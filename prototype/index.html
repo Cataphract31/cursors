@@ -10,6 +10,7 @@ input{user-select:text}
 /* ---------- desktop ---------- */
 #desktop{position:absolute;inset:0 0 30px 0;overflow:hidden}
 #bliss{position:absolute;inset:0;width:100%;height:100%;display:block}
+#arenaedge{position:absolute;display:none;border:2px dashed rgba(49,106,197,.85);box-shadow:0 0 0 9999px rgba(0,16,48,.22);pointer-events:none;z-index:4900;transition:all .9s ease}
 
 /* ---------- desktop icons ---------- */
 .icon{position:absolute;left:12px;width:78px;text-align:center;padding:5px 2px;border:1px solid transparent}
@@ -19,10 +20,7 @@ input{user-select:text}
 .icon.sel svg{opacity:.8}
 @media (max-width:700px){.icon{width:62px}.icon svg{width:26px;height:26px}.icon .lbl{font-size:10px}}
 
-/* ---------- marquee / tap marker ---------- */
 #marquee{position:absolute;border:1px solid #316AC5;background:rgba(49,106,197,.28);display:none;z-index:60;pointer-events:none}
-#tapmark{position:absolute;width:26px;height:26px;border:2px solid #fff;border-radius:50%;box-shadow:0 0 6px rgba(0,0,0,.5);display:none;z-index:70;pointer-events:none;animation:tap .6s forwards}
-@keyframes tap{from{transform:scale(.4);opacity:1}to{transform:scale(1.3);opacity:0}}
 
 /* ---------- windows (Luna) ---------- */
 .window{position:absolute;display:none;min-width:220px;max-width:96vw;padding:3px;padding-top:0;background:#0855DD;border-radius:8px 8px 3px 3px;box-shadow:1px 3px 12px rgba(0,0,0,.45);z-index:100}
@@ -118,6 +116,35 @@ input{user-select:text}
 #win-chat.nudged{animation:nudge .5s}
 @keyframes nudge{0%,100%{transform:translate(0,0)}20%{transform:translate(-6px,4px)}40%{transform:translate(5px,-5px)}60%{transform:translate(-5px,-4px)}80%{transform:translate(6px,5px)}}
 
+/* ---------- cursamp ---------- */
+.amp{background:#1A1A24;padding:8px;color:#16E05A}
+.amp-top{display:flex;gap:8px;align-items:center;margin-bottom:6px}
+.amp-time{background:#0A0A10;border:1px solid #2E2E3E;padding:3px 6px;font:bold 13px "Lucida Console",Consolas,monospace;color:#16E05A}
+.amp-top canvas{background:#0A0A10;border:1px solid #2E2E3E;flex:1;height:36px}
+.amp-title{background:#0A0A10;border:1px solid #2E2E3E;overflow:hidden;height:18px;margin-bottom:6px}
+.amp-title span{display:inline-block;white-space:nowrap;padding-left:100%;font:11px "Lucida Console",Consolas,monospace;color:#16E05A;line-height:18px;animation:ampmarq 9s linear infinite}
+@keyframes ampmarq{to{transform:translateX(-100%)}}
+.amp-ctl{display:flex;gap:4px;align-items:center}
+.amp-ctl button{width:30px;height:22px;border:1px solid #3E3E52;border-radius:2px;background:linear-gradient(180deg,#34344A,#20202E);color:#C8C8DC;cursor:pointer;font-size:11px;padding:0}
+.amp-ctl button:hover{filter:brightness(1.3)}
+.amp-ctl input[type=range]{flex:1;accent-color:#16E05A}
+.amp-pl{margin-top:6px;border:1px solid #2E2E3E;background:#0A0A10;font:10px "Lucida Console",Consolas,monospace}
+.amp-pl div{padding:3px 7px;cursor:pointer;color:#7ACF9A}
+.amp-pl div:hover{background:#16233A}
+.amp-pl div.on{color:#fff;background:#16324A}
+
+/* ---------- geocities ---------- */
+.geo{background:#000 radial-gradient(#fff 1px,transparent 1.2px);background-size:70px 70px;color:#0f0;font-family:"Comic Sans MS","Trebuchet MS",cursive;padding:12px;text-align:center;line-height:1.6}
+.geo-marq{overflow:hidden;background:#001;border:1px solid #0f0;margin-bottom:8px}
+.geo-marq span{display:inline-block;white-space:nowrap;padding-left:100%;animation:ampmarq 13s linear infinite;color:#ff0;font-size:12px;line-height:20px}
+.geo h1{font-size:17px;color:#f0f;text-shadow:2px 2px #005;margin:4px 0}
+.geo .rainbow{height:5px;margin:8px 0;background:linear-gradient(90deg,#f00,#ff0,#0f0,#0ff,#00f,#f0f,#f00);background-size:200% 100%;animation:rain 3s linear infinite}
+@keyframes rain{to{background-position:200% 0}}
+.geo .constr{height:14px;margin:8px 0;background:repeating-linear-gradient(45deg,#000 0 10px,#FB0 10px 20px);border:1px solid #FB0}
+.geo .cnt{display:inline-block;background:#111;border:1px solid #3f3;color:#3f3;font-family:"Lucida Console",Consolas,monospace;font-size:13px;letter-spacing:3px;padding:2px 8px}
+.geo a{color:#59f;cursor:pointer;text-decoration:underline}
+.geo .small{color:#aaa;font-size:9px}
+
 /* ---------- balloon ---------- */
 #balloon{position:fixed;right:14px;bottom:48px;width:236px;background:#FFFFE1;border:1px solid #000;border-radius:8px;padding:9px 11px;display:none;z-index:9600;box-shadow:2px 3px 8px rgba(0,0,0,.35);line-height:1.45}
 #balloon:after{content:"";position:absolute;right:28px;bottom:-11px;border:11px solid transparent;border-top-color:#FFFFE1;border-bottom:0}
@@ -127,7 +154,6 @@ input{user-select:text}
 #curlayer,#fxlayer{position:absolute;inset:0;z-index:5000;pointer-events:none;overflow:hidden}
 #fxlayer{z-index:5200}
 .cur{position:absolute;left:0;top:0;will-change:transform}
-.cur.me{pointer-events:auto;cursor:pointer}
 .cur svg{width:17px;height:26px;filter:drop-shadow(1px 2px 2px rgba(0,0,0,.55))}
 .cur .tag{position:absolute;left:13px;top:25px;white-space:nowrap;font:bold 10px Tahoma;color:#fff;text-shadow:1px 1px 2px #000,-1px 1px 2px #000,0 0 3px #000}
 .cur .tag .bt{margin-left:4px}
@@ -137,9 +163,12 @@ input{user-select:text}
 .cur.dueling svg{animation:shake .13s infinite}
 @keyframes shake{0%{transform:translate(0,0)}25%{transform:translate(-1.5px,1px)}50%{transform:translate(1.5px,-1px)}75%{transform:translate(-1px,-1.5px)}100%{transform:translate(1px,1px)}}
 .duelfx{position:absolute;text-align:center;font:bold 10px "Lucida Console",Consolas,monospace;color:#fff;text-shadow:1px 1px 2px #000,0 0 4px #000}
+.duelfx.big{font-size:13px;color:#FFD24A}
 .duelfx .hg{display:inline-block;font-size:15px;animation:flip .5s steps(2) infinite}
+.duelfx.big .hg{font-size:21px}
 @keyframes flip{to{transform:rotate(360deg)}}
 .shard{position:absolute;width:7px;height:10px;background:#fff;clip-path:polygon(0 0,100% 55%,25% 100%);filter:drop-shadow(0 1px 2px rgba(0,0,0,.6));animation:fly .7s forwards}
+.shard.gold{background:#FFD24A}
 @keyframes fly{to{transform:translate(var(--dx),var(--dy)) rotate(var(--rot));opacity:0}}
 .pop{position:absolute;width:34px;height:34px;border:3px solid #fff;border-radius:50%;animation:pop .45s forwards}
 @keyframes pop{from{transform:scale(.2);opacity:1}to{transform:scale(1.4);opacity:0}}
@@ -215,6 +244,10 @@ input{user-select:text}
       <path d="M17 17 C 23 20 26 26 23 28 C 20 30 17 24 16 20 Z" fill="#66A52E"/>
       <ellipse cx="16" cy="17" rx="1.6" ry="4" fill="#2B4A6E"/>
     </symbol>
+    <symbol id="ic-amp" viewBox="0 0 32 32">
+      <rect x="3" y="5" width="26" height="22" rx="3" fill="#1A1A24" stroke="#4A4A5A"/>
+      <path d="M7 22 V14 M11 22 V10 M15 22 V16 M19 22 V9 M23 22 V13" stroke="#16E05A" stroke-width="2.4"/>
+    </symbol>
     <symbol id="ic-warn" viewBox="0 0 32 32">
       <path d="M16 3 L30 28 L2 28 Z" fill="#F7D440" stroke="#B98A00" stroke-linejoin="round"/>
       <rect x="14.6" y="11" width="2.8" height="9" rx="1.2" fill="#000"/>
@@ -248,11 +281,12 @@ input{user-select:text}
     <div class="icon" style="top:96px"  data-app="win-recycle"><svg><use href="#ic-bin"/></svg><div class="lbl">Recycle Bin</div></div>
     <div class="icon" style="top:180px" data-app="win-cursors"><svg><use href="#ic-app"/></svg><div class="lbl">CURSORS.EXE</div></div>
     <div class="icon" style="top:264px" data-app="win-chat"><svg><use href="#ic-fly"/></svg><div class="lbl">Messenger</div></div>
-    <div class="icon" style="top:348px" data-app="win-log"><svg><use href="#ic-note"/></svg><div class="lbl">fights.log</div></div>
-    <div class="icon" style="top:432px" data-app="win-readme"><svg><use href="#ic-txt"/></svg><div class="lbl">README.txt</div></div>
+    <div class="icon" style="top:348px" data-app="win-amp"><svg><use href="#ic-amp"/></svg><div class="lbl">cursamp</div></div>
+    <div class="icon" style="top:432px" data-app="win-log"><svg><use href="#ic-note"/></svg><div class="lbl">fights.log</div></div>
+    <div class="icon" style="top:516px" data-app="win-readme"><svg><use href="#ic-txt"/></svg><div class="lbl">README.txt</div></div>
   </div>
   <div id="marquee"></div>
-  <div id="tapmark"></div>
+  <div id="arenaedge"></div>
 
   <!-- CURSORS.EXE control panel -->
   <div class="window" id="win-cursors" style="left:calc(100% - 348px);top:44px;width:318px">
@@ -262,9 +296,13 @@ input{user-select:text}
       <div class="walletrow"><span>WALLET</span><span class="amt" id="walletamt">5.000 SOL</span></div>
       <div class="hr"></div>
       <button class="xbtn big" id="btn-deploy">▸ DEPLOY 0.1 SOL</button>
-      <div class="small dim" style="margin-top:4px">0.100 = 0.097 arena + 0.001 fee + 0.002 rakeback</div>
-      <div class="small" style="margin-top:4px">live <b id="livecount">0</b>/5 · in play <b class="mono" id="liveval">0.000</b> · <span class="dim">click a cursor to recall it</span></div>
-      <button class="xbtn big" id="btn-recall" style="margin-top:6px">◂ RECALL ALL</button>
+      <div class="small dim" style="margin-top:4px">0.100 = 0.097 arena + 0.001 fee + 0.002 rakeback · deploys open all battle</div>
+      <div class="small" style="margin-top:4px">live <b id="livecount">0</b>/5 · in play <b class="mono" id="liveval">0.000</b></div>
+      <div class="chiprow" style="margin-top:6px">
+        <button class="xbtn chip on" id="st-attack">⚔ ATTACK</button>
+        <button class="xbtn chip" id="st-defend">🛡 DEFEND</button>
+      </div>
+      <button class="xbtn big" id="btn-recall" style="margin-top:2px">◂ RECALL ALL (3s)</button>
       <div class="hr"></div>
       <div class="aprow"><span class="lb">AUTOPLAY</span><button class="xbtn chip" id="ap-toggle" style="flex:1">OFF</button></div>
       <div class="aprow"><span class="lb">per round</span><span class="chiprow" style="flex:1;margin:0"><button class="xbtn chip apc" data-c="1">1</button><button class="xbtn chip apc on" data-c="3">3</button><button class="xbtn chip apc" data-c="5">5</button></span></div>
@@ -289,6 +327,20 @@ input{user-select:text}
     </div>
   </div>
 
+  <!-- cursamp -->
+  <div class="window" id="win-amp" style="left:calc(50% - 140px);top:64px;width:280px">
+    <div class="titlebar"><svg><use href="#ic-amp"/></svg><span class="tt">cursamp</span><button class="tbtn min" aria-label="Minimize">–</button><button class="tbtn close" aria-label="Close">✕</button></div>
+    <div class="win-body pad amp">
+      <div class="amp-top"><span class="amp-time" id="amptime">00:00</span><canvas id="ampviz" width="150" height="36"></canvas></div>
+      <div class="amp-title"><span id="amptrack">cursamp — press play · 3 tracks of pure zoomer-proof audio</span></div>
+      <div class="amp-ctl">
+        <button id="amp-prev">⏮</button><button id="amp-play">▶</button><button id="amp-stop">⏹</button><button id="amp-next">⏭</button>
+        <input type="range" id="amp-vol" min="0" max="100" value="50" aria-label="Volume">
+      </div>
+      <div class="amp-pl" id="amppl"></div>
+    </div>
+  </div>
+
   <!-- fights.log -->
   <div class="window" id="win-log" style="left:calc(100% - 348px);top:calc(100% - 258px);width:318px">
     <div class="titlebar"><svg><use href="#ic-note"/></svg><span class="tt">fights.log - Notepad</span><button class="tbtn min" aria-label="Minimize">–</button><button class="tbtn close" aria-label="Close">✕</button></div>
@@ -305,26 +357,26 @@ input{user-select:text}
       <div class="menubar"><span>File</span><span>Edit</span><span>Format</span><span>View</span><span>Help</span></div>
       <div class="paper tall">CURSORS.EXE — rules
 
-ROUNDS
-· join: deploy 1-5 cursors,
-  0.1 SOL each. fixed. everyone
+AUTO-BATTLER. you command, they fight.
+· deploy 1-5 cursors, 0.1 SOL each,
+  any time until shutdown. everyone
   spawns equal.
-· battle: cursors roam. touch an
-  enemy cursor: someone dies.
+· ATTACK: hunt the nearest enemy.
+  DEFEND: evade + regroup. that is
+  your whole variance dial.
+· touch an enemy: someone dies.
   odds = your bounty : theirs.
   winner takes all. every touch
   is EV-neutral. always.
-· your own cursors cluster and
-  never fight each other.
-· recall anytime: cursor runs
-  for the start button. killable
-  until it arrives. banks on
-  arrival.
-· shutdown: last 15s. all
-  cursors auto-recall. anyone
-  still en route at 0:00 banks
-  where they stand. nothing is
-  confiscated.
+· RECALL: 3 seconds to bank, from
+  anywhere. killable the whole way.
+· the resolution shrinks mid-round.
+  there is nowhere to hide at
+  640×480.
+· shutdown: everyone auto-recalls.
+  nothing is confiscated.
+· lose your last cursor? deploys
+  are still open. go again.
 
 MONEY
 · 0.100 = 0.097 arena
@@ -332,8 +384,6 @@ MONEY
         + 0.002 rakeback (2%)
 · each deploy: +200 rakeback
   tickets, 45-day half-life.
-  your tickets / all tickets =
-  your cut of the 2% pool.
   you play, you become the house.
 · effective RTP: 99%.
 · P(reach ×N) = 1/N. exactly.
@@ -359,18 +409,29 @@ play money prototype. chain later.</div>
     <div class="win-body mono" id="syspaper" style="line-height:1.9">loading…</div>
   </div>
 
-  <!-- Internet Explorer -->
-  <div class="window" id="win-ie" style="left:200px;top:110px;width:440px">
-    <div class="titlebar"><svg><use href="#ic-ie"/></svg><span class="tt">Cannot find server</span><button class="tbtn min" aria-label="Minimize">–</button><button class="tbtn close" aria-label="Close">✕</button></div>
-    <div class="win-body pad" style="padding:16px;background:#fff">
-      <b style="font-size:13px;color:#333">The page cannot be displayed</b>
-      <p style="margin:9px 0;color:#333">The page you are looking for is currently unavailable. The year is 2003. There is nothing out there yet.</p>
-      <div class="hr"></div>
-      <p style="color:#333">Please try the following:</p>
-      <ul style="margin:6px 0 0 22px;color:#333;line-height:1.8">
-        <li>Close this window.</li>
-        <li>Deploy a cursor instead.</li>
-      </ul>
+  <!-- Internet Explorer: cursor$land -->
+  <div class="window" id="win-ie" style="left:180px;top:90px;width:470px">
+    <div class="titlebar"><svg><use href="#ic-ie"/></svg><span class="tt">cursor$land - Microsoft Internet Explorer</span><button class="tbtn min" aria-label="Minimize">–</button><button class="tbtn close" aria-label="Close">✕</button></div>
+    <div class="win-body pad geo">
+      <div class="geo-marq"><span>★•*¨*•.¸¸ welcome to cursor$land ¸¸.•*¨*•★ the #1 cursor fightring on the information superhighway ★ winner takes all ★ tell your friends ★</span></div>
+      <h1>~ cursor$land ~</h1>
+      <div>est. 2003 · webmaster: admin</div>
+      <div class="rainbow"></div>
+      <div>you are visitor <span class="cnt" id="geocnt">0133721</span></div>
+      <div class="constr" title="under construction"></div>
+      <div>[ <a id="geo-guest">sign my guestbook</a> ] · [ <a id="geo-deploy">enter the arena</a> ]</div>
+      <div style="margin-top:4px">webring: [ <a>&lt;&lt; prev</a> · <a>random</a> · <a>next &gt;&gt;</a> ]</div>
+      <div class="rainbow"></div>
+      <div class="small">best viewed in 800×600 · made with notepad · no rights reserved</div>
+    </div>
+  </div>
+
+  <!-- Display properties (resolution shrink notice) -->
+  <div class="window" id="win-display" style="left:calc(50% - 150px);top:140px;width:300px">
+    <div class="titlebar"><svg><use href="#ic-computer"/></svg><span class="tt">Display Properties</span></div>
+    <div class="win-body" style="display:flex;gap:12px;align-items:center">
+      <svg style="width:34px;height:34px;flex:none"><use href="#ic-warn"/></svg>
+      <div>Screen resolution changed:<br><b class="mono" id="restext" style="font-size:14px">800×600</b><br><span class="dim small">less desktop. more fighting.</span></div>
     </div>
   </div>
 
@@ -381,7 +442,7 @@ play money prototype. chain later.</div>
       <svg style="width:36px;height:36px;flex:none"><use href="#ic-warn"/></svg>
       <div>
         <div>This desktop is shutting down. All cursors are recalling to start.</div>
-        <div class="mono" style="font-size:20px;font-weight:bold;margin-top:6px" id="shuttimer">0:15</div>
+        <div class="mono" style="font-size:20px;font-weight:bold;margin-top:6px" id="shuttimer">0:12</div>
       </div>
     </div>
   </div>
@@ -422,7 +483,8 @@ play money prototype. chain later.</div>
     <div class="sm-left">
       <div class="sm-item" data-app="win-cursors"><svg><use href="#ic-app"/></svg><span><b>CURSORS.EXE</b><span class="sub">winner takes all</span></span></div>
       <div class="sm-item" data-app="win-chat"><svg><use href="#ic-fly"/></svg><span><b>Messenger</b><span class="sub">everyone is online</span></span></div>
-      <div class="sm-item" data-app="win-ie"><svg><use href="#ic-ie"/></svg><span><b>Internet Explorer</b><span class="sub">do not</span></span></div>
+      <div class="sm-item" data-app="win-amp"><svg><use href="#ic-amp"/></svg><span><b>cursamp</b><span class="sub">it really whips</span></span></div>
+      <div class="sm-item" data-app="win-ie"><svg><use href="#ic-ie"/></svg><span><b>Internet Explorer</b><span class="sub">the information superhighway</span></span></div>
       <div class="sm-sep"></div>
       <div class="sm-item" data-app="win-log"><svg><use href="#ic-note"/></svg><span>fights.log</span></div>
       <div class="sm-item" data-app="win-readme"><svg><use href="#ic-txt"/></svg><span>README.txt</span></div>
@@ -439,7 +501,7 @@ play money prototype. chain later.</div>
   </div>
 </div>
 
-<div id="balloon"><b>ℹ CURSORS.EXE</b>rounds run forever. deploy up to 5 cursors in the join window. winner takes all. bank before shutdown.</div>
+<div id="balloon"><b>ℹ CURSORS.EXE</b>auto-battler. deploy any time. attack or defend from the dashboard. bank before shutdown.</div>
 
 <div id="bsod"></div>
 <div id="shutdown"><div>It is now safe to lose your money.<br><span style="font-size:13px;color:#888">click anywhere to log back in</span></div></div>
@@ -452,7 +514,7 @@ const rand=(a,b)=>a+Math.random()*(b-a);
 const pick=a=>a[Math.floor(Math.random()*a.length)];
 const desktop=$("#desktop"), curlayer=$("#curlayer"), fxlayer=$("#fxlayer");
 let W=desktop.clientWidth, H=desktop.clientHeight;
-addEventListener("resize",()=>{W=desktop.clientWidth;H=desktop.clientHeight;});
+addEventListener("resize",()=>{W=desktop.clientWidth;H=desktop.clientHeight;setArenaStage(arenaStage,true);});
 const SMALL=innerWidth<700;
 
 /* ---- money: integer units, 1 unit = 0.001 SOL ---- */
@@ -461,7 +523,8 @@ const fmtS=u=>((u<0?"-":"")+(Math.abs(u)/1000).toFixed(3));
 const fmtSign=u=>(u<0?"-":"+")+(Math.abs(u)/1000).toFixed(3);
 
 /* ---- round timing (seconds) ---- */
-const T_JOIN=18, T_BATTLE=75, T_SHUT=15, T_LATE=30, T_RESULTS=8;
+const T_JOIN=10, T_BATTLE=60, T_SHUT=12, T_RESULTS=6;
+const RECALL_SECS=3, DUEL_MS=700;
 
 /* ================= audio ================= */
 let AC=null, muted=false;
@@ -486,6 +549,7 @@ const sDie   =()=>tone(380,.55,"sawtooth",.09,0,-300);
 const sBank  =()=>[523,659,784,1046].forEach((f,i)=>tone(f,.11,"square",.05,i*.07));
 const sRound =()=>[392,523,659].forEach((f,i)=>tone(f,.12,"square",.045,i*.09));
 const sShut  =()=>{tone(220,.3,"sawtooth",.07,0,-60);tone(220,.3,"sawtooth",.07,.4,-60);};
+const sRes   =()=>{tone(700,.08,"square",.05);tone(500,.1,"square",.05,.1);};
 const sChat  =()=>tone(1000,.05,"square",.03);
 const sNudge =()=>tone(90,.3,"sawtooth",.09,0,-30);
 addEventListener("pointerdown",()=>{ if(AC&&AC.state==="suspended") AC.resume(); },{capture:true});
@@ -494,7 +558,7 @@ $("#sndico").addEventListener("click",()=>{ muted=!muted; $("#sndico").textConte
 /* ================= window manager ================= */
 let zTop=100;
 const openApps=new Map();
-const NOTAB=new Set(["win-logoff","win-shutdown","win-results"]);
+const NOTAB=new Set(["win-logoff","win-shutdown","win-results","win-display"]);
 function tabIconHref(id){ const u=$("#"+id+" .titlebar use"); return u?u.getAttribute("href"):"#ic-app"; }
 function tabTitle(id){ return $("#"+id+" .titlebar .tt").textContent; }
 function openWin(id){
@@ -560,26 +624,17 @@ $$(".window").forEach(w=>{
   });
 });
 
-/* ================= icons / marquee / drift target ================= */
+/* ================= icons / marquee ================= */
 $$(".icon").forEach(ic=>{
   ic.addEventListener("click",e=>{ e.stopPropagation(); $$(".icon").forEach(i=>i.classList.remove("sel")); ic.classList.add("sel"); });
   ic.addEventListener("dblclick",()=>{ sClick(); openWin(ic.dataset.app); });
 });
-const marquee=$("#marquee"), tapmark=$("#tapmark");
-let drift={x:innerWidth/2,y:innerHeight/2};
-addEventListener("mousemove",e=>{ drift.x=e.clientX; drift.y=e.clientY; });
+const marquee=$("#marquee");
 desktop.addEventListener("pointerdown",e=>{
-  if(e.target.closest(".icon,.window,.cur,#taskbar,#startmenu,#balloon")) return;
+  if(e.target.closest(".icon,.window,#taskbar,#startmenu,#balloon")) return;
   $$(".icon").forEach(i=>i.classList.remove("sel"));
   closeStart();
-  if(e.pointerType==="touch"){
-    drift.x=e.clientX; drift.y=e.clientY;
-    tapmark.style.display="block";
-    tapmark.style.left=(e.clientX-13)+"px"; tapmark.style.top=(e.clientY-13)+"px";
-    tapmark.style.animation="none"; void tapmark.offsetWidth; tapmark.style.animation="";
-    setTimeout(()=>tapmark.style.display="none",600);
-    return;
-  }
+  if(e.pointerType==="touch") return;
   const sx=e.clientX, sy=e.clientY;
   const move=ev=>{
     marquee.style.display="block";
@@ -637,6 +692,7 @@ function botChat(kind,vars){
     bigkill:["{w} IS FAT NOW","someone kill {w} already","{w} carrying the whole pot","free lottery ticket walking around"],
     bank:["{n} banked. coward","smart exit tbh","{n} took the money and ran","paper hands {n}"],
     shutdown:["RUN","exit rush GO","camping the door hehe","everybody OUT","see you at start"],
+    shrink:["walls closing LOL","640x480 no escape","resolution diff","small screen big problems"],
     idle:["anyone else lagging or is that the vibes","this desktop needs a screensaver","dial up holding strong","nudge me again and see what happens","imagine losing a 90:10"]
   }[kind];
   if(!L) return;
@@ -663,18 +719,135 @@ $("#chatnudge").addEventListener("click",()=>{
   w.classList.remove("nudged"); void w.offsetWidth; w.classList.add("nudged");
 });
 
+/* ================= cursamp ================= */
+const AMP={playing:false,track:0,startAt:0,nextNote:0,step:0,timer:null,gain:null,analyser:null,raf:0};
+const TRACKS=[
+  {name:"bliss.mod",bpm:132,root:110,bass:[0,0,7,0,5,0,7,10],lead:[12,15,19,15,12,15,19,22]},
+  {name:"dialup.xm",bpm:142,root:98,bass:[0,3,0,5,0,3,0,10],lead:[12,15,17,15,12,10,12,7]},
+  {name:"y2k.s3m",bpm:124,root:123.47,bass:[0,0,5,5,3,3,8,7],lead:[19,17,15,12,15,12,10,12]}
+];
+function ampInit(){
+  if(AMP.gain) return;
+  const c=ac();
+  AMP.gain=c.createGain(); AMP.gain.gain.value=.5;
+  AMP.analyser=c.createAnalyser(); AMP.analyser.fftSize=64;
+  AMP.gain.connect(AMP.analyser); AMP.analyser.connect(c.destination);
+}
+function ampNote(freq,t,dur,type,vol){
+  const c=ac(), o=c.createOscillator(), g=c.createGain();
+  o.type=type; o.frequency.value=freq;
+  g.gain.setValueAtTime(vol,t);
+  g.gain.exponentialRampToValueAtTime(.001,t+dur);
+  o.connect(g).connect(AMP.gain); o.start(t); o.stop(t+dur+.02);
+}
+function ampTick(){
+  const c=ac(), T=TRACKS[AMP.track], spb=60/T.bpm/2;
+  while(AMP.nextNote<c.currentTime+.18){
+    const s=AMP.step%8;
+    ampNote(T.root*Math.pow(2,T.bass[s]/12),AMP.nextNote,spb*.85,"square",.09);
+    if(AMP.step%2===0) ampNote(T.root*2*Math.pow(2,T.lead[(AMP.step>>1)%8]/12),AMP.nextNote,spb*.5,"sawtooth",.045);
+    ampNote(6600+((AMP.step%4===2)?1400:0),AMP.nextNote+spb/2,.03,"triangle",.02);
+    AMP.nextNote+=spb; AMP.step++;
+  }
+}
+function ampDraw(){
+  if(!AMP.playing) return;
+  const cv=$("#ampviz"), g=cv.getContext("2d");
+  const d=new Uint8Array(AMP.analyser.frequencyBinCount);
+  AMP.analyser.getByteFrequencyData(d);
+  g.clearRect(0,0,cv.width,cv.height);
+  const n=16, bw=cv.width/n;
+  for(let i=0;i<n;i++){
+    const v=d[i+2]/255, h=v*(cv.height-4);
+    g.fillStyle=v>.75?"#FFD24A":"#16E05A";
+    g.fillRect(i*bw+2,cv.height-h,bw-4,h);
+  }
+  const t=Math.floor((ac().currentTime-AMP.startAt));
+  $("#amptime").textContent=String(Math.floor(t/60)).padStart(2,"0")+":"+String(t%60).padStart(2,"0");
+  AMP.raf=requestAnimationFrame(ampDraw);
+}
+function ampPlay(){
+  ampInit();
+  if(AC&&AC.state==="suspended") AC.resume();
+  if(AMP.playing) return;
+  AMP.playing=true;
+  AMP.startAt=ac().currentTime;
+  AMP.nextNote=ac().currentTime+.06; AMP.step=0;
+  AMP.timer=setInterval(ampTick,100);
+  $("#amptrack").textContent=`${AMP.track+1}. ${TRACKS[AMP.track].name} · 128kbps · it really whips`;
+  renderPl(); ampDraw();
+}
+function ampStop(){
+  AMP.playing=false;
+  clearInterval(AMP.timer); cancelAnimationFrame(AMP.raf);
+  const cv=$("#ampviz"); cv.getContext("2d").clearRect(0,0,cv.width,cv.height);
+  $("#amptime").textContent="00:00";
+}
+function ampSwitch(d){
+  AMP.track=(AMP.track+d+TRACKS.length)%TRACKS.length;
+  const was=AMP.playing;
+  ampStop(); renderPl();
+  $("#amptrack").textContent=`${AMP.track+1}. ${TRACKS[AMP.track].name}`;
+  if(was) ampPlay();
+}
+function renderPl(){
+  $("#amppl").innerHTML="";
+  TRACKS.forEach((t,i)=>{
+    const d=document.createElement("div");
+    d.textContent=`${i+1}. ${t.name}`;
+    d.className=i===AMP.track?"on":"";
+    d.addEventListener("click",()=>{ AMP.track=i; const was=AMP.playing; ampStop(); renderPl(); if(was) ampPlay(); else $("#amptrack").textContent=`${i+1}. ${t.name}`; });
+    $("#amppl").appendChild(d);
+  });
+}
+$("#amp-play").addEventListener("click",ampPlay);
+$("#amp-stop").addEventListener("click",ampStop);
+$("#amp-prev").addEventListener("click",()=>ampSwitch(-1));
+$("#amp-next").addEventListener("click",()=>ampSwitch(1));
+$("#amp-vol").addEventListener("input",e=>{ if(AMP.gain) AMP.gain.gain.value=e.target.value/100; });
+renderPl();
+
+/* ================= geocities ================= */
+let geoN=133721;
+setInterval(()=>{ if($("#win-ie").style.display==="block"){ geoN+=Math.random()<.4?1:0; $("#geocnt").textContent=String(geoN).padStart(7,"0"); } },1500);
+$("#geo-guest").addEventListener("click",()=>openWin("win-chat"));
+$("#geo-deploy").addEventListener("click",()=>openWin("win-cursors"));
+
 /* ================= game state ================= */
 const BOTS=["mumu","bobo","clippy","bonk","solja","xp_chad","deg404"].map(n=>({name:n}));
 let wallet=5000, walletShown=5000;
 let stats={kills:0,deaths:0,best:0};
 let curs=[], binDead=[];
 let myTickets=0, globalTickets=1437200, rakeAccrued=0;
+let stance="attack";
 const auto={on:false,count:3,bankAt:2};
 
-/* round state */
+/* arena (resolution shrink) */
+let arena={x0:0,y0:0,x1:0,y1:0}, arenaStage=0;
+const STAGES=[1,.78,.58], RESNAMES=["1024×768","800×600","640×480"];
+function setArenaStage(st,silent){
+  arenaStage=st;
+  const f=STAGES[st], aw=W*f, ah=H*f;
+  arena={x0:(W-aw)/2, y0:Math.max(0,(H-ah)/2), x1:(W+aw)/2, y1:Math.min(H,(H+ah)/2)};
+  const e=$("#arenaedge");
+  if(st===0){ e.style.display="none"; }
+  else{
+    e.style.display="block";
+    e.style.left=arena.x0+"px"; e.style.top=arena.y0+"px";
+    e.style.width=(arena.x1-arena.x0)+"px"; e.style.height=(arena.y1-arena.y0)+"px";
+  }
+  if(!silent&&st>0){
+    $("#restext").textContent=RESNAMES[st];
+    openWin("win-display"); sRes();
+    log(`resolution: ${RESNAMES[st]}`);
+    botChat("shrink");
+    setTimeout(()=>closeWin("win-display"),2600);
+  }
+}
+
 let phase="boot", phaseT=0, roundNo=0, roundId=0;
-let R=null; // per-round record
-function newRoundRecord(){ return {pot:0,deploys:0,myIn:0,myOut:0,myKills:0,myDeployed:0,bigBank:null,deaths:0}; }
+let R=null;
+function newRoundRecord(){ return {pot:0,deploys:0,myIn:0,myOut:0,myKills:0,bigBank:null,deaths:0}; }
 
 const CURSVG=`<svg viewBox="0 0 14 22"><use href="#ic-cursor"/></svg>`;
 function makeCur(owner,isMine){
@@ -683,17 +856,16 @@ function makeCur(owner,isMine){
   el.innerHTML=CURSVG+`<div class="tag"><span class="nm">${owner}</span><span class="bt"></span><span class="mx"></span></div>`;
   curlayer.appendChild(el);
   let x,y,ax,ay;
-  if(isMine){ x=W/2+rand(-60,60); y=H+16; ax=W/2; ay=H-90; }
+  if(isMine){ x=clamp(W/2+rand(-60,60),arena.x0+20,arena.x1-20); y=arena.y1-8; ax=x; ay=arena.y1-80; }
   else{
     const side=Math.floor(rand(0,4));
-    x=side===0?-10:side===1?W+10:rand(60,W-60);
-    y=side===2?-10:side===3?H+10:rand(60,H-60);
-    ax=clamp(x+rand(-40,40),70,W-70); ay=clamp(y+rand(-40,40),70,H-110);
+    x=side===0?arena.x0+6:side===1?arena.x1-6:rand(arena.x0+40,arena.x1-40);
+    y=side===2?arena.y0+6:side===3?arena.y1-6:rand(arena.y0+40,arena.y1-40);
+    ax=clamp(x+rand(-40,40),arena.x0+50,arena.x1-50); ay=clamp(y+rand(-40,40),arena.y0+50,arena.y1-50);
   }
   const c={owner,isMine,el,x,y,ax,ay,bounty:ENTRY,
-    h:rand(0,Math.PI*2),spd:rand(72,118),mode:"hold",prevMode:"roam",
-    grace:1.5,riskAt:1.5+Math.random()*5,dead:false,s:1,r:10};
-  if(isMine) el.addEventListener("pointerdown",e=>{ e.stopPropagation(); recallOne(c); });
+    h:rand(0,Math.PI*2),spd:rand(78,124),mode:"hold",prevMode:"roam",recallT:0,
+    grace:1.4,riskAt:1.5+Math.random()*5,dead:false,s:1,r:10};
   updateTag(c);
   return c;
 }
@@ -721,6 +893,7 @@ function startJoin(){
   roundNo++; roundId++;
   R=newRoundRecord();
   closeWin("win-results");
+  setArenaStage(0,true);
   setPhase("join",T_JOIN);
   sRound();
   log(`— round ${roundNo}: deploys open —`);
@@ -729,10 +902,10 @@ function startJoin(){
   const rid=roundId;
   for(const b of BOTS){
     const n=pick([1,1,2,2,3]);
-    for(let i=0;i<n;i++) setTimeout(()=>{ if(roundId===rid&&phase==="join") botDeploy(b.name); },rand(600,(T_JOIN-3)*1000));
+    for(let i=0;i<n;i++) setTimeout(()=>{ if(roundId===rid&&phase==="join") botDeploy(b.name); },rand(500,(T_JOIN-2)*1000));
   }
   if(auto.on){
-    for(let i=0;i<auto.count;i++) setTimeout(()=>{ if(roundId===rid&&phase==="join") deploy(true); },500+i*450);
+    for(let i=0;i<auto.count;i++) setTimeout(()=>{ if(roundId===rid&&phase==="join") deploy(true); },400+i*400);
   }
   updatePanel();
 }
@@ -742,9 +915,6 @@ function startBattle(){
   setPhase("battle",T_BATTLE);
   for(const c of curs){ c.mode="roam"; c.prevMode="roam"; }
   log("battle begins");
-  const rid=roundId;
-  for(const b of BOTS) if(Math.random()<.3)
-    setTimeout(()=>{ if(roundId===rid&&phase==="battle"&&T_BATTLE-phaseT<T_LATE) botDeploy(b.name); },rand(3000,T_LATE*1000*.8));
   updatePanel();
 }
 let shutFired=false;
@@ -754,8 +924,11 @@ function startShutdownRush(){
   sShut();
   chatSys("system is shutting down — all cursors recalling");
   botChat("shutdown");
-  for(const c of curs) if(!c.dead&&c.mode!=="duel"){ c.mode="recall"; c.prevMode="recall"; }
+  for(const c of curs) if(!c.dead&&c.mode!=="duel") forceRecall(c);
   updatePanel();
+}
+function forceRecall(c){
+  if(c.mode!=="recall"){ c.mode="recall"; c.prevMode="recall"; c.recallT=RECALL_SECS; }
 }
 function endBattle(){
   for(const c of [...curs]) if(!c.dead) bank(c,true);
@@ -773,6 +946,7 @@ function cancelRound(){
 }
 function startResults(){
   setPhase("results",T_RESULTS);
+  setArenaStage(0,true);
   const net=R.myOut-R.myIn;
   const lines=[
     `round ${roundNo}`,
@@ -794,9 +968,12 @@ function phaseTick(dt){
   phaseT-=dt;
   if(phase==="join"&&phaseT<=0){ shutFired=false; startBattle(); }
   else if(phase==="battle"){
+    const elapsed=T_BATTLE-phaseT;
+    if(arenaStage===0&&elapsed>=T_BATTLE*.4) setArenaStage(1,false);
+    if(arenaStage===1&&elapsed>=T_BATTLE*.7) setArenaStage(2,false);
     if(!shutFired&&phaseT<=T_SHUT) startShutdownRush();
     if(shutFired) $("#shuttimer").textContent="0:"+String(Math.max(0,Math.ceil(phaseT))).padStart(2,"0");
-    if(phaseT<=0) endBattle();
+    if(phaseT<=0||(elapsed>3&&curs.length===0)) endBattle();
   }
   else if(phase==="results"&&phaseT<=0) startJoin();
   renderPhase();
@@ -817,16 +994,12 @@ function renderPhase(){
 }
 
 /* ================= deploy / recall / bank ================= */
-function canDeploy(){
-  if(phase==="join") return true;
-  if(phase==="battle"&&!shutFired&&(T_BATTLE-phaseT)<T_LATE) return true;
-  return false;
-}
+function canDeploy(){ return phase==="join"||(phase==="battle"&&!shutFired); }
 function deploy(silent){
   if(!canDeploy()||myCurs().length>=MAXCUR||wallet<STAKE) return;
   wallet-=STAKE;
   myTickets+=200;
-  R.myIn+=STAKE; R.myDeployed++;
+  R.myIn+=STAKE;
   R.pot+=ENTRY; R.deploys++;
   const c=makeCur("admin",true);
   if(phase==="battle"){ c.mode="roam"; c.prevMode="roam"; }
@@ -836,6 +1009,7 @@ function deploy(silent){
   updatePanel();
 }
 function botDeploy(name){
+  if(!canDeploy()) return;
   if(curs.filter(c=>c.owner===name).length>=3) return;
   const c=makeCur(name,false);
   if(phase==="battle"){ c.mode="roam"; c.prevMode="roam"; }
@@ -844,15 +1018,24 @@ function botDeploy(name){
   globalTickets+=200;
   updatePanel();
 }
-function recallOne(c){
-  if(c.dead||c.mode!=="roam"||phase!=="battle") return;
-  c.mode="recall"; c.prevMode="recall";
-  sClick();
-  log("cursor recalling — reach start to bank");
+function recallAll(){
+  if(phase==="join"){
+    for(const c of [...myCurs()]){
+      wallet+=STAKE; myTickets-=200; R.myIn-=STAKE; R.pot-=ENTRY; R.deploys--;
+      removeCur(c);
+    }
+    sClick(); log("undeployed — refunded in full");
+  }else if(phase==="battle"){
+    let n=0;
+    for(const c of myCurs()) if(c.mode==="roam"){ forceRecall(c); n++; }
+    if(n){ sClick(); log(`recalling ${n} cursor${n>1?"s":""} — banking in ${RECALL_SECS}s`); }
+  }
+  updatePanel();
 }
-function recallAll(){ for(const c of myCurs()) recallOne(c); updatePanel(); }
 $("#btn-deploy").addEventListener("click",()=>deploy(false));
 $("#btn-recall").addEventListener("click",recallAll);
+$("#st-attack").addEventListener("click",()=>{ stance="attack"; sClick(); updatePanel(); });
+$("#st-defend").addEventListener("click",()=>{ stance="defend"; sClick(); updatePanel(); });
 function bank(c,atShutdown){
   const m=(c.bounty/ENTRY).toFixed(1);
   if(!R.bigBank||c.bounty>R.bigBank.amt) R.bigBank={owner:c.owner,amt:c.bounty};
@@ -861,6 +1044,7 @@ function bank(c,atShutdown){
     stats.best=Math.max(stats.best,c.bounty/ENTRY);
     sBank();
     float(fmtSign(c.bounty)+" ×"+m,c.x,c.y,false);
+    goldBurst(c.x,c.y);
     log(`you banked ${fmtS(c.bounty)} (×${m})${atShutdown?" at shutdown":""}`);
   }else{
     if(c.bounty>=ENTRY*2){ log(`${c.owner} banked ${fmtS(c.bounty)} (×${m})`); botChat("bank",{n:c.owner}); }
@@ -874,13 +1058,14 @@ $("#ap-toggle").addEventListener("click",()=>{
   const b=$("#ap-toggle");
   b.textContent=auto.on?"ON":"OFF";
   b.classList.toggle("on",auto.on);
-  if(auto.on&&canDeploy()){
-    const rid=roundId, need=auto.count-myCurs().length;
-    for(let i=0;i<need;i++) setTimeout(()=>{ if(roundId===rid) deploy(true); },i*450);
-  }
 });
 $$(".apc").forEach(b=>b.addEventListener("click",()=>{ sClick(); auto.count=+b.dataset.c; $$(".apc").forEach(x=>x.classList.toggle("on",x===b)); }));
 $$(".apb").forEach(b=>b.addEventListener("click",()=>{ sClick(); auto.bankAt=+b.dataset.b; $$(".apb").forEach(x=>x.classList.toggle("on",x===b)); }));
+setInterval(()=>{
+  if(!canDeploy()) return;
+  if(auto.on&&myCurs().length<auto.count&&wallet>=STAKE) deploy(true);
+  if(phase==="battle"&&Math.random()<.35) botDeploy(pick(BOTS).name);
+},2200);
 
 /* ================= movement / duels ================= */
 function angDiff(a){ while(a>Math.PI)a-=2*Math.PI; while(a<-Math.PI)a+=2*Math.PI; return a; }
@@ -889,47 +1074,60 @@ function centroid(owner,self){
   for(const o of curs) if(o.owner===owner&&o!==self&&!o.dead){ x+=o.x; y+=o.y; n++; }
   return n?{x:x/n,y:y/n,n}:null;
 }
+function nearestEnemy(c){
+  let best=null,bd=1e9;
+  for(const o of curs){
+    if(o===c||o.dead||o.owner===c.owner||o.grace>0||o.mode==="duel"||o.mode==="hold") continue;
+    const d=(o.x-c.x)**2+(o.y-c.y)**2;
+    if(d<bd){bd=d;best=o;}
+  }
+  return {best,bd};
+}
 function move(c,dt){
   if(c.grace>0){ c.grace-=dt; if(c.grace<=0) c.el.classList.remove("grace"); }
   let tx=null,ty=null,turn=2.4;
-  if(c.mode==="recall"){ tx=42; ty=H-6; turn=3.4; }
-  else if(c.mode==="hold"){ tx=c.ax; ty=c.ay; turn=2.0; }
+  if(c.mode==="recall"){
+    c.recallT-=dt;
+    const dx=42-c.x, dy=(H-6)-c.y, dist=Math.hypot(dx,dy);
+    if(c.recallT<=0){ bank(c,false); return; }
+    const sp=dist/Math.max(.2,c.recallT);
+    c.x+=dx/Math.max(1,dist)*sp*dt; c.y+=dy/Math.max(1,dist)*sp*dt;
+    c.el.style.transform=`translate(${c.x-8}px,${c.y-4}px)`;
+    return;
+  }
+  if(c.mode==="hold"){ tx=c.ax; ty=c.ay; turn=2.0; }
   else{
-    let best=null,bd=1e9;
-    for(const o of curs){
-      if(o===c||o.dead||o.owner===c.owner||o.grace>0||o.mode==="duel"||o.mode==="hold") continue;
-      const d=(o.x-c.x)**2+(o.y-c.y)**2;
-      if(d<bd){bd=d;best=o;}
+    const st=c.isMine?stance:(c.bounty/ENTRY>=c.riskAt*.7?"defend":"attack");
+    const {best,bd}=nearestEnemy(c);
+    const aggr=phase==="battle"?(.7+1.5*(T_BATTLE-phaseT)/T_BATTLE):1;
+    turn=2.6*aggr;
+    if(best){
+      if(st==="attack"&&bd<520*520){ tx=best.x; ty=best.y; }
+      else if(st==="defend"&&bd<300*300){
+        tx=c.x+(c.x-best.x); ty=c.y+(c.y-best.y);
+      }
     }
-    const aggr=phase==="battle"?(.6+1.6*(T_BATTLE-phaseT)/T_BATTLE):1;
-    turn=2.4*aggr;
-    if(best&&bd<440*440){tx=best.x;ty=best.y;}
     const cen=centroid(c.owner,c);
     if(cen&&((cen.x-c.x)**2+(cen.y-c.y)**2)>75*75){
-      tx=tx===null?cen.x:(tx*.6+cen.x*.4);
-      ty=ty===null?cen.y:(ty*.6+cen.y*.4);
-    }
-    if(c.isMine){
-      tx=tx===null?drift.x:(tx*.5+drift.x*.5);
-      ty=ty===null?drift.y:(ty*.5+drift.y*.5);
+      tx=tx===null?cen.x:(tx*.65+cen.x*.35);
+      ty=ty===null?cen.y:(ty*.65+cen.y*.35);
     }
   }
   if(tx!==null){
     const want=Math.atan2(ty-c.y,tx-c.x);
     c.h+=clamp(angDiff(want-c.h),-1,1)*turn*dt;
   }
-  c.h+=(Math.random()-.5)*(c.mode==="hold"?2.2:3.2)*dt;
-  const M=34;
-  if(c.x<M) c.h+=clamp(angDiff(0-c.h),-1,1)*4*dt;
-  if(c.x>W-M) c.h+=clamp(angDiff(Math.PI-c.h),-1,1)*4*dt;
-  if(c.y<M) c.h+=clamp(angDiff(Math.PI/2-c.h),-1,1)*4*dt;
-  if(c.y>H-M&&c.mode!=="recall") c.h+=clamp(angDiff(-Math.PI/2-c.h),-1,1)*4*dt;
+  c.h+=(Math.random()-.5)*(c.mode==="hold"?2.2:3.0)*dt;
+  const M=30;
+  if(c.x<arena.x0+M) c.h+=clamp(angDiff(0-c.h),-1,1)*4.5*dt;
+  if(c.x>arena.x1-M) c.h+=clamp(angDiff(Math.PI-c.h),-1,1)*4.5*dt;
+  if(c.y<arena.y0+M) c.h+=clamp(angDiff(Math.PI/2-c.h),-1,1)*4.5*dt;
+  if(c.y>arena.y1-M) c.h+=clamp(angDiff(-Math.PI/2-c.h),-1,1)*4.5*dt;
   const weight=1+.25*(c.s-1);
-  const sp=c.spd*(c.mode==="recall"?1.45:c.mode==="hold"?.5:1)/weight;
-  c.x=clamp(c.x+Math.cos(c.h)*sp*dt,6,W-6);
-  c.y=clamp(c.y+Math.sin(c.h)*sp*dt,6,H-14);
+  const sp=c.spd*(c.mode==="hold"?.5:1)/weight;
+  c.x=clamp(c.x+Math.cos(c.h)*sp*dt,arena.x0+6,arena.x1-6);
+  c.y=clamp(c.y+Math.sin(c.h)*sp*dt,arena.y0+6,arena.y1-6);
   c.el.style.transform=`translate(${c.x-8}px,${c.y-4}px)`;
-  if(c.mode==="recall"&&(c.x-42)**2+(c.y-(H-6))**2<34*34) bank(c,false);
 }
 function startDuel(a,b){
   a.prevMode=a.mode; b.prevMode=b.mode;
@@ -938,12 +1136,13 @@ function startDuel(a,b){
   sDuel();
   const mx=(a.x+b.x)/2, my=(a.y+b.y)/2;
   const pA=Math.round(100*a.bounty/(a.bounty+b.bounty));
+  const big=(a.bounty+b.bounty)>=ENTRY*5;
   const fx=document.createElement("div");
-  fx.className="duelfx";
+  fx.className="duelfx"+(big?" big":"");
   fx.innerHTML=`<span class="hg">⌛</span><br>${pA}:${100-pA}`;
-  fx.style.left=(mx-24)+"px"; fx.style.top=(my-46)+"px";
+  fx.style.left=(mx-28)+"px"; fx.style.top=(my-(big?58:46))+"px";
   fxlayer.appendChild(fx);
-  setTimeout(()=>{ fx.remove(); resolveDuel(a,b); },900);
+  setTimeout(()=>{ fx.remove(); resolveDuel(a,b); },DUEL_MS);
 }
 function resolveDuel(a,b){
   if(a.dead||b.dead) return;
@@ -952,7 +1151,9 @@ function resolveDuel(a,b){
   const pA=a.bounty/(a.bounty+b.bounty);
   const w=Math.random()<pA?a:b, l=w===a?b:a;
   const pot=l.bounty;
-  w.bounty+=pot; w.mode=w.prevMode; updateTag(w);
+  w.bounty+=pot; w.mode=w.prevMode;
+  if(w.mode==="recall"&&w.recallT<=0) w.recallT=.3;
+  updateTag(w);
   explode(l);
   R.deaths++;
   binDead.unshift({name:l.owner,bounty:pot}); renderBin();
@@ -967,6 +1168,7 @@ function resolveDuel(a,b){
     stats.kills++; R.myKills++;
     stats.best=Math.max(stats.best,w.bounty/ENTRY);
     sKill(); float(fmtSign(pot),w.x,w.y,false);
+    if(R.myKills>=2) float(`${R.myKills} KILL STREAK`,w.x,w.y-24,false);
     botChat(w.bounty>=ENTRY*4?"bigkill":"kill",{w:"admin",l:l.owner});
   }else{
     float(fmtSign(pot),w.x,w.y,true);
@@ -989,6 +1191,18 @@ function explode(c){
   p.className="pop"; p.style.left=(c.x-17)+"px"; p.style.top=(c.y-17)+"px";
   fxlayer.appendChild(p); setTimeout(()=>p.remove(),500);
 }
+function goldBurst(x,y){
+  for(let i=0;i<9;i++){
+    const s=document.createElement("div");
+    s.className="shard gold";
+    s.style.left=x+"px"; s.style.top=y+"px";
+    const ang=rand(0,Math.PI*2), d=rand(30,90);
+    s.style.setProperty("--dx",Math.cos(ang)*d+"px");
+    s.style.setProperty("--dy",Math.sin(ang)*d+"px");
+    s.style.setProperty("--rot",rand(-260,260)+"deg");
+    fxlayer.appendChild(s); setTimeout(()=>s.remove(),750);
+  }
+}
 function float(text,x,y,small){
   const f=document.createElement("div");
   f.className="float"+(small?" sm":"");
@@ -1006,8 +1220,7 @@ function bsod(killer,lost){
 KILLED_BY              : ${killer}
 LOST                   : ${fmtS(lost)} SOL
 
-The round continues without you.
-Deploys reopen next round.
+Deploys are still open. Go again.
 
 Press any key to continue `;
   const u=document.createElement("span"); u.className="blink"; u.textContent="_";
@@ -1015,7 +1228,7 @@ Press any key to continue `;
   bsodEl.style.display="block";
   const hide=()=>{ bsodEl.style.display="none"; removeEventListener("keydown",hide); bsodEl.removeEventListener("click",hide); };
   addEventListener("keydown",hide); bsodEl.addEventListener("click",hide);
-  setTimeout(hide,auto.on?1300:2600);
+  setTimeout(hide,auto.on?1100:1600);
 }
 
 /* ================= log / bin / panels ================= */
@@ -1041,7 +1254,11 @@ function updatePanel(){
   dep.textContent=wallet<STAKE?"▸ INSUFFICIENT FUNDS"
     :mine.length>=MAXCUR?"▸ MAX 5 CURSORS LIVE"
     :canDeploy()?"▸ DEPLOY 0.1 SOL":"▸ DEPLOYS OPEN NEXT ROUND";
-  $("#btn-recall").disabled=!mine.some(c=>c.mode==="roam")||phase!=="battle";
+  const rec=$("#btn-recall");
+  rec.disabled=!mine.length||phase==="results"||(phase==="battle"&&!mine.some(c=>c.mode==="roam"));
+  rec.textContent=phase==="join"?"◂ UNDEPLOY (refund)":`◂ RECALL ALL (${RECALL_SECS}s)`;
+  $("#st-attack").classList.toggle("on",stance==="attack");
+  $("#st-defend").classList.toggle("on",stance==="defend");
   $("#livecount").textContent=mine.length;
   $("#liveval").textContent=fmtS(liveVal);
   const share=myTickets>0?100*myTickets/(globalTickets+myTickets):0;
@@ -1057,6 +1274,7 @@ function updateSys(){
     `round pot&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: <b>${fmtS(R?R.pot:0)} SOL</b><br>`+
     `on the field&nbsp;&nbsp;&nbsp;: <b>${fmtS(total)} SOL</b><br>`+
     `biggest bounty&nbsp;: <b>${top?top.owner+" "+fmtS(top.bounty):"—"}</b><br>`+
+    `resolution&nbsp;&nbsp;&nbsp;&nbsp;: <b>${RESNAMES[arenaStage]}</b><br>`+
     `dead this boot&nbsp;: <b>${binDead.length}</b><br>`+
     `global tickets&nbsp;: <b>${(globalTickets+myTickets).toLocaleString()}</b>`;
 }
@@ -1077,7 +1295,7 @@ $("#btn-logoff-yes").addEventListener("click",()=>{
   updatePanel();
 });
 
-/* ================= autoplay banking + main loop ================= */
+/* ================= main loop ================= */
 let last=performance.now();
 function frame(t){
   const dt=Math.min(.05,(t-last)/1000); last=t;
@@ -1096,8 +1314,8 @@ function frame(t){
     }
     for(const c of curs){
       if(c.dead||c.mode!=="roam") continue;
-      if(!c.isMine&&c.bounty/ENTRY>=c.riskAt&&Math.random()<dt*.5){ c.mode="recall"; c.prevMode="recall"; }
-      if(c.isMine&&auto.on&&auto.bankAt>0&&c.bounty>=auto.bankAt*ENTRY) recallOne(c);
+      if(!c.isMine&&c.bounty/ENTRY>=c.riskAt&&Math.random()<dt*.5) forceRecall(c);
+      if(c.isMine&&auto.on&&auto.bankAt>0&&c.bounty>=auto.bankAt*ENTRY) forceRecall(c);
     }
   }
   if(Math.abs(walletShown-wallet)>.5){
@@ -1114,6 +1332,7 @@ if(SMALL){
   $("#win-chat").style.left="4px"; $("#win-chat").style.top="calc(100% - 296px)";
   $("#win-log").style.left="unset";
 }
+setArenaStage(0,true);
 R=newRoundRecord();
 log("CURSORS.EXE started");
 openWin("win-cursors");
