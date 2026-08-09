@@ -618,3 +618,48 @@ rng.dll, kernel32.dll, luck.dll, shell32.dll with real sizes. Dev hashes: `#desk
 - The crash BSOD takes the whole screen for ~5s every epoch; it is dismissible by
   click/key, but if playtests find it too much, shorten T_CRASH or skip the BSOD when
   the player had nothing in play
+
+## 11. The XP-fidelity sweep (2026-08-10, one session)
+
+The full plan is `docs/xp-fidelity-plan.md`; phases 0–6 shipped in order, one commit each:
+
+- **Menus** (`aecfcf3`): XP's real desktop/icon/Explorer/IE/text-field/tray/Start menus —
+  Desktop Cleanup Wizard, Create Shortcut wizard, shell clipboard with Undo Delete,
+  Send To with the never-ready floppy, keyboard-driven Move/Size, edit menus with the
+  Insert Unicode submenu, menu accelerator column + keyboard walking + submenu delay.
+  The volume flyout capture-listener bug (closed on slider grab) is fixed.
+- **Cursors** (`3928785`): the complete real XP cursor set vendored (184 .cur/.ani,
+  bartekl1/windows-ui-assets — 3D-Bronze is the gold one). Mouse Properties, all five
+  tabs; runtime .ani player; pointer trails; Ctrl locate ripple. **The scheme rides the
+  wire**: server stores `p.skin`, spawns carry it, whole lobby renders your arrow.
+  Bots have schemes. Scheme table is registry-verified for Standard/Black/Inverted/
+  Magnified (read from this machine's real `Schemes` key); XP-only novelty schemes are
+  composed from the exact files XP shipped for them (best-evidence pairing).
+- **Screensavers** (`93da21e`): savers.js — 3D Pipes (raw WebGL, default), FlowerBox,
+  Flying Objects, 3D Text, Mystify/Beziers (exact), Marquee, Starfield, Windows XP,
+  My Pictures Slideshow (shows Paint saves + the lobby gallery). Per-saver Settings
+  dialogs; the monitor preview runs the real savers.
+- **IE** (`677c57b`): fiction sites demolished per owner decree. Home = cursorTV.
+  Real Favorites editing (Add/Organize), Explorer bar panels, Internet Options with the
+  Advanced tree (Show pictures works), Find, Text Size, autocomplete, items-remaining
+  status. cursorTV: live skip-vote count, watching count, real video title, ducks to 14%
+  while a duel is on screen. Server `tvMsg` now carries `skip:{n,need}`.
+- **Paint** (`86c9ed1`): Fonts toolbar (family/size/B/I/U, underline drawn onto the
+  bitmap), real Stretch/Skew, Copy To/Paste From.
+- **Shell depth** (`a2de1ed`): Alt+Tab box (Ctrl+Tab drives it — the OS eats the real
+  chord), restore zooms out of the taskbar tab, tray chevron hides idle icons,
+  F2/Delete/Shift+Delete/F5 desktop verbs.
+- **Depth apps** (`88560ac`): depthapps.js — Calculator (keyboard-complete), Character
+  Map (hover magnifier), Disk Defragmenter (the red fragments ARE the dead cursors;
+  cosmetic by law), Registry Editor (live game state under HKCU\Software\CURSORS.EXE,
+  writes refused with the real error). Reachable via Run, All Programs, system32.
+
+Server deployed twice (skin field, tvMsg) — `cursors` and `thinice` both verified
+active after each. `upload/cursors/` rebuilt and committed with every phase.
+First paint 2.42 → 2.56 MB across the whole sweep (the cursor set and all four MP3s
+stay out of it).
+
+**Watch-outs:** the Bash tool halves backslashes inside heredocs — write python patch
+scripts to a file and run them, or use the Edit tool, for any JS with `\n`/`\` in
+match strings. `#desktop-depth`, `#desktop-mouse[-bronze]`, `#desktop-saver-<id>` are
+the new dev hashes.
