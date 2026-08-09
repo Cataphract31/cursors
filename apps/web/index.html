@@ -485,7 +485,7 @@ play money prototype. chain later.</div>
 
 <!-- start menu -->
 <div id="startmenu">
-  <div class="sm-head"><span class="ava"><svg><use href="#ic-cursor"/></svg></span>Administrator</div>
+  <div class="sm-head"><span class="ava"><svg><use href="#ic-cursor"/></svg></span><span id="sm-user">Administrator</span></div>
   <div class="sm-cols">
     <div class="sm-left">
       <div class="sm-item" data-app="win-cursors"><svg><use href="#ic-app"/></svg><span><b>CURSORS.EXE</b><span class="sub">winner takes all</span></span></div>
@@ -533,7 +533,9 @@ play money prototype. chain later.</div>
     </div>
     <div class="lg-div"></div>
     <div class="lg-right">
-      <div class="lg-tile" id="tile-admin"><span class="lg-ava"><svg><use href="#ic-cursor"/></svg></span><div><b>Administrator</b><div class="lg-sub">5.000 SOL and dreams</div></div></div>
+      <div class="lg-tile" id="tile-admin"><span class="lg-ava"><svg><use href="#ic-cursor"/></svg></span><div style="flex:1"><b id="lg-name">Administrator</b><div class="lg-sub" id="lg-sub">5.000 SOL and dreams</div>
+        <div class="lg-inputrow" id="lg-inputrow" style="display:none"><input id="lg-user" maxlength="14" placeholder="type a user name" autocomplete="off" spellcheck="false"><button id="lg-go" title="Log on">→</button></div>
+      </div></div>
       <div class="lg-tile" id="tile-guest"><span class="lg-ava guest">?</span><div><b>Guest</b><div class="lg-sub" id="guest-sub">account disabled</div></div></div>
     </div>
   </div>

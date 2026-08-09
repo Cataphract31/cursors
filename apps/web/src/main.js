@@ -566,6 +566,16 @@ document.addEventListener("contextmenu",e=>{
   e.preventDefault();
   hideMenu();
   if(e.target.closest("#webamp,#webamp-slot")) return; /* Winamp draws its own menus */
+  const lgAdmin=e.target.closest("#tile-admin");
+  if(lgAdmin){
+    showMenu([{label:"Log on as a different user",action(){
+      PLAYER=null; delete store.data.userName; store.save();
+      syncIdentity();
+      $("#lg-inputrow").style.display="flex"; $("#lg-user").value=""; $("#lg-user").focus();
+      $("#lg-sub").textContent="pick a name for the scoreboard";
+    }}],e.clientX,e.clientY);
+    return;
+  }
   const icon=e.target.closest(".icon");
   const tb=e.target.closest(".titlebar");
   const tab=e.target.closest(".task-tab");
@@ -918,7 +928,7 @@ function sendChat(){
   const inp=$("#chatin"), t=inp.value.trim();
   if(!t) return;
   inp.value=""; sChat();
-  chatMsg("admin",t);
+  chatMsg(playerName(),t);
   if(Math.random()<.5) botChat("idle");
 }
 $("#chatsend").addEventListener("click",sendChat);
@@ -1439,7 +1449,7 @@ function deploy(silent){
   myTickets+=200;
   R.myIn+=STAKE;
   R.pot+=ENTRY; R.deploys++;
-  const c=makeCur("admin",true);
+  const c=makeCur(playerName(),true);
   if(phase==="battle"){ c.mode="roam"; c.prevMode="roam"; }
   curs.push(c);
   if(!silent) sDeploy();
@@ -1608,7 +1618,7 @@ function resolveDuel(a,b){
     stats.best=Math.max(stats.best,w.bounty/ENTRY);
     sKill(); float(fmtSign(pot),w.x,w.y,false);
     if(R.myKills>=2) float(`${R.myKills} KILL STREAK`,w.x,w.y-24,false);
-    botChat(w.bounty>=ENTRY*4?"bigkill":"kill",{w:"admin",l:l.owner});
+    botChat(w.bounty>=ENTRY*4?"bigkill":"kill",{w:playerName(),l:l.owner});
   }else{
     float(fmtSign(pot),w.x,w.y,true);
     botChat(w.bounty>=ENTRY*5?"bigkill":"kill",{w:w.owner,l:l.owner});
@@ -1807,11 +1817,42 @@ function enterDesktop(){
     showBalloon();
   },520);
 }
-$("#tile-admin").addEventListener("click",()=>{
+/* ---- user identity: picked at the login screen, Phantom wallet later ---- */
+let PLAYER=store.data.userName||null;
+function playerName(){ return PLAYER||"admin"; }
+function playerNameFull(){ return PLAYER||"Administrator"; }
+function syncIdentity(){
+  $("#lg-name").textContent=playerNameFull();
+  $("#sm-user").textContent=playerNameFull();
+  $("#lg-sub").textContent=PLAYER?"click to log on":"5.000 SOL and dreams";
+}
+function logon(){
   sessionStorage.setItem("cxp.booted","1");
+  syncIdentity();
   chime();
   enterDesktop();
+}
+function commitUserName(){
+  const raw=$("#lg-user").value.trim().replace(/[^\w .$-]/g,"").slice(0,14);
+  if(!raw){
+    const t=$("#tile-admin");
+    t.classList.remove("shake"); void t.offsetWidth; t.classList.add("shake");
+    sError(); return;
+  }
+  PLAYER=raw;
+  store.data.userName=raw; store.save();
+  logon();
+}
+$("#tile-admin").addEventListener("click",e=>{
+  if(e.target.closest(".lg-inputrow")) return;
+  if(PLAYER){ logon(); return; }
+  $("#lg-inputrow").style.display="flex";
+  $("#lg-sub").textContent="pick a name for the scoreboard";
+  $("#lg-user").focus();
 });
+$("#lg-go").addEventListener("click",commitUserName);
+$("#lg-user").addEventListener("keydown",e=>{ if(e.key==="Enter") commitUserName(); });
+syncIdentity();
 $("#tile-guest").addEventListener("click",()=>{
   const t=$("#tile-guest");
   t.classList.remove("shake"); void t.offsetWidth; t.classList.add("shake");

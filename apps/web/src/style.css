@@ -200,6 +200,10 @@ input{user-select:text}
 .lg-ava svg{width:30px;height:30px}
 .lg-ava.guest{background:linear-gradient(160deg,#9AA6BC,#5A6478);font:bold 24px Tahoma;color:#fff}
 .lg-tile.shake{animation:nudge .4s}
+.lg-inputrow{display:flex;gap:5px;margin-top:7px}
+.lg-inputrow input{flex:1;min-width:60px;width:130px;border:1px solid #7F9DB9;border-radius:3px;padding:4px 7px;font:12px Tahoma;color:#000;background:#fff;outline:none}
+.lg-inputrow button{width:30px;flex:none;border:1px solid #fff;border-radius:3px;background:linear-gradient(180deg,#8CC63F,#4E9A06);color:#fff;font:bold 14px Tahoma;cursor:pointer;box-shadow:1px 1px 3px rgba(0,0,0,.3)}
+.lg-inputrow button:hover{filter:brightness(1.12)}
 #lg-off{background:none;border:1px solid rgba(255,255,255,.4);border-radius:4px;color:#fff;padding:5px 12px;cursor:pointer;font-size:12px}
 #lg-off:hover{background:rgba(255,255,255,.14)}
 .lg-note{color:#B9C8EC;font-size:11px}
