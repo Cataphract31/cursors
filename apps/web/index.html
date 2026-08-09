@@ -371,6 +371,9 @@ icons/sounds: winXP (MIT)</div>
         <div class="aprow"><span class="lb">Scheme</span>
           <select style="flex:1"><option>Luna (Blue)</option><option disabled>Olive Green — ships in a later update</option><option disabled>Silver — ships in a later update</option></select>
         </div>
+        <div class="aprow" style="margin-top:8px"><span class="lb">Monitor</span>
+          <label class="small" style="display:flex;align-items:center;gap:6px;flex:1"><input type="checkbox" id="crt-chk" checked> CRT glass — scanlines, glare, the tube</label>
+        </div>
         <div class="small dim" style="margin-top:8px;line-height:1.7">Windows and buttons: Luna.<br>Font size: Normal.<br>Nostalgia: Maximum.</div>
       </div>
       <div class="dlg-foot"><button class="xbtn" id="dp-ok">OK</button><button class="xbtn" id="dp-cancel">Cancel</button><button class="xbtn" id="dp-apply">Apply</button></div>
@@ -698,6 +701,8 @@ icons/sounds: winXP (MIT)</div>
 
 <div id="bsod"></div>
 <div id="jackpot"></div>
+<!-- the monitor itself: glass in front of everything, including the BSOD -->
+<div id="crt"><div class="px"></div><div class="lines"></div><div class="hum"></div><div class="glass"></div><div class="frame"></div></div>
 <div id="shutdown"><div>It is now safe to turn off<br>your computer.<br><span class="shut-sub">click anywhere to log back in</span></div></div>
 
 <canvas id="saver"></canvas>

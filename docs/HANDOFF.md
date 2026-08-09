@@ -110,6 +110,15 @@ taskbar button. Typing indicators, nudge (real nudge.wav + shake), Send a File j
 the **real 80-emoticon MSN retro set** with ~110 text shortcuts and a picker. Bots have
 per-contact reply pools and answer you; presence drifts; sign-ins raise stacking toasts.
 
+**The CRT (2026-08-09).** The whole product is viewed through monitor glass: `#crt`, a
+fixed overlay above everything including the BSOD — phosphor triads, static scanlines
+(rolling = VHS, static = CRT), a drifting mains-hum band, glass glare + corner vignette,
+black rounded tube corners, and a 7s micro-flicker. All static composited layers, no
+filters on live content, ~zero frame cost. Phones drop the phosphor (hiDPI moiré) and
+lighten the lines. **Degauss** (a 0.9s filter wobble on body) fires at logon, after every
+BSOD, and when the toggle is switched on. Toggle lives in Display Properties → Appearance
+→ "CRT glass", persisted as `store.data.crt` (default ON), `body.crt-off` kills it.
+
 **The game** — deploy/recall/stances, duels with odds display, gold bursts, kill streaks,
 BSOD on losing your last cursor, rakeback tracking, autoplay. Every death writes a
 certificate (`certify()` in main.js) that the Recycle Bin renders.

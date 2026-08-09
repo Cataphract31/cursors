@@ -1116,6 +1116,26 @@ function showBalloon(head,text){
 }
 $("#balloon").addEventListener("click",()=>$("#balloon").style.display="none");
 
+/* ================= the CRT ================= */
+function applyCrt(){
+  document.body.classList.toggle("crt-off",store.data.crt===false);
+  $("#crt-chk").checked=store.data.crt!==false;
+}
+$("#crt-chk").addEventListener("change",()=>{
+  store.data.crt=$("#crt-chk").checked; store.save(); applyCrt(); sClick();
+  if(store.data.crt) degauss();   /* turning the tube on deserves the thunk */
+});
+applyCrt();
+let degaussT=null;
+function degauss(){
+  if(store.data.crt===false) return;
+  document.body.classList.remove("degaussing");
+  void document.body.offsetWidth;   /* restart the animation */
+  document.body.classList.add("degaussing");
+  clearTimeout(degaussT);
+  degaussT=setTimeout(()=>document.body.classList.remove("degaussing"),950);
+}
+
 /* ================= xp tabs ================= */
 $$(".xtabs").forEach(tabs=>{
   tabs.querySelectorAll(".xtab").forEach(t=>t.addEventListener("click",()=>{
@@ -1647,6 +1667,7 @@ function phaseTick(dt){
     /* the playfield hiccups back to life; nothing about the money does */
     $("#arena").classList.add("crashed");
     setTimeout(()=>$("#arena").classList.remove("crashed"),900);
+    degauss();   /* the tube collects itself after a stop error */
     startEpoch();
   }
   renderPhase();
@@ -2318,6 +2339,7 @@ function desktopActive(){
 }
 function enterDesktop(){
   desktopEntered=true;
+  degauss();
   $("#login").style.opacity="0";
   setTimeout(()=>{
     const lg=$("#login");
