@@ -201,8 +201,21 @@ function openWin(id,opts){
     if(id==="win-chat"&&!opts.silent) sysSnd("msnOnline",.5);
   }
   else if(openApps.get(id).min){ restoreWin(id); return; }
+  requestAnimationFrame(()=>fitWin(el));
   focusWin(id);
   if(id==="win-run") setTimeout(()=>{ const i=$("#run-in"); i.value=""; i.focus(); },0);
+}
+/* no window may hang off the screen — the small-screen safety net */
+function fitWin(el){
+  if(!el||el.classList.contains("maxed")) return;
+  const r=el.getBoundingClientRect();
+  if(!r.width&&!r.height) return;
+  if(r.height>H-6) el.style.height=(H-10)+"px";
+  const h=Math.min(r.height,H-10), w=Math.min(r.width,W-4);
+  if(r.width>W-4) el.style.width=w+"px";
+  if(r.top+h>H-2||r.top<0) el.style.top=clamp(H-h-2,0,Math.max(0,H-h-2))+"px";
+  if(r.left+w>W-2) el.style.left=Math.max(2,W-w-2)+"px";
+  if(r.left<0) el.style.left="2px";
 }
 function restoreWin(id){
   const a=openApps.get(id); if(!a) return;
@@ -1710,7 +1723,7 @@ function frame(t){
 if(SMALL){
   $("#win-cursors").style.left="4px"; $("#win-cursors").style.top="4px"; $("#win-cursors").style.width="min(316px,96vw)";
   $("#win-chat").style.left="4px"; $("#win-chat").style.top="calc(100% - 330px)"; $("#win-chat").style.height="300px";
-  $("#win-log").style.left="unset";
+  $("#win-log").style.left="4px"; $("#win-log").style.top="calc(100% - 244px)"; $("#win-log").style.width="min(316px,96vw)";
 }
 syncArena();
 renderIcons();
@@ -1819,6 +1832,10 @@ $("#tile-guest").addEventListener("click",()=>{
 $("#lg-off").addEventListener("click",()=>{ sysSnd("shutdown",.55); $("#login").style.display="none"; $("#shutdown").style.display="grid"; });
 if(location.hash.indexOf("#desktop")===0) sessionStorage.setItem("cxp.booted","1"); /* dev: skip boot/login */
 if(location.hash==="#desktop-start") setTimeout(()=>$("#startmenu").classList.add("open"),400); /* dev: capture start menu */
+if(location.hash==="#desktop-logfill") setTimeout(()=>{ /* dev: does a long log blow the window out? */
+  openWin("win-log");
+  for(let i=0;i<60;i++) log("mumu > bobo  +0.097   (line "+i+")");
+},500);
 if(location.hash.indexOf("#desktop-msn")===0) setTimeout(()=>{ /* dev: capture messenger in use */
   const conv=id=>document.getElementById(msn.convIdFor(id));
   msn.openConv("bobo");

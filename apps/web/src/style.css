@@ -40,7 +40,9 @@ input{user-select:text}
 .title-bar.inactive .title-bar-controls button{filter:saturate(.55) brightness(1.06)}
 .menubar{background:#ECE9D8;padding:3px 7px;display:flex;gap:13px;color:#111;border-bottom:1px solid #D4D0C8;flex:none}
 .menubar span:hover{background:#316AC5;color:#fff;padding:0 3px;margin:0 -3px}
-.paper{font:11px "Lucida Console",Consolas,monospace;padding:7px;flex:1;height:150px;overflow-y:auto;white-space:pre-wrap;line-height:1.55;color:#111;background:#fff}
+/* min-height:0 + a hard cap: without them a flex-sized pane in an
+   auto-height window sizes to its CONTENT, so the window grows forever */
+.paper{font:11px "Lucida Console",Consolas,monospace;padding:7px;flex:1;height:150px;min-height:0;max-height:52vh;overflow-y:auto;white-space:pre-wrap;line-height:1.55;color:#111;background:#fff}
 .paper.tall{height:250px}
 
 /* ---------- controls: xp.css does the look, we do layout ---------- */
