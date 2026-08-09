@@ -6,8 +6,19 @@ Sibling project of THIN ICE (`c:\ZINC`) — round-based like it, and deliberatel
 
 ## Layout
 
-- `prototype/index.html` — self-contained playable prototype, play money, no build step. Open it in a browser or via the published artifact.
+npm workspace, mirroring THIN ICE's `apps/*` shape (server joins later):
+
+- `apps/web/` — the desktop, Vite app (vanilla JS modules, no framework yet).
+  - `src/main.js` — all app code (window manager, shell, game, Winamp integration). Split into modules as it grows.
+  - `src/style.css` — all styles.
+  - `index.html` — markup.
+  - `scripts/smoke.mjs` — runs the whole module under a stub DOM in node; catches strict-mode/load-time crashes pre-build.
+  - `scripts/postbuild.mjs` — escapes U+FFFD and emits `dist/artifact.html` (skeleton-stripped) for artifact publishing.
 - `docs/` — design and reuse notes.
+
+Commands (repo root): `npm install`, `npm run dev` (Vite dev server with HMR), `npm run build` (smoke test → single-file `dist/index.html` + `dist/artifact.html`).
+
+Winamp is the real one — [Webamp](https://github.com/captbaritone/webamp) from npm, inlined at build. The 7 house tracks are synthesized to WAV via OfflineAudioContext at runtime and appended to its playlist as they finish. Publishing: `dist/artifact.html` → the claude.ai artifact (single URL, kept stable).
 
 ## Economics (agreed so far)
 

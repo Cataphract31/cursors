@@ -1,0 +1,9 @@
+{
+  "name": "cursors",
+  "private": true,
+  "workspaces": ["apps/*"],
+  "scripts": {
+    "dev": "npm run dev -w @cursors/web",
+    "build": "npm run build -w @cursors/web"
+  }
+}

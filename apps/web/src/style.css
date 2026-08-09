@@ -1,0 +1,260 @@
+*{margin:0;padding:0;box-sizing:border-box;user-select:none}
+html,body{height:100%}
+body{overflow:hidden;background:#5A7EDC;font:11px Tahoma,"Segoe UI",Verdana,sans-serif;cursor:default;color:#000;touch-action:manipulation}
+button{font:inherit}
+input{user-select:text}
+
+/* ---------- desktop ---------- */
+#desktop{position:absolute;inset:0 0 30px 0;overflow:hidden}
+#bliss{position:absolute;inset:0;width:100%;height:100%;display:block}
+#bliss .wp{display:none}
+#bliss .wp.on{display:inline}
+
+/* ---------- desktop icons ---------- */
+.icon{position:absolute;left:12px;width:78px;text-align:center;padding:5px 2px;border:1px solid transparent}
+.icon svg{width:34px;height:34px;filter:drop-shadow(1px 2px 2px rgba(0,0,0,.45))}
+.icon .lbl{margin-top:3px;color:#fff;font-size:11px;line-height:1.2;text-shadow:1px 1px 2px #000,0 0 3px rgba(0,0,0,.8);padding:0 2px}
+.icon.sel .lbl{background:#316AC5;text-shadow:none}
+.icon.sel svg{opacity:.8}
+@media (max-width:700px){.icon{width:62px}.icon svg{width:26px;height:26px}.icon .lbl{font-size:10px}}
+
+#marquee{position:absolute;border:1px solid #316AC5;background:rgba(49,106,197,.28);display:none;z-index:60;pointer-events:none}
+
+/* ---------- windows (Luna) ---------- */
+.window{position:absolute;display:none;min-width:220px;max-width:96vw;padding:3px;padding-top:0;background:#0855DD;border-radius:8px 8px 3px 3px;box-shadow:1px 3px 12px rgba(0,0,0,.45);z-index:100}
+.window.inactive{background:#7A96DF}
+.titlebar{height:26px;display:flex;align-items:center;gap:5px;margin:0 -3px;padding:0 3px 0 6px;border-radius:8px 8px 0 0;color:#fff;font:bold 12px "Trebuchet MS",Tahoma,sans-serif;text-shadow:1px 1px 1px rgba(0,0,0,.55);background:linear-gradient(180deg,#0997FF 0%,#0053EE 10%,#0050EE 38%,#0048DC 86%,#003AB9 96%,#0855DD 100%);cursor:default}
+.window.inactive .titlebar{background:linear-gradient(180deg,#9DB9EB 0%,#7A96DF 20%,#7A96DF 100%)}
+.titlebar svg{width:15px;height:15px;flex:none}
+.titlebar .tt{flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;pointer-events:none}
+.tbtn{width:21px;height:21px;margin-left:1px;flex:none;border:1px solid #fff;border-radius:3px;color:#fff;display:grid;place-items:center;font:bold 12px Tahoma;line-height:1;background:linear-gradient(180deg,#4D8EF5,#2B6CDB 45%,#1B54C4);box-shadow:inset 0 1px 1px rgba(255,255,255,.6);cursor:pointer;padding:0}
+.tbtn.close{background:linear-gradient(180deg,#EC8F7D,#D8543A 45%,#B52D10)}
+.tbtn:hover{filter:brightness(1.15)}
+.tbtn:active{filter:brightness(.88)}
+.win-body{background:#ECE9D8;padding:9px;font-size:11px}
+.win-body.pad{background:#fff;padding:0}
+.menubar{background:#ECE9D8;padding:3px 7px;display:flex;gap:13px;color:#111;border-bottom:1px solid #D4D0C8}
+.menubar span:hover{background:#316AC5;color:#fff;padding:0 3px;margin:0 -3px}
+.paper{font:11px "Lucida Console",Consolas,monospace;padding:7px;height:150px;overflow-y:auto;white-space:pre-wrap;line-height:1.55;color:#111}
+.paper.tall{height:250px}
+
+/* ---------- XP controls ---------- */
+.xbtn{font:11px Tahoma;padding:4px 12px;border:1px solid #003C74;border-radius:3px;background:linear-gradient(180deg,#fff,#F1EFE2 55%,#D8D0C0);cursor:pointer;color:#000}
+.xbtn:hover:not(:disabled){box-shadow:inset 0 0 0 2px rgba(255,178,83,.65)}
+.xbtn:active:not(:disabled){background:linear-gradient(180deg,#D8D0C0,#F1EFE2)}
+.xbtn:disabled{color:#9A9484;border-color:#B8B0A0;cursor:default}
+.xbtn:focus-visible{outline:1px dotted #000;outline-offset:-4px}
+.xbtn.big{width:100%;padding:8px;font-weight:bold;font-size:12px}
+.chiprow{display:flex;gap:4px;margin:4px 0}
+.chip{flex:1;padding:4px 0;text-align:center}
+.chip.on{box-shadow:inset 0 0 0 2px #2A66C9;background:linear-gradient(180deg,#DCE9FB,#BDD4F2);font-weight:bold}
+.hr{border-top:1px solid #C9C4B4;border-bottom:1px solid #fff;margin:8px 0}
+.mono{font-family:"Lucida Console",Consolas,monospace}
+.dim{color:#6B6656}
+.small{font-size:10px}
+.phaseline{font:bold 12px "Lucida Console",Consolas,monospace;background:#FFF7DE;border:1px solid #E0C05A;border-radius:3px;padding:5px 8px;text-align:center;margin-bottom:8px}
+.phaseline.battle{background:#FFE9E0;border-color:#E08A5A}
+.walletrow{display:flex;justify-content:space-between;align-items:baseline}
+.walletrow .amt{font:bold 17px "Lucida Console",Consolas,monospace}
+.statline{color:#555;margin-top:7px}
+.aprow{display:flex;align-items:center;gap:6px;margin:4px 0}
+.aprow .lb{width:70px;color:#555}
+
+/* ---------- taskbar ---------- */
+#taskbar{position:fixed;left:0;right:0;bottom:0;height:30px;display:flex;align-items:stretch;z-index:9000;background:linear-gradient(180deg,#1E52B7 0%,#3A80E6 3%,#2E6FE0 6%,#245EDB 10%,#245EDB 52%,#1941A5 90%,#0C2F81 100%);box-shadow:inset 0 1px 0 rgba(255,255,255,.25)}
+#startbtn{display:flex;align-items:center;gap:6px;padding:0 24px 0 10px;border:0;color:#fff;font:bold italic 15px "Franklin Gothic Medium","Segoe UI",Tahoma;text-shadow:1px 1px 2px rgba(0,0,0,.6);background:linear-gradient(180deg,#7ADB58 0%,#4CB648 7%,#3C9838 14%,#2E8830 55%,#2D7D25 85%,#1E6A1E 100%);border-radius:0 12px 12px 0;box-shadow:2px 0 6px rgba(0,0,0,.35),inset 0 1px 1px rgba(255,255,255,.4);cursor:pointer}
+#startbtn:hover{filter:brightness(1.08)}
+#startbtn svg{width:19px;height:19px;filter:drop-shadow(1px 1px 1px rgba(0,0,0,.5))}
+#tabs{flex:1;display:flex;gap:3px;padding:3px 5px;overflow:hidden}
+.task-tab{min-width:90px;max-width:170px;display:flex;align-items:center;gap:5px;padding:0 8px;color:#fff;font:11px Tahoma;border:0;border-radius:3px;white-space:nowrap;overflow:hidden;cursor:pointer;background:linear-gradient(180deg,#4E91F5 0%,#3B7DE9 8%,#2E6CD8 42%,#2A63CD 100%);box-shadow:inset 0 1px 0 rgba(255,255,255,.35)}
+.task-tab.on{background:linear-gradient(180deg,#1E4FA8,#2559B9 90%);box-shadow:inset 1px 1px 3px rgba(0,0,0,.45)}
+.task-tab svg{width:14px;height:14px;flex:none}
+#tray{display:flex;align-items:center;gap:9px;padding:0 12px 0 14px;color:#fff;font:11px Tahoma;background:linear-gradient(180deg,#1290E9 0%,#19A5F0 4%,#1290E9 9%,#0D6FC9 85%,#0B5CB0 100%);box-shadow:inset 2px 1px 3px rgba(0,0,0,.3)}
+#phasechip{font-family:"Lucida Console",Consolas,monospace;font-size:10px;white-space:nowrap}
+#sndico{cursor:pointer;font-size:13px}
+#clock{font-variant-numeric:tabular-nums}
+@media (max-width:700px){#clock{display:none}.task-tab span{display:none}.task-tab{min-width:34px}}
+
+/* ---------- start menu ---------- */
+#startmenu{position:fixed;left:0;bottom:30px;width:min(392px,96vw);display:none;z-index:9500;border-radius:6px 6px 0 0;overflow:hidden;box-shadow:3px -2px 14px rgba(0,0,0,.5);background:#2E70CE;padding:0 2px}
+#startmenu.open{display:block}
+.sm-head{height:58px;display:flex;align-items:center;gap:10px;padding:0 10px;color:#fff;font:bold 14px "Trebuchet MS",Tahoma;text-shadow:1px 1px 2px rgba(0,0,0,.5);background:linear-gradient(180deg,#1C5FBE 0%,#3A8AE8 12%,#2470D4 30%,#1C5FBE 80%,#1650A8 100%)}
+.sm-head .ava{width:40px;height:40px;border:2px solid #fff;border-radius:4px;background:linear-gradient(160deg,#8EC440,#3D7D1E);display:grid;place-items:center;box-shadow:1px 1px 4px rgba(0,0,0,.4)}
+.sm-head .ava svg{width:26px;height:26px}
+.sm-cols{display:flex;border-top:1px solid #1650A8}
+.sm-left{width:53%;background:#fff;padding:7px 3px;display:flex;flex-direction:column}
+.sm-right{width:47%;background:#D3E5FA;border-left:1px solid #96BEE4;padding:7px 3px;color:#0C327D;display:flex;flex-direction:column}
+.sm-item{display:flex;gap:8px;align-items:center;padding:6px 8px;cursor:pointer;border-radius:2px}
+.sm-item:hover{background:#316AC5;color:#fff}
+.sm-item svg{width:24px;height:24px;flex:none}
+.sm-item b{display:block}
+.sm-item .sub{font-size:10px;color:#8A8A8A}
+.sm-item:hover .sub{color:#D6E4F7}
+.sm-sep{border-top:1px solid #D4D0C8;margin:5px 8px}
+.sm-right .sm-sep{border-color:#96BEE4}
+.sm-foot{height:38px;display:flex;justify-content:flex-end;align-items:center;gap:14px;padding:0 14px;color:#fff;background:linear-gradient(180deg,#1C5FBE 0%,#3A8AE8 10%,#2470D4 26%,#1C5FBE 80%,#1650A8 100%)}
+.sm-foot span{display:flex;align-items:center;gap:6px;cursor:pointer;padding:3px 6px;border-radius:3px}
+.sm-foot span:hover{background:rgba(255,255,255,.18)}
+.sm-foot i{width:20px;height:20px;border-radius:3px;display:grid;place-items:center;font:bold 12px Tahoma;font-style:normal}
+.i-off{background:linear-gradient(180deg,#F0977F,#C33D14)}
+.i-log{background:linear-gradient(180deg,#F7D77C,#C79A18)}
+
+/* ---------- messenger ---------- */
+.msn-head{display:flex;align-items:center;gap:8px;padding:6px 9px;background:linear-gradient(180deg,#F6F9FE,#DDE9F9 60%,#CBDCF3);border-bottom:1px solid #A8C0DE}
+.msn-head svg{width:24px;height:24px;flex:none}
+.msn-head .to{font-size:11px;color:#3A5A80;line-height:1.35}
+.msn-head .to b{color:#16569E}
+.msn-msgs{background:#fff;height:158px;overflow-y:auto;padding:6px 9px;line-height:1.5}
+.msn-msgs .who{color:#54708C;margin-top:5px}
+.msn-msgs .who b{color:#16569E;font-weight:normal}
+.msn-msgs .txt{color:#000;padding-left:14px;word-wrap:break-word}
+.msn-msgs .sys{color:#94A4B4;font-style:italic;margin-top:4px}
+.msn-input{display:flex;gap:5px;padding:6px;background:#EAF2FB;border-top:1px solid #A8C0DE}
+.msn-input input{flex:1;min-width:40px;border:1px solid #7F9DB9;padding:4px 6px;font:11px Tahoma;background:#fff;color:#000}
+#win-chat.nudged{animation:nudge .5s}
+@keyframes nudge{0%,100%{transform:translate(0,0)}20%{transform:translate(-6px,4px)}40%{transform:translate(5px,-5px)}60%{transform:translate(-5px,-4px)}80%{transform:translate(6px,5px)}}
+
+/* ---------- winamp (real Webamp) ---------- */
+@keyframes ampmarq{to{transform:translateX(-100%)}}
+#webamp-slot{position:absolute;left:0;top:0;width:0;height:0}
+
+/* ---------- geocities ---------- */
+.geo{background:#000 radial-gradient(#fff 1px,transparent 1.2px);background-size:70px 70px;color:#0f0;font-family:"Comic Sans MS","Trebuchet MS",cursive;padding:12px;text-align:center;line-height:1.6}
+.geo-marq{overflow:hidden;background:#001;border:1px solid #0f0;margin-bottom:8px}
+.geo-marq span{display:inline-block;white-space:nowrap;padding-left:100%;animation:ampmarq 13s linear infinite;color:#ff0;font-size:12px;line-height:20px}
+.geo h1{font-size:17px;color:#f0f;text-shadow:2px 2px #005;margin:4px 0}
+.geo .rainbow{height:5px;margin:8px 0;background:linear-gradient(90deg,#f00,#ff0,#0f0,#0ff,#00f,#f0f,#f00);background-size:200% 100%;animation:rain 3s linear infinite}
+@keyframes rain{to{background-position:200% 0}}
+.geo .constr{height:14px;margin:8px 0;background:repeating-linear-gradient(45deg,#000 0 10px,#FB0 10px 20px);border:1px solid #FB0}
+.geo .cnt{display:inline-block;background:#111;border:1px solid #3f3;color:#3f3;font-family:"Lucida Console",Consolas,monospace;font-size:13px;letter-spacing:3px;padding:2px 8px}
+.geo a{color:#59f;cursor:pointer;text-decoration:underline}
+.geo .small{color:#aaa;font-size:9px}
+
+/* ---------- balloon ---------- */
+#balloon{position:fixed;right:14px;bottom:48px;width:236px;background:#FFFFE1;border:1px solid #000;border-radius:8px;padding:9px 11px;display:none;z-index:9600;box-shadow:2px 3px 8px rgba(0,0,0,.35);line-height:1.45}
+#balloon:after{content:"";position:absolute;right:28px;bottom:-11px;border:11px solid transparent;border-top-color:#FFFFE1;border-bottom:0}
+#balloon b{display:block;margin-bottom:3px}
+
+/* ---------- game layer ---------- */
+#curlayer,#fxlayer{position:absolute;inset:0;z-index:5000;pointer-events:none;overflow:hidden}
+#fxlayer{z-index:5200}
+.cur{position:absolute;left:0;top:0;will-change:transform}
+.cur svg{width:17px;height:26px;filter:drop-shadow(1px 2px 2px rgba(0,0,0,.55))}
+.cur .tag{position:absolute;left:13px;top:25px;white-space:nowrap;font:bold 10px Tahoma;color:#fff;text-shadow:1px 1px 2px #000,-1px 1px 2px #000,0 0 3px #000}
+.cur .tag .bt{margin-left:4px}
+.cur .tag .mx{margin-left:4px;color:#FFD24A}
+.cur.me .nm{background:#316AC5;padding:0 4px;border-radius:2px}
+.cur.grace{opacity:.55}
+.cur.dueling svg{animation:shake .13s infinite}
+@keyframes shake{0%{transform:translate(0,0)}25%{transform:translate(-1.5px,1px)}50%{transform:translate(1.5px,-1px)}75%{transform:translate(-1px,-1.5px)}100%{transform:translate(1px,1px)}}
+.duelfx{position:absolute;text-align:center;font:bold 10px "Lucida Console",Consolas,monospace;color:#fff;text-shadow:1px 1px 2px #000,0 0 4px #000}
+.duelfx.big{font-size:13px;color:#FFD24A}
+.duelfx .hg{display:inline-block;font-size:15px;animation:flip .5s steps(2) infinite}
+.duelfx.big .hg{font-size:21px}
+@keyframes flip{to{transform:rotate(360deg)}}
+.shard{position:absolute;width:7px;height:10px;background:#fff;clip-path:polygon(0 0,100% 55%,25% 100%);filter:drop-shadow(0 1px 2px rgba(0,0,0,.6));animation:fly .7s forwards}
+.shard.gold{background:#FFD24A}
+@keyframes fly{to{transform:translate(var(--dx),var(--dy)) rotate(var(--rot));opacity:0}}
+.pop{position:absolute;width:34px;height:34px;border:3px solid #fff;border-radius:50%;animation:pop .45s forwards}
+@keyframes pop{from{transform:scale(.2);opacity:1}to{transform:scale(1.4);opacity:0}}
+.float{position:absolute;font:bold 13px "Lucida Console",Consolas,monospace;color:#FFD24A;text-shadow:1px 1px 2px #000,0 0 4px #000;animation:rise 1.2s forwards;white-space:nowrap}
+.float.sm{font-size:10px;color:#fff}
+@keyframes rise{to{transform:translateY(-48px);opacity:0}}
+
+/* ---------- BSOD / shutdown screen ---------- */
+#bsod{position:fixed;inset:0;background:#0000AA;color:#fff;font:14px "Lucida Console",Consolas,monospace;padding:8% 10%;display:none;z-index:99999;line-height:1.7;white-space:pre-wrap}
+#shutdown{position:fixed;inset:0;background:#000;display:none;z-index:99999;place-items:center}
+#shutdown div{color:#FFB300;font:bold 22px "Lucida Console",Consolas,monospace;text-align:center;line-height:2}
+.blink{animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+
+/* ---------- boot / login ---------- */
+#boot{position:fixed;inset:0;background:#000;z-index:100006;display:none;place-items:center}
+.boot-logo{display:flex;align-items:center;gap:14px}
+.boot-logo svg{width:52px;height:52px}
+.boot-name{font:bold italic 34px "Franklin Gothic Medium","Segoe UI",Tahoma;color:#fff}
+.boot-name span{color:#F7941D;font-size:22px;vertical-align:top;margin-left:2px}
+.boot-bar{width:190px;height:16px;border:2px solid #7A7A7A;border-radius:9px;margin:34px auto 0;overflow:hidden;position:relative}
+.boot-bar span{position:absolute;top:3px;width:9px;height:8px;background:linear-gradient(180deg,#6FA0FF,#2A5FD8);border-radius:2px;animation:bootmove 1.5s linear infinite}
+.boot-bar span:nth-child(2){animation-delay:.13s}
+.boot-bar span:nth-child(3){animation-delay:.26s}
+@keyframes bootmove{from{left:-14px}to{left:196px}}
+#login{position:fixed;inset:0;z-index:100005;display:none;flex-direction:column;transition:opacity .5s}
+.lg-top,.lg-bot{height:62px;background:linear-gradient(180deg,#16327E,#0B1E55);flex:none}
+.lg-top{border-bottom:2px solid #E0A02B}
+.lg-bot{border-top:2px solid #E0A02B;display:flex;align-items:center;justify-content:space-between;padding:0 26px}
+.lg-mid{flex:1;display:flex;align-items:center;background:radial-gradient(ellipse at 50% 40%,#7FA2E8 0%,#4A74D4 55%,#2F55B4 100%)}
+.lg-left{flex:1;display:flex;flex-direction:column;align-items:flex-end;gap:16px;padding-right:38px}
+.lg-brand{display:flex;align-items:center;gap:10px}
+.lg-brand svg{width:44px;height:44px;filter:drop-shadow(2px 2px 3px rgba(0,0,0,.4))}
+.lg-brand div{font:bold italic 30px "Franklin Gothic Medium","Segoe UI",Tahoma;color:#fff;text-shadow:2px 2px 3px rgba(0,0,0,.35)}
+.lg-brand span{color:#F7941D;font-size:19px;vertical-align:top}
+.lg-hint{color:#DCE6FA;font-size:13px}
+.lg-div{width:2px;align-self:stretch;margin:40px 0;background:linear-gradient(180deg,transparent,rgba(255,255,255,.55),transparent)}
+.lg-right{flex:1;padding-left:38px;display:flex;flex-direction:column;gap:14px}
+.lg-tile{display:flex;align-items:center;gap:12px;padding:8px 12px;border-radius:6px;cursor:pointer;color:#fff;max-width:280px}
+.lg-tile:hover{background:rgba(255,255,255,.16);box-shadow:0 0 12px rgba(255,255,255,.15)}
+.lg-tile b{font-size:15px}
+.lg-sub{font-size:11px;color:#CFDCF6}
+.lg-ava{width:50px;height:50px;flex:none;border:2px solid #fff;border-radius:6px;background:linear-gradient(160deg,#8EC440,#3D7D1E);display:grid;place-items:center;box-shadow:1px 2px 5px rgba(0,0,0,.35)}
+.lg-ava svg{width:30px;height:30px}
+.lg-ava.guest{background:linear-gradient(160deg,#9AA6BC,#5A6478);font:bold 24px Tahoma;color:#fff}
+.lg-tile.shake{animation:nudge .4s}
+#lg-off{background:none;border:1px solid rgba(255,255,255,.4);border-radius:4px;color:#fff;padding:5px 12px;cursor:pointer;font-size:12px}
+#lg-off:hover{background:rgba(255,255,255,.14)}
+.lg-note{color:#B9C8EC;font-size:11px}
+
+/* ---------- context menus / tooltip ---------- */
+#ctx{position:fixed;display:none;z-index:99990;background:#fff;border:1px solid #8A867A;box-shadow:3px 3px 7px rgba(0,0,0,.32);padding:3px;min-width:186px;font-size:11px}
+.cit{position:relative;padding:5px 26px 5px 30px;cursor:default;white-space:nowrap}
+.cit:hover{background:#316AC5;color:#fff}
+.cit.dis{color:#A6A49A}
+.cit.dis:hover{background:none;color:#A6A49A}
+.cit.bold{font-weight:bold}
+.cit.has-sub:after{content:"▸";position:absolute;right:8px}
+.csub{display:none;position:absolute;left:100%;top:-4px;background:#fff;border:1px solid #8A867A;box-shadow:3px 3px 7px rgba(0,0,0,.32);padding:3px;min-width:160px;color:#000}
+.cit.has-sub:hover>.csub{display:block}
+.csep{border-top:1px solid #E0DDD3;margin:3px 2px}
+#xptip{position:fixed;display:none;z-index:100010;background:#FFFFE1;border:1px solid #000;padding:3px 7px;font-size:11px;box-shadow:1px 2px 4px rgba(0,0,0,.3);pointer-events:none;white-space:nowrap}
+
+/* ---------- xp tabs / dialogs / task manager ---------- */
+.xtabs{display:flex;gap:2px;padding:6px 8px 0;border-bottom:1px solid #919B9C;background:#ECE9D8;flex:none}
+.xtab{padding:4px 12px;border:1px solid #919B9C;border-bottom:0;border-radius:3px 3px 0 0;background:#F0EEE1;cursor:pointer}
+.xtab.on{background:#FCFBF6;position:relative;top:1px;padding-bottom:5px}
+.xpane{display:none;padding:11px}
+.xpane.on{display:block}
+.dlg-foot{display:flex;justify-content:flex-end;gap:7px;padding:9px 11px;border-top:1px solid #D4D0C8;flex:none}
+.monframe{width:170px;margin:0 auto 10px;text-align:center}
+.monframe .scr{border:9px solid #D6D3CE;border-radius:6px;background:#000;box-shadow:inset 0 0 3px #000,1px 2px 5px rgba(0,0,0,.3);display:block;width:170px;height:110px}
+.monframe .foot{width:56px;height:9px;background:#B8B5AE;margin:0 auto;border-radius:0 0 3px 3px}
+.wplist{border:1px solid #7F9DB9;background:#fff;height:96px;overflow-y:auto;font-size:11px}
+.wplist div{padding:3px 8px;cursor:default}
+.wplist div.on{background:#316AC5;color:#fff}
+.cal{border-collapse:collapse;font-size:11px}
+.cal th{width:24px;padding:2px;color:#666;font-weight:normal}
+.cal td{width:24px;text-align:center;padding:3px 0;cursor:default}
+.cal td.today{background:#316AC5;color:#fff;border-radius:2px}
+.cal td.dim3{color:#AAA}
+.calnav{display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;font-weight:bold}
+.calnav button{width:20px}
+#anaclock{display:block;margin:0 auto}
+.tm-list{font:11px "Lucida Console",Consolas,monospace;background:#fff;border:1px solid #7F9DB9;height:150px;overflow-y:auto}
+.tm-list .row{display:flex;justify-content:space-between;padding:3px 8px;cursor:default}
+.tm-list .row.on{background:#316AC5;color:#fff}
+.tm-stat{display:flex;gap:18px;padding:5px 9px;border-top:1px solid #D4D0C8;color:#555;font-size:10px;flex:none}
+#saver{position:fixed;inset:0;z-index:100008;display:none;background:#000;cursor:none}
+.renamer{width:76px;font:11px Tahoma;border:1px solid #316AC5;text-align:center}
+#ql{display:flex;align-items:center;padding:0 3px;flex:none}
+.ql-grip{width:5px;align-self:stretch;margin:4px 2px;border-left:1px dotted rgba(255,255,255,.45)}
+.qlb{width:25px;height:24px;background:none;border:0;border-radius:3px;padding:2px;cursor:pointer;display:grid;place-items:center}
+.qlb:hover{background:rgba(255,255,255,.22)}
+.qlb svg{width:17px;height:17px}
+.usertxtarea{flex:1;border:0;resize:none;font:12px "Lucida Console",Consolas,monospace;padding:7px;outline:none;background:#fff;color:#111;min-height:120px}
+.window{flex-direction:column}
+.window.maxed{border-radius:0}
+.win-body{flex:1;min-height:0}
+.win-body.pad{display:flex;flex-direction:column;min-height:0;overflow:hidden}
+.paper{flex:1}
+.msn-msgs{flex:1;min-height:60px}
+
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01s !important;transition:none !important}}
