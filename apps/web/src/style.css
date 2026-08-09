@@ -147,6 +147,56 @@ body.mobile #tray{padding:0 8px;margin-left:0;gap:8px}
 .ms-c{width:16px;height:16px;flex:none;box-sizing:border-box;background-color:#BDBDBD;background-repeat:no-repeat;background-position:center;background-origin:border-box;background-clip:border-box;border-top:2px solid #FFF;border-left:2px solid #FFF;border-right:2px solid #7B7B7B;border-bottom:2px solid #7B7B7B}
 .ms-c.open{border:0;border-top:1px solid #7B7B7B;border-left:1px solid #7B7B7B}
 
+/* ---------- Paint (real MS Paint metrics: 25x24 tools, 16px swatches) ---------- */
+.win-body.pt-body{background:#ECE9D8;display:flex;flex-direction:column;padding:0;overflow:hidden}
+.pt-main{flex:1;min-height:0;display:flex}
+.pt-left{flex:none;width:52px;padding:2px 0 0 1px;display:flex;flex-direction:column;gap:4px}
+.pt-left.off{display:none}
+.pt-tools{display:grid;grid-template-columns:25px 25px;gap:0}
+.pt-tool{width:25px;height:24px;min-width:0;min-height:0;padding:0;border-radius:0;box-shadow:none;background-color:#ECE9D8;border:1px solid #ECE9D8;cursor:default;display:grid;place-items:center}
+.pt-tool i{width:16px;height:16px;display:block;background-image:var(--pt-tools);background-repeat:no-repeat;background-size:256px 16px}
+.pt-tool:hover{border-color:#B4B2A6}
+/* the pressed tool is genuinely sunken — Paint never used a highlight colour */
+.pt-tool.on{background-color:#DCD8CC;border-top:1px solid #808080;border-left:1px solid #808080;border-right:1px solid #FFF;border-bottom:1px solid #FFF}
+.pt-opts{border-top:1px solid #808080;border-left:1px solid #808080;border-right:1px solid #FFF;border-bottom:1px solid #FFF;background:#ECE9D8;padding:3px;min-height:56px}
+.pt-optgrid{display:grid;justify-content:center;gap:1px}
+.pt-optgrid.one{grid-template-columns:1fr}
+.pt-optgrid.three{grid-template-columns:repeat(3,auto)}
+.pt-opt{min-width:0;min-height:0;padding:1px;background:#ECE9D8;background-repeat:no-repeat;border:1px solid transparent;border-radius:0;box-shadow:none;display:grid;place-items:center;cursor:default}
+.pt-opt canvas{display:block}
+.pt-opt.on{background-color:#316AC5;border-color:#1B4A9C}
+.pt-opt.on canvas{filter:invert(1) hue-rotate(180deg)}
+.pt-trans{width:35px;height:23px;background-image:var(--pt-trans)}
+.pt-air{width:24px;height:24px;background-image:var(--pt-air)}
+.pt-zoomopt{width:100%;height:15px;font:10px Tahoma;padding:0}
+.pt-zoomopt.on{color:#fff}
+.pt-wrap{flex:1;min-width:0;overflow:auto;background:#808080;padding:4px;position:relative}
+.pt-box{position:relative;background:#fff;box-shadow:0 0 0 1px #000}
+.pt-box canvas{position:absolute;left:0;top:0;image-rendering:pixelated;touch-action:none}
+.pt-box canvas:first-child{position:relative}
+/* Paint's three canvas grips, in Paint's blue */
+.pt-h{position:absolute;width:5px;height:5px;background:#0A246A;font-style:normal}
+.pt-h.e{right:-3px;top:50%;margin-top:-2px;cursor:ew-resize}
+.pt-h.s{bottom:-3px;left:50%;margin-left:-2px;cursor:ns-resize}
+.pt-h.se{right:-3px;bottom:-3px;cursor:nwse-resize}
+.pt-text{position:absolute;min-width:60px;min-height:22px;background:transparent;border:1px dotted #000;outline:none;resize:both;padding:0;overflow:hidden;white-space:pre}
+.pt-colors{flex:none;display:flex;align-items:center;gap:6px;padding:3px 4px;border-top:1px solid #D4D0C8;overflow-x:auto}
+.pt-colors.off{display:none}
+.pt-cur{position:relative;width:32px;height:32px;flex:none;cursor:default}
+.pt-cur i{position:absolute;width:17px;height:17px;border:1px solid #808080;box-shadow:inset 1px 1px #000}
+.pt-cur .pt-fg{left:2px;top:2px;z-index:2}
+.pt-cur .pt-bg{left:12px;top:12px}
+/* flex:none — a grid item's min-width is min-content, so without it the whole
+   palette collapses to a couple of columns on a phone */
+.pt-swatches{flex:none;display:grid;grid-template-rows:repeat(2,16px);grid-auto-flow:column;gap:1px}
+.pt-sw{width:16px;height:16px;min-width:0;min-height:0;padding:0;border-radius:0;box-shadow:none;border-top:1px solid #808080;border-left:1px solid #808080;border-right:1px solid #FFF;border-bottom:1px solid #FFF;cursor:default}
+.pt-status{flex:none;display:flex;gap:2px;padding:2px;border-top:1px solid #D4D0C8;font-size:11px}
+.pt-status.off{display:none}
+.pt-status span{border-top:1px solid #808080;border-left:1px solid #808080;border-right:1px solid #FFF;border-bottom:1px solid #FFF;padding:1px 5px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.pt-status span:first-child{flex:1;min-width:0}
+.pt-status span+span{width:74px;flex:none;text-align:center}
+body.mobile .pt-status span:first-child{display:none}
+
 /* ---------- Windows Messenger ---------- */
 .win-body.msn-win{background:#fff;display:flex;flex-direction:column}
 .msn-hdr{display:flex;align-items:center;gap:7px;padding:6px 8px;flex:none;cursor:default;background:linear-gradient(180deg,#F4F9FF,#DCEAFB 55%,#C8DEF6);border-bottom:1px solid #A6C3E4}

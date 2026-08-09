@@ -35,12 +35,13 @@ Second game alongside **THIN ICE** (`c:\ZINC`), the owner's other Solana casino 
 
 Source layout (`apps/web/src/`):
 - `main.js` (~1800 lines) — shell, window manager, desktop, game sim, boot/login
-- `minesweeper.js`, `messenger.js` — self-contained app modules, **import-free on purpose**
+- `minesweeper.js`, `messenger.js`, `paint.js` — self-contained app modules, **import-free on purpose**
   (the build's smoke runner executes them in node; main.js injects assets + shell hooks)
 - `assets.js` — every real asset, imported/globbed so Vite inlines it
 - `style.css` — everything on top of `xp.css`
 - `assets/xp/` — icons (winXP repo, MIT), sounds (2001 XP scheme + MSN 7), emo (80 MSN
-  emoticons), mine (Minesweeper sprites), wall (Bliss), logo (XP flag)
+  emoticons), mine (Minesweeper sprites), paint (jspaint tool sprites, MIT), wall (Bliss),
+  logo (XP flag)
 - `assets/music/` — 4 Kevin MacLeod CC-BY MP3s at 96kbps
 
 ---
@@ -126,7 +127,8 @@ BSOD on losing your last cursor, shutdown rush, results, rakeback tracking, auto
   **The loop has caught every visual bug so far. Do not skip it.**
 - **Dev hashes** (skip boot/login and drive states headlessly): `#desktop`, `#desktop-start`,
   `#desktop-mine-play`, `#desktop-msn`, `#desktop-msn-emo`, `#desktop-msn-toast`,
-  `#desktop-amptest`, `#desktop-logfill`.
+  `#desktop-amptest`, `#desktop-logfill`, `#desktop-paint` (draws with 6 tools),
+  `#desktop-paint-wall` (paints, then sets it as tiled wallpaper), `#desktop-paint-props`.
 - **Smoke test** runs before every build: executes `main.js` in node under a stub DOM,
   catching strict-mode and load-time crashes. Sibling modules run for real, so keep them
   import-free.
@@ -150,9 +152,18 @@ explicitly **parked** ("stuff only 2% of users would search for"). Run… jokes 
    desktop icons, welcome screen stacks vertically. Not yet done: landscape phones
    (>760px wide) still get the desktop shell; real-device pass (iOS Safari keyboard,
    safe-area) still owed before launch.
-2. **Paint** (NEXT) — via a real library/embed if possible; Save As Wallpaper (meme machine).
-3. **My Computer / Explorer + fake C:\ drive** — address bar, task pane, Properties dialogs,
-   System Properties joke, disk-usage pie fed by real game stats.
+2. ~~Paint~~ **SHIPPED 2026-08-09.** `paint.js`, import-free sibling module. All 16 real
+   tools in the real 2-column box, the real 28-colour palette, tool-options box, 3-deep
+   undo (authentic), Image menu (flip/rotate/invert/attributes), drag-drop + File > Open to
+   load an image, and **File > Set As Background (Tiled/Centered/Stretched)** — the meme
+   machine. Painted wallpaper persists and appears in Display Properties as "Untitled
+   (Paint)". Shapes are drawn by a hand-rolled **aliased** rasteriser (Bresenham + midpoint
+   ellipse): canvas paths antialias, and antialiased edges instantly stop reading as Paint.
+   jspaint is MIT but not on npm and assumes it owns the page, so we vendored its tool
+   sprites (`src/assets/xp/paint/`) and wrote the app. Not done: Stretch/Skew (joke error),
+   a Fonts toolbar for the text tool, saving into a fake My Pictures.
+3. **My Computer / Explorer + fake C:\ drive** (NEXT) — address bar, task pane, Properties
+   dialogs, System Properties joke, disk-usage pie fed by real game stats.
 4. **Recycle Bin with a purpose** — dead cursors as `.cur` files with death certificates
    (killer, bounty lost, the 92:8 that did it), Hall of Pain leaderboard.
 5. **CURSORS.EXE production pass** — the game window is still the most-used and least-polished

@@ -1,9 +1,10 @@
 import "xp.css";
 import "./style.css";
 import WebampImport from "webamp";
-import { IMG, SNDF, TRACKS, MINE, EMO } from "./assets.js";
+import { IMG, SNDF, TRACKS, MINE, EMO, PAINT } from "./assets.js";
 import { initMinesweeper } from "./minesweeper.js";
 import { initMessenger } from "./messenger.js";
+import { initPaint } from "./paint.js";
 const Webamp = (WebampImport && WebampImport.default) ? WebampImport.default : WebampImport;
 
 "use strict";
@@ -121,6 +122,10 @@ function icoNode(key){
   return img;
 }
 $$(".xico[data-ico]").forEach(el=>{ el.appendChild(icoNode(el.dataset.ico)); });
+/* Paint's sprite sheets reach CSS as variables so the stylesheet stays asset-free */
+document.documentElement.style.setProperty("--pt-tools",`url(${PAINT.tools})`);
+document.documentElement.style.setProperty("--pt-trans",`url(${PAINT.transparency})`);
+document.documentElement.style.setProperty("--pt-air",`url(${PAINT.airbrush})`);
 $("#startbtn").src=IMG.startBtn;
 $("#sm-ava").src=IMG.user48;
 $("#sm-allarrow").src=IMG.allProg;
@@ -248,6 +253,7 @@ function closeWin(id,opts){
   if(id==="win-amp"){ winampApp.close(); return; }
   const a=openApps.get(id); if(!a) return;
   if(id==="win-mine") mine.pause(); /* the clock does not run while the box is shut */
+  if(id==="win-paint") paint.commit(); /* half-finished text/curves/selections land before the lid shuts */
   a.el.style.display="none"; a.el.classList.remove("focused");
   openApps.delete(id);
   if(focusedId===id) focusedId=null;
@@ -389,6 +395,7 @@ const SYSICONS=[
   {id:"recycle",label:"Recycle Bin",ico:"bin32",app:"win-recycle",sys:1},
   {id:"cursors",label:"CURSORS.EXE",ico:"@ic-app",app:"win-cursors",sys:1},
   {id:"mine",label:"Minesweeper",ico:"mine32",app:"win-mine",sys:1},
+  {id:"paint",label:"Paint",ico:"paint32",app:"win-paint",sys:1},
   {id:"ie",label:"Internet Explorer",ico:"ie32",app:"win-ie",sys:1},
   {id:"chat",label:"Windows Messenger",ico:"msn32",app:"win-chat",sys:1},
   {id:"amp",label:"Winamp",ico:"amp16",app:"win-amp",sys:1},
@@ -724,6 +731,7 @@ $$(".menubar span").forEach(m=>m.addEventListener("click",e=>{
     (m.textContent==="Game"?mine.gameMenu:mine.helpMenu)(r.left,r.bottom+2);
     return;
   }
+  if(win.id==="win-paint"){ paint.menu(m.textContent,r.left,r.bottom+2); return; }
   showMenu(menubarMenu(m.textContent,win.id),r.left,r.bottom+2);
 }));
 
@@ -740,9 +748,49 @@ const mine=initMinesweeper({
     if(lv!=="beginner") chatSys(`${playerName()} swept ${lv} in ${t}s`);
   }
 });
+/* ================= Paint ================= */
+const paint=initPaint({
+  PAINT,
+  els:{
+    canvas:$("#pt-canvas"), overlay:$("#pt-overlay"), box:$("#pt-box"), wrap:$("#pt-wrap"),
+    tools:$("#pt-tools"), opts:$("#pt-opts"), colors:$("#pt-colors"), left:$("#pt-left"),
+    status:$("#pt-status"), st1:$("#pt-st1"), st2:$("#pt-st2"), st3:$("#pt-st3"),
+  },
+  store, sysSnd, showError, showMenu, showConfirm,
+  setWallpaperFrom,
+  close:()=>closeWin("win-paint"),
+  setTitle:name=>{ $("#win-paint .title-bar-text").textContent=name+" - Paint"; renderTaskbar(); },
+  isFocused:()=>focusedId==="win-paint",
+  openAttributes:(w,h)=>{ $("#pa-w").value=w; $("#pa-h").value=h; openWin("win-paintattr"); },
+});
+$("#pa-ok").addEventListener("click",()=>{
+  paint.setSize(+$("#pa-w").value||1,+$("#pa-h").value||1);
+  closeWin("win-paintattr");
+});
+$("#pa-cancel").addEventListener("click",()=>closeWin("win-paintattr"));
+$("#pa-default").addEventListener("click",()=>{ $("#pa-w").value=384; $("#pa-h").value=272; });
+$$("#win-paintattr input").forEach(i=>i.addEventListener("keydown",e=>{
+  e.stopPropagation();
+  if(e.key==="Enter") $("#pa-ok").click();
+}));
+/* the canvas grips resize the image, exactly like the real three handles */
+$$("#pt-box .pt-h").forEach(h=>h.addEventListener("pointerdown",e=>{
+  e.preventDefault(); e.stopPropagation();
+  const dir=h.dataset.grip, s=paint.size();
+  const sx=e.clientX, sy=e.clientY;
+  const mv=ev=>{
+    const w=dir==="s"?s.w:Math.max(1,s.w+Math.round(ev.clientX-sx));
+    const ht=dir==="e"?s.h:Math.max(1,s.h+Math.round(ev.clientY-sy));
+    paint.setSize(w,ht);
+  };
+  const up=()=>{ removeEventListener("pointermove",mv); removeEventListener("pointerup",up); };
+  addEventListener("pointermove",mv); addEventListener("pointerup",up);
+}));
+
 document.addEventListener("contextmenu",e=>{
   e.preventDefault();
   hideMenu();
+  if(e.target.closest("#pt-box,.pt-sw")) return;  /* Paint uses the right button to draw */
   if(e.target.closest("#webamp,#webamp-slot")) return; /* Winamp draws its own menus */
   if(e.target.closest(".ms-grid")) return;             /* right-click plants flags */
   const lgAdmin=e.target.closest("#tile-admin");
@@ -776,6 +824,7 @@ document.addEventListener("contextmenu",e=>{
 let lpFiredAt=0;
 addEventListener("pointerdown",e=>{
   if(e.pointerType!=="touch") return;
+  if(e.target.closest&&e.target.closest("[data-nolongpress]")) return; /* drawing surfaces keep the finger */
   const sx=e.clientX, sy=e.clientY, target=e.target;
   let sawNative=false;
   const onNative=()=>{ sawNative=true; };
@@ -873,7 +922,7 @@ function allProgramsMenu(){
     {sep:1},
     {label:"Accessories",sub:[
       {label:"Notepad",action:go("win-readme")},
-      {label:"Paint",action:()=>{ closeStart(); showError("Paint","mspaint.exe ships in a later update. Draw your losses from memory."); }},
+      {label:"Paint",action:go("win-paint")},
       {label:"Calculator",action:()=>{ closeStart(); showError("Calculator","Cannot compute expected value: it is zero. It is always zero. Read the README."); }}]},
     {label:"Games",sub:[
       {label:"Minesweeper",action:go("win-mine")},
@@ -919,6 +968,7 @@ const RUNMAP={
   "iexplore":"win-ie","iexplore.exe":"win-ie",
   "notepad":"win-readme","notepad.exe":"win-readme",
   "winmine":"win-mine","winmine.exe":"win-mine",
+  "mspaint":"win-paint","mspaint.exe":"win-paint","paint":"win-paint","pbrush":"win-paint",
   "control":"win-dispprops","desk.cpl":"win-dispprops",
   "timedate.cpl":"win-datetime",
 };
@@ -942,9 +992,13 @@ $("#run-in").addEventListener("keydown",e=>{ e.stopPropagation(); if(e.key==="En
 $("#btn-logoff-no").addEventListener("click",()=>{ sClick(); closeWin("win-logoff"); });
 function tickClock(){ $("#clock").textContent=new Date().toLocaleTimeString([],{hour:"numeric",minute:"2-digit"}); }
 tickClock(); setInterval(tickClock,10000);
-function showBalloon(){
+let balloonT=null;
+function showBalloon(head,text){
+  $("#balloon-h").textContent=head||"Take a tour of CURSORS.EXE";
+  $("#balloon-t").textContent=text||"auto-battler. deploy any time. attack or defend from the dashboard. bank before shutdown.";
   $("#balloon").style.display="block"; sBalloon();
-  setTimeout(()=>{ $("#balloon").style.display="none"; },8500);
+  clearTimeout(balloonT);
+  balloonT=setTimeout(()=>{ $("#balloon").style.display="none"; },8500);
 }
 $("#balloon").addEventListener("click",()=>$("#balloon").style.display="none");
 
@@ -959,20 +1013,50 @@ $$(".xtabs").forEach(tabs=>{
 });
 
 /* ================= display properties ================= */
-const WALLPAPERS=[["bliss","Bliss"],["none","(None)"]];
-let wpSel=WALLPAPERS.some(w=>w[0]===store.data.wallpaper)?store.data.wallpaper:"bliss";
+/* "painted" is whatever Paint last sent to File > Set As Background. It only
+   appears in the list once it exists, exactly like a real wallpaper file. */
+function wallpapers(){
+  const list=[["bliss","Bliss"]];
+  if(store.data.wallpaperData) list.push(["painted","Untitled (Paint)"]);
+  list.push(["none","(None)"]);
+  return list;
+}
+let wpSel=store.data.wallpaper||"bliss";
 function wpApplyTo(el,id){
-  el.style.backgroundImage=id==="bliss"?`url(${IMG.bliss})`:"none";
   el.style.backgroundColor="#3A6EA5";
+  if(id==="painted"&&store.data.wallpaperData){
+    const mode=store.data.wallpaperMode||"center";
+    el.style.backgroundImage=`url(${store.data.wallpaperData})`;
+    el.style.backgroundRepeat=mode==="tile"?"repeat":"no-repeat";
+    el.style.backgroundSize=mode==="stretch"?"100% 100%":"auto";
+    el.style.backgroundPosition="center";
+    el.style.imageRendering="pixelated";
+    return;
+  }
+  el.style.backgroundImage=id==="bliss"?`url(${IMG.bliss})`:"none";
+  el.style.backgroundRepeat="no-repeat";
+  el.style.backgroundSize="cover";
+  el.style.backgroundPosition="center";
+  el.style.imageRendering="";
 }
 function setWallpaper(id){
-  if(!WALLPAPERS.some(w=>w[0]===id)) id="bliss";
+  if(!wallpapers().some(w=>w[0]===id)) id="bliss";
   wpApplyTo($("#wallpaper"),id);
   store.data.wallpaper=id; store.save();
 }
+/* Paint hands the desktop a PNG; the desktop is now a meme surface */
+function setWallpaperFrom(dataUrl,mode){
+  store.data.wallpaperData=dataUrl;
+  store.data.wallpaperMode=mode||"center";
+  wpSel="painted";
+  setWallpaper("painted");
+  renderWplist();
+  log("wallpaper set from Paint ("+store.data.wallpaperMode+")");
+  showBalloon("Your desktop has been redecorated","Right-click the desktop → Properties to put Bliss back.");
+}
 function renderWplist(){
   const host=$("#wplist"); host.innerHTML="";
-  for(const [id,name] of WALLPAPERS){
+  for(const [id,name] of wallpapers()){
     const d=document.createElement("div"); d.textContent=name;
     d.classList.toggle("on",id===wpSel);
     d.addEventListener("click",()=>{ wpSel=id; renderWplist(); });
@@ -1954,6 +2038,41 @@ if(location.hash.indexOf("#desktop-msn")===0) setTimeout(()=>{ /* dev: capture m
     setTimeout(()=>c.querySelector(".conv-emo").click(),2600);
   if(location.hash==="#desktop-msn-toast")
     setTimeout(()=>msn.incoming("mumu","you still alive? (bunny)"),2400);
+},600);
+if(location.hash.indexOf("#desktop-paint")===0) setTimeout(()=>{ /* dev: capture Paint with art on the canvas */
+  openWin("win-paint");
+  const box=$("#pt-box"), cvv=$("#pt-canvas");
+  const at=(x,y)=>{ const r=cvv.getBoundingClientRect(); return {clientX:r.left+x,clientY:r.top+y}; };
+  const stroke=(pts,btn)=>{
+    const opts={bubbles:true,button:btn||0,pointerId:1,pointerType:"mouse"};
+    box.dispatchEvent(new PointerEvent("pointerdown",{...opts,...at(pts[0][0],pts[0][1])}));
+    for(const p of pts.slice(1)) box.dispatchEvent(new PointerEvent("pointermove",{...opts,...at(p[0],p[1])}));
+    dispatchEvent(new PointerEvent("pointerup",{...opts,...at(pts[pts.length-1][0],pts[pts.length-1][1])}));
+  };
+  const swatch=hex=>$(`#pt-colors .pt-sw[data-hex="${hex}"]`).click();
+  const tool=i=>$$("#pt-tools .pt-tool")[i].click();
+  tool(7); swatch("#FF0000");                            /* brush, red */
+  stroke([[40,40],[70,90],[110,45],[150,95],[190,50]]);
+  tool(14); swatch("#0000FF");                           /* ellipse, blue */
+  stroke([[210,40],[300,110]]);
+  tool(12); swatch("#008000");                           /* rectangle, green */
+  stroke([[40,130],[170,210]]);
+  tool(3); swatch("#FFFF00");                            /* fill, yellow */
+  stroke([[100,170]]);
+  tool(8); swatch("#FF00FF");                            /* airbrush, magenta */
+  stroke([[230,150],[250,170],[270,150],[290,180],[250,200]]);
+  tool(10); swatch("#000000");                           /* line */
+  stroke([[210,230],[330,230]]);
+  tool(9);                                               /* text, left on the box */
+  if(location.hash==="#desktop-paint-wall"||location.hash==="#desktop-paint-props") setTimeout(()=>{  /* dev: the meme machine, end to end */
+    const f=$$("#win-paint .menubar span")[0];
+    f.click();
+    const items=[...$("#ctx").children].filter(c=>c.classList.contains("cit"));
+    const tiled=items.find(c=>c.textContent.indexOf("Tiled")>=0);
+    tiled.dispatchEvent(new PointerEvent("pointerup",{bubbles:true,pointerType:"mouse"}));
+    minWin("win-paint");
+    if(location.hash==="#desktop-paint-props") setTimeout(()=>openWin("win-dispprops"),300);
+  },700);
 },600);
 if(location.hash.indexOf("#desktop-mine")===0) setTimeout(()=>{ /* dev: capture minesweeper mid-game */
   const w=$("#win-mine"); w.style.left="8px"; w.style.top="8px";

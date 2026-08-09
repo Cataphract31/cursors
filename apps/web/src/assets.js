@@ -42,6 +42,12 @@ import trayRisk from "./assets/xp/icons/229(16x16).png";
 import offBig from "./assets/xp/icons/windows-off.png";
 import flag16 from "./assets/xp/icons/windows.png";
 
+import paintTools from "./assets/xp/paint/tools.png";
+import paintTrans from "./assets/xp/paint/options-transparency.png";
+import paintAir from "./assets/xp/paint/options-airbrush-size.png";
+import paint16 from "./assets/xp/paint/paint16.png";
+import paint32 from "./assets/xp/paint/paint32.png";
+
 import sndStartup from "./assets/xp/sounds/startup.wav";
 import sndLogon from "./assets/xp/sounds/logon.wav";
 import sndLogoff from "./assets/xp/sounds/logoff.wav";
@@ -68,7 +74,11 @@ export const IMG = {
   docs32, pics32, music32, cpanel32, connect32, printer32,
   help32, search32, run32, lock32, off32, outlook32, wmp32, allProg,
   trayVol, trayUsb, trayRisk, offBig, flag16,
+  paint16, paint32,
 };
+
+/* Paint tool sprites — jspaint (Isaiah Odhner), MIT */
+export const PAINT = { tools: paintTools, transparency: paintTrans, airbrush: paintAir };
 
 import trkMonkeys from "./assets/music/monkeys-spinning-monkeys.mp3";
 import trkSnitch from "./assets/music/sneaky-snitch.mp3";
