@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <title>CURSORS.EXE</title>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-  <script type="module" crossorigin src="./assets/index-BM2SQIf9.js"></script>
-  <link rel="stylesheet" crossorigin href="./assets/index-CyrImYDW.css">
+  <script type="module" crossorigin src="./assets/index-DIOqFkNz.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-BQIJw3JW.css">
 </head>
 <body>
 <svg width="0" height="0" style="position:absolute">
@@ -50,6 +50,12 @@
     <div class="win-body cx-body">
       <div class="menubar"><span>Game</span><span>View</span><span>Help</span></div>
       <div class="phaseline" id="phaseline">BOOTING…</div>
+      <!-- the disk IS the round clock now: every death is a 12 MB corpse, and
+           when C: fills the system crashes and banks everyone -->
+      <div class="diskbar" id="diskbar" title="Local Disk (C:) — dead cursors fill it, and a full disk crashes CURSORS.EXE">
+        <i id="diskfill"></i>
+        <span id="disktext">C: —</span>
+      </div>
       <div class="cx-tabs">
         <span class="cx-tab on" data-cx="cx-play">Play</span>
         <span class="cx-tab" data-cx="cx-stats">Stats</span>
@@ -405,6 +411,30 @@ icons/sounds: winXP (MIT)</div>
     </div>
   </div>
 
+  <!-- Help and Support Center -->
+  <div class="window" id="win-help" data-minw="420" data-minh="300" style="left:130px;top:56px;width:660px;height:470px">
+    <div class="title-bar">
+      <div class="tb-l"><i class="xico tb-ico" data-ico="help16"></i><div class="title-bar-text">Help and Support Center</div></div>
+      <div class="title-bar-controls"><button aria-label="Minimize"></button><button aria-label="Close"></button></div>
+    </div>
+    <div class="win-body pad hlp-body">
+      <div class="hlp-head">
+        <span class="hlp-brand">Help and Support Center</span>
+        <span class="hlp-sub">CURSORS XP Professional</span>
+      </div>
+      <div class="ex-bar">
+        <button class="ex-tb" id="hlp-back"><img id="hlp-backi" alt=""><span>Back</span></button>
+        <button class="ex-tb" id="hlp-home"><img id="hlp-homei" alt=""><span>Home</span></button>
+        <span class="ex-sep"></span>
+        <span class="ex-addrbox" style="max-width:280px"><img id="hlp-searchi" alt=""><input id="hlp-search" placeholder="Search" spellcheck="false" autocomplete="off"></span>
+      </div>
+      <div class="hlp-main">
+        <div class="hlp-side" id="hlp-side"></div>
+        <div class="hlp-doc" id="hlp-doc"></div>
+      </div>
+    </div>
+  </div>
+
   <!-- Display Properties -->
   <div class="window fixed" id="win-dispprops" style="left:calc(50% - 190px);top:60px;width:380px">
     <div class="title-bar">
@@ -735,12 +765,9 @@ icons/sounds: winXP (MIT)</div>
       <div class="sm-item two" data-app="win-ie"><i class="xico" data-ico="ie32"></i><div class="sm-texts"><div class="sm-text b">Internet</div><div class="sm-sub">Internet Explorer</div></div></div>
       <div class="sm-item two" data-act="email"><i class="xico" data-ico="outlook32"></i><div class="sm-texts"><div class="sm-text b">E-mail</div><div class="sm-sub">Outlook Express</div></div></div>
       <div class="sm-sep"></div>
-      <div class="sm-item" data-app="win-cursors"><i class="xico" data-ico="@ic-app"></i><div class="sm-texts"><div class="sm-text">CURSORS.EXE</div></div></div>
-      <div class="sm-item" data-app="win-chat"><i class="xico" data-ico="msn32"></i><div class="sm-texts"><div class="sm-text">Windows Messenger</div></div></div>
-      <div class="sm-item" data-app="win-amp"><i class="xico" data-ico="amp16"></i><div class="sm-texts"><div class="sm-text">Winamp</div></div></div>
-      <div class="sm-item" data-act="wmp"><i class="xico" data-ico="wmp32"></i><div class="sm-texts"><div class="sm-text">Windows Media Player</div></div></div>
-      <div class="sm-item" data-app="win-paint"><i class="xico" data-ico="paint32"></i><div class="sm-texts"><div class="sm-text">Paint</div></div></div>
-      <div class="sm-item" data-app="win-log"><i class="xico" data-ico="note32"></i><div class="sm-texts"><div class="sm-text">fights.log</div></div></div>
+      <!-- XP's left column below the pins is a most-recently-used list, not a
+           fixed roster: it rebuilds itself from what you actually open -->
+      <div id="sm-mru"></div>
       <div style="flex:1"></div>
       <div class="sm-sep"></div>
       <div class="sm-item allprog" data-act="allprograms"><i class="xico empty"></i><div class="sm-texts"><div class="sm-text b">All Programs</div></div><img class="sm-allarrow" id="sm-allarrow" alt=""></div>
@@ -755,7 +782,7 @@ icons/sounds: winXP (MIT)</div>
       <div class="sm-item" data-act="connect"><i class="xico" data-ico="connect32"></i><div class="sm-texts"><div class="sm-text">Connect To</div></div></div>
       <div class="sm-item" data-act="printers"><i class="xico" data-ico="printer32"></i><div class="sm-texts"><div class="sm-text">Printers and Faxes</div></div></div>
       <div class="sm-sep"></div>
-      <div class="sm-item" data-app="win-readme"><i class="xico" data-ico="help32"></i><div class="sm-texts"><div class="sm-text">Help and Support</div></div></div>
+      <div class="sm-item" data-app="win-help"><i class="xico" data-ico="help32"></i><div class="sm-texts"><div class="sm-text">Help and Support</div></div></div>
       <div class="sm-item" data-act="search"><i class="xico" data-ico="search32"></i><div class="sm-texts"><div class="sm-text">Search</div></div></div>
       <div class="sm-item" data-app="win-run"><i class="xico" data-ico="run32"></i><div class="sm-texts"><div class="sm-text">Run...</div></div></div>
     </div>

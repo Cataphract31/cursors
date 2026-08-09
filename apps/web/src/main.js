@@ -226,6 +226,7 @@ function openWin(id,opts){
   focusWin(id);
   if(id==="win-run") setTimeout(()=>{ const i=$("#run-in"); i.value=""; i.focus(); },0);
   if(id==="win-ie"&&ie) ie.boot();   /* an empty browser dials out on its own */
+  if(!was) smTouch(id);
 }
 /* no window may hang off the screen — the small-screen safety net */
 function fitWin(el){
@@ -736,7 +737,7 @@ function menubarMenu(label,id){
     if(label==="View") return Object.keys(P).map(n=>({
       label:n,check:$("#"+P[n]).classList.contains("on"),action:()=>cxShow(P[n])}));
     if(label==="Help") return [
-      {label:"How it works",action:()=>openWin("win-readme")},
+      {label:"How it works",action:()=>openWin("win-help")},
       {label:"Verify fairness",action:()=>cxShow("cx-verify")},
       {sep:1},
       {label:"About CURSORS.EXE",action:()=>showError("About CURSORS.EXE",
@@ -817,6 +818,7 @@ const paint=initPaint({
     store.data.pictures=store.data.pictures.slice(0,6);
     store.save();
     if(openApps.has("win-explorer")) explorer.render();
+renderMru();
     return n;
   },
 });
@@ -1030,6 +1032,51 @@ addEventListener("pointerdown",()=>{ clearTimeout(tipTimer); tip.style.display="
 /* ================= start menu / tray ================= */
 const startmenu=$("#startmenu");
 function closeStart(){ startmenu.classList.remove("open"); }
+/* XP's left column below the pinned pair is a most-recently-used list. Ours is
+   too: opening an app promotes it, so the menu reshapes around how you play. */
+const SMAPPS={
+  "win-cursors":{label:"CURSORS.EXE",ico:"@ic-app"},
+  "win-ie":{label:"Internet Explorer",ico:"ie32"},
+  "win-chat":{label:"Windows Messenger",ico:"msn32"},
+  "win-amp":{label:"Winamp",ico:"amp16"},
+  "win-paint":{label:"Paint",ico:"paint32"},
+  "win-mine":{label:"Minesweeper",ico:"mine32"},
+  "win-explorer":{label:"My Computer",ico:"computer32"},
+  "win-log":{label:"fights.log",ico:"note32"},
+  "win-readme":{label:"README.txt",ico:"note32"},
+  "win-help":{label:"Help and Support",ico:"help32"},
+  "win-dispprops":{label:"Display Properties",ico:"cpanel32"},
+  "win-datetime":{label:"Date and Time",ico:"cpanel32"},
+};
+const SM_DEFAULT=["win-cursors","win-chat","win-amp","win-paint","win-mine","win-log"];
+function smRecent(){
+  const r=(store.data.recent||[]).filter(id=>SMAPPS[id]);
+  for(const id of SM_DEFAULT) if(r.length<6&&r.indexOf(id)<0) r.push(id);
+  return r.slice(0,6);
+}
+function smTouch(id){
+  if(!SMAPPS[id]||id==="win-ie") return;   /* Internet is pinned above the line */
+  const r=(store.data.recent||[]).filter(x=>x!==id);
+  r.unshift(id);
+  store.data.recent=r.slice(0,8);
+  store.save();
+  renderMru();
+}
+function renderMru(){
+  const host=$("#sm-mru"); if(!host) return;
+  host.innerHTML="";
+  for(const id of smRecent()){
+    const a=SMAPPS[id];
+    const el=document.createElement("div");
+    el.className="sm-item";
+    el.dataset.app=id;
+    el.innerHTML=`<i class="xico"></i><div class="sm-texts"><div class="sm-text"></div></div>`;
+    el.querySelector(".xico").appendChild(icoNode(a.ico));
+    el.querySelector(".sm-text").textContent=a.label;
+    el.addEventListener("click",()=>{ closeStart(); sysSnd("nav",.5); openWin(id); });
+    host.appendChild(el);
+  }
+}
 $("#startbtn").addEventListener("click",e=>{ e.stopPropagation(); sClick(); startmenu.classList.toggle("open"); });
 addEventListener("pointerdown",e=>{ if(!e.target.closest("#startmenu,#startbtn")) closeStart(); });
 addEventListener("keydown",e=>{
@@ -1044,14 +1091,33 @@ function allProgramsMenu(){
     {label:"Windows Messenger",action:go("win-chat")},
     {label:"Winamp",action:go("win-amp")},
     {sep:1},
+    {label:"Windows Media Player",action:()=>{ closeStart(); smAction("wmp"); }},
+    {sep:1},
     {label:"Accessories",sub:[
+      {label:"Accessibility",sub:[
+        {label:"Magnifier",disabled:1},
+        {label:"Narrator",disabled:1},
+        {label:"On-Screen Keyboard",disabled:1}]},
+      {label:"System Tools",sub:[
+        {label:"Disk Cleanup",action:()=>{ closeStart(); openWin("win-explorer"); explorer.go("C:\\"); setTimeout(()=>explorer.driveProperties(),350); }},
+        {label:"Disk Defragmenter",disabled:1},
+        {label:"System Information",action:()=>{ closeStart(); $("#sp-user").textContent=playerNameFull(); openWin("win-sysprops"); }},
+        {label:"Character Map",disabled:1}]},
+      {sep:1},
       {label:"Notepad",action:go("win-readme")},
       {label:"Paint",action:go("win-paint")},
-      {label:"Calculator",action:()=>{ closeStart(); showError("Calculator","Cannot compute expected value: it is zero. It is always zero. Read the README."); }}]},
+      {label:"Calculator",action:()=>{ closeStart(); showError("Calculator","Cannot compute expected value: it is zero. It is always zero. Read the README."); }},
+      {label:"Command Prompt",action:()=>{ closeStart(); showError("cmd.exe","The console subsystem ships in the next update. The house always ships."); }}]},
     {label:"Games",sub:[
       {label:"Minesweeper",action:go("win-mine")},
-      {label:"Solitaire",action:()=>{ closeStart(); showError("Solitaire","You are already gambling."); }}]},
+      {label:"Solitaire",action:()=>{ closeStart(); showError("Solitaire","You are already gambling."); }},
+      {label:"FreeCell",disabled:1},
+      {label:"Hearts",disabled:1},
+      {label:"Pinball",disabled:1}]},
+    {label:"Startup",sub:[
+      {label:"CURSORS.EXE",action:go("win-cursors")}]},
     {sep:1},
+    {label:"Help and Support",action:go("win-help")},
     {label:"Windows Update",action:()=>{ closeStart(); showError("Windows Update","0 critical updates available. The house is already patched."); }},
   ];
 }
@@ -1584,6 +1650,7 @@ $("#ie-histi").src=IMG.navHistory;$("#ie-maili").src=IMG.navMail;
 $("#ie-printi").src=IMG.printer32;$("#ie-linksi").src=IMG.navLinks;
 $("#ie-throbi").src=IMG.ie32;     $("#ie-addrico").src=IMG.ie16;
 $("#ie-zonei").src=IMG.earth16;
+$("#hlp-backi").src=IMG.navBack; $("#hlp-homei").src=IMG.navHome; $("#hlp-searchi").src=IMG.navSearch;
 /* shutting the dial-up box with the X means the same thing as Work Offline */
 $('#win-dialup .title-bar-controls button[aria-label="Close"]').addEventListener("click",()=>$("#dl-offline").click());
 $('#win-dialing .title-bar-controls button[aria-label="Close"]').addEventListener("click",()=>$("#dg-cancel").click());
@@ -1750,13 +1817,31 @@ function phaseTick(dt){
   renderPhase();
 }
 function fmtUp(s){ const t=Math.floor(s); return `${Math.floor(t/60)}:${String(t%60).padStart(2,"0")}`; }
+/* The disk is the round clock now, so it gets a real gauge instead of a
+   percentage buried in a status line. Offline there is no epoch budget, so the
+   sandbox counts its own dead against the same nominal 64. */
+let lastDisk=-1;
+function renderDisk(){
+  const f=MP.on?MP.fill:Math.min(1,binDead.length/64);
+  const pct=Math.min(100,Math.round(f*100));
+  if(pct===lastDisk) return;
+  lastDisk=pct;
+  const bar=$("#diskbar");
+  $("#diskfill").style.width=pct+"%";
+  bar.classList.toggle("warn",pct>=70&&pct<90);
+  bar.classList.toggle("crit",pct>=90);
+  const dead=MP.on&&MP.corpses?Math.round(f*MP.corpses):binDead.length;
+  const cap=MP.on&&MP.corpses?MP.corpses:64;
+  $("#disktext").textContent=pct>=90
+    ? `C: ${pct}% FULL — ${cap-dead} cursor${cap-dead===1?"":"s"} from a crash`
+    : `C: ${pct}% full · ${dead}/${cap} dead cursors · ${((cap-dead)*12/1024).toFixed(2)} GB free`;
+}
 let lastPhaseText="";
 function renderPhase(){
   const mm="0:"+String(Math.max(0,Math.ceil(phaseT))).padStart(2,"0");
   const live=curs.reduce((s,c)=>s+c.bounty,0);
-  const dsk=MP.on?` · C: ${Math.min(99,Math.round(MP.fill*100))}% FULL`:"";
   const txt=phase==="battle"
-    ?(shutFired?`⚠ SHUTDOWN ${mm} — BANKING ALL`:`UPTIME ${fmtUp(upT)} · ${fmtS(live)} LIVE${dsk}`)
+    ?(shutFired?`⚠ SHUTDOWN ${mm} — BANKING ALL`:`UPTIME ${fmtUp(upT)} · ${fmtS(live)} LIVE`)
     :phase==="crash"?"☠ CRASHED · RESTARTING…":"BOOT";
   if(txt===lastPhaseText) return;
   lastPhaseText=txt;
@@ -1770,6 +1855,7 @@ function renderPhase(){
   const mp=$("#mh-phase");
   mp.textContent=chip;
   mp.classList.toggle("battle",urgent);
+  renderDisk();
 }
 
 /* ================= deploy / recall / bank ================= */
@@ -2479,6 +2565,7 @@ function mpWelcome(m){
     for(const e of (m.chat||[])) e.who==="*"?msn.lobbySys(e.text):msn.lobbySay(e.who,e.text);
   }
   mpSend({t:"guest"}); mpSend({t:"gallery"});
+  msn.setHumans(m.online);
   log(`connected to the beta arena as ${MP.name} — epoch ${roundNo}, ${m.online.length} online`);
   showBalloon("Connected to the beta arena",
     `Live multiplayer, play money. You are ${MP.name}. ${m.online.length} player${m.online.length===1?"":"s"} online — everyone starts with 5 SOL.`);
@@ -2562,6 +2649,7 @@ function mpKill(m){
     w.el.classList.remove("dueling");
     updateTag(w);
   }
+  renderDisk();
   log(`${m.wOwner} > ${m.lOwner}  +${fmtS(m.pot)}`);
   if(cert.mine){
     stats.deaths++;
@@ -2635,7 +2723,7 @@ function mpDown(){
     mpGraceT=null;
     if(net.up()) return;              /* came back; mpWelcome already rebuilt the world */
     MP.on=false; MP.name=null; MP.chatSeeded=false;
-    mpPurge();
+    mpPurge(); msn.setHumans([]);
     showBalloon("Offline sandbox","The beta server did not come back. You are playing the local sandbox now — the bots are fake and so is the money. It reconnects on its own.");
     log("server unreachable — offline sandbox running");
     startEpoch();
@@ -2656,8 +2744,8 @@ function mpMsg(m){
     case "epoch": if(MP.on) mpEpoch(m); break;
     case "chat": if(MP.on) msn.lobbySay(m.who,m.text); break;
     case "sys": if(MP.on) msn.lobbySys(m.text); break;
-    case "join": break;   /* the sys line covers it */
-    case "part": if(MP.on) msn.lobbySys(`${m.name} signed out`); break;
+    case "join": if(MP.on&&m.online) msn.setHumans(m.online); break;   /* the sys line covers the greeting */
+    case "part": if(MP.on){ msn.lobbySys(`${m.name} signed out`); if(m.online) msn.setHumans(m.online); } break;
     case "guest": MP.guest=m.list; mpRefreshIe("guest.html"); break;
     case "gallery": MP.gallery=m.list; mpRefreshIe("gallery"); break;
     case "tv": MP.tv={now:m.now,queue:m.queue}; mpTvSync(); break;
@@ -2751,6 +2839,202 @@ function mpTvRenderQueue(){
     ? MP.tv.queue.map((q,i)=>`<div>${i+1}. ${esc(q.vid)} <font size="1" color="#888">— ${esc(q.by)}</font></div>`).join("")
     : `<font size="1">queue is empty</font>`;
 }
+
+/* ================= Help and Support Center ================= */
+/* The one place in the product that answers questions in plain words instead
+   of in character. It is where the honest-casino thesis gets stated without a
+   joke attached, and where a first-time player finds out what the disk bar
+   means and why the game crashes on purpose. Topics are functions so the ones
+   that quote live numbers can. */
+const HELP={
+  start:{t:"What CURSORS.EXE is",group:"Start here",body:()=>`
+    <h1>What CURSORS.EXE is</h1>
+    <p>You deploy mouse cursors onto this desktop for <b>0.1 SOL</b> each. They
+    fight on their own — you do not steer them. When two cursors owned by
+    different players touch, one dies and the winner takes everything the loser
+    was carrying.</p>
+    <p>You make exactly one decision: <b>when to stop</b>. Recall a cursor and
+    its bounty is banked to your wallet. Leave it out and it keeps fighting.</p>
+    <h2>The three verbs</h2>
+    <ul>
+      <li><b>DEPLOY</b> — put a new cursor in, 0.1 SOL, up to five at once.</li>
+      <li><b>ATTACK / DEFEND</b> — a standing order for all your cursors. Attack
+      hunts the nearest enemy; defend runs from it and regroups.</li>
+      <li><b>RECALL</b> — bank everything. Takes three seconds, during which
+      your cursors can still be caught.</li>
+    </ul>
+    <p>A cursor that has just been deployed is in <b>spawn grace</b> for a
+    moment and cannot fight. Recalling during grace is a full refund — it is a
+    misclick window, not a strategy.</p>`},
+
+  odds:{t:"The odds, stated plainly",group:"Start here",body:()=>`
+    <h1>The odds, stated plainly</h1>
+    <p>When cursor A (carrying <i>a</i>) meets cursor B (carrying <i>b</i>), A
+    wins with probability <b>a / (a + b)</b>. The bigger pile is more likely to
+    win, in exact proportion to how much bigger it is. The house does not take a
+    cut of that collision, does not tilt it, and cannot see it coming.</p>
+    <p>Because every fight pays exactly what it risks, chaining fights cannot
+    bend the average. The chance a cursor ever reaches <b>×N</b> its entry is
+    <b>1/N</b> — exactly.</p>
+    <table>
+      <tr><th>Bank at</th><th>Chance of getting there</th></tr>
+      <tr><td>×2</td><td>1 in 2 &nbsp;(50%)</td></tr>
+      <tr><td>×5</td><td>1 in 5 &nbsp;(20%)</td></tr>
+      <tr><td>×10</td><td>1 in 10 &nbsp;(10%)</td></tr>
+      <tr><td>×100</td><td>1 in 100 &nbsp;(1%)</td></tr>
+    </table>
+    <h2>Where the house edge is</h2>
+    <p>Entry is 0.100 SOL: <b>0.097</b> goes into the arena, <b>0.001</b> to the
+    platform, <b>0.002</b> back to players as rakeback. That fee is the entire
+    edge — about <b>1%</b>, giving an RTP of <b>99%</b>. Nothing else in this
+    game takes anything from you.</p>
+    <div class="hlp-note">Expected profit is −1% of everything you stake. Every
+    other number you see — your streak, your best multiplier, your worst beat —
+    is variance. Running better than −1% is luck, not skill. Running worse is
+    also luck.</div>
+    <p>Bet size cannot change your variance, because every cursor costs the
+    same. Only your banking discipline can. Cash at ×2 often and you win small
+    often; ride for ×50 and you will lose 49 times in 50 without once being
+    cheated.</p>`},
+
+  disk:{t:"Why the computer crashes",group:"Start here",body:()=>{
+    const cap=MP.on&&MP.corpses?MP.corpses:64;
+    const dead=MP.on?Math.round(MP.fill*cap):binDead.length;
+    return `
+    <h1>Why the computer crashes</h1>
+    <p>Every cursor that dies is written to the hard disk as a <b>12 MB</b>
+    file. You can read them: they are in the Recycle Bin, one certificate each.
+    Nothing deletes them while the round is running.</p>
+    <p>So the disk fills up. When <b>C:</b> is full, CURSORS.EXE cannot write the
+    next corpse and it crashes — a real stop error, the blue screen. That is the
+    end of the round, and it is the only thing that ends a round. There is no
+    timer.</p>
+    <h2>The crash cannot cost you money</h2>
+    <p>Before the blue screen, <b>every live cursor is banked at full value</b>.
+    A few cursors before the disk fills, a shutdown warning appears and all
+    cursors are recalled automatically. You keep everything you were carrying.</p>
+    <p>This is why it is safe to make the ending predictable: rushing the disk
+    just pays everyone else at fair odds.</p>
+    <div class="hlp-note">Right now the disk is <b>${Math.round((dead/cap)*100)}% full</b>
+    — ${dead} dead cursors of the ${cap} it takes to crash.</div>
+    <p>The gauge under the CURSORS.EXE menu bar is that number. So is the pie
+    chart in <b>My Computer → Local Disk (C:) → Properties</b>.</p>`;}},
+
+  multi:{t:"The multiplayer beta",group:"Start here",body:()=>`
+    <h1>The multiplayer beta</h1>
+    <p>This is a <b>play-money beta</b>. Every player starts with 5.000 SOL that
+    is not real and cannot be withdrawn. If you go broke, the faucet refills you.
+    Nothing here touches a wallet or a chain.</p>
+    <p>The arena is shared: the cursors you see belong to other people who are
+    connected right now. Open <b>Windows Messenger</b> to see who is here — real
+    players are listed above the bots.</p>
+    <h2>About the bots</h2>
+    <p>Seven bots play continuously so the arena is never empty. They are full
+    economic participants under identical rules — same entry, same duel odds, no
+    special information. They are listed as bots in the buddy list because
+    pretending otherwise would be the one lie this game does not tell.</p>
+    <h2>If the connection drops</h2>
+    <p>The status line says <b>RECONNECTING</b> and the arena holds still. If the
+    server does not come back, you drop into a local offline sandbox — same game,
+    fake opponents, nothing shared. It reconnects on its own.</p>`},
+
+  verify:{t:"How to check we are not cheating",group:"Fairness",body:()=>`
+    <h1>How to check we are not cheating</h1>
+    <p>Before each round the server generates a random seed, and publishes
+    <b>sha256(seed)</b> — a fingerprint that cannot be reversed but also cannot
+    be faked later. Every duel and every movement draw in that round comes from
+    that seed.</p>
+    <p>When the round crashes, the server <b>reveals the seed</b>. Hash it
+    yourself. If it does not match the fingerprint published beforehand, the
+    round was tampered with and you have the proof in your hands.</p>
+    <p>Both values are in <b>CURSORS.EXE → Verify</b>, live.</p>
+    <h2>What this does and does not prove</h2>
+    <p>It proves the outcomes were fixed before play started and were not
+    adjusted while watching your bets. It does not yet let you replay the whole
+    round offline and re-derive every collision — that needs the full input log
+    alongside the seed, and it ships with the real-money engine.</p>
+    <div class="hlp-note">We would rather tell you exactly how far the proof
+    goes than let you assume it goes further.</div>`},
+
+  rake:{t:"Rakeback, and why it exists",group:"Fairness",body:()=>`
+    <h1>Rakeback, and why it exists</h1>
+    <p>Every deploy — yours or anyone else's — pays <b>0.002 SOL</b> into a
+    rakeback pool and mints the person who deployed <b>200 tickets</b>.</p>
+    <p>Your share of every future pool equals your share of all live tickets.
+    Tickets decay with a <b>45-day half-life</b>, so the payroll always belongs
+    to whoever is playing now rather than to whoever showed up first.</p>
+    <p>That 0.002 is two-thirds of the 0.003 fee, which is what turns a 3% take
+    into a <b>1% house edge</b> and a 99% RTP. Claim it from
+    <b>CURSORS.EXE → Rakeback</b> whenever it is worth claiming.</p>`},
+
+  bin:{t:"The Recycle Bin and death certificates",group:"The desktop",body:()=>`
+    <h1>The Recycle Bin and death certificates</h1>
+    <p>Every dead cursor files a certificate recording what it was carrying, its
+    peak value, how long it lived, who killed it, and — the number that matters —
+    <b>its own chance of winning that exact collision</b>.</p>
+    <p>A cursor that died holding 92% odds gets a piece of paper saying it was
+    92% and lost anyway, and that nothing went wrong. 92% is a rate, not a
+    promise, and the certificate is where the other 8% lives.</p>
+    <p><b>Hall of Pain</b> (in the bin's task pane) sorts the whole graveyard by
+    damage and reddens the ones that died as favourites.</p>`},
+
+  apps:{t:"The rest of the desktop",group:"The desktop",body:()=>`
+    <h1>The rest of the desktop</h1>
+    <p>It is a real desktop, not a backdrop. Everything on it works.</p>
+    <ul>
+      <li><b>Internet Explorer</b> — a small handmade web, including cursorTV,
+      where the whole lobby watches one video together with a shared queue.</li>
+      <li><b>Paint</b> — all sixteen tools, aliased edges. File → Set As
+      Background makes wallpaper; File → Publish to Gallery hangs it where every
+      player can see it.</li>
+      <li><b>Minesweeper</b> — the real rules, including chording.</li>
+      <li><b>Winamp</b> — actually Winamp. Ctrl+D for double size.</li>
+      <li><b>Windows Messenger</b> — the lobby is real chat with real players.</li>
+      <li><b>My Computer</b> — a real C: drive whose free space is the round clock.</li>
+    </ul>
+    <p>Right-click almost anything. Most of it does what XP did.</p>`},
+};
+const HELP_ORDER=["start","odds","disk","multi","verify","rake","bin","apps"];
+let helpAt="start", helpHist=[];
+function renderHelp(){
+  const side=$("#hlp-side"); side.innerHTML="";
+  let group=null;
+  for(const k of HELP_ORDER){
+    const h=HELP[k];
+    if(h.group!==group){
+      group=h.group;
+      const g=document.createElement("div");
+      g.className="hlp-shead"; g.textContent=group;
+      side.appendChild(g);
+    }
+    const a=document.createElement("a");
+    a.textContent=h.t;
+    a.className=k===helpAt?"on":"";
+    a.addEventListener("click",()=>helpGo(k));
+    side.appendChild(a);
+  }
+  $("#hlp-doc").innerHTML=HELP[helpAt].body();
+  $("#hlp-doc").scrollTop=0;
+  $("#hlp-back").disabled=!helpHist.length;
+}
+function helpGo(k,noHist){
+  if(!HELP[k]) return;
+  if(!noHist&&k!==helpAt) helpHist.push(helpAt);
+  helpAt=k; sysSnd("nav",.4); renderHelp();
+}
+$("#hlp-back").addEventListener("click",()=>{ if(helpHist.length) helpGo(helpHist.pop(),true); });
+$("#hlp-home").addEventListener("click",()=>helpGo("start"));
+$("#hlp-search").addEventListener("keydown",e=>{
+  e.stopPropagation();
+  if(e.key!=="Enter") return;
+  const q=e.target.value.trim().toLowerCase();
+  if(!q) return;
+  /* the whole library is eight pages, so a substring scan is the honest search */
+  const hit=HELP_ORDER.find(k=>(HELP[k].t+" "+HELP[k].body()).toLowerCase().indexOf(q)>=0);
+  if(hit) helpGo(hit);
+  else showError("Search",`No Help topic contains "${e.target.value.trim()}".`,true);
+});
+renderHelp();
 
 /* ================= main loop ================= */
 let last=performance.now();
@@ -2903,6 +3187,20 @@ $("#tile-guest").addEventListener("click",()=>{
 $("#lg-off").addEventListener("click",()=>{ sysSnd("shutdown",.55); $("#login").style.display="none"; $("#shutdown").style.display="grid"; });
 if(location.hash.indexOf("#desktop")===0) sessionStorage.setItem("cxp.booted","1"); /* dev: skip boot/login */
 if(location.hash==="#desktop-start") setTimeout(()=>$("#startmenu").classList.add("open"),400); /* dev: capture start menu */
+if(location.hash==="#desktop-start-mru") setTimeout(()=>{ /* dev: does the menu reshape around use? */
+  openWin("win-help"); openWin("win-mine"); openWin("win-paint");
+  minWin("win-help"); minWin("win-mine"); minWin("win-paint");
+  $("#startmenu").classList.add("open");
+},400);
+if(location.hash.indexOf("#desktop-allprog")===0) setTimeout(()=>{ /* dev: the All Programs flyout */
+  $("#startmenu").classList.add("open");
+  setTimeout(()=>$(".sm-item.allprog").click(),250);
+},400);
+if(location.hash.indexOf("#desktop-help")===0) setTimeout(()=>{ /* dev: Help and Support Center */
+  openWin("win-help");
+  const p=location.hash.replace("#desktop-help","").replace("-","");
+  if(p) helpGo(p);
+},450);
 if(location.hash==="#desktop-logfill") setTimeout(()=>{ /* dev: does a long log blow the window out? */
   openWin("win-log");
   for(let i=0;i<60;i++) log("mumu > bobo  +0.097   (line "+i+")");
@@ -3005,6 +3303,7 @@ if(location.hash.indexOf("#desktop-mp")===0) setTimeout(()=>{ /* dev: drive the 
     };
     requestAnimationFrame(tt=>{ probeT=tt; tick(); });
   });
+  if(p==="-buddies") when(()=>msn.openList());
   if(p==="-chat") when(()=>{
     msn.openConv("lobby");
     const c=document.getElementById(msn.convIdFor("lobby"));

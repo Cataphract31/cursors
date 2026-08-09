@@ -30,6 +30,10 @@ function broadcast(msg) { const s = JSON.stringify(msg); for (const c of conns) 
 function sys(text) { pushChat("*", text); broadcast({ t: "sys", text }); }
 function pushChat(who, text) { chatLog.push({ who, text, at: Date.now() }); if (chatLog.length > 40) chatLog.shift(); }
 
+function onlineNames() {
+  return [...byKey.values()].filter(c => c.hello)
+    .map(c => sim.players.get(c.key)?.name).filter(Boolean);
+}
 function balMsg(key) {
   const p = sim.players.get(key); if (!p) return null;
   let glob = 0;
@@ -142,10 +146,10 @@ function handle(c, m) {
         t: "welcome", token, name,
         balance: b.balance, tickets: b.tickets, glob: b.glob, rake: b.rake,
         epoch: sim.welcomeState(), chat: chatLog.slice(-25),
-        online: [...byKey.values()].filter(x => x.hello).map(x => sim.players.get(x.key)?.name).filter(Boolean),
+        online: onlineNames(),
         tv: { now: tv.now, queue: tv.queue },
       });
-      broadcast({ t: "join", name });
+      broadcast({ t: "join", name, online: onlineNames() });
       sys(`${name} signed in — ${conns.size} player${conns.size === 1 ? "" : "s"} online`);
       break;
     }
@@ -240,7 +244,7 @@ wss.on("connection", ws => {
       if (byKey.get(c.key) === c) {
         byKey.delete(c.key);
         const name = sim.players.get(c.key)?.name;
-        if (name && c.hello) broadcast({ t: "part", name });
+        if (name && c.hello) broadcast({ t: "part", name, online: onlineNames() });
       }
     }
   });

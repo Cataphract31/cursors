@@ -399,6 +399,44 @@ body.mobile .conv-right{display:none}
 /* webamp's windows also carry class "window" — undo our shell window rules for them */
 #webamp .window{display:block;min-width:0;max-width:none;flex-direction:row;z-index:auto}
 
+/* ---------- Help and Support Center ---------- */
+.win-body.hlp-body{background:#ECE9D8;display:flex;flex-direction:column;padding:0;overflow:hidden}
+.hlp-head{flex:none;display:flex;align-items:baseline;gap:9px;padding:7px 12px;color:#fff;
+  background:linear-gradient(180deg,#4A80D8,#2B5CB8 55%,#20489E)}
+.hlp-brand{font-size:15px;font-weight:bold;text-shadow:1px 1px 1px rgba(0,0,0,.35)}
+.hlp-sub{font-size:10px;color:#CFE0FF}
+.hlp-main{flex:1;min-height:0;display:flex;background:#fff}
+.hlp-side{flex:none;width:196px;overflow-y:auto;padding:10px 8px;display:flex;flex-direction:column;gap:3px;
+  background:linear-gradient(180deg,#7CA2E3,#5F8AD9 40%,#4E7BD2)}
+.hlp-shead{color:#fff;font-weight:bold;margin:6px 2px 2px;text-shadow:1px 1px 1px rgba(0,0,0,.3)}
+.hlp-side a{display:block;padding:3px 7px;border-radius:3px;color:#fff;cursor:default;line-height:1.35}
+.hlp-side a:hover{background:rgba(255,255,255,.22);text-decoration:underline}
+.hlp-side a.on{background:#fff;color:#1B3F86;font-weight:bold}
+.hlp-doc{flex:1;min-width:0;overflow:auto;padding:14px 18px;font-size:12px;line-height:1.65;color:#000}
+.hlp-doc h1{font-size:17px;color:#1B3F86;margin:0 0 4px}
+.hlp-doc h2{font-size:13px;color:#1B3F86;margin:16px 0 4px}
+.hlp-doc p{margin:8px 0}
+.hlp-doc ul{margin:8px 0;padding-left:22px}
+.hlp-doc li{margin:4px 0}
+.hlp-doc b{color:#000}
+.hlp-doc .hlp-note{background:#FFFFE1;border:1px solid #D9C97E;padding:8px 10px;margin:12px 0}
+.hlp-doc table{border-collapse:collapse;margin:10px 0}
+.hlp-doc th,.hlp-doc td{border:1px solid #C0C0C0;padding:3px 9px;text-align:left}
+.hlp-doc th{background:#ECE9D8}
+body.mobile .hlp-side{width:132px;font-size:11px}
+body.mobile .hlp-doc{padding:10px 12px}
+
+/* ---------- the disk meter: the round clock, since the disk is the clock ---------- */
+.diskbar{position:relative;flex:none;height:15px;margin:0 6px 5px;border:1px solid #7F9DB9;background:#fff;overflow:hidden}
+.diskbar i{position:absolute;left:0;top:0;bottom:0;width:0;
+  background:repeating-linear-gradient(90deg,#3B6EA5 0 9px,#5C8FC7 9px 11px);transition:width .35s linear}
+.diskbar.warn i{background:repeating-linear-gradient(90deg,#C08000 0 9px,#E0A020 9px 11px)}
+.diskbar.crit i{background:repeating-linear-gradient(90deg,#B00000 0 9px,#E03030 9px 11px);animation:diskpulse 1s ease-in-out infinite}
+@keyframes diskpulse{50%{opacity:.62}}
+.diskbar span{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  font:10px Tahoma,sans-serif;color:#000;mix-blend-mode:luminosity;letter-spacing:.2px;white-space:nowrap}
+body.mobile .diskbar{margin:0 4px 4px}
+
 /* ---------- Internet Explorer 6: the chrome ---------- */
 .ie-bar{position:relative;padding-right:36px}
 .ie-throb{position:absolute;right:0;top:0;bottom:0;width:34px;display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg,#F1F0E8,#E5E2D5);border-left:1px solid #D4D0C8}

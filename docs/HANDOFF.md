@@ -172,6 +172,42 @@ window, server-echoed, bot chatter muted online), the **guestbook is global**, P
 window via the official iframe API, synced by the server: fair FIFO queue (3/person),
 skip by vote, muted-start with a click-for-sound badge (browser autoplay law).
 
+**Netcode, measured not guessed (2026-08-09).** Reported instability was diagnosed
+before it was touched: the box showed zero restarts, 33 MB of a 230 MB budget, load 0.03,
+and the wire showed p50 100ms cadence with a flat 152ms RTT — hosting, the free tier and
+file size were all innocent. Three real defects, all ours: the client chased positions with
+an exponential filter (velocity ∝ error, so it pulsed at the packet rate); the sim ticked at
+50ms while snapshots went at 66ms, so each snapshot caught one step of movement or two,
+alternating (**rate aliasing**, worth 33% speed variance on its own); and the interpolator
+read `performance.now()` instead of the frame's rAF timestamp, folding our own per-frame
+workload into rendered position. Now: fixed 30Hz timestep with the snapshot emitted from
+inside the loop every second step (a true, even 15Hz), snapshots stamped with **sim** time
+and mapped to the client clock by a min-delay filter, and real snapshot interpolation
+rendering 110ms in the past between two real samples. Median speed variance **34.3% → 6.4%**
+against a 0.4% browser floor (`#desktop-mp-smooth` reports both). A dropped socket now shows
+RECONNECTING and holds for 7s before falling back to the sandbox.
+
+**Start menu completeness + Help (2026-08-09) — roadmap item 7 done.** The left column
+below the pinned pair is a real **most-recently-used list** (persisted in `store.data.recent`,
+promoted by `openWin`), which is what XP actually did. All Programs grew the real roster:
+Accessories with Accessibility/System Tools submenus (Disk Cleanup and System Information
+open the real windows), Games, Startup, Help and Support, Windows Update. And there is a
+real **Help and Support Center** (`win-help`) in XP's blue-header two-column shape, with
+Back/Home/Search — eight topics that state the game plainly and without jokes: what it is,
+the odds (with the 1/N table and the −1% expectation stated outright), why the computer
+crashes, the multiplayer beta and its bots, how to check the commit-reveal, rakeback, the
+certificates, and the rest of the desktop. It quotes the live disk fill. This is the
+first-run explanation the game never had.
+
+**The disk gauge.** The round clock is the disk, so it has a gauge: a real progress bar
+under the CURSORS.EXE menu bar reading `C: 45% full · 29/64 dead cursors · 0.41 GB free`,
+going amber at 70% and pulsing red at 90%. Same number as Explorer's C: pie chart.
+
+**Real players are visible.** The Messenger buddy list leads with **Players in the arena**
+— everyone actually connected, pushed by the server on every join/part — above a group
+labelled *Bots (they play for real money too)*. Knowing whether anyone else is in the lobby
+is the most useful thing a multiplayer beta can show, and the bots stay honestly labelled.
+
 **The game** — deploy/recall/stances, duels with odds display, gold bursts, kill streaks,
 BSOD on losing your last cursor, rakeback tracking, autoplay. Every death writes a
 certificate (`certify()` in main.js) that the Recycle Bin renders.
@@ -209,6 +245,10 @@ rush, ~18.5s the crash dialog, ~27s the recovered arena).
   `#desktop-amptest`, `#desktop-logfill`, `#desktop-paint` (draws with 6 tools),
   `#desktop-paint-wall` (paints, then sets it as tiled wallpaper), `#desktop-paint-props`,
   `#desktop-exp` + `-c` / `-sys` / `-game` / `-det` / `-props` / `-sysprops`,
+  `#desktop-mp` (LIVE local server at `ws://localhost:8788`; + `-play` / `-chat` /
+  `-buddies` / `-tv` / `-gal` / `-guest` / `-smooth` for the netcode probe),
+  `#desktop-help` (+ `-odds` / `-disk` / `-verify` … any topic key),
+  `#desktop-allprog`, `#desktop-start-mru`,
   `#desktop-ie` (+ `-odds` / `-hall` / `-guest` / `-ring` / `-mumu` / `-deg` / `-bobo` /
   `-404` / `-search`, plus `-dial` for the Connect box, `-dialgo` for the handshake in
   progress, `-src` for View > Source into Notepad, and `-post` which really signs the
@@ -319,7 +359,8 @@ explicitly **parked** ("stuff only 2% of users would search for"). Run… jokes 
    claims to have a system. Not done: no Favorites *editing* (Add to Favorites is a joke
    box), no cookies gag, no IE-specific right-click menu, and images are CSS rather than
    period GIFs (no MIT-clean animated set turned up).
-7. **Start menu completeness** — All Programs roster, recent apps, Help & Support.
+7. ~~Start menu completeness~~ **SHIPPED 2026-08-09.** See §5. Not done: no Search
+   Companion window (still a joke box), no per-app jump lists (XP had none either).
 
 **Owner direction (2026-08-09 evening) — ALL SHIPPED same night, see §5:** live
 multiplayer beta (server-authoritative, play money, bots as liquidity floor), disk-full
@@ -327,6 +368,17 @@ epochs, global guestbook + gallery, cursorTV watch-together.
 - **Content note, standing:** owner explicitly does not want more AI-authored joke copy
   filling surfaces (called the IE fake-web text "AI slop"). Keep authored gag text
   minimal; prefer real systems and real player content over pastiche.
+
+**What is left, in order:**
+1. **Prove the invariants offline** — the server asserts pot conservation every crash, but
+   nothing yet proves EV per deploy = stake × 0.97 for *every* strategy (hunter, camper,
+   instant banker, chain rider, autoplay). This is how THIN ICE caught its wipe leak, and
+   it is the last thing between the beta and real money.
+2. **Mobile landscape** (>760px wide phones still get the desktop shell) and a real-device
+   pass (iOS Safari keyboard, safe-area).
+3. **Bot/liquidity policy disclosed** before real money — the buddy list labels them now,
+   but the written policy is still owed.
+4. Then: Phantom wallet at the login tile, real custody, real DMs.
 
 **Parallel engine track (blocks real money, not UI):** port THIN ICE's sim skeleton and
 **prove the invariants** — pot conservation, and EV per deploy = stake × 0.97 for *every*

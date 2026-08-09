@@ -369,12 +369,42 @@ export function initMessenger(deps) {
 
   /* ---------- contact list ---------- */
   function statusClass(s) { return "st-" + s; }
+  /* Real people, when there are any. On the beta server the buddy list leads
+     with whoever is actually connected — the single most useful thing a
+     multiplayer lobby can tell you is whether anyone else is in it. The bots
+     stay below, honestly labelled, because they are the liquidity floor and
+     pretending otherwise would be the one lie this game does not tell. */
+  let humans = [];
+  function setHumans(names) {
+    humans = (names || []).filter(n => n !== playerName());
+    renderList();
+  }
   function renderList() {
     const host = $("#msn-list");
     if (!host) return;
     host.innerHTML = "";
     const online = CONTACTS.filter(c => state[c.id] !== "offline");
     const offline = CONTACTS.filter(c => state[c.id] === "offline");
+    if (humans.length) {
+      const g = document.createElement("div");
+      g.className = "msn-group";
+      const h = document.createElement("div");
+      h.className = "msn-ghead";
+      h.innerHTML = `<i class="tw">▾</i><span></span>`;
+      h.querySelector("span").textContent = `Players in the arena (${humans.length})`;
+      h.addEventListener("click", () => g.classList.toggle("closed"));
+      g.appendChild(h);
+      for (const n of humans) {
+        const row = document.createElement("div");
+        row.className = "msn-row on";
+        row.innerHTML = `<img class="msn-st" src="${IMG.msn16}" alt=""><span class="msn-nm"></span><span class="msn-psm"> - real person</span>`;
+        row.querySelector(".msn-nm").textContent = n;
+        row.title = `${n} — connected to the beta server right now`;
+        row.addEventListener("dblclick", () => openConv("lobby"));
+        g.appendChild(row);
+      }
+      host.appendChild(g);
+    }
 
     const groupEl = (title, list) => {
       const g = document.createElement("div");
@@ -397,7 +427,7 @@ export function initMessenger(deps) {
       }
       return g;
     };
-    host.appendChild(groupEl("Online", online));
+    host.appendChild(groupEl(humans.length ? "Bots (they play for real money too)" : "Online", online));
     host.appendChild(groupEl("Offline", offline));
   }
 
@@ -467,7 +497,7 @@ export function initMessenger(deps) {
     /* a contact messages you out of the blue — toasts if the window is shut */
     incoming: (id, text) => say(id, byId(id).name, text, false),
     place: (id, x, y) => { const r = conv(id); r.el.style.left = x + "px"; r.el.style.top = y + "px"; },
-    openConv, lobbySys, lobbySay, botChat,
+    openConv, lobbySys, lobbySay, botChat, setHumans,
     nudgeLobby: () => nudge("lobby"),
     renderList, renderMe,
     convIdFor: convId,

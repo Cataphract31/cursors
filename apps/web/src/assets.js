@@ -29,6 +29,7 @@ import cpanel32 from "./assets/xp/icons/300(32x32).png";
 import connect32 from "./assets/xp/icons/309(32x32).png";
 import printer32 from "./assets/xp/icons/549(32x32).png";
 import help32 from "./assets/xp/icons/747(32x32).png";
+import help16 from "./assets/xp/icons/747(16x16).png";
 import search32 from "./assets/xp/icons/299(32x32).png";
 import run32 from "./assets/xp/icons/743(32x32).png";
 import lock32 from "./assets/xp/icons/546(32x32).png";
@@ -97,7 +98,7 @@ export const IMG = {
   computer16, computer32, bin32, folder16, folder32, note16, note32,
   ie16, ie32, msn16, msn32, amp16, err16, err32, user48,
   docs32, pics32, music32, cpanel32, connect32, printer32,
-  help32, search32, run32, lock32, off32, outlook32, wmp32, allProg,
+  help32, help16, search32, run32, lock32, off32, outlook32, wmp32, allProg,
   trayVol, trayUsb, trayRisk, offBig, flag16,
   paint16, paint32,
   hdd32, cd32, progfolder32, openfolder32, winfolder32, shareddocs32, sysfile32,
