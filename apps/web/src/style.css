@@ -218,6 +218,32 @@ body.mobile .ex-tb span{display:none}
 .dp-bar{height:14px;border:1px solid #808080;background:#D64B4B;margin:8px 0 4px;overflow:hidden}
 .dp-bar i{display:block;height:100%;background:#1B5FAE}
 
+/* ---------- CURSORS.EXE panes ---------- */
+.cx-body{display:flex;flex-direction:column;overflow:hidden}
+.cx-body .menubar,.cx-body .phaseline,.cx-tabs{flex:none}
+.cx-tabs{display:flex;gap:1px;margin:0 0 7px;border-bottom:1px solid #ACA899}
+.cx-tab{padding:3px 9px 2px;font-size:10px;border:1px solid #ACA899;border-bottom:0;
+  border-radius:3px 3px 0 0;background:#EFEDE0;cursor:pointer;color:#444}
+.cx-tab.on{background:#fff;color:#000;position:relative;top:1px;padding-bottom:3px;font-weight:bold}
+.cx-pane{display:none;overflow-y:auto}
+.cx-pane.on{display:block;flex:none}   /* flex-basis would collapse the fixed heights below */
+/* the data panes hold the window at the Play pane's height instead of reflowing it */
+#cx-stats.on,#cx-rake.on,#cx-hist.on,#cx-verify.on{height:368px}
+body.mobile .cx-pane.on{height:auto !important;flex:1;min-height:0}   /* sheets size themselves */
+.cx-kv{display:flex;align-items:baseline;gap:8px;padding:2.5px 0;font-size:11px}
+.cx-kv span{width:110px;flex:none;color:#5A5648}
+.cx-kv b{flex:1;min-width:0}
+.cx-kv.neg b{color:#A32020}
+.cx-kv.pos b{color:#0A7A2F}
+.cx-note{font-size:10px;line-height:1.65;color:#4A4636;background:#FFF7DE;border:1px solid #E0C05A;padding:6px 8px;margin-top:8px}
+.cx-seed{font:10px "Lucida Console",Consolas,monospace;word-break:break-all;background:#F6F5EE;border:1px solid #D4D0C8;padding:5px 6px;margin:3px 0 8px;user-select:text;cursor:text}
+table.cxh{border-collapse:collapse;width:100%;font-size:10px}
+table.cxh th{background:#ECE9D8;border-bottom:1px solid #ACA899;text-align:left;font-weight:normal;padding:2px 5px;white-space:nowrap;position:sticky;top:0}
+table.cxh td{padding:2px 5px;border-bottom:1px solid #F0F0F0;white-space:nowrap}
+table.cxh td.n,table.cxh th.n{text-align:right}
+table.cxh td.pos{color:#0A7A2F;font-weight:bold}
+table.cxh td.neg{color:#A32020;font-weight:bold}
+
 /* ---------- death certificate + Hall of Pain ---------- */
 .cert-head{display:flex;align-items:center;gap:10px}
 .cert-ico{width:32px;height:32px;flex:none;display:block;filter:grayscale(1) brightness(.75)}
@@ -414,7 +440,7 @@ body.mobile .conv-right{display:none}
 .cur .tag .mx{margin-left:4px;color:#FFD24A}
 .cur.me .nm{background:#316AC5;padding:0 4px;border-radius:2px}
 .cur.grace{opacity:.55}
-.cur.dueling svg{animation:shake .13s infinite}
+.cur.dueling svg{animation:shake .13s infinite;filter:drop-shadow(0 0 3px #FF3B20) drop-shadow(0 0 7px rgba(255,40,20,.55))}
 @keyframes shake{0%{transform:translate(0,0)}25%{transform:translate(-1.5px,1px)}50%{transform:translate(1.5px,-1px)}75%{transform:translate(-1px,-1.5px)}100%{transform:translate(1px,1px)}}
 .duelfx{position:absolute;text-align:center;font:bold 10px "Lucida Console",Consolas,monospace;color:#fff;text-shadow:1px 1px 2px #000,0 0 4px #000}
 .duelfx.big{font-size:13px;color:#FFD24A}
@@ -431,7 +457,11 @@ body.mobile .conv-right{display:none}
 @keyframes rise{to{transform:translateY(-48px);opacity:0}}
 
 /* ---------- BSOD / power-off screen ---------- */
-#bsod{position:fixed;inset:0;background:#0000AA;color:#fff;font:14px "Lucida Console",Consolas,monospace;padding:8% 10%;display:none;z-index:99999;line-height:1.7;white-space:pre-wrap}
+/* the real NT stop screen: text-mode metrics, top-left start, tight leading */
+#bsod{position:fixed;inset:0;background:#0000AA;color:#FFF;display:none;z-index:99999;
+  font:15px/1.45 "Lucida Console",Consolas,monospace;padding:28px 38px;
+  white-space:pre-wrap;overflow:hidden;cursor:default}
+body.mobile #bsod{font-size:11px;padding:16px 14px}
 #shutdown{position:fixed;inset:0;background:#000;display:none;z-index:99999;place-items:center}
 #shutdown div{color:#FFB300;font:bold 24px "Lucida Console",Consolas,monospace;text-align:center;line-height:1.8}
 #shutdown .shut-sub{font-size:12px;color:#666;font-weight:normal}

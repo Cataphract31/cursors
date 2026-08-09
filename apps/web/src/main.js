@@ -33,7 +33,7 @@ const fmtSign=u=>(u<0?"-":"+")+(Math.abs(u)/1000).toFixed(3);
    but the player never sees a round end — they see the system CRASH, bank
    everyone in full, and come straight back. Length is randomized so the
    crash cannot be camped by the clock. */
-const T_SHUT=12, T_CRASH=3, EPOCH_MIN=110, EPOCH_MAX=195;
+const T_SHUT=12, T_CRASH=5, EPOCH_MIN=110, EPOCH_MAX=195;
 const RECALL_SECS=3, DUEL_MS=700;
 
 /* ================= audio ================= */
@@ -152,7 +152,7 @@ function hideWamp(){ const w=wampWrap(); if(w) w.style.display="none"; }
 function wampHidden(){ const w=wampWrap(); return !w||w.style.display==="none"; }
 let zTop=100, focusedId=null;
 const openApps=new Map();
-const NOTAB=new Set(["win-logoff","win-shutdown","win-results","win-error","win-confirm","win-props","win-run","win-cert"]);
+const NOTAB=new Set(["win-logoff","win-shutdown","win-error","win-confirm","win-props","win-run","win-cert"]);
 function tabTitle(id){ const a=openApps.get(id); if(a&&a.title) return a.title; const t=$("#"+id+" .title-bar-text"); return t?t.textContent:id; }
 function tabIconHTML(id){
   const el=$("#"+id+" .title-bar .tb-ico");
@@ -719,6 +719,24 @@ function trayMenu(){
 
 /* ---- menu bars actually drop menus ---- */
 function menubarMenu(label,id){
+  if(id==="win-cursors"){
+    const P={Play:"cx-play",Stats:"cx-stats",Rakeback:"cx-rake",History:"cx-hist",Verify:"cx-verify"};
+    if(label==="Game") return [
+      {label:"Deploy 0.1 SOL",bold:1,action:()=>deploy(false)},
+      {label:"Recall All",action:recallAll},
+      {sep:1},
+      {label:"Autoplay",check:auto.on,action:()=>$("#ap-toggle").click()},
+      {sep:1},
+      {label:"Exit",action:()=>closeWin(id)}];
+    if(label==="View") return Object.keys(P).map(n=>({
+      label:n,check:$("#"+P[n]).classList.contains("on"),action:()=>cxShow(P[n])}));
+    if(label==="Help") return [
+      {label:"How it works",action:()=>openWin("win-readme")},
+      {label:"Verify fairness",action:()=>cxShow("cx-verify")},
+      {sep:1},
+      {label:"About CURSORS.EXE",action:()=>showError("About CURSORS.EXE",
+        "CURSORS.EXE · version 5.1 (Build 2600.casino)\nRTP 99% · P(reach ×N)=1/N · the edge is the fee.\nThis product is licensed to: whoever is losing right now.",true)}];
+  }
   switch(label){
     case "File": return [
       {label:"New",disabled:1},{label:"Open...",disabled:1},{label:"Save",disabled:1},
@@ -1476,7 +1494,7 @@ $("#geo-deploy").addEventListener("click",()=>openWin("win-cursors"));
 /* ================= game state ================= */
 const BOTS=["mumu","bobo","clippy","bonk","solja","xp_chad","deg404"].map(n=>({name:n}));
 let wallet=5000, walletShown=5000;
-let stats={kills:0,deaths:0,best:0};
+let stats={kills:0,deaths:0,best:0,deploys:0,banks:0,bigBank:0,tIn:0,tOut:0};
 let curs=[], binDead=[];
 let myTickets=0, globalTickets=1437200, rakeAccrued=0;
 let stance="attack";
@@ -1503,7 +1521,7 @@ function syncArena(){
 
 let phase="boot", phaseT=0, roundNo=0, roundId=0;
 let epochLen=150, upT=0, epochStart=0;   /* uptime never resets: the desktop stays up, only CURSORS.EXE crashes */
-let R=null;
+let R=null, epochHist=[];
 function newRoundRecord(){ return {pot:0,deploys:0,myIn:0,myOut:0,myKills:0,bigBank:null,deaths:0}; }
 
 const CURSVG=`<svg viewBox="0 0 14 22"><use href="#ic-cursor"/></svg>`;
@@ -1556,6 +1574,7 @@ function startEpoch(){
   epochLen=rand(EPOCH_MIN,EPOCH_MAX);
   epochStart=upT;
   shutFired=false;
+  commitSeed();
   setPhase("battle",epochLen);
   if(roundNo===1){ log("system online — deploys are open"); }
   else{ log(`CURSORS.EXE restarted (epoch ${roundNo}) — deploys are open`); botChat("join"); }
@@ -1586,19 +1605,13 @@ function crashSystem(){
   closeWin("win-shutdown",{silent:true});
   const share=myTickets>0?myTickets/(globalTickets+myTickets):0;
   rakeAccrued+=share*R.deploys*FEE_RAKE;
-  const net=R.myOut-R.myIn;
-  $("#resultsbody").innerHTML=[
-    `epoch&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: ${roundNo} · up ${fmtUp(upT-epochStart)}`,
-    `pot&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: ${fmtS(R.pot)} SOL · ${R.deploys} cursors`,
-    `graveyard&nbsp;: ${R.deaths} dead`,
-    R.bigBank?`top bank&nbsp;&nbsp;: ${R.bigBank.owner} ${fmtS(R.bigBank.amt)} (×${(R.bigBank.amt/ENTRY).toFixed(1)})`:`top bank&nbsp;&nbsp;: —`,
-    `you&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: in ${fmtS(R.myIn)} · out ${fmtS(R.myOut)} · <b>${fmtSign(net)}</b>`,
-  ].join("<br>");
-  openWin("win-results",{silent:true});
+  /* the epoch goes into the History pane before R is reset */
+  epochHist.unshift({no:roundNo,up:fmtUp(upT-epochStart),pot:R.pot,deploys:R.deploys,
+    deaths:R.deaths,top:R.bigBank,net:R.myOut-R.myIn,myIn:R.myIn});
+  epochHist=epochHist.slice(0,30);
+  revealSeed();
+  bsodShow(crashBsodText());
   sError();
-  /* the whole playfield hiccups; nothing about the money does */
-  $("#arena").classList.add("crashed");
-  setTimeout(()=>$("#arena").classList.remove("crashed"),900);
   setPhase("crash",T_CRASH);
   log(`CURSORS.EXE crashed. epoch ${roundNo}: pot ${fmtS(R.pot)}, ${R.deaths} dead.`);
   chatSys("it crashed again. everyone got banked. we go again");
@@ -1612,7 +1625,13 @@ function phaseTick(dt){
     if(shutFired) $("#shuttimer").textContent="0:"+String(Math.max(0,Math.ceil(phaseT))).padStart(2,"0");
     if(phaseT<=0) crashSystem();
   }
-  else if(phase==="crash"&&phaseT<=0){ closeWin("win-results",{silent:true}); startEpoch(); }
+  else if(phase==="crash"&&phaseT<=0){
+    bsodEl.style.display="none";
+    /* the playfield hiccups back to life; nothing about the money does */
+    $("#arena").classList.add("crashed");
+    setTimeout(()=>$("#arena").classList.remove("crashed"),900);
+    startEpoch();
+  }
   renderPhase();
 }
 function fmtUp(s){ const t=Math.floor(s); return `${Math.floor(t/60)}:${String(t%60).padStart(2,"0")}`; }
@@ -1642,7 +1661,7 @@ function deploy(silent){
   if(!canDeploy()||myCurs().length>=MAXCUR||wallet<STAKE) return;
   wallet-=STAKE;
   myTickets+=200;
-  R.myIn+=STAKE;
+  R.myIn+=STAKE; stats.deploys++; stats.tIn+=STAKE;
   R.pot+=ENTRY; R.deploys++;
   const c=makeCur(playerName(),true);
   c.mode="roam"; c.prevMode="roam";
@@ -1692,7 +1711,13 @@ function bank(c,atShutdown){
   if(c.isMine){
     wallet+=c.bounty; R.myOut+=c.bounty;
     stats.best=Math.max(stats.best,c.bounty/ENTRY);
-    if(c.bounty>=ENTRY*10) sysSnd("tada",.6); else sBank();
+    stats.banks++; stats.tOut+=c.bounty; stats.bigBank=Math.max(stats.bigBank,c.bounty);
+    if(c.bounty>=ENTRY*10){
+      /* the ×10: 1-in-10 exactly, and it should feel like it */
+      sysSnd("tada",.6);
+      for(let i=0;i<3;i++) setTimeout(()=>goldBurst(c.x+rand(-44,44),c.y+rand(-30,30)),i*170);
+      showBalloon(`×${m} BANKED`,`${fmtS(c.bounty)} SOL. P(reach ×10) is exactly 1/10 — today you were the 1.`);
+    }else sBank();
     float(fmtSign(c.bounty)+" ×"+m,c.x,c.y,false);
     goldBurst(c.x,c.y);
     log(`you banked ${fmtS(c.bounty)} (×${m})${atShutdown?" at shutdown":""}`);
@@ -1700,6 +1725,103 @@ function bank(c,atShutdown){
     if(c.bounty>=ENTRY*2){ log(`${c.owner} banked ${fmtS(c.bounty)} (×${m})`); botChat("bank",{n:c.owner}); }
   }
   removeCur(c);
+}
+
+/* ================= CURSORS.EXE panes ================= */
+function cxShow(id){
+  $$("#win-cursors .cx-tab").forEach(t=>t.classList.toggle("on",t.dataset.cx===id));
+  $$("#win-cursors .cx-pane").forEach(p=>p.classList.toggle("on",p.id===id));
+  renderCx();
+}
+$$("#win-cursors .cx-tab").forEach(t=>t.addEventListener("click",()=>{ sClick(); cxShow(t.dataset.cx); }));
+function renderCx(){
+  if($("#cx-stats").classList.contains("on")) renderCxStats();
+  else if($("#cx-rake").classList.contains("on")) renderCxRake();
+  else if($("#cx-hist").classList.contains("on")) renderCxHist();
+  else if($("#cx-verify").classList.contains("on")) renderCxVerify();
+}
+const cxKV=(k,v,cls)=>`<div class="cx-kv${cls?" "+cls:""}"><span>${k}</span><b>${v}</b></div>`;
+function renderCxStats(){
+  const liveVal=myCurs().reduce((s,c)=>s+c.bounty,0);
+  const pl=wallet+liveVal-5000;
+  const dead=binDead.filter(d=>d.mine);
+  const lostToDeaths=dead.reduce((s,d)=>s+d.lost,0);
+  $("#cx-stats").innerHTML=
+    cxKV("session P/L",fmtSign(pl)+" SOL",pl>=0?"pos":"neg")+
+    cxKV("deploys",`${stats.deploys} · ${fmtS(stats.tIn)} SOL staked`)+
+    cxKV("banks",`${stats.banks} · ${fmtS(stats.tOut)} SOL out`)+
+    cxKV("kills / deaths",`${stats.kills} / ${stats.deaths}`)+
+    cxKV("lost to deaths",fmtS(lostToDeaths)+" SOL",lostToDeaths?"neg":"")+
+    cxKV("best multiplier","×"+stats.best.toFixed(1))+
+    cxKV("biggest bank",stats.bigBank?fmtS(stats.bigBank)+" SOL":"—")+
+    cxKV("live right now",`${myCurs().length} cursor${myCurs().length===1?"":"s"} · ${fmtS(liveVal)} SOL`)+
+    `<div class="cx-note">expected P/L is −1% of everything you stake (the fee). All the rest
+     of this page is variance. If your P/L is better than −1%, you are running hot, not smart.
+     If it is worse, you are running cold, not cursed.</div>`;
+}
+function renderCxRake(){
+  const share=myTickets>0?100*myTickets/(globalTickets+myTickets):0;
+  $("#cx-rake").innerHTML=
+    cxKV("your tickets",myTickets.toLocaleString())+
+    cxKV("global tickets",globalTickets.toLocaleString())+
+    cxKV("your share",share.toFixed(4)+"%")+
+    cxKV("accrued",(rakeAccrued/1000).toFixed(4)+" SOL",rakeAccrued>0?"pos":"")+
+    `<button class="xbtn big" id="rk-claim" style="margin-top:6px"${rakeAccrued>0?"":" disabled"}>CLAIM ${(rakeAccrued/1000).toFixed(4)} SOL</button>`+
+    `<div class="cx-note">every deploy — yours or anyone's — pays 0.002 SOL into rakeback and
+     mints the deployer 200 tickets. Your share of every future deploy's rakeback equals your
+     share of tickets. Tickets decay with a 45-day half-life, so the payroll always belongs to
+     whoever is playing <i>now</i>. You play, you become the house.</div>`;
+}
+$("#cx-rake").addEventListener("click",e=>{
+  if(e.target.id!=="rk-claim"||rakeAccrued<=0) return;
+  wallet+=rakeAccrued;
+  log(`rakeback claimed: ${(rakeAccrued/1000).toFixed(4)} SOL`);
+  rakeAccrued=0;
+  sysSnd("tada",.4);
+  renderCxRake(); updatePanel();
+});
+function renderCxHist(){
+  const rows=epochHist.map(h=>
+    `<tr><td>${h.no}</td><td>${h.up}</td><td class="n">${fmtS(h.pot)}</td><td class="n">${h.deploys}</td><td class="n">${h.deaths}</td>`+
+    `<td>${h.top?`${esc(h.top.owner)} ${fmtS(h.top.amt)}`:"—"}</td>`+
+    `<td class="n ${h.myIn?(h.net>=0?"pos":"neg"):""}">${h.myIn?fmtSign(h.net):"—"}</td></tr>`).join("");
+  $("#cx-hist").innerHTML=
+    `<table class="cxh"><thead><tr><th>#</th><th>up</th><th class="n">pot</th><th class="n">curs</th>`+
+    `<th class="n">dead</th><th>top bank</th><th class="n">you</th></tr></thead>`+
+    `<tbody>${rows||`<tr><td colspan="7" class="dim">no epochs finished yet — the first crash writes the first row</td></tr>`}</tbody></table>`;
+}
+/* ---- the fairness ceremony: committed before the epoch, revealed at the crash ---- */
+let seedHex=null, commitHex=null, prevSeed=null, prevCommit=null, prevSeedEpoch=0;
+function randHex(n){
+  try{ const a=crypto.getRandomValues(new Uint8Array(n)); return [...a].map(x=>x.toString(16).padStart(2,"0")).join(""); }
+  catch(e){ let s=""; for(let i=0;i<n*2;i++) s+="0123456789abcdef"[Math.floor(Math.random()*16)]; return s; }
+}
+function commitSeed(){
+  seedHex=randHex(16); commitHex=null;
+  try{
+    crypto.subtle.digest("SHA-256",new TextEncoder().encode(seedHex))
+      .then(b=>{ commitHex=[...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,"0")).join(""); renderCx(); });
+  }catch(e){ commitHex="(sha-256 unavailable in this browser)"; }
+}
+function revealSeed(){ prevSeed=seedHex; prevCommit=commitHex; prevSeedEpoch=roundNo; }
+function renderCxVerify(){
+  $("#cx-verify").innerHTML=
+    cxKV("duel odds","P(A wins) = A / (A + B)")+
+    cxKV("reach ×N","P = 1/N. exactly.")+
+    cxKV("house edge","the 1% entry fee. nothing else.")+
+    `<div class="hr"></div>`+
+    cxKV(`epoch ${roundNo} commitment`,"published while play is live")+
+    `<div class="cx-seed">sha256: ${commitHex||"computing…"}</div>`+
+    cxKV("its seed","sealed until the crash")+
+    (prevSeed
+      ? `<div class="hr"></div>`+
+        cxKV(`epoch ${prevSeedEpoch} — revealed`,"check it yourself")+
+        `<div class="cx-seed">seed:   ${prevSeed}\nsha256: ${prevCommit||"…"}</div>`
+      : "")+
+    `<div class="cx-note">the contract: a random seed is committed (its hash published) before
+     each epoch and revealed at the crash — hash the seed yourself and it must match. This
+     prototype's duels still draw from the browser RNG; wiring the sim to the committed seed
+     ships with the server. The ceremony is real today so you can hold us to it tomorrow.</div>`;
 }
 
 /* ================= autoplay ================= */
@@ -1819,7 +1941,9 @@ function resolveDuel(a,b){
   if(pot>=ENTRY*2) chatSys(`${w.owner} killed ${l.owner} for ${fmtS(pot)}`);
   if(l.isMine){
     stats.deaths++;
-    if(myCurs().length===0){ sDie(); bsod(w.owner,pot); }
+    /* your last cursor dying is not a system event — the system is fine, it
+       has your money. You get the death certificate, not a blue screen. */
+    if(myCurs().length===0){ sDie(); if(!auto.on) deathCert(binDead[0]); }
     else float("cursor lost",l.x,l.y,true);
   }else if(w.isMine){
     stats.kills++; R.myKills++;
@@ -1834,18 +1958,23 @@ function resolveDuel(a,b){
   updatePanel();
 }
 function explode(c){
-  for(let i=0;i<12;i++){
+  /* a fat cursor dies bigger: more shards, further, and a wider ring */
+  const n=Math.min(26,Math.round(10+8*c.s));
+  for(let i=0;i<n;i++){
     const s=document.createElement("div");
     s.className="shard";
     s.style.left=c.x+"px"; s.style.top=c.y+"px";
-    const ang=rand(0,Math.PI*2), d=rand(26,86)*c.s;
+    const ang=rand(0,Math.PI*2), d=rand(26,96)*c.s;
     s.style.setProperty("--dx",Math.cos(ang)*d+"px");
     s.style.setProperty("--dy",Math.sin(ang)*d+"px");
     s.style.setProperty("--rot",rand(-260,260)+"deg");
     fxlayer.appendChild(s); setTimeout(()=>s.remove(),750);
   }
   const p=document.createElement("div");
-  p.className="pop"; p.style.left=(c.x-17)+"px"; p.style.top=(c.y-17)+"px";
+  const pw=Math.round(34*Math.min(2.2,.75+.45*c.s));
+  p.className="pop";
+  p.style.width=p.style.height=pw+"px";
+  p.style.left=(c.x-pw/2)+"px"; p.style.top=(c.y-pw/2)+"px";
   fxlayer.appendChild(p); setTimeout(()=>p.remove(),500);
 }
 function goldBurst(x,y){
@@ -1869,23 +1998,47 @@ function float(text,x,y,small){
 }
 
 /* ================= BSOD ================= */
+/* The blue screen belongs to the BIG crash — the epoch boundary — not to a
+   personal loss (your death gets a certificate; the system gets a funeral).
+   The layout is the real NT stop screen: same paragraphs, same cadence, the
+   receipt hiding in the Technical information block where the STOP code goes. */
 const bsodEl=$("#bsod");
-function bsod(killer,lost){
-  bsodEl.textContent=
-`A problem has been detected and your last cursor has been terminated.
-
-KILLED_BY              : ${killer}
-LOST                   : ${fmtS(lost)} SOL
-
-Deploys are still open. Go again.
-
-Press any key to continue `;
-  const u=document.createElement("span"); u.className="blink"; u.textContent="_";
-  bsodEl.appendChild(u);
+function bsodShow(text,ms){
+  bsodEl.textContent=text;
   bsodEl.style.display="block";
   const hide=()=>{ bsodEl.style.display="none"; removeEventListener("keydown",hide); bsodEl.removeEventListener("click",hide); };
   addEventListener("keydown",hide); bsodEl.addEventListener("click",hide);
-  setTimeout(hide,auto.on?1100:1600);
+  if(ms) setTimeout(hide,ms);
+}
+function crashBsodText(){
+  const net=R.myOut-R.myIn;
+  const hex=n=>"0x"+Math.max(0,Math.round(n)).toString(16).toUpperCase().padStart(8,"0");
+  return (
+`A problem has been detected and CURSORS.EXE has been shut down to prevent
+damage to your bankroll.
+
+EPOCH_TERMINATED
+
+All live cursors were banked at full value before termination. No SOL was
+harmed. If this is the first time you've seen this Stop error screen,
+deploy again. If this screen appears again, deploy again.
+
+Check to make sure your cursors were properly banked. The pot below is
+final. If you need someone to blame, press F8 to select Advanced Copium
+Options, and then select luck.dll.
+
+Technical information:
+
+*** STOP: 0x0000000E (${hex(roundNo)},${hex(R.pot)},${hex(R.deploys)},${hex(R.deaths)})
+
+***  arena.dll - epoch ${roundNo} · up ${fmtUp(upT-epochStart)} · pot ${fmtS(R.pot)} SOL · ${R.deploys} cursors · ${R.deaths} dead
+
+***  ${R.bigBank?`top bank: ${R.bigBank.owner} ${fmtS(R.bigBank.amt)} (x${(R.bigBank.amt/ENTRY).toFixed(1)})`:"top bank: none. everyone died holding."}
+***  you: in ${fmtS(R.myIn)} · out ${fmtS(R.myOut)} · net ${fmtSign(net)}
+
+Beginning dump of dead cursors
+Dead cursor dump complete.
+Restarting automatically. Deploys reopen on restart.`);
 }
 
 /* ================= log / bin / panels ================= */
@@ -2031,6 +2184,7 @@ function updatePanel(){
   $("#mh-attack").classList.toggle("on",stance==="attack");
   $("#mh-defend").classList.toggle("on",stance==="defend");
   $("#mh-live").textContent=`${mine.length}/5 · ${fmtS(liveVal)}`;
+  renderCx();   /* whatever pane is open stays live */
 }
 setInterval(()=>{ if(Math.random()<.25) botChat("idle"); },9000);
 
@@ -2039,7 +2193,8 @@ $("#btn-logoff-yes").addEventListener("click",()=>{
   sClick();
   for(const c of [...myCurs()]) removeCur(c);
   wallet=5000; walletShown=5000;
-  stats={kills:0,deaths:0,best:0};
+  stats={kills:0,deaths:0,best:0,deploys:0,banks:0,bigBank:0,tIn:0,tOut:0};
+  epochHist=[];
   myTickets=0; rakeAccrued=0;
   binDead=[]; binFiles=[]; renderBin();
   logpaper.textContent="";
@@ -2097,11 +2252,10 @@ if(MOBILE){
      Every app is one tap away; none of them start covering the field. */
   $("#mh-wallet").textContent=fmtS(wallet)+" SOL";
 }else{
+  /* the desktop boots clean: one window, the game. Messenger and the log are
+     one click away and their notifications (toasts, balloons) work closed —
+     an opening screen that shows five windows is a cockpit, not an invitation */
   openWin("win-cursors",{silent:true});
-  openWin("win-chat",{silent:true});
-  openWin("win-log",{silent:true});
-  msn.place("lobby",258,Math.max(40,H-336));
-  msn.openConv("lobby");
   focusWin("win-cursors");
 }
 chatSys("welcome to the desktop. say gm.");
@@ -2228,6 +2382,25 @@ if(location.hash.indexOf("#desktop-exp")===0) setTimeout(()=>{ /* dev: capture E
 if(location.hash==="#desktop-crash") setTimeout(()=>{ /* dev: fast-forward to the shutdown rush and crash */
   phaseT=Math.min(phaseT,T_SHUT+3);
 },2500);
+if(location.hash.indexOf("#desktop-cx")===0) setTimeout(()=>{ /* dev: capture a CURSORS.EXE pane */
+  openWin("win-cursors");   /* the phone boots to a bare desktop */
+  const p=location.hash.replace("#desktop-cx-","");
+  if(["stats","rake","hist","verify"].indexOf(p)>=0) cxShow("cx-"+p);
+  if(p==="hist"||p==="stats"){ /* fake a played session so the pane has flesh */
+    stats={kills:4,deaths:2,best:6.2,deploys:11,banks:6,bigBank:601,tIn:1100,tOut:1289};
+    epochHist=[
+      {no:3,up:"2:41",pot:2140,deploys:22,deaths:9,top:{owner:"mumu",amt:388},net:112,myIn:300},
+      {no:2,up:"3:05",pot:1750,deploys:18,deaths:11,top:{owner:playerName(),amt:601},net:301,myIn:300},
+      {no:1,up:"1:58",pot:970,deploys:10,deaths:7,top:{owner:"bobo",amt:194},net:-200,myIn:200},
+    ];
+    renderCx();
+  }
+  if(p==="death"){ /* your last cursor dies -> certificate, not a bluescreen */
+    binDead.unshift({id:++deathN,name:playerName(),mine:true,killer:"mumu",killerMine:false,
+      lost:485,mult:5,peak:485,odds:71,kills:3,lived:88,round:roundNo,at:"09:41:12"});
+    deathCert(binDead[0]);
+  }
+},900);
 if(location.hash==="#desktop-binlive") setTimeout(()=>{ /* dev: does the open folder fill up as cursors actually die? */
   openWin("win-explorer"); explorer.go("Recycle Bin"); explorer.setView("details");
 },600);

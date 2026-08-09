@@ -211,9 +211,23 @@ explicitly **parked** ("stuff only 2% of users would search for"). Run… jokes 
    whole bin by damage, reds the bad beats (odds ≥ 50), and each row opens its certificate.
    Not done: no full-bin desktop icon (the winXP icon set has only the empty one, and no
    MIT source for the full variant turned up — the desktop icon never changes).
-5. **CURSORS.EXE production pass** (NEXT) — the game window is still the most-used and least-polished
-   surface: menu bar, Play/Stats/Rakeback/History/Verify panes, canvas render upgrade
-   (trails, chunkier explosions, duel lock-on), ×10 celebration, first-run wizard.
+5. ~~CURSORS.EXE production pass~~ **SHIPPED 2026-08-09.** Menu bar (Game/View/Help) and
+   five panes: **Play** (the dashboard), **Stats** (session P/L, deploys/banks, lost-to-deaths,
+   with the honest footnote: expected P/L is −1% of stake, everything else is variance),
+   **Rakeback** (tickets, share, accrued, a working CLAIM button, the 45-day half-life
+   explainer), **History** (per-epoch table written at each crash), **Verify** (the fairness
+   ceremony: a real random seed is committed via real SHA-256 before each epoch and revealed
+   at the crash — honestly labelled: duels still draw browser RNG until the server wires the
+   seed in). Also: ×10 banks celebrate (triple gold burst + balloon), explosions scale with
+   the dead cursor's size, duelists glow red. **BSOD reassigned per owner:** the blue screen
+   now belongs to the BIG crash — full carbon-copy NT stop screen (Lucida Console, #0000AA,
+   the real paragraph cadence) with the epoch receipt in the Technical-information block.
+   Losing your last cursor shows its death certificate instead (suppressed during autoplay).
+   **Clean boot per owner:** desktop boots with only CURSORS.EXE open; Messenger/log are one
+   click away and toasts/balloons work with them closed. Not done: first-run wizard (clean
+   boot made it less urgent), cursor trails (DOM perf risk, skipped deliberately).
+   Dev hashes: `#desktop-cx-stats/-rake/-hist/-verify` (stats/hist seed a fixture),
+   `#desktop-cx-death` (last-cursor death → certificate).
 6. **IE + handmade web** — cursor$land at unicorn.meme density, webring, dial-up sequence.
 7. **Start menu completeness** — All Programs roster, recent apps, Help & Support.
 
@@ -269,6 +283,7 @@ escrow (replacement, not hardening); no graceful shutdown.
 - Artifact viewer may hand the page a desktop-width viewport on phones; real hosting won't
 - `main.js` should keep shedding modules as apps grow (minesweeper/messenger set the pattern)
 - Bot/liquidity policy for dead hours needs a disclosed design before real money
-- Epoch timings (110–195s, 12s shutdown, 3s crash) are feel-tuned, not measured
-- The crash dialog auto-opens for everyone every epoch; if playtests find it annoying,
-  the candidate fix is showing it only when the player had money in, with a balloon otherwise
+- Epoch timings (110–195s, 12s shutdown, 5s BSOD) are feel-tuned, not measured
+- The crash BSOD takes the whole screen for ~5s every epoch; it is dismissible by
+  click/key, but if playtests find it too much, shorten T_CRASH or skip the BSOD when
+  the player had nothing in play
