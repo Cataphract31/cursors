@@ -1206,9 +1206,24 @@ let myTickets=0, globalTickets=1437200, rakeAccrued=0;
 let stance="attack";
 const auto={on:false,count:3,bankAt:2};
 
-/* arena = the whole desktop */
-let arena={x0:0,y0:0,x1:W,y1:H};
-function syncArena(){ arena={x0:0,y0:0,x1:W,y1:H}; }
+/* The arena is a FIXED logical playfield (not "however big your window is"),
+   scaled to fit the screen. Two reasons, one of them load-bearing for real
+   money: every player must fight on an identical battlefield, and on a phone
+   you then see the whole fight instead of a corner of it. */
+const AW=1280, AH=800;
+let arena={x0:0,y0:0,x1:AW,y1:AH};
+let AS=1, CMAG=1;
+function syncArena(){
+  arena={x0:0,y0:0,x1:AW,y1:AH};
+  const el=$("#arena"); if(!el) return;
+  AS=Math.min(W/AW,H/AH);
+  const ox=Math.round((W-AW*AS)/2), oy=Math.round((H-AH*AS)/2);
+  el.style.transform=`translate(${ox}px,${oy}px) scale(${AS})`;
+  /* counter-magnify the sprites so cursors stay legible on a scaled-down arena */
+  CMAG=Math.max(1,.52/AS);
+  el.style.setProperty("--cmag",CMAG);
+  for(const c of curs) updateTag(c);
+}
 
 let phase="boot", phaseT=0, roundNo=0, roundId=0;
 let R=null;
@@ -1221,7 +1236,7 @@ function makeCur(owner,isMine){
   el.innerHTML=CURSVG+`<div class="tag"><span class="nm">${owner}</span><span class="bt"></span><span class="mx"></span></div>`;
   curlayer.appendChild(el);
   let x,y,ax,ay;
-  if(isMine){ x=clamp(W/2+rand(-60,60),arena.x0+20,arena.x1-20); y=arena.y1-8; ax=x; ay=arena.y1-80; }
+  if(isMine){ x=clamp(AW/2+rand(-60,60),arena.x0+20,arena.x1-20); y=arena.y1-8; ax=x; ay=arena.y1-80; }
   else{
     const side=Math.floor(rand(0,4));
     x=side===0?arena.x0+6:side===1?arena.x1-6:rand(arena.x0+40,arena.x1-40);
@@ -1239,11 +1254,12 @@ function updateTag(c){
   c.el.querySelector(".bt").textContent=fmtS(c.bounty);
   c.el.querySelector(".mx").textContent=m>=1.05?"×"+(m>=10?m.toFixed(0):m.toFixed(1)):"";
   c.s=Math.min(2.6,1+.35*Math.log2(Math.max(1,m)));
-  c.r=10*c.s;
+  c.r=10*c.s;                       /* collision radius stays in logical units */
+  const v=c.s*CMAG;                 /* magnification is purely visual */
   const sv=c.el.querySelector("svg");
-  sv.style.width=(17*c.s)+"px"; sv.style.height=(26*c.s)+"px";
+  sv.style.width=(17*v)+"px"; sv.style.height=(26*v)+"px";
   const tag=c.el.querySelector(".tag");
-  tag.style.left=(13*c.s)+"px"; tag.style.top=(25*c.s)+"px";
+  tag.style.left=(13*v)+"px"; tag.style.top=(25*v)+"px";
 }
 function removeCur(c){
   c.dead=true; c.el.remove();
@@ -1449,7 +1465,7 @@ function move(c,dt){
   let tx=null,ty=null,turn=2.4;
   if(c.mode==="recall"){
     c.recallT-=dt;
-    const dx=42-c.x, dy=(H-6)-c.y, dist=Math.hypot(dx,dy);
+    const dx=40-c.x, dy=(AH-8)-c.y, dist=Math.hypot(dx,dy);
     if(c.recallT<=0){ bank(c,false); return; }
     const sp=dist/Math.max(.2,c.recallT);
     c.x+=dx/Math.max(1,dist)*sp*dt; c.y+=dy/Math.max(1,dist)*sp*dt;
@@ -1569,7 +1585,7 @@ function float(text,x,y,small){
   const f=document.createElement("div");
   f.className="float"+(small?" sm":"");
   f.textContent=text;
-  f.style.left=clamp(x-20,4,W-80)+"px"; f.style.top=clamp(y-30,4,H-30)+"px";
+  f.style.left=clamp(x-20,4,AW-80)+"px"; f.style.top=clamp(y-30,4,AH-30)+"px";
   fxlayer.appendChild(f); setTimeout(()=>f.remove(),1250);
 }
 

@@ -235,11 +235,12 @@ input{user-select:text}
 #balloon-x{position:absolute;right:6px;top:5px;font-size:9px;border:1px solid #8A867A;padding:0 2px;cursor:pointer;background:#ECE9D8}
 
 /* ---------- game layer ---------- */
-#curlayer,#fxlayer{position:absolute;inset:0;z-index:5000;pointer-events:none;overflow:hidden}
-#fxlayer{z-index:5200}
+#arena{position:absolute;left:0;top:0;width:1280px;height:800px;transform-origin:0 0;z-index:5000;pointer-events:none}
+#curlayer,#fxlayer{position:absolute;inset:0;pointer-events:none}
+#fxlayer{z-index:2}
 .cur{position:absolute;left:0;top:0;will-change:transform}
 .cur svg{width:17px;height:26px;filter:drop-shadow(1px 2px 2px rgba(0,0,0,.55))}
-.cur .tag{position:absolute;left:13px;top:25px;white-space:nowrap;font:bold 10px Tahoma;color:#fff;text-shadow:1px 1px 2px #000,-1px 1px 2px #000,0 0 3px #000}
+.cur .tag{position:absolute;left:13px;top:25px;white-space:nowrap;font-weight:bold;font-family:Tahoma,sans-serif;font-size:calc(10px * var(--cmag,1));color:#fff;text-shadow:1px 1px 2px #000,-1px 1px 2px #000,0 0 3px #000}
 .cur .tag .bt{margin-left:4px}
 .cur .tag .mx{margin-left:4px;color:#FFD24A}
 .cur.me .nm{background:#316AC5;padding:0 4px;border-radius:2px}

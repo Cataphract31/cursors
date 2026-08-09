@@ -58,6 +58,20 @@ Owner: *"leave the too in-depth stuff that only like 2% of the userbase would go
 - Zombie-proofing round 2: headless repro harness (`#desktop-amptest`) proved open→close→reopen works; the taskbar tab now trusts actual wrapper visibility, not a flag, so any desync self-heals on click.
 - Context menus at XP metrics (ACA899 borders, real submenu arrows, proper shadow); menu bars (File/Edit/View/Help…) actually drop menus — File→Exit, Help→About, Task Manager's Shut Down→Turn Off/Restart work.
 
+### Phase M — MOBILE (owner 2026-08-09: "mobile will probably be the majority playerbase") — NEXT
+
+Evidence first (headless screenshots at 390×844 and 844×390): the desktop metaphor does not survive a phone. Portrait = the CURSORS panel eats the top half and three more windows fight for the rest; landscape = three windows, zero visible battlefield. What the owner saw on their phone (a left-edge strip from My Computer down to the start button) is the artifact viewer handing the page a desktop-width viewport and cropping it — but fixing the crop only reveals the real problem underneath.
+
+**Step 1 — ✅ SHIPPED: fixed logical arena.** The battlefield is 1280×800 logical units scaled to fit, not "your window size". Solves phone visibility (you see the entire fight, letterboxed) *and* a fairness bug nobody had flagged — see `design-decisions.md`. On a portrait phone the arena becomes a band across the middle, which conveniently leaves the top and bottom free for chrome.
+
+**Step 2 — the mobile shell (NOT a responsive desktop; a different shell over the same engine).** Below ~760px:
+- **Apps go full-screen, one at a time** — no dragging, no overlap, no resize. The title bar keeps its Luna look but gains a big back/close target. Windows are already state-driven, so this is a layout mode on the existing process table, not a second app.
+- **The taskbar becomes an app switcher** with thumb-sized targets; Start becomes a full-screen launcher grid (which is also where Control Panel, Paint, Minesweeper etc. live, so adding apps costs no screen space — the owner's "adding more stuff only lowers visibility" worry disappears once apps stop being tiled windows).
+- **The game HUD leaves its window and becomes a permanent bottom bar** in the thumb zone: wallet + round timer on top, then DEPLOY / ATTACK / DEFEND / RECALL as large buttons. It is never covered by an app, because apps are sheets *above* the arena but *below* the HUD. This is the payoff of the auto-battler decision — three verbs fit a phone; steering never would.
+- **Long-press = right-click** for every context menu.
+- Per-app mobile behaviour: Minesweeper beginner fits natively (9×9×16px = 144px); Intermediate/Expert get pinch/scroll inside their frame. Messenger conversations are full-screen sheets with the DP column dropped (already done in CSS). Paint gets a touch-first toolbar when built. Notepad/Explorer are trivially full-screen.
+- Keep the desktop shell untouched above the breakpoint — this is additive, and the arena is now identical on both.
+
 ### Phase C — The fun, visible stuff (owner picks order)
 
 - **Minesweeper — ✅ SHIPPED 2026-08-09.** Own module (`src/minesweeper.js`, kept import-free so the smoke runner executes it for real). Real rules: first click always safe, flood fill, chording (both buttons on a satisfied number), flag → question → clear cycle with a Marks toggle, mine counter that goes negative, 999-second LED clock, face states (smile/ohh/dead/win), losing reveals every mine and X's the wrong flags. Three levels persisted, Best Times per level stamped with the player's name, resettable. Menus are real (Game/Help with checkmarks — `check:` added to the shared menu builder). Genuine winXP sprite set (16×16 cells, 13×23 LEDs); learned by zooming the sprites 6× that they are **bare transparent glyphs**, so the cell itself must draw both bevels — that plus `box-sizing:content-box` on the grid were the two pixel bugs. Reachable from desktop icon, Start ▸ All Programs ▸ Games, and `winmine` in Run. Winning above beginner posts to Messenger. Dev harness: `#desktop-mine-play` plays real games headlessly until a rich board survives.
