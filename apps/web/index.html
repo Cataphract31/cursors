@@ -744,6 +744,28 @@ icons/sounds: winXP (MIT)</div>
     </div>
   </div>
 
+  <!-- Stretch and Skew: the real four-field dialog -->
+  <div class="window fixed" id="win-stretchskew" style="left:calc(50% - 160px);top:calc(50% - 120px);width:320px">
+    <div class="title-bar">
+      <div class="tb-l"><i class="xico tb-ico" data-ico="paint16"></i><div class="title-bar-text">Stretch and Skew</div></div>
+      <div class="title-bar-controls"><button aria-label="Close"></button></div>
+    </div>
+    <div class="win-body">
+      <fieldset class="mo-fs"><legend>Stretch</legend>
+        <div class="aprow"><span class="lb">Horizontal:</span><input type="number" id="ss-hs" min="1" max="500" value="100" style="width:64px"><span class="small dim">%</span></div>
+        <div class="aprow"><span class="lb">Vertical:</span><input type="number" id="ss-vs" min="1" max="500" value="100" style="width:64px"><span class="small dim">%</span></div>
+      </fieldset>
+      <fieldset class="mo-fs"><legend>Skew</legend>
+        <div class="aprow"><span class="lb">Horizontal:</span><input type="number" id="ss-hd" min="-89" max="89" value="0" style="width:64px"><span class="small dim">degrees</span></div>
+        <div class="aprow"><span class="lb">Vertical:</span><input type="number" id="ss-vd" min="-89" max="89" value="0" style="width:64px"><span class="small dim">degrees</span></div>
+      </fieldset>
+      <div style="display:flex;gap:7px;justify-content:flex-end;margin-top:6px">
+        <button class="xbtn" id="ss-ok" style="min-width:74px">OK</button>
+        <button class="xbtn" id="ss-cancel" style="min-width:74px">Cancel</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Add Favorite -->
   <div class="window fixed" id="win-addfav" style="left:calc(50% - 180px);top:calc(50% - 80px);width:360px">
     <div class="title-bar">

@@ -1318,6 +1318,7 @@ const paint=initPaint({
   setTitle:name=>{ $("#win-paint .title-bar-text").textContent=name+" - Paint"; renderTaskbar(); },
   isFocused:()=>focusedId==="win-paint",
   openAttributes:(w,h)=>{ $("#pa-w").value=w; $("#pa-h").value=h; openWin("win-paintattr"); },
+  openStretchSkew:()=>{ $("#ss-hs").value=100; $("#ss-vs").value=100; $("#ss-hd").value=0; $("#ss-vd").value=0; openWin("win-stretchskew"); },
   /* the fake disk gets a real file; keep few, they live in localStorage */
   savePicture:url=>{
     store.data.pictures=store.data.pictures||[];
@@ -1335,6 +1336,11 @@ $("#pa-ok").addEventListener("click",()=>{
   closeWin("win-paintattr");
 });
 $("#pa-cancel").addEventListener("click",()=>closeWin("win-paintattr"));
+$("#ss-ok").addEventListener("click",()=>{
+  paint.stretchSkew(+$("#ss-hs").value,+$("#ss-vs").value,+$("#ss-hd").value,+$("#ss-vd").value);
+  closeWin("win-stretchskew");
+});
+$("#ss-cancel").addEventListener("click",()=>closeWin("win-stretchskew"));
 $("#pa-default").addEventListener("click",()=>{ $("#pa-w").value=384; $("#pa-h").value=272; });
 $$("#win-paintattr input").forEach(i=>i.addEventListener("keydown",e=>{
   e.stopPropagation();

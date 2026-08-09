@@ -1151,3 +1151,13 @@ body.typing,body.typing *{cursor:none!important}
 .io-advgroup{font-weight:bold;padding:3px 2px 1px}
 .io-advrow{display:flex;gap:6px;align-items:flex-start;padding:1px 2px 1px 14px;font-size:11px}
 .ex-tb.on{background:#fff;border-color:#ACA899;box-shadow:inset 1px 1px 2px rgba(0,0,0,.12)}
+
+/* ---------- Paint: the Fonts toolbar ---------- */
+.pt-fontbar{position:absolute;left:70px;top:8px;z-index:40;display:flex;gap:4px;align-items:center;
+  background:#ECE9D8;border:1px solid #ACA899;box-shadow:2px 2px 5px rgba(0,0,0,.3);padding:4px 6px}
+.pt-fonttitle{font-weight:bold;margin-right:2px}
+.pt-fontbtn{min-width:22px;height:21px;min-height:0;padding:0 4px;border-radius:0}
+.pt-fontbtn.b{font-weight:bold}
+.pt-fontbtn.i{font-style:italic}
+.pt-fontbtn.u{text-decoration:underline}
+.pt-fontbtn.on{background:#fff;box-shadow:inset 1px 1px 2px rgba(0,0,0,.25);border:1px solid #ACA899}

@@ -549,10 +549,96 @@ export function initPaint(deps) {
     renderFloating();
   }
 
-  /* ---------- text ---------- */
+  /* ---------- Paste From / Copy To: the file half of the clipboard ---------- */
+  function pasteFrom() {
+    const inp = document.createElement("input");
+    inp.type = "file"; inp.accept = "image/*";
+    inp.style.cssText = "position:fixed;left:-200px;top:0;opacity:0";
+    document.body.appendChild(inp);
+    inp.addEventListener("change", () => {
+      const f = inp.files && inp.files[0];
+      if (f) {
+        const rd = new FileReader();
+        rd.onload = () => {
+          const im = new Image();
+          im.onload = () => {
+            const w = Math.min(im.naturalWidth, cw), h = Math.min(im.naturalHeight, ch);
+            const tmp = document.createElement("canvas");
+            tmp.width = w; tmp.height = h;
+            const tc2 = tmp.getContext("2d");
+            tc2.drawImage(im, 0, 0);
+            clip = tc2.getImageData(0, 0, w, h);
+            pasteClip();
+          };
+          im.src = rd.result;
+        };
+        rd.readAsDataURL(f);
+      }
+      inp.remove();
+    });
+    inp.click();
+  }
+  function copyTo() {
+    if (!sel || !sel.img) return;
+    const tmp = document.createElement("canvas");
+    tmp.width = sel.img.width; tmp.height = sel.img.height;
+    tmp.getContext("2d").putImageData(sel.floatImg || sel.img, 0, 0);
+    try {
+      const a = document.createElement("a");
+      a.href = tmp.toDataURL("image/png"); a.download = "clip.png";
+      document.body.appendChild(a); a.click(); a.remove();
+    } catch (e) {}
+  }
+
+  /* ---------- text, with the real Fonts toolbar ---------- */
+  const FONTLIST = ["Arial", "Arial Black", "Comic Sans MS", "Courier New", "Georgia", "Impact",
+    "Lucida Console", "Tahoma", "Times New Roman", "Trebuchet MS", "Verdana"];
+  let fontBar = null;
+  function showFontBar() {
+    if (fontBar) { fontBar.style.display = "flex"; return; }
+    fontBar = document.createElement("div");
+    fontBar.className = "pt-fontbar";
+    const t = document.createElement("span"); t.textContent = "Fonts"; t.className = "pt-fonttitle";
+    const fsel = document.createElement("select");
+    for (const f of FONTLIST) { const o = document.createElement("option"); o.value = f; o.textContent = f; fsel.appendChild(o); }
+    fsel.value = store.data.paintFont || "Tahoma";
+    const ssel = document.createElement("select");
+    for (const nn of [8, 9, 10, 11, 12, 14, 16, 18, 20, 22, 24, 26, 28, 36, 48, 72]) { const o = document.createElement("option"); o.value = nn; o.textContent = nn; ssel.appendChild(o); }
+    ssel.value = String(store.data.paintFontSize || 16);
+    const mkT = (label, key, cls) => {
+      const b = document.createElement("button");
+      b.className = "pt-fontbtn " + cls + (store.data[key] ? " on" : "");
+      b.textContent = label;
+      b.addEventListener("click", () => {
+        store.data[key] = store.data[key] ? 0 : 1; store.save();
+        b.classList.toggle("on", !!store.data[key]);
+        if (textBox) {
+          textBox.el.style.font = textFont();
+          textBox.el.style.textDecoration = store.data.paintFontU ? "underline" : "";
+        }
+      });
+      return b;
+    };
+    const upd = () => {
+      store.data.paintFont = fsel.value;
+      store.data.paintFontSize = +ssel.value;
+      store.save();
+      if (textBox) textBox.el.style.font = textFont();
+    };
+    fsel.addEventListener("change", upd);
+    ssel.addEventListener("change", upd);
+    fontBar.appendChild(t);
+    fontBar.appendChild(fsel); fontBar.appendChild(ssel);
+    fontBar.appendChild(mkT("B", "paintFontB", "b"));
+    fontBar.appendChild(mkT("I", "paintFontI", "i"));
+    fontBar.appendChild(mkT("U", "paintFontU", "u"));
+    els.wrap.appendChild(fontBar);
+  }
+  function hideFontBar() { if (fontBar) fontBar.style.display = "none"; }
   function textStart(p) {
     commitText();
     snapshot();
+    showFontBar();
     const ta = document.createElement("textarea");
     ta.className = "pt-text";
     ta.spellcheck = false;
@@ -560,6 +646,7 @@ export function initPaint(deps) {
     ta.style.top = (p.y * zoom) + "px";
     ta.style.color = fg;
     ta.style.font = textFont();
+    ta.style.textDecoration = store.data.paintFontU ? "underline" : "";
     els.box.appendChild(ta);
     textBox = { el: ta, x: p.x, y: p.y };
     setTimeout(() => ta.focus(), 0);
@@ -568,7 +655,10 @@ export function initPaint(deps) {
       if (e.key === "Escape") { ta.remove(); textBox = null; }
     });
   }
-  function textFont() { return `${store.data.paintFontSize || 16}px ${store.data.paintFont || "Tahoma"}`; }
+  function textFont() {
+    const b = store.data.paintFontB ? "bold " : "", i = store.data.paintFontI ? "italic " : "";
+    return `${i}${b}${store.data.paintFontSize || 16}px "${store.data.paintFont || "Tahoma"}"`;
+  }
   function commitText() {
     if (!textBox) return;
     const { el, x, y } = textBox;
@@ -580,7 +670,14 @@ export function initPaint(deps) {
     ctx.fillStyle = fg;
     ctx.textBaseline = "top";
     const size = store.data.paintFontSize || 16;
-    txt.split("\n").forEach((ln, i) => ctx.fillText(ln, x, y + i * size * 1.2));
+    txt.split(String.fromCharCode(10)).forEach((ln, i) => {
+      const ly = y + i * size * 1.2;
+      ctx.fillText(ln, x, ly);
+      if (store.data.paintFontU && ln.trim()) {
+        const w = ctx.measureText(ln).width;
+        ctx.fillRect(x, ly + size * 1.02, w, Math.max(1, size / 14));
+      }
+    });
     ctx.restore();
     dirty();
   }
@@ -588,7 +685,7 @@ export function initPaint(deps) {
 
   /* ---------- toolbox / options / colours ---------- */
   function setTool(i) {
-    if (TOOLS[i].id !== "text") commitText();
+    if (TOOLS[i].id !== "text") { commitText(); hideFontBar(); }
     if (i !== tool) { closePoly(); commitCurve(); }
     if (TOOLS[i].id !== "select" && TOOLS[i].id !== "freeselect") dropSel();
     tool = i;
@@ -849,6 +946,32 @@ export function initPaint(deps) {
     ctx.drawImage(tmp, 0, 0);
     syncStatus(); dirty();
   }
+  /* the real four-field dialog: stretch in percent, skew in degrees */
+  function stretchSkew(hs, vs, hd, vd) {
+    cancelPending(); snapshot();
+    hs = Math.max(1, Math.min(500, hs || 100)) / 100;
+    vs = Math.max(1, Math.min(500, vs || 100)) / 100;
+    hd = Math.max(-89, Math.min(89, hd || 0)) * Math.PI / 180;
+    vd = Math.max(-89, Math.min(89, vd || 0)) * Math.PI / 180;
+    const sw = Math.max(1, Math.round(cw * hs)), sh = Math.max(1, Math.round(ch * vs));
+    const shx = Math.abs(Math.tan(hd)) * sh, shy = Math.abs(Math.tan(vd)) * sw;
+    const nw = Math.round(sw + shx), nh = Math.round(sh + shy);
+    const tmp = document.createElement("canvas");
+    tmp.width = nw; tmp.height = nh;
+    const tc = tmp.getContext("2d");
+    tc.imageSmoothingEnabled = false;
+    tc.fillStyle = "#FFFFFF"; tc.fillRect(0, 0, nw, nh);
+    tc.setTransform(1, Math.tan(vd), Math.tan(hd), 1,
+      Math.tan(hd) < 0 ? shx : 0, Math.tan(vd) < 0 ? shy : 0);
+    tc.drawImage(cv, 0, 0, cw, ch, 0, 0, sw, sh);
+    cw = nw; ch = nh;
+    cv.width = cw; cv.height = ch; ov.width = cw; ov.height = ch;
+    applyZoom();
+    ctx.imageSmoothingEnabled = false;
+    ctx.fillStyle = "#FFFFFF"; ctx.fillRect(0, 0, cw, ch);
+    ctx.drawImage(tmp, 0, 0);
+    syncStatus(); dirty();
+  }
   function invert() {
     cancelPending(); snapshot();
     const img = ctx.getImageData(0, 0, cw, ch), d = img.data;
@@ -884,9 +1007,12 @@ export function initPaint(deps) {
       { label: "Cut", disabled: !sel || !sel.img, action: () => { copySel(); deleteSel(); } },
       { label: "Copy", disabled: !sel || !sel.img, action: copySel },
       { label: "Paste", disabled: !clip, action: pasteClip },
+      { label: "Paste From...", action: pasteFrom },
       { sep: 1 },
       { label: "Clear Selection", disabled: !sel, action: deleteSel },
       { label: "Select All", action: selectAll },
+      { sep: 1 },
+      { label: "Copy To...", disabled: !sel || !sel.img, action: copyTo },
     ], x, y);
   }
   function viewMenu(x, y) {
@@ -911,8 +1037,7 @@ export function initPaint(deps) {
         { label: "Rotate by 180°", action: () => transform("rot180") },
         { label: "Rotate by 270°", action: () => transform("rot270") },
       ] },
-      { label: "Stretch/Skew...", action: () => showError("Stretch and Skew",
-        "Stretch and Skew ships in a later update. Your losses are already skewed.") },
+      { label: "Stretch/Skew...", action: () => deps.openStretchSkew && deps.openStretchSkew() },
       { sep: 1 },
       { label: "Invert Colors", action: invert },
       { label: "Attributes...", action: () => deps.openAttributes(cw, ch) },
@@ -982,6 +1107,7 @@ export function initPaint(deps) {
 
   return {
     menu: (label, x, y) => { (MENUS[label] || helpMenu)(x, y); },
+    stretchSkew,
     setSize: (w, h) => {
       resize(w, h, true);
       store.data.paintW = cw; store.data.paintH = ch; store.save();
