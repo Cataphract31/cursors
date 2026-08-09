@@ -444,9 +444,21 @@ second):
    answer "Access is denied." Keyboard comes through a hidden input so a phone raises its
    on-screen keyboard and `--kb` lifts the window. **Control Panel** has XP's category view
    (eight categories, task lists, blue side pane) and classic view, persisted; applets open
-   the real dialogs. **Services** lists 17 services and stopping one *does* something —
-   Windows Audio mutes, Themes drops to classic, Arena closes deploys and banks everyone,
-   the Rakeback ledger stops accruing; the two core services confirm first. **Device
+   the real dialogs. **Services** is split in two tiers and the line between them is
+   load-bearing: `local:1` services touch only your own machine (audio, themes, toast
+   notifications, the tray clock, spooler, scheduler...) and you may stop them; everything
+   the house owns — the Arena service, the Rakeback Ticket Ledger, the fairness provider,
+   Plug and Play, RPC, Event Log — refuses with the real error ("Could not stop the X
+   service on Local Computer. Error 5: Access is denied.") and greys its properties sheet.
+   **This was corrected the same day after an owner catch and the reasoning matters:** the
+   first version let you stop the ledger and logged "the edge is 3% until you start it",
+   which was *false* (the server owns rakeback) — a lie told to a gambler about their own
+   edge. A switch that appears to change the economics is a trust bug even when it only
+   deceives the person who flipped it, and one that really changed them would be an
+   exploit. Rule for anything added to these consoles: **local presentation only, never
+   shared state and never anything that reads as economic.** Same rule for Group Policy —
+   every setting there is user-scoped and reversible, and every one of them is true (no
+   setting claims an effect it does not have). **Device
    Manager**'s "Mice and other pointing devices" are the live cursors, refreshed while
    open, with per-device Properties. **gpedit.msc** has real policy folders and the
    settings apply (CRT off, mute, hide desktop icons, remove Run, remove clock, no

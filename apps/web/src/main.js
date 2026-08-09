@@ -313,6 +313,9 @@ function applyWinRect(el){
 }
 let ie=null;   /* the browser, wired further down; openWin needs the handle */
 let netUp=false;   /* cursor$net dial-up state, published by ie.setNet for ipconfig/ping */
+/* declared here because boot-time code reads them: `sys` is the XP applications
+   module (assigned further down) and these two are local service switches */
+let sys=null, toastsOn=true, clockOn=true;
 function openWin(id,opts){
   if(id==="win-amp"){ winampApp.open(); return; }
   opts=opts||{};
@@ -538,7 +541,12 @@ function reflowIcons(){
   iconRows=rows; renderIcons();
 }
 let curTxtIcon=null, binFiles=[];
-function allIcons(){ return SYSICONS.concat(store.data.userIcons); }
+function allIcons(){
+  let a=SYSICONS.concat(store.data.userIcons);
+  /* Group Policy, applied where the icons are built rather than after */
+  if(sys&&sys.policyOn("nobin")) a=a.filter(i=>i.id!=="recycle");
+  return a;
+}
 function iconById(id){ return allIcons().find(i=>i.id===id); }
 function posOf(ic){ return store.data.icons[ic.id]||{c:ic._dc||0,r:ic._dr||0}; }
 function cellFree(c,r,exceptId){
@@ -1337,10 +1345,11 @@ $("#run-cancel").addEventListener("click",()=>closeWin("win-run"));
 $("#run-browse").addEventListener("click",()=>showError("Browse","There is nothing else. This is the whole computer."));
 $("#run-in").addEventListener("keydown",e=>{ e.stopPropagation(); if(e.key==="Enter") runCommand(); if(e.key==="Escape") closeWin("win-run"); });
 $("#btn-logoff-no").addEventListener("click",()=>{ sClick(); closeWin("win-logoff"); });
-function tickClock(){ $("#clock").textContent=new Date().toLocaleTimeString([],{hour:"numeric",minute:"2-digit"}); }
+function tickClock(){ if(!clockOn) return; $("#clock").textContent=new Date().toLocaleTimeString([],{hour:"numeric",minute:"2-digit"}); }
 tickClock(); setInterval(tickClock,10000);
 let balloonT=null;
 function showBalloon(head,text){
+  if(!toastsOn||(sys&&sys.policyOn("nobal"))) return;   /* Messenger service / policy */
   $("#balloon-h").textContent=head||"Take a tour of CURSORS.EXE";
   $("#balloon-t").textContent=text||"auto-battler. deploy any time. attack or defend from the dashboard. bank before shutdown.";
   $("#balloon").style.display="block"; sBalloon();
@@ -1413,6 +1422,7 @@ function setWallpaper(id){
 }
 /* Paint hands the desktop a PNG; the desktop is now a meme surface */
 function setWallpaperFrom(dataUrl,mode){
+  if(sys&&sys.policyOn("nowall")){ showError("Desktop","Your system administrator has disabled changes to the desktop background."); return; }
   store.data.wallpaperData=dataUrl;
   store.data.wallpaperMode=mode||"center";
   wpSel="painted";
@@ -1752,7 +1762,7 @@ const PROC_BASE=[
 let killedProcs=new Set();
 function liveProcesses(){
   const out=PROC_BASE.filter(p=>!killedProcs.has(p.pid)).map(p=>Object.assign({},p));
-  if(!killedProcs.has(9001)) out.push({name:"cursors.exe",pid:9001,mem:34200+curs.length*420,critical:0,game:1});
+  out.push({name:"cursors.exe",pid:9001,mem:34200+curs.length*420,critical:1});
   if(openApps.has("win-ie")) out.push({name:"iexplore.exe",pid:2244,mem:19860});
   if(openApps.has("win-paint")) out.push({name:"mspaint.exe",pid:2360,mem:8104});
   if(openApps.has("win-mine")) out.push({name:"winmine.exe",pid:2412,mem:2288});
@@ -1764,7 +1774,7 @@ function fmtUpLong(t){
   const d=Math.floor(t/86400), h=Math.floor(t%86400/3600), m=Math.floor(t%3600/60);
   return `${d} Days, ${h} Hours, ${m} Minutes, ${Math.floor(t%60)} Seconds`;
 }
-const sys=initSysApps({
+sys=initSysApps({
   $,$$,store,sysSnd,showMenu,showError,openWin,closeWin,
   icoNode,isMobile:MOBILE,
   hooks:{
@@ -1786,10 +1796,9 @@ const sys=initSysApps({
     netInfo:()=>({ up:MP.on||netUp, ip:MP.on?"10.64.0."+(1+(roundNo%250)):"192.168.0.14",
       gw:"34.70.75.204", rtt:MP.on?46:38 }),
     processes:liveProcesses,
-    killProcess:p=>{
-      killedProcs.add(p.pid);
-      if(p.game){ log("cursors.exe terminated"); crashSystem(); setTimeout(()=>killedProcs.delete(9001),1000); }
-    },
+    /* only your own decorative processes can be killed; cursors.exe is marked
+       critical and taskkill refuses it, because the arena is not local */
+    killProcess:p=>{ killedProcs.add(p.pid); },
     /* --- the arena, as data --- */
     arenaState:()=>({
       epoch:roundNo, phase:phase.toUpperCase(), uptime:fmtUp(upT), net:MP.on,
@@ -1802,7 +1811,13 @@ const sys=initSysApps({
     deploy:()=>{ const n=myCurs().length; deploy(false); return myCurs().length>n||MP.on; },
     recall:()=>recallAll(),
     stance:st=>{ stance=st; mpSend({t:"stance",s:st}); updatePanel(); },
-    recallOne:()=>recallAll(),
+    recallOne:id=>{
+      const c=curs.find(x=>x.id===id&&x.isMine);
+      if(!c) return;
+      if(MP.on){ c._bankReq=true; mpSend({t:"recallOne",id:c.id}); }
+      else if(c.mode==="roam"){ c.prevMode="recall"; c.mode="recall"; c.recallT=RECALL_SECS; }
+      log(`recall order: cursor #${id}`);
+    },
     /* --- shell --- */
     runCommand:t=>runNamed(t),
     confirm:(title,body,ok)=>showConfirm(title,body,ok),
@@ -1813,7 +1828,7 @@ const sys=initSysApps({
     printers:()=>showError("Printers and Faxes","There are no printers installed on this computer."),
     userAccounts:()=>openWin("win-logoff"),
     accessibility:()=>openWin("win-dispprops"),
-    addRemove:()=>showError("Add or Remove Programs","CURSORS.EXE cannot be removed while it is running.\n\nStop the CURSORS.EXE Arena Service first (Control Panel > Administrative Tools)."),
+    addRemove:()=>showError("Add or Remove Programs","CURSORS.EXE is installed by the server and cannot be removed from this computer."),
     windowsUpdate:()=>{ openWin("win-ie"); if(ie) ie.go("http://windowsupdate.microsoft.com/"); },
     /* --- services and policies actually do things --- */
     serviceChanged:(ctl,on)=>applyService(ctl,on),
@@ -1822,21 +1837,18 @@ const sys=initSysApps({
 });
 sys.init();
 
-/* a stopped service really is stopped */
+/* A stopped service changes THIS computer and nothing else.
+   The arena, the rakeback ledger and the fairness provider run on the game
+   server, so they are not in here at all — Services refuses to touch them and
+   tells you why. This is a live game played for money: a switch that appears
+   to stop the ledger would be a lie even if it only lied to the person who
+   flipped it, and a switch that actually stopped it would be an exploit. */
 function applyService(ctl,on){
   if(ctl==="audio"){ muted=!on||$("#vf-mute").checked; volSync(); }
-  if(ctl==="themes"){ document.body.classList.toggle("classic-theme",!on); }
-  if(ctl==="arena"){
-    arenaSvc=on;
-    if(!on){ recallAll(); log("CURSORS.EXE Arena Service stopped — deploys closed"); }
-    else log("CURSORS.EXE Arena Service started — deploys open");
-    updatePanel();
-  }
-  if(ctl==="rake"){ rakeSvc=on; log(on?"rakeback ledger started":"rakeback ledger stopped — the edge is 3% until you start it"); updatePanel(); }
-  if(ctl==="fair"){ fairSvc=on; renderCx(); }
-  if(ctl==="net"&&!on){ log("Remote Access Connection Manager stopped"); }
+  if(ctl==="themes") document.body.classList.toggle("classic-theme",!on);
+  if(ctl==="toasts"){ toastsOn=on; if(!on) $("#balloon").style.display="none"; }
+  if(ctl==="clock"){ clockOn=on; $("#clock").textContent=on?$("#clock").textContent:"--:--"; }
 }
-let arenaSvc=true, rakeSvc=true, fairSvc=true;
 
 /* a Group Policy setting really applies */
 function applyPolicy(id,v){
@@ -2244,7 +2256,7 @@ function renderPhase(){
 }
 
 /* ================= deploy / recall / bank ================= */
-function canDeploy(){ return phase==="battle"&&!shutFired&&arenaSvc; }
+function canDeploy(){ return phase==="battle"&&!shutFired; }
 function deploy(silent){
   if(!canDeploy()||myCurs().length>=MAXCUR||wallet<STAKE) return;
   if(MP.on){ mpSend({t:"deploy"}); if(!silent) sysSnd("hwin",.5); return; }

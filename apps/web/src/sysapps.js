@@ -454,57 +454,76 @@ export function initSysApps(deps) {
   /* ================================================================
      2. Services — the real console, and stopping one really stops it
      ================================================================ */
+  /* Two tiers, and the line between them is the whole point.
+
+     `local` services touch nothing but your own machine — your sound, your
+     theme, your notifications — so you may stop them and the only person
+     affected is you.
+
+     Everything else belongs to the house: the arena, the ledger, the fairness
+     provider, the plumbing they sit on. This is a live multiplayer game played
+     for money. A control that appears to stop the rakeback ledger is a lie
+     even when it is only lying to you, so those services refuse with the error
+     a real managed machine gives you, and the properties sheet greys out. */
   const SERVICES = [
-    { name: "AudioSrv", display: "Windows Audio", state: "Started", start: "Automatic", logon: "Local System",
-      desc: "Manages audio devices for Windows-based programs. If this service is stopped, audio devices and effects will not function properly.",
-      path: "C:\\WINDOWS\\System32\\svchost.exe -k netsvcs", ctl: "audio" },
-    { name: "Arena", display: "CURSORS.EXE Arena Service", state: "Started", start: "Automatic", logon: "Local System",
-      desc: "Runs the cursor arena, writes a 12 MB corpse for every death, and stops the machine when the disk is full. If this service is stopped, no cursor can be deployed and every live bounty is banked.",
-      path: "C:\\Program Files\\CURSORS.EXE\\arena.dll", ctl: "arena", core: true },
-    { name: "RasMan", display: "Remote Access Connection Manager", state: "Started", start: "Manual", logon: "Local System",
-      desc: "Creates a network connection. Manages the dial-up connection to cursor$net.",
-      path: "C:\\WINDOWS\\System32\\svchost.exe -k netsvcs", ctl: "net" },
-    { name: "Rake", display: "Rakeback Ticket Ledger", state: "Started", start: "Automatic", logon: "Local System",
-      desc: "Mints 200 tickets per deploy and decays every balance on a 45-day half-life. If this service is stopped, rakeback stops accruing and the house edge rises from 1% to 3%.",
-      path: "C:\\Program Files\\CURSORS.EXE\\ledger.dll", ctl: "rake" },
-    { name: "Themes", display: "Themes", state: "Started", start: "Automatic", logon: "Local System",
-      desc: "Provides user experience theme management. Stopping this service returns the desktop to the classic appearance.",
-      path: "C:\\WINDOWS\\System32\\svchost.exe -k netsvcs", ctl: "themes" },
-    { name: "Fairness", display: "Commit-Reveal Fairness Provider", state: "Started", start: "Automatic", logon: "Local System",
-      desc: "Publishes sha256(seed) before each epoch and reveals the seed at the crash. If this service is stopped, outcomes are still generated but nobody can check them.",
-      path: "C:\\Program Files\\CURSORS.EXE\\rng.dll", ctl: "fair", core: true },
-    { name: "Spooler", display: "Print Spooler", state: "Started", start: "Automatic", logon: "Local System",
+    { name: "AudioSrv", display: "Windows Audio", state: "Started", start: "Automatic", logon: "Local System", local: 1, ctl: "audio",
+      desc: "Manages audio devices for Windows-based programs. Stopping it mutes this computer.",
+      path: "C:\\WINDOWS\\System32\\svchost.exe -k netsvcs" },
+    { name: "Themes", display: "Themes", state: "Started", start: "Automatic", logon: "Local System", local: 1, ctl: "themes",
+      desc: "Provides user experience theme management. Stopping it returns this desktop to the classic appearance.",
+      path: "C:\\WINDOWS\\System32\\svchost.exe -k netsvcs" },
+    { name: "Messenger", display: "Messenger", state: "Started", start: "Automatic", logon: "Local System", local: 1, ctl: "toasts",
+      desc: "Transmits alert messages between clients and servers. Stopping it silences pop-up notifications on this computer. The lobby keeps running.",
+      path: "C:\\WINDOWS\\System32\\svchost.exe -k netsvcs" },
+    { name: "W32Time", display: "Windows Time", state: "Started", start: "Automatic", logon: "Local System", local: 1, ctl: "clock",
+      desc: "Maintains date and time synchronization. Stopping it stops the clock in the notification area.",
+      path: "C:\\WINDOWS\\System32\\svchost.exe -k netsvcs" },
+    { name: "Spooler", display: "Print Spooler", state: "Started", start: "Automatic", logon: "Local System", local: 1,
       desc: "Loads files to memory for later printing.", path: "C:\\WINDOWS\\system32\\spoolsv.exe" },
-    { name: "Schedule", display: "Task Scheduler", state: "Started", start: "Automatic", logon: "Local System",
+    { name: "Schedule", display: "Task Scheduler", state: "Started", start: "Automatic", logon: "Local System", local: 1,
       desc: "Enables a user to configure and schedule automated tasks on this computer.",
       path: "C:\\WINDOWS\\System32\\svchost.exe -k netsvcs" },
+    { name: "SysMain", display: "Error Reporting Service", state: "Started", start: "Automatic", logon: "Local System", local: 1,
+      desc: "Allows error reporting for services and applications running in non-standard environments.",
+      path: "C:\\WINDOWS\\System32\\svchost.exe -k netsvcs" },
+    { name: "Alerter", display: "Alerter", state: "Stopped", start: "Manual", logon: "Local Service", local: 1,
+      desc: "Notifies selected users and computers of administrative alerts.",
+      path: "C:\\WINDOWS\\System32\\svchost.exe -k LocalService" },
+    { name: "ClipSrv", display: "ClipBook", state: "Stopped", start: "Manual", logon: "Local System", local: 1,
+      desc: "Enables ClipBook Viewer to store information and share it with remote computers.",
+      path: "C:\\WINDOWS\\system32\\clipsrv.exe" },
+    { name: "TlntSvr", display: "Telnet", state: "Stopped", start: "Disabled", logon: "Local System", local: 1,
+      desc: "Enables a remote user to log on to this computer and run programs.",
+      path: "C:\\WINDOWS\\system32\\tlntsvr.exe" },
+    { name: "wuauserv", display: "Automatic Updates", state: "Stopped", start: "Disabled", logon: "Local System", local: 1,
+      desc: "Enables the download and installation of Windows updates.",
+      path: "C:\\WINDOWS\\system32\\svchost.exe -k netsvcs" },
+    { name: "SharedAccess", display: "Windows Firewall/Internet Connection Sharing", state: "Stopped", start: "Disabled", logon: "Local System", local: 1,
+      desc: "Provides network address translation and name resolution for computers on your home network.",
+      path: "C:\\WINDOWS\\System32\\svchost.exe -k netsvcs" },
+
+    /* --- the house's own, all protected --- */
+    { name: "Arena", display: "CURSORS.EXE Arena Service", state: "Started", start: "Automatic", logon: "Local System",
+      desc: "Runs the cursor arena and writes a 12 MB corpse for every death. This service runs on the game server, not on this computer, and cannot be controlled from here.",
+      path: "\\\\CURSORS-BETA\\arena.dll" },
+    { name: "Rake", display: "Rakeback Ticket Ledger", state: "Started", start: "Automatic", logon: "Local System",
+      desc: "Mints 200 tickets per deploy and decays every balance on a 45-day half-life. Runs on the game server. Your rakeback accrues whether this computer is on or not.",
+      path: "\\\\CURSORS-BETA\\ledger.dll" },
+    { name: "Fairness", display: "Commit-Reveal Fairness Provider", state: "Started", start: "Automatic", logon: "Local System",
+      desc: "Publishes sha256(seed) before each epoch and reveals the seed at the crash. Runs on the game server, where nobody with a keyboard can turn it off.",
+      path: "\\\\CURSORS-BETA\\rng.dll" },
+    { name: "PlugPlay", display: "Plug and Play", state: "Started", start: "Automatic", logon: "Local System",
+      desc: "Enables this computer to recognize and adapt to hardware changes. Every deployed cursor arrives through this service.",
+      path: "C:\\WINDOWS\\system32\\services.exe" },
     { name: "EventLog", display: "Event Log", state: "Started", start: "Automatic", logon: "Local System",
       desc: "Enables event log messages issued by Windows-based programs to be viewed in Event Viewer.",
       path: "C:\\WINDOWS\\system32\\services.exe" },
-    { name: "PlugPlay", display: "Plug and Play", state: "Started", start: "Automatic", logon: "Local System",
-      desc: "Enables a computer to recognize and adapt to hardware changes with little or no user input. Every deployed cursor arrives through this service.",
-      path: "C:\\WINDOWS\\system32\\services.exe" },
-    { name: "W32Time", display: "Windows Time", state: "Started", start: "Automatic", logon: "Local System",
-      desc: "Maintains date and time synchronization on all clients and servers in the network.",
+    { name: "RpcSs", display: "Remote Procedure Call (RPC)", state: "Started", start: "Automatic", logon: "Local System",
+      desc: "Provides the endpoint mapper and other miscellaneous RPC services.",
+      path: "C:\\WINDOWS\\system32\\svchost.exe -k rpcss" },
+    { name: "RasMan", display: "Remote Access Connection Manager", state: "Started", start: "Manual", logon: "Local System",
+      desc: "Creates a network connection. Manages the dial-up connection to cursor$net.",
       path: "C:\\WINDOWS\\System32\\svchost.exe -k netsvcs" },
-    { name: "Messenger", display: "Messenger", state: "Started", start: "Automatic", logon: "Local System",
-      desc: "Transmits net send and Alerter service messages between clients and servers. Carries the lobby.",
-      path: "C:\\WINDOWS\\System32\\svchost.exe -k netsvcs" },
-    { name: "SharedAccess", display: "Windows Firewall/Internet Connection Sharing", state: "Stopped", start: "Disabled", logon: "Local System",
-      desc: "Provides network address translation, addressing and name resolution services for all computers on your home network.",
-      path: "C:\\WINDOWS\\System32\\svchost.exe -k netsvcs" },
-    { name: "wuauserv", display: "Automatic Updates", state: "Stopped", start: "Disabled", logon: "Local System",
-      desc: "Enables the download and installation of Windows updates.",
-      path: "C:\\WINDOWS\\system32\\svchost.exe -k netsvcs" },
-    { name: "Alerter", display: "Alerter", state: "Stopped", start: "Manual", logon: "Local Service",
-      desc: "Notifies selected users and computers of administrative alerts.",
-      path: "C:\\WINDOWS\\System32\\svchost.exe -k LocalService" },
-    { name: "ClipSrv", display: "ClipBook", state: "Stopped", start: "Manual", logon: "Local System",
-      desc: "Enables ClipBook Viewer to store information and share it with remote computers.",
-      path: "C:\\WINDOWS\\system32\\clipsrv.exe" },
-    { name: "TlntSvr", display: "Telnet", state: "Stopped", start: "Disabled", logon: "Local System",
-      desc: "Enables a remote user to log on to this computer and run programs.",
-      path: "C:\\WINDOWS\\system32\\tlntsvr.exe" },
   ];
   SERVICES.sort((a, b) => a.display.localeCompare(b.display));
 
@@ -514,19 +533,17 @@ export function initSysApps(deps) {
     s.state = started ? "Started" : "Stopped";
     if (s.ctl) hooks.serviceChanged(s.ctl, started);
   }
+  /* the error a real managed machine gives you, verbatim */
+  function svcDenied(s, verb) {
+    showError("Services",
+      "Could not " + verb + " the " + s.display + " service on Local Computer.\n\n" +
+      "Error 5: Access is denied.");
+  }
   function svcAct(s, action) {
     if (!s) return;
+    if (!s.local) { svcDenied(s, action === "start" ? "start" : action === "restart" ? "restart" : "stop"); return; }
     if (action === "start" && s.state === "Started") return;
     if (action !== "start" && s.state !== "Started") return;
-    if (s.core && action !== "start") {
-      /* the two services the game cannot run without warn like Windows does,
-         then do exactly what they say — this is a machine you can break */
-      hooks.confirm("Stop " + s.display,
-        "Windows will stop the following service:\n\n" + s.display +
-        "\n\nThis service runs the game. Stopping it banks every live cursor and closes deploys until you start it again.\n\nAre you sure?",
-        () => { svcApply(s, false); svcRender(); sysSnd("hwout", .5); });
-      return;
-    }
     if (action === "restart") { svcApply(s, false); setTimeout(() => { svcApply(s, true); svcRender(); }, 400); }
     else svcApply(s, action === "start");
     sysSnd(action === "start" ? "hwin" : "hwout", .45);
@@ -535,9 +552,9 @@ export function initSysApps(deps) {
   function svcMenu(s, x, y) {
     svcSel = s; svcRender();
     showMenu([
-      { label: "Start", disabled: s.state === "Started", action: () => svcAct(s, "start") },
-      { label: "Stop", disabled: s.state !== "Started", action: () => svcAct(s, "stop") },
-      { label: "Restart", disabled: s.state !== "Started", action: () => svcAct(s, "restart") },
+      { label: "Start", disabled: !s.local || s.state === "Started", action: () => svcAct(s, "start") },
+      { label: "Stop", disabled: !s.local || s.state !== "Started", action: () => svcAct(s, "stop") },
+      { label: "Restart", disabled: !s.local || s.state !== "Started", action: () => svcAct(s, "restart") },
       { sep: 1 },
       { label: "Properties", bold: true, action: () => svcProps(s) },
     ], x, y);
@@ -568,14 +585,15 @@ export function initSysApps(deps) {
       if (o === s.start) op.selected = true;
       sel.appendChild(op);
     }
+    sel.disabled = !s.local;
     sel.addEventListener("change", () => { s.start = sel.value; svcRender(); });
     sr.appendChild(sel);
     b.appendChild(sr);
     b.appendChild(el("div", "pr-hr"));
     kv("Service status:", s.state);
     const row = el("div", "pr-btns");
-    for (const [label, act, on] of [["Start", "start", s.state !== "Started"],
-                                    ["Stop", "stop", s.state === "Started"],
+    for (const [label, act, on] of [["Start", "start", s.local && s.state !== "Started"],
+                                    ["Stop", "stop", s.local && s.state === "Started"],
                                     ["Pause", "pause", false],
                                     ["Resume", "resume", false]]) {
       const btn = el("button", "xbtn", label);
@@ -584,6 +602,8 @@ export function initSysApps(deps) {
       row.appendChild(btn);
     }
     b.appendChild(row);
+    if (!s.local) b.appendChild(el("div", "pr-locked",
+      "You do not have permission to start, stop or configure this service."));
     const foot = el("div", "dlg-foot");
     const ok = el("button", "xbtn", "OK");
     ok.addEventListener("click", () => closeWin("win-mmcprops"));
@@ -636,6 +656,7 @@ export function initSysApps(deps) {
         const out = [{ n: "PS/2 Compatible Mouse" }];
         for (const c of s.cursors)
           out.push({
+            id: c.id,
             n: `${c.owner} cursor (#${c.id})`,
             note: `Carrying ${c.bounty} SOL, x${c.mult}. State: ${c.mode}.` + (c.mine ? " This device is yours." : ""),
             live: true, mine: c.mine,
@@ -686,7 +707,10 @@ export function initSysApps(deps) {
           devSel = Object.assign({ cls: cls.name }, it); devRender();
           showMenu([
             { label: "Update Driver...", action: () => showError("Hardware Update Wizard", "Windows could not find a better match for your hardware than the software you currently have installed.") },
-            { label: "Disable", disabled: !it.live, action: () => it.live ? hooks.recallOne(it.n) : null },
+            /* recalling your own cursor from Device Manager is fair game — it
+               is your money and it is the same order the RECALL button sends.
+               Somebody else's cursor is not yours to disable. */
+            { label: "Disable", disabled: !it.mine, action: () => hooks.recallOne(it.id) },
             { label: "Uninstall", disabled: true },
             { sep: 1 },
             { label: "Scan for hardware changes", action: () => { devRender(); sysSnd("hwin", .4); } },
