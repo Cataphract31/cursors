@@ -288,6 +288,25 @@ music: Kevin MacLeod
     </div>
   </div>
 
+  <!-- Minesweeper -->
+  <div class="window fixed" id="win-mine" style="left:210px;top:110px;width:auto">
+    <div class="title-bar">
+      <div class="tb-l"><i class="xico tb-ico" data-ico="mine16"></i><div class="title-bar-text">Minesweeper</div></div>
+      <div class="title-bar-controls"><button aria-label="Minimize"></button><button aria-label="Close"></button></div>
+    </div>
+    <div class="win-body pad ms-body">
+      <div class="menubar ms-menubar"><span>Game</span><span>Help</span></div>
+      <div class="ms-frame">
+        <div class="ms-head">
+          <div class="ms-led" id="ms-counter"></div>
+          <button class="ms-face" id="ms-face"><img alt="new game"></button>
+          <div class="ms-led" id="ms-timer"></div>
+        </div>
+        <div class="ms-grid" id="ms-grid"></div>
+      </div>
+    </div>
+  </div>
+
   <!-- Run dialog -->
   <div class="window fixed" id="win-run" style="left:8px;top:calc(100% - 190px);width:346px">
     <div class="title-bar">

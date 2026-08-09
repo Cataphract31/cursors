@@ -58,9 +58,9 @@ Owner: *"leave the too in-depth stuff that only like 2% of the userbase would go
 - Zombie-proofing round 2: headless repro harness (`#desktop-amptest`) proved open→close→reopen works; the taskbar tab now trusts actual wrapper visibility, not a flag, so any desync self-heals on click.
 - Context menus at XP metrics (ACA899 borders, real submenu arrows, proper shadow); menu bars (File/Edit/View/Help…) actually drop menus — File→Exit, Help→About, Task Manager's Shut Down→Turn Off/Restart work.
 
-### Phase C — The fun, visible stuff (NEXT, owner picks order)
+### Phase C — The fun, visible stuff (owner picks order)
 
-- **Minesweeper** — real clone, real art (winXP repo ships the full sprite set already downloaded ideas), wager hooks later.
+- **Minesweeper — ✅ SHIPPED 2026-08-09.** Own module (`src/minesweeper.js`, kept import-free so the smoke runner executes it for real). Real rules: first click always safe, flood fill, chording (both buttons on a satisfied number), flag → question → clear cycle with a Marks toggle, mine counter that goes negative, 999-second LED clock, face states (smile/ohh/dead/win), losing reveals every mine and X's the wrong flags. Three levels persisted, Best Times per level stamped with the player's name, resettable. Menus are real (Game/Help with checkmarks — `check:` added to the shared menu builder). Genuine winXP sprite set (16×16 cells, 13×23 LEDs); learned by zooming the sprites 6× that they are **bare transparent glyphs**, so the cell itself must draw both bevels — that plus `box-sizing:content-box` on the grid were the two pixel bugs. Reachable from desktop icon, Start ▸ All Programs ▸ Games, and `winmine` in Run. Winning above beginner posts to Messenger. Dev harness: `#desktop-mine-play` plays real games headlessly until a rich board survives.
 - **Messenger production pass** (Phase 2 below) — contact list, per-bot DMs, typing indicators, nudge cooldowns.
 - **Paint** via jspaint embed; Save As Wallpaper.
 - **Explorer/My Computer + Recycle Bin with purpose** (Phases 3-4 below).

@@ -1,22 +1,27 @@
 // Smoke test: execute src/main.js under a stub DOM in node.
 // Catches strict-mode violations (undeclared assignments), ReferenceErrors,
 // and load-time crashes that a syntax check cannot see.
-import { readFileSync, writeFileSync, mkdtempSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { readFileSync, writeFileSync, rmSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 let src = readFileSync(join(root, "src", "main.js"), "utf8");
 
-// strip browser-only imports; stub the Webamp constructor and asset maps.
-// css imports vanish; named-import lines from local modules become stub consts.
+// Strip browser-only imports; stub the Webamp constructor and the asset module
+// (it imports binary files and uses import.meta.glob, neither of which node can
+// resolve). Sibling source modules are left alone so they get real coverage —
+// which is why the temp file is written into src/ rather than a temp dir.
 src = src
   .replace(/^import\s+"[^"]*";\s*$/gm, "")
   .replace('import WebampImport from "webamp";', "")
   .replace(
-    'import { IMG, SNDF, TRACKS } from "./assets.js";',
-    "const IMG = globalThis.__AssetStub; const SNDF = globalThis.__AssetStub; const TRACKS = [];"
+    /^import\s*\{([^}]*)\}\s*from\s*"\.\/assets\.js";\s*$/m,
+    (_, names) =>
+      names
+        .split(",")
+        .map((n) => `const ${n.trim()} = globalThis.__AssetStub;`)
+        .join(" ")
   )
   .replace(
     "const Webamp = (WebampImport && WebampImport.default) ? WebampImport.default : WebampImport;",
@@ -65,8 +70,7 @@ g.setInterval = () => 0;
 g.clearTimeout = () => {};
 g.clearInterval = () => {};
 
-const dir = mkdtempSync(join(tmpdir(), "cursors-smoke-"));
-const tmp = join(dir, "main.smoke.mjs");
+const tmp = join(root, "src", ".main.smoke.mjs");
 writeFileSync(tmp, src);
 
 try {
@@ -74,5 +78,7 @@ try {
   console.log("SMOKE OK — module executed to completion under strict mode");
 } catch (e) {
   console.error("SMOKE FAILED:", e && e.stack ? e.stack.split("\n").slice(0, 6).join("\n") : e);
-  process.exit(1);
+  process.exitCode = 1;
+} finally {
+  rmSync(tmp, { force: true });
 }

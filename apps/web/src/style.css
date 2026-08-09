@@ -119,6 +119,23 @@ input{user-select:text}
 .sm-fitem .xico{width:22px;height:22px;margin-right:2px;border-radius:3px}
 @media (max-width:420px){.sm-left,.sm-right{width:47vw}}
 
+/* ---------- minesweeper (classic metrics: 16px cells, 13x23 LEDs) ---------- */
+#win-mine{min-width:0}
+.win-body.ms-body{background:#BDBDBD;display:block;overflow:visible;padding:0}
+.menubar.ms-menubar{background:#BDBDBD;border-bottom:0;padding:3px 6px;gap:13px}
+.ms-frame{margin:0 5px 5px;padding:5px;border-top:3px solid #FFF;border-left:3px solid #FFF;border-right:3px solid #7B7B7B;border-bottom:3px solid #7B7B7B}
+.ms-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;padding:3px 4px;border-top:2px solid #7B7B7B;border-left:2px solid #7B7B7B;border-right:2px solid #FFF;border-bottom:2px solid #FFF}
+.ms-led{display:flex;background:#000;border-top:1px solid #7B7B7B;border-left:1px solid #7B7B7B;border-right:1px solid #FFF;border-bottom:1px solid #FFF}
+.ms-digit{width:13px;height:23px;display:block;-webkit-user-drag:none}
+.ms-face{width:26px;height:26px;min-width:0;min-height:0;padding:0;margin:0;display:grid;place-items:center;background:#BDBDBD;background-image:none;border-top:2px solid #FFF;border-left:2px solid #FFF;border-right:2px solid #7B7B7B;border-bottom:2px solid #7B7B7B;border-radius:0;box-shadow:none;cursor:default}
+.ms-face:active{border-top-color:#7B7B7B;border-left-color:#7B7B7B;border-right-color:#FFF;border-bottom-color:#FFF}
+.ms-face img{width:17px;height:17px;display:block;-webkit-user-drag:none}
+/* content-box: the JS sets the exact cell-grid size, borders sit outside it */
+.ms-grid{box-sizing:content-box;display:flex;flex-wrap:wrap;align-content:flex-start;border-top:3px solid #7B7B7B;border-left:3px solid #7B7B7B;border-right:3px solid #FFF;border-bottom:3px solid #FFF}
+/* every sprite is a bare transparent glyph — the cell draws its own bevel */
+.ms-c{width:16px;height:16px;flex:none;box-sizing:border-box;background-color:#BDBDBD;background-repeat:no-repeat;background-position:center;background-origin:border-box;background-clip:border-box;border-top:2px solid #FFF;border-left:2px solid #FFF;border-right:2px solid #7B7B7B;border-bottom:2px solid #7B7B7B}
+.ms-c.open{border:0;border-top:1px solid #7B7B7B;border-left:1px solid #7B7B7B}
+
 /* ---------- messenger ---------- */
 .msn-head{display:flex;align-items:center;gap:8px;padding:6px 9px;background:linear-gradient(180deg,#F6F9FE,#DDE9F9 60%,#CBDCF3);border-bottom:1px solid #A8C0DE;flex:none}
 .msn-fly{width:24px;height:24px}
@@ -252,6 +269,7 @@ input{user-select:text}
 .cit.dis{color:#ACA899}
 .cit.dis:hover{background:none;color:#ACA899}
 .cit.bold{font-weight:bold}
+.cit.chk:before{content:"\2714";position:absolute;left:5px;font-size:10px}
 .cit.has-sub:after{content:"";position:absolute;right:8px;top:50%;margin-top:-3.5px;border:3.5px solid transparent;border-left-color:currentColor;border-right:0}
 .csub{display:none;position:absolute;left:100%;top:-3px;background:#fff;border:1px solid #ACA899;box-shadow:4px 4px 3px -1px rgba(0,0,0,.28);padding:2px;min-width:150px;color:#000}
 .cit.has-sub:hover>.csub{display:block}

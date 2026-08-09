@@ -1,7 +1,8 @@
 import "xp.css";
 import "./style.css";
 import WebampImport from "webamp";
-import { IMG, SNDF, TRACKS } from "./assets.js";
+import { IMG, SNDF, TRACKS, MINE } from "./assets.js";
+import { initMinesweeper } from "./minesweeper.js";
 const Webamp = (WebampImport && WebampImport.default) ? WebampImport.default : WebampImport;
 
 "use strict";
@@ -223,6 +224,7 @@ function restoreWin(id){
 function closeWin(id,opts){
   if(id==="win-amp"){ winampApp.close(); return; }
   const a=openApps.get(id); if(!a) return;
+  if(id==="win-mine") mine.pause(); /* the clock does not run while the box is shut */
   a.el.style.display="none"; a.el.classList.remove("focused");
   openApps.delete(id);
   if(focusedId===id) focusedId=null;
@@ -344,6 +346,7 @@ const SYSICONS=[
   {id:"computer",label:"My Computer",ico:"computer32",app:"win-computer",sys:1},
   {id:"recycle",label:"Recycle Bin",ico:"bin32",app:"win-recycle",sys:1},
   {id:"cursors",label:"CURSORS.EXE",ico:"@ic-app",app:"win-cursors",sys:1},
+  {id:"mine",label:"Minesweeper",ico:"mine32",app:"win-mine",sys:1},
   {id:"ie",label:"Internet Explorer",ico:"ie32",app:"win-ie",sys:1},
   {id:"chat",label:"Windows Messenger",ico:"msn32",app:"win-chat",sys:1},
   {id:"amp",label:"Winamp",ico:"amp16",app:"win-amp",sys:1},
@@ -544,7 +547,7 @@ function buildMenu(host,items){
   for(const it of items){
     if(it.sep){ const s=document.createElement("div"); s.className="csep"; host.appendChild(s); continue; }
     const d=document.createElement("div");
-    d.className="cit"+(it.disabled?" dis":"")+(it.bold?" bold":"");
+    d.className="cit"+(it.disabled?" dis":"")+(it.bold?" bold":"")+(it.check?" chk":"");
     d.textContent=it.label;
     if(it.sub){
       d.classList.add("has-sub");
@@ -665,12 +668,31 @@ $$(".menubar span").forEach(m=>m.addEventListener("click",e=>{
   e.stopPropagation();
   const win=m.closest(".window"); if(!win) return;
   const r=m.getBoundingClientRect();
+  if(win.id==="win-mine"){
+    (m.textContent==="Game"?mine.gameMenu:mine.helpMenu)(r.left,r.bottom+2);
+    return;
+  }
   showMenu(menubarMenu(m.textContent,win.id),r.left,r.bottom+2);
 }));
+
+/* ================= Minesweeper ================= */
+const mine=initMinesweeper({
+  MINE,
+  host:$("#ms-grid"),
+  headEls:{counter:$("#ms-counter"),timer:$("#ms-timer"),face:$("#ms-face")},
+  store, sysSnd, showError, showMenu,
+  playerName:()=>playerName(),
+  close:()=>closeWin("win-mine"),
+  onWin:(lv,t)=>{
+    log(`minesweeper: ${lv} cleared in ${t}s`);
+    if(lv!=="beginner") chatSys(`${playerName()} swept ${lv} in ${t}s`);
+  }
+});
 document.addEventListener("contextmenu",e=>{
   e.preventDefault();
   hideMenu();
   if(e.target.closest("#webamp,#webamp-slot")) return; /* Winamp draws its own menus */
+  if(e.target.closest(".ms-grid")) return;             /* right-click plants flags */
   const lgAdmin=e.target.closest("#tile-admin");
   if(lgAdmin){
     showMenu([{label:"Log on as a different user",action(){
@@ -759,7 +781,7 @@ function allProgramsMenu(){
       {label:"Paint",action:()=>{ closeStart(); showError("Paint","mspaint.exe ships in a later update. Draw your losses from memory."); }},
       {label:"Calculator",action:()=>{ closeStart(); showError("Calculator","Cannot compute expected value: it is zero. It is always zero. Read the README."); }}]},
     {label:"Games",sub:[
-      {label:"Minesweeper",action:()=>{ closeStart(); showError("Minesweeper","winmine.exe ships in a later update. This whole desktop is the minefield."); }},
+      {label:"Minesweeper",action:go("win-mine")},
       {label:"Solitaire",action:()=>{ closeStart(); showError("Solitaire","You are already gambling."); }}]},
     {sep:1},
     {label:"Windows Update",action:()=>{ closeStart(); showError("Windows Update","0 critical updates available. The house is already patched."); }},
@@ -801,6 +823,7 @@ const RUNMAP={
   "msnmsgr":"win-chat","msmsgs":"win-chat",
   "iexplore":"win-ie","iexplore.exe":"win-ie",
   "notepad":"win-readme","notepad.exe":"win-readme",
+  "winmine":"win-mine","winmine.exe":"win-mine",
   "control":"win-dispprops","desk.cpl":"win-dispprops",
   "timedate.cpl":"win-datetime",
 };
@@ -1826,6 +1849,29 @@ $("#tile-guest").addEventListener("click",()=>{
 $("#lg-off").addEventListener("click",()=>{ sysSnd("shutdown",.55); $("#login").style.display="none"; $("#shutdown").style.display="grid"; });
 if(location.hash.indexOf("#desktop")===0) sessionStorage.setItem("cxp.booted","1"); /* dev: skip boot/login */
 if(location.hash==="#desktop-start") setTimeout(()=>$("#startmenu").classList.add("open"),400); /* dev: capture start menu */
+if(location.hash.indexOf("#desktop-mine")===0) setTimeout(()=>{ /* dev: capture minesweeper mid-game */
+  const w=$("#win-mine"); w.style.left="8px"; w.style.top="8px";
+  openWin("win-mine");
+  if(location.hash!=="#desktop-mine-play") return;
+  const g=$("#ms-grid");
+  const hit=(el,btn)=>{
+    el.dispatchEvent(new MouseEvent("mousedown",{bubbles:true,button:btn,buttons:btn===2?2:1}));
+    el.dispatchEvent(new MouseEvent("mouseup",{bubbles:true,button:btn,buttons:0}));
+  };
+  const dead=()=>($("#ms-face img").src||"").indexOf("dead")>=0;
+  const opens=()=>[...g.children].filter(e=>e.classList.contains("open")).length;
+  /* play real games until one survives to a rich board, then stop on it */
+  for(let guard=0;guard<400;guard++){
+    if(dead()) mine.newGame();
+    const hidden=[...g.children].filter(e=>e.className==="ms-c");
+    if(!hidden.length){ mine.newGame(); continue; }
+    hit(hidden[Math.floor(Math.random()*hidden.length)],0);
+    if(!dead()&&opens()>=30) break;
+  }
+  const hidden=[...g.children].filter(e=>e.className==="ms-c");
+  hit(hidden[0],2);                                   /* flag */
+  if(hidden[1]){ hit(hidden[1],2); hit(hidden[1],2); } /* flag -> question */
+},500);
 if(location.hash==="#desktop-amptest"){ /* dev: reproduce the open/close/reopen cycle headlessly */
   const dlog=[];
   const D=document.createElement("pre");

@@ -83,6 +83,14 @@ export const TRACKS = [
   { url: trkElevator, artist: "Kevin MacLeod", title: "Local Forecast - Elevator" },
 ];
 
+/* Minesweeper sprite set (winXP repo, MIT): digits 13x23, cells 16x16 */
+const mineGlob = import.meta.glob("./assets/xp/mine/*.png", { eager: true, query: "?url", import: "default" });
+export const MINE = Object.fromEntries(
+  Object.entries(mineGlob).map(([p, url]) => [p.split("/").pop().replace(/\.png$/, ""), url])
+);
+IMG.mine16 = MINE["mine-icon"];
+IMG.mine32 = MINE["mine-icon"];
+
 export const SNDF = {
   startup: sndStartup, logon: sndLogon, logoff: sndLogoff, shutdown: sndShutdown,
   balloon: sndBalloon, critical: sndCritical, exclaim: sndExclaim, ding: sndDing,
