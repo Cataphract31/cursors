@@ -138,7 +138,10 @@ function tvOrder() {
   }
   return out;
 }
-function tvMsg() { return { t: "tv", now: tv.now, queue: tvOrder() }; }
+function tvMsg() {
+  const need = conns.size <= 2 ? 1 : Math.ceil(conns.size / 3);
+  return { t: "tv", now: tv.now, queue: tvOrder(), skip: { n: skipVotes.size, need } };
+}
 let skipVotes = new Set();
 function tvAdvance() {
   const order = tvOrder();
@@ -281,7 +284,7 @@ function handle(c, m) {
       skipVotes.add(c.key);
       const need = conns.size <= 2 ? 1 : Math.ceil(conns.size / 3);
       if (skipVotes.size >= need) { sys("the lobby voted to skip"); tvAdvance(); }
-      else broadcast({ t: "sys", text: `skip vote: ${skipVotes.size}/${need}` });
+      else broadcast(tvMsg());   /* the page shows the count; no chat spam */
       break;
     }
     case "vis":

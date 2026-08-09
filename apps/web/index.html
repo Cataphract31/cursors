@@ -391,10 +391,17 @@ icons/sounds: winXP (MIT)</div>
         <img id="ie-linksi" alt=""><b>Links</b>
         <a data-go="http://www.hotmail.com/">Free Hotmail</a>
         <a data-go="http://windowsupdate.microsoft.com/">Windows Update</a>
-        <a data-go="http://www.cursorwebring.org/">The Cursor Webring</a>
+        <a data-go="http://tv.cursor.land/">cursorTV</a>
+        <a data-go="http://gallery.cursor.land/">the gallery</a>
         <a data-go="http://search.msn.com/">Search the Web</a>
       </div>
-      <div class="ie-doc" id="ie-page"></div>
+      <div class="ie-main">
+        <div class="ie-side" id="ie-side" style="display:none">
+          <div class="ie-side-h"><span id="ie-side-title">Favorites</span><i id="ie-side-x">✕</i></div>
+          <div class="ie-side-body" id="ie-side-body"></div>
+        </div>
+        <div class="ie-doc" id="ie-page"></div>
+      </div>
       <div class="ex-status ie-status">
         <span id="ie-st1">Done</span>
         <span class="ie-progcell"><span class="ie-prog" id="ie-prog"><i id="ie-progbar"></i></span></span>
@@ -734,6 +741,170 @@ icons/sounds: winXP (MIT)</div>
         <div id="errtext" style="line-height:1.55">Something happened.</div>
       </div>
       <div style="text-align:center"><button class="xbtn" id="err-ok" style="min-width:82px">OK</button></div>
+    </div>
+  </div>
+
+  <!-- Add Favorite -->
+  <div class="window fixed" id="win-addfav" style="left:calc(50% - 180px);top:calc(50% - 80px);width:360px">
+    <div class="title-bar">
+      <div class="tb-l"><i class="xico tb-ico" data-ico="ie16"></i><div class="title-bar-text">Add Favorite</div></div>
+      <div class="title-bar-controls"><button aria-label="Close"></button></div>
+    </div>
+    <div class="win-body">
+      <div style="display:flex;gap:9px;align-items:flex-start;padding:4px 2px 10px">
+        <i class="xico" data-ico="ie32" style="width:32px;height:32px;flex:none"></i>
+        <div style="line-height:1.5">Internet Explorer will add this page to your Favorites list.<br>
+        <span class="small dim" id="af-url"></span></div>
+      </div>
+      <div style="display:grid;grid-template-columns:44px 1fr;gap:6px;align-items:center;padding:0 2px 10px">
+        <span>Name:</span><input type="text" id="af-name" spellcheck="false" maxlength="40">
+      </div>
+      <div style="display:flex;gap:7px;justify-content:flex-end">
+        <button class="xbtn" id="af-ok" style="min-width:74px">OK</button>
+        <button class="xbtn" id="af-cancel" style="min-width:74px">Cancel</button>
+        <button class="xbtn" disabled style="min-width:88px">Create in &gt;&gt;</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Organize Favorites -->
+  <div class="window fixed" id="win-orgfav" style="left:calc(50% - 190px);top:calc(50% - 130px);width:380px">
+    <div class="title-bar">
+      <div class="tb-l"><i class="xico tb-ico" data-ico="ie16"></i><div class="title-bar-text">Organize Favorites</div></div>
+      <div class="title-bar-controls"><button aria-label="Close"></button></div>
+    </div>
+    <div class="win-body">
+      <div style="display:flex;gap:8px">
+        <div style="display:flex;flex-direction:column;gap:5px;width:104px;flex:none">
+          <button class="xbtn" disabled>Create Folder</button>
+          <button class="xbtn" id="of-rename">Rename</button>
+          <button class="xbtn" disabled>Move to Folder...</button>
+          <button class="xbtn" id="of-delete">Delete</button>
+          <button class="xbtn" id="of-up">Move Up</button>
+          <button class="xbtn" id="of-down">Move Down</button>
+        </div>
+        <div style="flex:1;display:flex;flex-direction:column">
+          <div id="of-list" style="border:1px solid #7F9DB9;background:#fff;height:170px;overflow:auto"></div>
+          <div class="small dim" id="of-info" style="padding:4px 2px;min-height:16px"></div>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:flex-end;margin-top:6px">
+        <button class="xbtn" id="of-close" style="min-width:74px">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Internet Options: the seven tabs, Advanced tree included -->
+  <div class="window fixed" id="win-inetopts" style="left:calc(50% - 200px);top:44px;width:400px">
+    <div class="title-bar">
+      <div class="tb-l"><i class="xico tb-ico" data-ico="ie16"></i><div class="title-bar-text">Internet Options</div></div>
+      <div class="title-bar-controls"><button aria-label="Close"></button></div>
+    </div>
+    <div class="win-body pad" style="background:#ECE9D8">
+      <div class="xtabs" style="flex-wrap:wrap">
+        <span class="xtab on" data-pane="io-gen">General</span>
+        <span class="xtab" data-pane="io-sec">Security</span>
+        <span class="xtab" data-pane="io-priv">Privacy</span>
+        <span class="xtab" data-pane="io-cont">Content</span>
+        <span class="xtab" data-pane="io-conn">Connections</span>
+        <span class="xtab" data-pane="io-prog">Programs</span>
+        <span class="xtab" data-pane="io-advt">Advanced</span>
+      </div>
+      <div class="xpane on" id="io-gen">
+        <fieldset class="mo-fs"><legend>Home page</legend>
+          <div class="small" style="margin-bottom:4px">You can change which page to use for your home page.</div>
+          <div class="aprow"><span class="lb">Address:</span><input type="text" id="io-home" style="flex:1" spellcheck="false"></div>
+          <div style="display:flex;gap:5px;justify-content:flex-end;margin-top:4px">
+            <button class="xbtn" id="io-usecur" style="min-width:86px">Use Current</button>
+            <button class="xbtn" id="io-usedef" style="min-width:86px">Use Default</button>
+            <button class="xbtn" id="io-useblank" style="min-width:86px">Use Blank</button>
+          </div>
+        </fieldset>
+        <fieldset class="mo-fs"><legend>Temporary Internet files</legend>
+          <div class="small" id="io-cache" style="margin-bottom:5px"></div>
+          <div style="display:flex;gap:5px;justify-content:flex-end">
+            <button class="xbtn" id="io-delcookies" style="min-width:98px">Delete Cookies...</button>
+            <button class="xbtn" id="io-delfiles" style="min-width:86px">Delete Files...</button>
+            <button class="xbtn" disabled style="min-width:74px">Settings...</button>
+          </div>
+        </fieldset>
+        <fieldset class="mo-fs"><legend>History</legend>
+          <div style="display:flex;gap:8px;align-items:center">
+            <span class="small" style="flex:1">Days to keep pages in history:</span>
+            <input type="number" value="20" min="0" max="99" style="width:48px">
+            <button class="xbtn" id="io-clearhist" style="min-width:86px">Clear History</button>
+          </div>
+        </fieldset>
+      </div>
+      <div class="xpane" id="io-sec">
+        <div class="small" style="margin:4px 0 8px">Select a Web content zone to specify its security settings.</div>
+        <div style="display:flex;gap:14px;justify-content:center;padding:8px;border:1px solid #ACA899;background:#fff">
+          <div style="text-align:center"><i class="xico" data-ico="earth16" style="width:31px;height:31px"></i><div class="small"><b>Internet</b></div></div>
+          <div style="text-align:center;opacity:.55"><i class="xico" data-ico="computer32" style="width:31px;height:31px"></i><div class="small">Local intranet</div></div>
+          <div style="text-align:center;opacity:.55"><i class="xico" data-ico="@ic-check" style="width:31px;height:31px"></i><div class="small">Trusted sites</div></div>
+          <div style="text-align:center;opacity:.55"><i class="xico" data-ico="err32" style="width:31px;height:31px"></i><div class="small">Restricted sites</div></div>
+        </div>
+        <fieldset class="mo-fs" style="margin-top:8px"><legend>Security level for this zone</legend>
+          <div style="display:flex;gap:10px;align-items:center">
+            <b>Medium</b>
+            <span class="small dim">Safe browsing and still functional. Prompts before downloading potentially unsafe content. Unsigned ActiveX controls will not be downloaded. Appropriate for most Internet sites.</span>
+          </div>
+        </fieldset>
+      </div>
+      <div class="xpane" id="io-priv">
+        <fieldset class="mo-fs"><legend>Settings</legend>
+          <div style="display:flex;gap:10px">
+            <b style="writing-mode:vertical-lr;transform:rotate(180deg);text-align:center">Medium</b>
+            <span class="small dim">Blocks third-party cookies that do not have a compact privacy policy. Blocks third-party cookies that use personally identifiable information without your implicit consent. Restricts first-party cookies that use personally identifiable information without implicit consent.</span>
+          </div>
+        </fieldset>
+        <div class="small dim" style="padding:2px">This computer sets no cookies. We could not get them working in 2003 and see no reason to start now.</div>
+      </div>
+      <div class="xpane" id="io-cont">
+        <fieldset class="mo-fs"><legend>Content Advisor</legend>
+          <div class="small dim" style="margin-bottom:4px">Ratings help you control the Internet content that can be viewed on this computer.</div>
+          <div style="text-align:right"><button class="xbtn" disabled style="min-width:74px">Enable...</button></div>
+        </fieldset>
+        <fieldset class="mo-fs"><legend>Certificates</legend>
+          <div class="small dim" style="margin-bottom:4px">Use certificates to positively identify yourself, certification authorities, and publishers.</div>
+          <div style="text-align:right"><button class="xbtn" id="io-certs" style="min-width:86px">Certificates...</button></div>
+        </fieldset>
+      </div>
+      <div class="xpane" id="io-conn">
+        <fieldset class="mo-fs"><legend>Dial-up and Virtual Private Network settings</legend>
+          <div style="border:1px solid #7F9DB9;background:#fff;padding:4px 6px;display:flex;gap:7px;align-items:center">
+            <i class="xico" data-ico="connect16" style="width:16px;height:16px"></i><span>cursor$net (Default)</span>
+          </div>
+          <div style="display:flex;gap:5px;justify-content:flex-end;margin-top:5px">
+            <button class="xbtn" disabled style="min-width:64px">Add...</button>
+            <button class="xbtn" disabled style="min-width:74px">Remove</button>
+            <button class="xbtn" id="io-dialset" style="min-width:74px">Settings...</button>
+          </div>
+        </fieldset>
+        <div class="small dim" style="padding:2px">56.6 Kbps. It is not the wires, it is the era.</div>
+      </div>
+      <div class="xpane" id="io-prog">
+        <fieldset class="mo-fs"><legend>Internet programs</legend>
+          <div style="display:grid;grid-template-columns:96px 1fr;gap:5px 8px;align-items:center" class="small">
+            <span>HTML editor:</span><b>Notepad</b>
+            <span>E-mail:</span><b>Windows Messenger</b>
+            <span>Newsgroups:</span><b>Outlook Express</b>
+            <span>Internet call:</span><b>NetMeeting</b>
+            <span>Calendar:</span><b>(none)</b>
+            <span>Contact list:</span><b>Address Book</b>
+          </div>
+        </fieldset>
+      </div>
+      <div class="xpane" id="io-advt">
+        <div class="small" style="margin:2px 0 4px">Settings:</div>
+        <div id="io-adv" style="border:1px solid #7F9DB9;background:#fff;height:218px;overflow:auto;padding:2px 4px"></div>
+        <div class="small dim" style="margin-top:3px">Entries marked with a working switch actually do something. The rest are exactly as load-bearing as they were in 2003.</div>
+      </div>
+      <div style="display:flex;gap:7px;justify-content:flex-end;margin-top:8px">
+        <button class="xbtn" id="io-ok" style="min-width:74px">OK</button>
+        <button class="xbtn" id="io-cancel" style="min-width:74px">Cancel</button>
+        <button class="xbtn" disabled style="min-width:74px">Apply</button>
+      </div>
     </div>
   </div>
 

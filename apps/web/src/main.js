@@ -2448,6 +2448,14 @@ ie=initIE({
     hist:$("#ie-hist"), mail:$("#ie-mail"), print:$("#ie-print"),
     addr:$("#ie-addr"), go:$("#ie-go"), links:$("#ie-links"), page:$("#ie-page"),
     throb:$("#ie-throb"), prog:$("#ie-prog"), progbar:$("#ie-progbar"), st1:$("#ie-st1"),
+    side:$("#ie-side"), sideBody:$("#ie-side-body"), sideTitle:$("#ie-side-title"), sideX:$("#ie-side-x"),
+    afName:$("#af-name"), afUrl:$("#af-url"), afOk:$("#af-ok"), afCancel:$("#af-cancel"),
+    ofList:$("#of-list"), ofInfo:$("#of-info"), ofRename:$("#of-rename"), ofDelete:$("#of-delete"),
+    ofUp:$("#of-up"), ofDown:$("#of-down"), ofClose:$("#of-close"),
+    ioHome:$("#io-home"), ioCache:$("#io-cache"), ioAdv:$("#io-adv"), ioOk:$("#io-ok"), ioCancel:$("#io-cancel"),
+    ioUseCur:$("#io-usecur"), ioUseDef:$("#io-usedef"), ioUseBlank:$("#io-useblank"),
+    ioDelCookies:$("#io-delcookies"), ioDelFiles:$("#io-delfiles"), ioClearHist:$("#io-clearhist"),
+    ioCerts:$("#io-certs"), ioDialSet:$("#io-dialset"),
     dlUser:$("#dl-user"), dlConnect:$("#dl-connect"), dlOffline:$("#dl-offline"),
     dlSettings:$("#dl-settings"),
     dgText:$("#dg-text"), dgBar:$("#dg-bar"), dgCancel:$("#dg-cancel"),
@@ -3481,6 +3489,7 @@ function mpWelcome(m){
     for(const e of (m.chat||[])) e.who==="*"?msn.lobbySys(e.text):msn.lobbySay(e.who,e.text);
   }
   mpSend({t:"guest"}); mpSend({t:"gallery"});
+  MP.online=m.online;
   msn.setHumans(m.online);
   log(`connected to the beta arena as ${MP.name} — epoch ${roundNo}, ${m.online.length} online`);
   showBalloon("Connected to the beta arena",
@@ -3677,11 +3686,11 @@ function mpMsg(m){
     case "epoch": if(MP.on) mpEpoch(m); break;
     case "chat": if(MP.on) msn.lobbySay(m.who,m.text); break;
     case "sys": if(MP.on) msn.lobbySys(m.text); break;
-    case "join": if(MP.on&&m.online) msn.setHumans(m.online); break;   /* the sys line covers the greeting */
-    case "part": if(MP.on){ msn.lobbySys(`${m.name} signed out`); if(m.online) msn.setHumans(m.online); } break;
+    case "join": if(MP.on&&m.online){ MP.online=m.online; msn.setHumans(m.online); mpTvRenderQueue(); } break;   /* the sys line covers the greeting */
+    case "part": if(MP.on){ msn.lobbySys(`${m.name} signed out`); if(m.online){ MP.online=m.online; msn.setHumans(m.online); mpTvRenderQueue(); } } break;
     case "guest": MP.guest=m.list; mpRefreshIe("guest.html"); break;
     case "gallery": MP.gallery=m.list; mpRefreshIe("gallery"); break;
-    case "tv": MP.tv={now:m.now,queue:m.queue}; mpTvSync(); break;
+    case "tv": MP.tv={now:m.now,queue:m.queue,skip:m.skip}; mpTvSync(); break;
     case "err": if(m.msg) showBalloon("beta server",m.msg); break;
   }
 }
@@ -3757,6 +3766,16 @@ function mpTvPlayer(){
     events:{onStateChange:e=>{ if(e.data===0) mpSend({t:"tvEnded",vid:MP.tv.now&&MP.tv.now.vid}); }},
   });
 }
+/* the TV ducks while a duel is on screen: the fight is the main act */
+setInterval(()=>{
+  if(!ytPlayer||!ytPlayer.setVolume) return;
+  try{
+    const fighting=document.querySelector("#curlayer .cur.dueling");
+    const want=fighting?14:100;
+    if(ytDuck!==want){ ytDuck=want; ytPlayer.setVolume(want); }
+  }catch(e){}
+},400);
+let ytDuck=-1;
 function mpTvSync(){
   if(!tvPage||!tvPage.isConnected) return;
   mpTvRenderQueue();
@@ -3768,12 +3787,19 @@ function mpTvSync(){
     else mpTvPlayer();
   }catch(e){ mpTvPlayer(); }
 }
+function tvTitle(){
+  try{ const d=ytPlayer&&ytPlayer.getVideoData&&ytPlayer.getVideoData(); return d&&d.title?d.title:null; }catch(e){ return null; }
+}
 function mpTvRenderQueue(){
   if(!tvPage||!tvPage.isConnected) return;
   const nowEl=tvPage.querySelector("#tv-now"), qEl=tvPage.querySelector("#tv-queue");
+  const ttl=tvTitle();
   if(nowEl) nowEl.innerHTML=MP.tv.now
-    ? `now playing: <b>${esc(MP.tv.now.vid)}</b> <font size="1">(queued by ${esc(MP.tv.now.by)})</font>`
+    ? `now playing: <b>${esc(ttl||MP.tv.now.vid)}</b> <font size="1">(queued by ${esc(MP.tv.now.by)})</font>`
     : `<font size="1">dead air. queue something.</font>`;
+  const wEl=tvPage.querySelector("#tv-watch"), skEl=tvPage.querySelector("#tv-skipn");
+  if(wEl) wEl.textContent=(MP.online&&MP.online.length?MP.online.length:1)+" watching";
+  if(skEl) skEl.textContent=MP.tv.skip&&MP.tv.skip.n?`· skip votes ${MP.tv.skip.n}/${MP.tv.skip.need}`:"";
   /* the server hands back the order it will ACTUALLY play in — rotated by
      person, not first-come — so the page shows the deck, not the inbox */
   if(qEl) qEl.innerHTML=MP.tv.queue.length
@@ -4177,14 +4203,12 @@ if(location.hash.indexOf("#desktop-ie")===0) setTimeout(()=>{ /* dev: capture th
   const p=location.hash.replace("#desktop-ie","");
   if(p!=="-dial"&&p!=="-dialgo") ie.connectNow();   /* skip the handshake unless that is the shot */
   openWin("win-ie");
-  const to={"-odds":"http://www.cursor.land/odds.html","-hall":"http://www.cursor.land/hall.html",
-    "-guest":"http://www.cursor.land/guest.html","-ring":"http://www.cursorwebring.org/",
-    "-mumu":"http://mumu.tripod.com/","-deg":"http://deg404.neocities.org/",
-    "-bobo":"http://www.angelfire.com/biz/bobo/","-404":"http://www.cursortactics.com/",
-    "-search":"http://search.msn.com/results?q=how%20to%20win"};
+  const to={"-hall":"http://hall.cursor.land/","-guest":"http://guest.cursor.land/",
+    "-gallery":"http://gallery.cursor.land/","-404":"http://www.cursortactics.com/",
+    "-search":"http://search.msn.com/results?q=gallery"};
   if(to[p]) ie.go(to[p],{replace:true});
   if(p==="-post") setTimeout(()=>{
-    ie.go("http://www.cursor.land/guest.html",{replace:true});
+    ie.go("http://guest.cursor.land/",{replace:true});
     setTimeout(()=>{
       $("#gb-txt").value="testing the guestbook. if you can read this it saved.";
       $("#ie-page").querySelector("[data-act=gb-post]").click();

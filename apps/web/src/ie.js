@@ -9,12 +9,12 @@
 export function initIE(deps) {
   const { IMG, els, store, sysSnd, snd, showMenu, showError, hooks } = deps;
 
-  const HOME = "http://www.cursor.land/";
+  const HOME = "http://tv.cursor.land/";   /* home is the shared screen */
   const PHONE = "555-0134";
 
   let url = null, past = [], future = [], loading = null, timers = [];
-  let online = false, offline = false, popped = false, srcHTML = "", pageTitle = "";
-  let pending = null, hits = 133721, popN = 0;
+  let online = false, offline = false, srcHTML = "", pageTitle = "";
+  let pending = null;
   const HISTORY = [];
 
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -24,227 +24,69 @@ export function initIE(deps) {
 
   /* ---------- the guestbook is real, and it persists ----------
      online it is GLOBAL: the beta server owns it and everyone reads the same
-     page. offline it falls back to the local store, as before. */
+     page. offline it falls back to the local store - empty until YOU sign it,
+     because the entries are player content, not set dressing. */
   function guests() {
     const net = hooks.netGuests && hooks.netGuests();
     if (net) return net;
-    if (!store.data.guest) {
-      store.data.guest = [
-        { who: "mumu", when: "14 Aug 2003", txt: "first!!! also i am up 4.2 SOL all time (this account)" },
-        { who: "bobo", when: "16 Aug 2003", txt: "cool site. how do i get my cursor back" },
-        { who: "xp_chad", when: "02 Sep 2003", txt: "banked at x2 six times in a row. i have solved it." },
-        { who: "clippy", when: "11 Sep 2003", txt: "It looks like you're chasing a loss. Would you like help with that?" },
-        { who: "deg404", when: "29 Nov 2003", txt: "the rng is crackable. email me. do not email the webmaster." },
-        { who: "solja", when: "03 Jan 2004", txt: "webmaster please add music i have a midi" },
-      ];
-      store.save();
-    }
-    return store.data.guest;
+    return store.data.guest || (store.data.guest = []);
   }
 
   /* ================= the sites ================= */
   /* every page is a function, so the ones with live numbers in them can be */
 
-  const NAV = `<table border="0" cellpadding="3" cellspacing="0"><tr>
-  <td><a href="/" data-go="http://www.cursor.land/">home</a></td>
-  <td><font color="#00BB00">&#183;</font></td>
-  <td><a href="/odds.html" data-go="http://www.cursor.land/odds.html">the odds</a></td>
-  <td><font color="#00BB00">&#183;</font></td>
-  <td><a href="/hall.html" data-go="http://www.cursor.land/hall.html">hall of fame</a></td>
-  <td><font color="#00BB00">&#183;</font></td>
-  <td><a href="/guest.html" data-go="http://www.cursor.land/guest.html">guestbook</a></td>
-  <td><font color="#00BB00">&#183;</font></td>
-  <td><a href="http://www.cursorwebring.org/" data-go="http://www.cursorwebring.org/">webring</a></td>
-</tr></table>`;
-
-  const RING = `<!-- webring code. paste this on your own page. do not edit it. -->
-<table class="ringbox" border="1" cellpadding="6" cellspacing="0"><tr><td>
-<center>
-<font size="1">this site is member #7 of</font><br>
-<b><a data-go="http://www.cursorwebring.org/">THE CURSOR WEBRING</a></b><br>
-<font size="1">[ <a data-go="ring:prev">&lt;&lt; prev</a> |
-<a data-go="ring:rand">random</a> |
-<a data-go="ring:next">next &gt;&gt;</a> |
-<a data-go="http://www.cursorwebring.org/">list all</a> ]</font>
-</center>
-</td></tr></table>`;
-
   const SITES = {};
   const site = (u, o) => { SITES[key(u)] = Object.assign({ url: u }, o); };
 
-  site("http://www.cursor.land/", {
-    title: "cursor$land - the #1 cursor fightring on the net",
-    cls: "geo",
-    body: () => `<marquee behavior="scroll" scrollamount="4" class="marq">
-  &#9733;&#8226;*&#168;*&#8226;.&#184;&#184;.&#8226;*&#168;*&#8226;&#9733; welcome to cursor$land &#9733;&#8226;*&#168;*&#8226;.&#184;&#184;.&#8226;*&#168;*&#8226;&#9733;
-  the #1 cursor fightring on the information superhighway &#9733; winner takes all &#9733; tell your friends &#9733;
-</marquee>
+  /* ---------- the real pages: live systems, player content, plain chrome ----------
+     The 2003 fiction sites (cursor$land, the webring, mumu, deg404, bobo) are
+     gone by owner decree: no authored joke copy. What remains is only what
+     players make - the shared TV, the gallery, the guestbook, the hall - plus
+     MSN Search over exactly those pages. */
 
-<center>
-<h1>~ cursor$land ~</h1>
-<font size="1">est. 2003 &#183; webmaster: admin &#183; last updated: never</font>
-<div class="rainbow"></div>
-${NAV}
-<div class="rainbow"></div>
-
-<table border="0" cellpadding="8" cellspacing="0" width="100%"><tr>
-<td valign="top" width="62%">
-  <p><b>welcome 2 my page!!</b></p>
-  <p>this is the homepage of cursor$land, where cursors fight for money and
-  nobody lies to you about it. you deploy a cursor for <b>0.1 SOL</b>. it fights
-  on its own. when two of them touch, one dies and the other one takes the
-  money. you decide <u>one thing only</u>: when to stop.</p>
-  <p><a data-act="deploy"><b>&gt;&gt;&gt; ENTER THE ARENA &lt;&lt;&lt;</b></a><br>
-  <font size="1">(opens CURSORS.EXE. costs real money. always did.)</font></p>
-  <p>read <a data-go="http://www.cursor.land/odds.html">the odds</a> first if you
-  are new. it is one page, it is not selling anything, and that is how you will
-  know it is the only honest page on this webring.</p>
-  <div class="constr"></div>
-  <font size="1">this page is under construction and always will be</font>
-</td>
-<td valign="top" width="38%">
-  <table border="1" cellpadding="5" cellspacing="0" class="sidebox"><tr><td>
-    <center>
-    <font size="1">you are visitor</font><br>
-    <span class="cnt" id="ie-hits">${String(hits).padStart(7, "0")}</span><br>
-    <font size="1">since 14 aug 2003</font>
-    </center>
-  </td></tr></table>
-  <br>
-  <center>
-  <a data-act="amp"><span class="badge">&#9835; now playing: cursor.mid</span></a><br>
-  <span class="badge">BEST VIEWED IN 800&#215;600</span><br>
-  <span class="badge">MADE WITH NOTEPAD</span><br>
-  <span class="badge">Y2K COMPLIANT</span><br>
-  <span class="badge">NO RIGHTS RESERVED</span>
-  </center>
-</td>
-</tr></table>
-
-<div class="rainbow"></div>
-${RING}
-<p><font size="1">sign my <a data-go="http://www.cursor.land/guest.html">guestbook</a> &#183;
-<a data-act="mail">email the webmaster</a> &#183;
-this page sets no cookies because we could not get them working</font></p>
-</center>`,
-  });
-
-  site("http://www.cursor.land/odds.html", {
-    title: "cursor$land - the odds",
-    cls: "geo",
-    body: () => {
-      const rows = [2, 3, 5, 10, 25, 100].map(n => `  <tr>
-    <td align="center">&#215;${n}</td>
-    <td align="center">1 / ${n}</td>
-    <td align="center">${(100 / n).toFixed(n >= 25 ? 1 : 0)}%</td>
-    <td align="center">${n === 2 ? "a coin" : n === 100 ? "once a career" : "1 run in " + n}</td>
-  </tr>`).join("\n");
-      return `<center>
-<h1>~ the odds ~</h1>
-<font size="1">the only page on this webring that is not shouting</font>
-<div class="rainbow"></div>
-${NAV}
-<div class="rainbow"></div>
-
-<table border="0" cellpadding="8" cellspacing="0" width="94%"><tr><td align="left">
-<p><b>1. every touch is a coin weighted by money.</b><br>
-when cursor A (carrying <i>a</i>) touches cursor B (carrying <i>b</i>), A wins
-with probability <b>a / (a + b)</b>. that is the whole duel. the winner takes the
-loser's bounty. the house does not take a cut of it, does not tilt it, and is
-not watching it.</p>
-
-<p><b>2. so every fight is fair, and therefore every run is too.</b><br>
-because each touch pays exactly what it risks, chaining them cannot bend the
-average. the chance that a cursor ever reaches <b>&#215;N</b> its entry is
-<b>1/N</b>. exactly. not about. not usually.</p>
-
-<table border="1" cellpadding="4" cellspacing="0" class="oddstable">
-  <tr><th>bank at</th><th>chance</th><th>%</th><th>in plain english</th></tr>
-${rows}
-</table>
-
-<p><b>3. the fee is the edge, and it is the whole edge.</b><br>
-entry is 0.100 SOL: <b>0.097</b> into the arena, <b>0.001</b> to the platform
-(1%), <b>0.002</b> back to players as rakeback (2%). played long enough that is
-an <b>RTP of 99%</b>. no single collision has an edge inside it. we take the fee
-at the door and then we get out of the way.</p>
-
-<p><b>4. bet size cannot change your variance. only banking can.</b><br>
-every cursor costs the same 0.1 SOL, so there is no bet-sizing lever to pull.
-cash at &#215;2 often and you win small often. ride for &#215;50 and you will
-lose 49 times out of 50 without being cheated once.</p>
-
-<p><b>5. there is no jackpot.</b><br>
-the chain <i>is</i> the lottery, and it is priced honestly, which is why it does
-not need a siren on it.</p>
-
-<p><font size="1">if a page on this webring tells you it has a system, it wants
-your 2 SOL. <a data-go="http://deg404.neocities.org/">deg404</a> is the purest
-example. read it, then come back here.</font></p>
-</td></tr></table>
-<div class="rainbow"></div>
-${RING}
-</center>`;
-    },
-  });
-
-  site("http://www.cursor.land/hall.html", {
-    title: "cursor$land - hall of fame",
-    cls: "geo",
+  site("http://hall.cursor.land/", {
+    title: "hall of fame",
     body: () => {
       const h = hooks.hall();
       const board = h.top.length
         ? h.top.map((t, i) => `  <tr>
-    <td>${i + 1}. <b>${esc(t.name)}</b>${t.mine ? ' <font color="#ff0">(you)</font>' : ""}</td>
+    <td>${i + 1}. <b>${esc(t.name)}</b>${t.mine ? ' <font color="#c60">(you)</font>' : ""}</td>
     <td align="right">&#215;${t.mult.toFixed(1)}</td>
     <td align="left"><font size="1">${esc(t.note)}</font></td>
   </tr>`).join("\n")
-        : `  <tr><td colspan="3"><center><font size="1">nothing has happened yet. deploy something.</font></center></td></tr>`;
+        : `  <tr><td colspan="3"><center><font size="1">nothing has happened yet</font></center></td></tr>`;
       return `<center>
-<h1>~ hall of fame ~</h1>
-<font size="1">live from the arena. this table is not decoration.</font>
-<div class="rainbow"></div>
-${NAV}
-<div class="rainbow"></div>
-
+<h1>hall of fame</h1>
+<font size="1">live from the arena</font>
+<hr width="88%">
 <table border="1" cellpadding="5" cellspacing="0" class="oddstable" width="88%">
   <tr><th align="left" width="34%">cursor</th><th width="70">peak</th><th align="left">how it went</th></tr>
 ${board}
 </table>
-
 <p><font size="1">uptime <b>${esc(h.uptime)}</b> &#183;
 alive right now <b>${h.alive}</b> &#183;
 dead so far <b>${h.dead}</b> &#183;
 your biggest bank <b>${esc(h.bigBank)}</b></font></p>
-
-<div class="constr"></div>
-<p><b>the other hall.</b><br>
-<font size="1">every cursor that dies gets a certificate saying what its odds
-were at the moment it lost. the ones that died as heavy favourites are the
-interesting ones. they are filed in the <a data-act="hall">Hall of Pain</a>, in
-the Recycle Bin, where they belong.</font></p>
-<div class="rainbow"></div>
-${RING}
+<p><font size="1">every cursor that dies gets a certificate with its odds at the
+moment it lost. the ones that died as favourites are filed in the
+<a data-act="hall">Hall of Pain</a>, in the Recycle Bin.</font></p>
 </center>`;
     },
   });
 
-  site("http://www.cursor.land/guest.html", {
-    title: "cursor$land - sign my guestbook",
-    cls: "geo",
+  site("http://guest.cursor.land/", {
+    title: "the guestbook",
     body: () => {
       const g = guests();
-      const list = g.map(e => `<table border="1" cellpadding="5" cellspacing="0" class="gbentry" width="88%"><tr><td align="left">
+      const list = g.length ? g.map(e => `<table border="1" cellpadding="5" cellspacing="0" class="gbentry" width="88%"><tr><td align="left">
   <b>${esc(e.who)}</b> <font size="1" color="#888">wrote on ${esc(e.when)}</font><br>
   ${esc(e.txt)}
-</td></tr></table>`).join("\n<br>\n");
+</td></tr></table>`).join("\n<br>\n")
+        : `<font size="1">no entries yet.</font>`;
       return `<center>
-<h1>~ guestbook ~</h1>
-<font size="1">${g.length} entries &#183; unmoderated &#183; no takebacks</font>
-<div class="rainbow"></div>
-${NAV}
-<div class="rainbow"></div>
-
+<h1>the guestbook</h1>
+<font size="1">${g.length} entries &#183; signing costs one deploy &#183; no takebacks</font>
+<hr width="88%">
 <table border="1" cellpadding="8" cellspacing="0" class="sidebox" width="88%"><tr><td>
 <center><b>sign it</b></center>
 <table border="0" cellpadding="3" cellspacing="0" width="100%">
@@ -252,205 +94,31 @@ ${NAV}
       <td><input id="gb-who" class="gbin" value="${esc(hooks.playerName())}" maxlength="18" spellcheck="false"></td></tr>
   <tr><td valign="top"><font size="1">message</font></td>
       <td><textarea id="gb-txt" class="gbin" rows="3" maxlength="220" spellcheck="false"></textarea></td></tr>
-  <tr><td></td><td><a data-act="gb-post"><b>[ sign my guestbook ]</b></a></td></tr>
+  <tr><td></td><td><a data-act="gb-post"><b>[ sign ]</b></a></td></tr>
 </table>
 </td></tr></table>
 <br>
 ${list}
-<div class="rainbow"></div>
-${RING}
 </center>`;
     },
   });
 
-  /* ---------- the ring ---------- */
-  const MEMBERS = [
-    { n: "cursor$land", u: "http://www.cursor.land/", d: "the honest one. the odds page is not a bit.", ok: 1 },
-    { n: "MUMU'S CURSOR PAGE", u: "http://mumu.tripod.com/", d: "shrine to one guy's wins. the losses are on another account.", ok: 1 },
-    { n: "deg404 // RNG CRACKED", u: "http://deg404.neocities.org/", d: "sells a bot. read it for the education.", ok: 1 },
-    { n: "bobo's homepage", u: "http://www.angelfire.com/biz/bobo/", d: "under construction since 2003.", ok: 1 },
-    { n: "MSN Search", u: "http://search.msn.com/", d: "indexes the entire web. all ten pages of it, counting the 404.", ok: 1 },
-    { n: "cursorTV", u: "http://tv.cursor.land/", d: "one screen, everyone watches. bring a link.", ok: 1 },
-    { n: "the gallery", u: "http://gallery.cursor.land/", d: "what the lobby painted. curated by nobody.", ok: 1 },
-    { n: "cursor tactics quarterly", u: "http://www.cursortactics.com/", d: "host suspended", ok: 0 },
-    { n: "XP_CHAD SYSTEM (works!!)", u: "http://xpchad.tripod.com/system/", d: "account deleted by tripod", ok: 0 },
-    { n: "the cursor graveyard", u: "http://graveyard.cursor.land/", d: "domain expired", ok: 0 },
-    { n: "clippy fan club", u: "http://clippy.homestead.com/", d: "needs a plugin that no longer exists", ok: 0 },
-    { n: "solja's midi archive", u: "http://solja.geocities.com/midi/", d: "geocities closed in 2009", ok: 0 },
-  ];
-  const LIVE = MEMBERS.filter(m => m.ok);
-
-  site("http://www.cursorwebring.org/", {
-    title: "THE CURSOR WEBRING",
-    cls: "ring",
-    body: () => `<center>
-<table border="0" cellpadding="0" cellspacing="0" width="100%"><tr><td bgcolor="#000080" align="center" height="40">
-  <font color="#FFFF00" size="4"><b>&#9679; THE CURSOR WEBRING &#9679;</b></font><br>
-  <font color="#FFFFFF" size="1">${MEMBERS.length} sites &#183; ${LIVE.length} still answering &#183; join by emailing the ringmaster (do not)</font>
-</td></tr></table>
-<br>
-<font size="1">[ <a data-go="ring:prev">&lt;&lt; prev</a> |
-<a data-go="ring:rand">random site</a> |
-<a data-go="ring:next">next &gt;&gt;</a> ]</font>
-<br><br>
-<table border="1" cellpadding="6" cellspacing="0" width="94%">
-<tr bgcolor="#C0C0C0"><th align="left">#</th><th align="left">site</th><th align="left">status</th></tr>
-${MEMBERS.map((m, i) => `<tr>
-  <td>${i + 1}</td>
-  <td><a data-go="${m.u}">${esc(m.n)}</a><br><font size="1" color="#555">${esc(m.u)}</font></td>
-  <td><font size="1" color="${m.ok ? "#008000" : "#AA0000"}"><b>${m.ok ? "ok" : "dead"}</b></font><br>
-      <font size="1" color="#555">${esc(m.d)}</font></td>
-</tr>`).join("\n")}
-</table>
-<br>
-<font size="1">the ring had 34 sites in 2004. this is what is left. the survivors
-are the ones that were not selling anything &#8212; plus deg404, who is
-immortal.</font>
-</center>`,
-  });
-
-  site("http://mumu.tripod.com/", {
-    title: "MUMU'S CURSOR PAGE  ***UPDATED***",
-    cls: "mumu",
-    body: () => `<center>
-<marquee behavior="alternate" scrollamount="6" class="marq"><b>*** MUMU IS UP 4.2 SOL ALL TIME ***</b></marquee>
-<h1>MUMU'S CURSOR PAGE</h1>
-<span class="blink"><font color="#FF0000" size="2"><b>NEW!!</b></font></span>
-<font size="1">updated 3 mar 2004</font>
-<hr>
-<table border="0" cellpadding="10" cellspacing="0" width="100%"><tr>
-<td valign="top" align="left">
-<p><b>WHO I AM</b><br>
-mumu. i have been deploying since day one. i am up <b>4.2 SOL</b> all time on
-this account.</p>
-
-<p><b>MY STRATEGY (do not steal)</b></p>
-<ol>
-  <li>only deploy when the visitor counter ends in 7</li>
-  <li>never bank on an even multiple, they are "sticky"</li>
-  <li>if you lose twice, deploy three. this is called <b>the ladder</b></li>
-  <li>DEFEND when the arena feels hot. you will know</li>
-  <li>never play sundays</li>
-</ol>
-<p><font size="1">i have not lost with this since i started using it (on this
-account).</font></p>
-
-<p><b>PROOF</b></p>
-<pre class="ascii">
-  +--------------------------+
-  |  banked  x6.2    +0.52   |   &lt;-- screenshot
-  |  banked  x2.0    +0.10   |
-  |  banked  x11.4   +1.04   |
-  +--------------------------+
-</pre>
-<p><font size="1">(the other screenshots are on my old pc)</font></p>
-
-<p><b>LINKS</b><br>
-<a data-go="http://www.cursor.land/">cursor$land</a> &#8212; webmaster is a hater<br>
-<a data-go="http://www.cursor.land/odds.html">"the odds"</a> &#8212; do not read this, it is demoralising<br>
-<a data-go="http://www.cursorwebring.org/">the ring</a><br>
-<a data-act="mail">email me</a> for coaching (0.5 SOL/hr)</p>
-</td>
-<td valign="top" width="150" align="center">
-  <table border="1" cellpadding="4" cellspacing="0"><tr><td bgcolor="#000000">
-  <font color="#00FF00" size="1">visitors<br><b>0000${Math.floor(hits / 40)}</b></font>
-  </td></tr></table>
-  <br><span class="badge">NETSCAPE OK</span>
-  <br><span class="badge">NO BOTS HERE</span>
-  <br><br>
-  <font size="1" color="#888">webcam:<br>offline</font>
-</td>
-</tr></table>
-<hr>
-${RING}
-</center>`,
-  });
-
-  site("http://deg404.neocities.org/", {
-    title: "deg404 // THE RNG IS CRACKED",
-    cls: "hax",
-    pop: 1,
-    body: () => `<pre class="ascii big">
-      _              _  _    ___   _  _
-   __| | ___  __ _  | || |  / _ \\ | || |
-  / _\` |/ -_)/ _\` | |_  _|| (_) ||_  _|
-  \\__,_|\\___|\\__, |   |_|  \\___/   |_|
-             |___/
-</pre>
-<center><font color="#00FF00" size="3"><b>&gt;&gt; I HAVE CRACKED THE RNG &lt;&lt;</b></font></center>
-<hr class="hax-hr">
-<p>after <b>3 months</b> of analysis i have reverse engineered the cursor duel
-algorithm. i am not going to explain how. what i will tell you is that the
-outcome of every collision is <b>decided in advance</b>, and i can read it.</p>
-
-<p>i built a tool. it is called <b>CURSORBOT 9000</b>. it watches the arena and
-tells you exactly when to bank.</p>
-
-<table border="1" cellpadding="10" cellspacing="0" class="haxbox"><tr><td>
-<center>
-<font size="4"><b>CURSORBOT 9000</b></font><br>
-<font size="1">win rate: <b>94%</b> &#183; verified by me</font><br><br>
-<b>2 SOL</b> &#183; one time payment &#183; lifetime updates<br><br>
-<a data-act="buy"><b>[ DOWNLOAD NOW &#8212; cursorbot9000.exe ]</b></a>
-</center>
-</td></tr></table>
-
-<p><b>TESTIMONIALS</b></p>
-<ul>
-  <li>"i made my money back in one session" &#8212; <i>xp_chad</i></li>
-  <li>"i cannot log in anymore but the bot worked" &#8212; <i>bonk</i></li>
-  <li>"who is this" &#8212; <i>mumu</i></li>
-</ul>
-
-<p><b>FAQ</b></p>
-<p><b>Q:</b> if you cracked it, why are you selling a bot for 2 SOL<br>
-<b>A:</b> exposure.</p>
-<p><b>Q:</b> is this a scam<br>
-<b>A:</b> no.</p>
-
-<hr class="hax-hr">
-<p><font size="1" color="#0a0">this site is hosted free, the counter is fake, and
-the 94% is a number i chose. the duel is <b>a / (a+b)</b>, computed from a seed
-that is published before the epoch and revealed after it, which you can check
-yourself &#8212; see <a data-go="http://www.cursor.land/odds.html">the odds</a>.
-if the rng were crackable, this page would not be free.</font></p>`,
-  });
-
-  site("http://www.angelfire.com/biz/bobo/", {
-    title: "bobo's homepage",
-    cls: "bobo",
-    body: () => `<center>
-<br><br>
-<h1>bobo's homepage</h1>
-<div class="constr"></div>
-<p><b>UNDER CONSTRUCTION</b></p>
-<p><font size="1">check back soon!!</font></p>
-<br>
-<p><font size="1" color="#888">last modified: 04 sep 2003</font></p>
-<br><br>
-<a data-act="mail"><span class="badge">&#9993; email me</span></a>
-<br><br><br>
-${RING}
-</center>`,
-  });
 
   /* ---------- cursorTV: the lobby watches one video together ---------- */
   /* the player, the queue and the sync all live in main.js (hooks.tvMounted);
-     this page is only the 2003 chrome around them */
+     this page is only the room around them. It is also the home page. */
   site("http://tv.cursor.land/", {
     title: "cursorTV - now showing",
-    cls: "geo",
     mounted: p => hooks.tvMounted && hooks.tvMounted(p),
     body: () => hooks.mpOn && hooks.mpOn() ? `<center>
-<h1>~ cursorTV ~</h1>
+<h1>cursorTV</h1>
 <font size="1">one screen &#183; everyone watches &#183; the decks rotate &#183; skip by vote</font>
-<div class="rainbow"></div>
-${NAV}
-<div class="rainbow"></div>
+<hr width="94%">
 <table border="1" cellpadding="0" cellspacing="0" class="sidebox" width="94%"><tr><td>
   <div id="tv-slot" style="width:100%;height:300px;background:#000"></div>
 </td></tr></table>
 <div id="tv-now" style="margin:6px 0"></div>
+<div id="tv-meta" style="margin:2px 0"><font size="1"><span id="tv-watch"></span> <span id="tv-skipn"></span></font></div>
 <a id="tv-sound"><span class="badge">&#128266; CLICK FOR SOUND (the browser makes us start muted)</span></a>
 <br><br>
 <table border="0" cellpadding="3" cellspacing="0"><tr>
@@ -461,76 +129,66 @@ ${NAV}
 </tr></table>
 <br>
 <table border="1" cellpadding="6" cellspacing="0" class="sidebox" width="80%"><tr><td align="left">
-  <b>up next</b>
+  <b>the decks</b>
   <div id="tv-queue"></div>
 </td></tr></table>
-<p><font size="1">3 in the queue per person, first come first played. nobody pays
-for the aux. yet.</font></p>
-<div class="rainbow"></div>
-${RING}
+<p><font size="1">3 in the queue per person. the rotation is by person, not by
+who queued first, and it is not for sale.</font></p>
 </center>` : `<center>
-<h1>~ cursorTV ~</h1>
-<div class="rainbow"></div>
+<h1>cursorTV</h1>
+<hr width="94%">
 <p>the antenna is the beta server, and you are not connected to it.</p>
 <p><font size="1">cursorTV is live only on the hosted beta, where the whole lobby
 watches one screen. offline there is nothing on. there is not even static.</font></p>
-<div class="constr"></div>
 </center>`,
   });
 
   /* ---------- the gallery: what the lobby painted ---------- */
   site("http://gallery.cursor.land/", {
-    title: "the cursor$land gallery",
-    cls: "geo",
+    title: "the gallery",
     mounted: p => hooks.galleryMounted && hooks.galleryMounted(p),
     body: () => {
       const list = hooks.netGallery && hooks.netGallery();
       if (!list) return `<center>
-<h1>~ the gallery ~</h1>
-<div class="rainbow"></div>
+<h1>the gallery</h1>
+<hr width="88%">
 <p>the gallery hangs on the beta server, and you are offline.</p>
 <p><font size="1">connect, open Paint, make something, File &gt; Publish to Gallery.</font></p>
-<div class="constr"></div>
 </center>`;
       const items = list.length ? list.map(g => `<table border="1" cellpadding="6" cellspacing="0" class="gbentry" style="display:inline-table;margin:6px" width="260"><tr><td>
   <img src="${g.png}" style="max-width:240px;max-height:170px;background:#fff"><br>
   <b>${esc(g.name)}</b> <font size="1" color="#888">by ${esc(g.by)}</font>
-</td></tr></table>`).join("") : `<p><font size="1">nothing hangs here yet. open Paint. File &gt; Publish to Gallery. make history.</font></p>`;
+</td></tr></table>`).join("") : `<p><font size="1">nothing hangs here yet. open Paint. File &gt; Publish to Gallery.</font></p>`;
       return `<center>
-<h1>~ the gallery ~</h1>
-<font size="1">${list.length} works &#183; curated by nobody &#183; latest 16 survive</font>
-<div class="rainbow"></div>
-${NAV}
-<div class="rainbow"></div>
+<h1>the gallery</h1>
+<font size="1">${list.length} works &#183; a frame costs 10 deploys &#183; latest 16 survive</font>
+<hr width="88%">
 ${items}
-<div class="rainbow"></div>
-${RING}
 </center>`;
     },
   });
 
   /* ---------- the search engine, which indexes the entire web ---------- */
-  const RESULTS = [
-    { t: "cursor$land - the #1 cursor fightring on the net", u: "http://www.cursor.land/",
-      d: "deploy a cursor for 0.1 SOL. it fights on its own. you decide when to stop. sign my guestbook." },
-    { t: "the odds - cursor$land", u: "http://www.cursor.land/odds.html",
-      d: "P(ever reaching xN) = 1/N, exactly. fee 1%, rakeback 2%, RTP 99%. no system, no jackpot, no siren." },
-    { t: "THE CURSOR WEBRING", u: "http://www.cursorwebring.org/",
-      d: "10 member sites, 5 still answering. join by emailing the ringmaster." },
-    { t: "MUMU'S CURSOR PAGE ***UPDATED***", u: "http://mumu.tripod.com/",
-      d: "my strategy (do not steal). never bank on an even multiple. never play sundays." },
-    { t: "deg404 // THE RNG IS CRACKED", u: "http://deg404.neocities.org/",
-      d: "CURSORBOT 9000. win rate 94%, verified by me. 2 SOL, one time payment." },
-    { t: "hall of fame - cursor$land", u: "http://www.cursor.land/hall.html",
-      d: "live from the arena: peaks, deaths, and the certificate of everyone who lost as a favourite." },
-  ];
+  /* the index IS the site registry: search finds what exists, nothing else */
+  function searchIndex() {
+    const DESC = {
+      "tv.cursor.land": "one screen, everyone watches, the decks rotate. this is the home page.",
+      "gallery.cursor.land": "what the lobby painted. published from Paint, priced in deploys.",
+      "guest.cursor.land": "the guestbook. signing costs one deploy.",
+      "hall.cursor.land": "live from the arena: peaks, deaths, uptime.",
+      "search.msn.com": "this page.",
+    };
+    return Object.values(SITES).map(s => ({ t: s.title, u: s.url, d: DESC[key(s.url)] || "" }));
+  }
   site("http://search.msn.com/", {
     title: "MSN Search",
     cls: "srch",
     body: q => {
       const query = q || "";
-      const honest = /win|system|strateg|guarantee|beat|crack|trick|hack|rig|cheat|edge/i.test(query);
-      const list = query ? (honest ? [RESULTS[1]].concat(RESULTS.filter(r => r !== RESULTS[1])) : RESULTS) : [];
+      const ql = query.toLowerCase();
+      const all = searchIndex();
+      const list = query ? all.filter(r => (r.t + " " + r.u + " " + r.d).toLowerCase().includes(ql)).concat(
+        all.filter(r => !(r.t + " " + r.u + " " + r.d).toLowerCase().includes(ql))).slice(0, 6) : [];
       return `<table border="0" cellpadding="0" cellspacing="0" width="100%"><tr><td bgcolor="#000084" height="36">
 &nbsp;<font color="#FFFFFF" size="4"><b>msn</b></font><font color="#FFCC00" size="4"><b>Search</b></font>
 </td></tr></table>
@@ -540,16 +198,11 @@ ${RING}
 <td><input id="sq" class="gbin" style="width:320px" value="${esc(query)}" spellcheck="false"></td>
 <td><a data-act="search"><b>[ Search the Web ]</b></a></td>
 </tr></table>
-<font size="1" color="#666">the web has ten pages on it, counting the one that says the page cannot be displayed. this indexes all of them.</font>
+<font size="1" color="#666">indexes the entire web. all ${all.length} pages of it.</font>
 </center>
 <br>
 ${query ? `<p><font size="1" color="#666">Results <b>1-${list.length}</b> of about <b>${list.length}</b>
 containing "<b>${esc(query)}</b>". (0.04 seconds)</font></p>
-${honest ? `<table border="0" cellpadding="8" cellspacing="0" width="100%" bgcolor="#FFFFCC"><tr><td>
-<font size="1">you are looking for a way to win. the top result answers that
-question completely and takes ninety seconds to read. everything under it is
-someone selling you the opposite answer.</font>
-</td></tr></table><br>` : ""}
 ${list.map(r => `<div class="hit">
   <a data-go="${r.u}"><b>${esc(r.t)}</b></a><br>
   ${esc(r.d)}<br>
@@ -635,14 +288,6 @@ Internet Explorer</p>
 
   function go(u, opts) {
     opts = opts || {};
-    /* ring links are shortcuts, not addresses */
-    if (u === "ring:prev" || u === "ring:next" || u === "ring:rand") {
-      const here = LIVE.findIndex(m => key(m.u) === key(url || ""));
-      const i = u === "ring:rand"
-        ? Math.floor(Math.random() * LIVE.length)
-        : (here < 0 ? 0 : (here + (u === "ring:next" ? 1 : LIVE.length - 1)) % LIVE.length);
-      u = LIVE[i].u;
-    }
     if (!u) return;
     if (!online) { pending = u; dialup(); return; }
     if (offline) { render({ url: u, title: "Web page unavailable while offline", cls: "err", html: pageOffline(u) }, true); return; }
@@ -653,9 +298,13 @@ Internet Explorer</p>
     els.addr.value = r.url;
     els.throb.classList.add("spin");
     status("Opening page " + r.url + "...");
-    /* a page over dial-up arrives in fits, so the bar does too */
+    /* a page over dial-up arrives in fits, so the bar and the status text do too */
     const steps = 4 + Math.floor(Math.random() * 3), span = 260 + Math.random() * 620;
-    for (let i = 1; i <= steps; i++) later(() => progress(i / steps), (span * i) / steps);
+    for (let i = 1; i <= steps; i++) later(() => {
+      progress(i / steps);
+      const left = steps - i;
+      if (left > 0) status(`(${left} item${left === 1 ? "" : "s"} remaining) Downloading picture ${r.url}...`);
+    }, (span * i) / steps);
     later(() => render(r), span + 90);
   }
 
@@ -673,9 +322,27 @@ Internet Explorer</p>
     setTitle(r.title);
     status("Done");
     buttons();
-    if (!noHist && r.url !== "about:blank" && HISTORY.indexOf(r.url) < 0) HISTORY.unshift(r.url);
-    if (r.pop && !popped) { popped = true; later(popup, 900); }
+    if (!noHist && r.url !== "about:blank" && HISTORY.indexOf(r.url) < 0) { HISTORY.unshift(r.url); syncAutocomplete(); }
+    /* the cache grows because the page really did cost something */
+    store.data.ieCacheKB = (store.data.ieCacheKB || 0) + 14 + Math.floor(Math.random() * 60);
+    setTextSize(store.data.ieTextSize || "Medium");
+    applyAdvanced();
     if (r.bad) sysSnd("exclaim", .4);
+  }
+  /* the address bar remembers, like AutoComplete did */
+  function syncAutocomplete() {
+    let dl = document.getElementById("ie-histlist");
+    if (!dl) {
+      dl = document.createElement("datalist");
+      dl.id = "ie-histlist";
+      els.addr.setAttribute("list", "ie-histlist");
+      els.addr.parentNode.appendChild(dl);
+    }
+    dl.innerHTML = "";
+    for (const u of HISTORY.slice(0, 20)) {
+      const o = document.createElement("option");
+      o.value = u; dl.appendChild(o);
+    }
   }
 
   function stop() {
@@ -688,43 +355,6 @@ Internet Explorer</p>
     els.page.innerHTML = page404(half.url);
     srcHTML = els.page.innerHTML;
     setTitle("The page cannot be displayed");
-  }
-
-  /* ---------- the popup, because this is 2003 and nobody blocks them ---------- */
-  function popup() {
-    const id = "win-iepop-" + (++popN);
-    const el = document.createElement("div");
-    el.className = "window fixed";
-    el.id = id;
-    el.style.left = "calc(50% - 152px)"; el.style.top = "130px";
-    el.style.width = "304px"; el.style.height = "236px";   /* popups came in one size: annoying */
-    el.innerHTML = `
-      <div class="title-bar">
-        <div class="tb-l"><img class="tb-ico" src="${IMG.ie16}" alt=""><div class="title-bar-text">CONGRATULATIONS - Microsoft Internet Explorer</div></div>
-        <div class="title-bar-controls"><button aria-label="Close"></button></div>
-      </div>
-      <div class="win-body pad">
-        <div class="ie-doc iepop">
-          <center>
-          <marquee behavior="alternate" scrollamount="7" class="marq"><b>*** YOU ARE THE 1,000,000th VISITOR ***</b></marquee>
-          <h1 class="blink">YOU HAVE WON!!</h1>
-          <p>click below to claim your prize<br>
-          <font size="1">(prize must be claimed within 60 seconds)</font></p>
-          <p><a data-act="claim"><b>[ CLAIM PRIZE ]</b></a></p>
-          <p><font size="1" color="#888">you are visitor 1,000,000. so was everyone.</font></p>
-          </center>
-        </div>
-      </div>`;
-    hooks.desk.appendChild(el);
-    el.querySelector("[data-act=claim]").addEventListener("click", () => {
-      hooks.closeWin(id);
-      el.remove();
-      showError("Prize", "Your prize is nothing.\n\nIt was always nothing. The only thing on this computer that pays out is priced at 0.1 SOL and tells you the odds up front.", true);
-    });
-    el.querySelector('button[aria-label="Close"]').addEventListener("click", () => later(() => el.remove(), 400));
-    hooks.wireWindow(el);
-    hooks.openWin(id);
-    sysSnd("exclaim", .5);
   }
 
   /* ---------- dial-up ---------- */
@@ -802,9 +432,6 @@ Internet Explorer</p>
       const q = els.page.querySelector("#sq");
       go("http://search.msn.com/results?q=" + encodeURIComponent(((q && q.value) || "").trim()));
     },
-    buy: () => showError("Security Warning",
-      "cursorbot9000.exe\n\nPublisher: unknown. This file has an invalid digital signature.\n\nWindows has blocked this download, which is the single most valuable thing this computer has ever done for you.", true),
-    claim: () => {},
     "gb-post": () => {
       const who = els.page.querySelector("#gb-who"), txt = els.page.querySelector("#gb-txt");
       const t = ((txt && txt.value) || "").trim();
@@ -908,25 +535,21 @@ Internet Explorer</p>
     showMenu(items, e.clientX, e.clientY);
   });
 
-  /* the hit counter only moves while somebody is looking at it */
-  setInterval(() => {
-    if (!hooks.isOpen()) return;
-    if (Math.random() < .45) hits++;
-    const el = els.page.querySelector("#ie-hits");
-    if (el) el.textContent = String(hits).padStart(7, "0");
-  }, 1600);
 
   /* ---------- menus ---------- */
-  const FAVS = [
-    { label: "cursor$land", u: HOME },
-    { label: "the odds", u: "http://www.cursor.land/odds.html" },
-    { label: "hall of fame", u: "http://www.cursor.land/hall.html" },
-    { label: "guestbook", u: "http://www.cursor.land/guest.html" },
-    { label: "THE CURSOR WEBRING", u: "http://www.cursorwebring.org/" },
-    { label: "MSN Search", u: "http://search.msn.com/" },
+  /* Favorites: the defaults plus whatever the user added; both editable
+     through the real Add/Organize dialogs, persisted in the store */
+  const DEFFAVS = [
     { label: "cursorTV", u: "http://tv.cursor.land/" },
     { label: "the gallery", u: "http://gallery.cursor.land/" },
+    { label: "the guestbook", u: "http://guest.cursor.land/" },
+    { label: "hall of fame", u: "http://hall.cursor.land/" },
+    { label: "MSN Search", u: "http://search.msn.com/" },
   ];
+  function FAVS() {
+    if (!store.data.ieFavs) { store.data.ieFavs = DEFFAVS.slice(); store.save(); }
+    return store.data.ieFavs;
+  }
   function srcName() {
     const last = key(url || "").split("/").pop();
     return last && /\./.test(last) && !/^[a-z0-9-]+\.(com|org|net|land)$/i.test(last) ? last : "index.html";
@@ -962,27 +585,36 @@ ${srcHTML}
         { label: "Close", action: () => hooks.close() },
       ] :
       label === "Edit" ? [
-        { label: "Cut", disabled: 1 }, { label: "Copy", disabled: 1 }, { label: "Paste", disabled: 1 },
+        { label: "Cut", disabled: 1 }, { label: "Copy", accel: "Ctrl+C", action: () => document.execCommand("copy") },
+        { label: "Paste", disabled: 1 },
         { sep: 1 },
-        { label: "Select All", disabled: 1 },
-        { label: "Find (on This Page)...", action: () => showError("Find", "Find is not implemented.\n\nThe page is right there.", true) },
+        { label: "Select All", accel: "Ctrl+A", action() {
+          const r = document.createRange(); r.selectNodeContents(els.page);
+          const s = getSelection(); s.removeAllRanges(); s.addRange(r);
+        } },
+        { label: "Find (on This Page)...", accel: "Ctrl+F", action: findDialog },
       ] :
       label === "View" ? [
         { label: "Toolbars", sub: [
           { label: "Standard Buttons", check: 1 }, { label: "Address Bar", check: 1 }, { label: "Links", check: 1 }] },
         { label: "Status Bar", check: 1 },
+        { label: "Explorer Bar", sub: [
+          { label: "Search", accel: "Ctrl+E", check: sideMode === "search", action: () => sidebar("search") },
+          { label: "Favorites", accel: "Ctrl+I", check: sideMode === "favs", action: () => sidebar("favs") },
+          { label: "History", accel: "Ctrl+H", check: sideMode === "hist", action: () => sidebar("hist") },
+        ] },
         { sep: 1 },
-        { label: "Refresh", action: () => ACTIONS.refresh() },
-        { label: "Text Size", sub: ["Largest", "Larger", "Medium", "Smaller", "Smallest"].map(n => ({ label: n, check: n === "Medium" })) },
+        { label: "Refresh", accel: "F5", action: () => ACTIONS.refresh() },
+        { label: "Text Size", sub: Object.keys(TEXTSIZES).map(n => ({
+          label: n, check: (store.data.ieTextSize || "Medium") === n, action: () => setTextSize(n) })) },
         { sep: 1 },
         { label: "Source", action: () => hooks.openText(srcName(), srcView()) },
       ] :
       label === "Favorites" ? [
-        { label: "Add to Favorites...", action: () => showError("Add Favorite",
-          "Your Favorites folder already contains this page.\n\nIt contains every page. There are ten.", true) },
-        { label: "Organize Favorites...", disabled: 1 },
+        { label: "Add to Favorites...", action: addFavDialog },
+        { label: "Organize Favorites...", action: orgFavDialog },
         { sep: 1 },
-      ].concat(FAVS.map(f => ({ label: f.label, action: () => go(f.u) }))) :
+      ].concat(FAVS().map(f => ({ label: f.label, action: () => go(f.u) }))) :
       label === "Tools" ? [
         { label: "Mail and News", sub: [
           { label: "Read Mail", action: () => hooks.openLobby() },
@@ -990,25 +622,246 @@ ${srcHTML}
         { label: "Synchronize...", disabled: 1 },
         { label: "Windows Update", action: () => go("http://windowsupdate.microsoft.com/") },
         { sep: 1 },
-        { label: "Internet Options...", action: () => showError("Internet Options",
-          "These settings are managed by your system administrator.\n\nYou are the system administrator. This is a known issue.", true) },
+        { label: "Internet Options...", action: inetOptions },
       ] :
       label === "Help" ? [
-        { label: "Contents and Index", action: () => hooks.openWin("win-readme") },
+        { label: "Contents and Index", action: () => hooks.openHelp ? hooks.openHelp() : hooks.openWin("win-help") },
         { label: "Tip of the Day", action: () => showError("Tip of the Day", pick([
           "Did you know? P(ever reaching x N) = 1/N. Exactly.",
           "Did you know? You can bank at any moment. That is the entire skill.",
           "Did you know? Every collision is a coin weighted by money, and the house is not in it.",
-          "Did you know? The 94% on deg404's site is a number he chose."]), true) },
+          "Did you know? The rotation on cursorTV is by person, and it is not for sale."]), true) },
         { sep: 1 },
         { label: "About Internet Explorer", action: () => showError("About Internet Explorer",
-          "Microsoft Internet Explorer\nVersion 6.0.2900.2180\nCipher Strength: 128-bit\n\nThis browser has ten pages to visit. Four of them are lying to you, and one of them says so.", true) },
+          "Microsoft Internet Explorer\nVersion 6.0.2900.2180\nCipher Strength: 128-bit\n\nBased on NCSA Mosaic. NCSA Mosaic(TM); was developed at the National Center for Supercomputing Applications at the University of Illinois at Urbana-Champaign.", true) },
       ] : [{ label: "(nothing here)", disabled: 1 }];
     showMenu(items, x, y);
+  }
+  /* ---------- working Text Size, like the menu says ---------- */
+  const TEXTSIZES = { Largest: "125%", Larger: "112%", Medium: "100%", Smaller: "88%", Smallest: "76%" };
+  function setTextSize(n) {
+    store.data.ieTextSize = n; store.save();
+    els.page.style.fontSize = TEXTSIZES[n] || "100%";
+  }
+  /* ---------- Find (on This Page): highlights and scrolls, for real ---------- */
+  function findDialog() { findBar(); }
+  let findWrap = null;
+  function findBar() {
+    if (findWrap && findWrap.isConnected) { findWrap.querySelector("input").focus(); return; }
+    findWrap = document.createElement("div");
+    findWrap.className = "ie-findbar";
+    findWrap.innerHTML = `<span>Find:</span><input type="text" spellcheck="false">
+      <button class="xbtn">Find Next</button><button class="xbtn">Close</button>`;
+    els.page.parentNode.insertBefore(findWrap, els.page);
+    const inp = findWrap.querySelector("input");
+    const [nextB, closeB] = findWrap.querySelectorAll("button");
+    let lastHit = null;
+    const clear = () => { if (lastHit) { lastHit.outerHTML = lastHit.innerHTML; lastHit = null; } };
+    const doFind = () => {
+      clear();
+      const q = inp.value.trim(); if (!q) return;
+      const walker = document.createTreeWalker(els.page, NodeFilter.SHOW_TEXT);
+      let node;
+      while ((node = walker.nextNode())) {
+        const i = node.textContent.toLowerCase().indexOf(q.toLowerCase());
+        if (i < 0) continue;
+        const r = document.createRange();
+        r.setStart(node, i); r.setEnd(node, i + q.length);
+        const m = document.createElement("mark");
+        try { r.surroundContents(m); } catch (e) { continue; }
+        m.scrollIntoView({ block: "center" });
+        lastHit = m;
+        return;
+      }
+      showError("Find", `Finished searching the document.\n\nCannot find "${q}".`, true);
+    };
+    nextB.addEventListener("click", doFind);
+    inp.addEventListener("keydown", e => { e.stopPropagation(); if (e.key === "Enter") doFind(); });
+    closeB.addEventListener("click", () => { clear(); findWrap.remove(); findWrap = null; });
+    inp.focus();
   }
   function noPrinter() {
     showError("Print", "No printer is installed.\n\nThere has never been a printer. The icon is decorative.", true);
   }
+
+  /* ---------- the Explorer bar: Search / Favorites / History ---------- */
+  let sideMode = null;
+  function sidebar(mode) {
+    const panel = els.side, body = els.sideBody, title = els.sideTitle;
+    if (!panel) return;
+    if (sideMode === mode || !mode) { sideMode = null; panel.style.display = "none"; syncBarBtns(); return; }
+    sideMode = mode;
+    panel.style.display = "flex";
+    body.innerHTML = "";
+    const item = (label, act, sub) => {
+      const d = document.createElement("div");
+      d.className = "ie-side-it";
+      d.innerHTML = `<b></b><span class="dim"></span>`;
+      d.querySelector("b").textContent = label;
+      if (sub) d.querySelector("span").textContent = " " + sub;
+      d.addEventListener("click", act);
+      body.appendChild(d);
+      return d;
+    };
+    if (mode === "favs") {
+      title.textContent = "Favorites";
+      const add = document.createElement("div");
+      add.className = "ie-side-tools";
+      add.innerHTML = `<a>Add...</a> <a>Organize...</a>`;
+      add.children[0].addEventListener("click", addFavDialog);
+      add.children[1].addEventListener("click", orgFavDialog);
+      body.appendChild(add);
+      for (const f of FAVS()) item(f.label, () => go(f.u));
+    } else if (mode === "hist") {
+      title.textContent = "History";
+      const h = document.createElement("div");
+      h.className = "ie-side-group"; h.textContent = "Today";
+      body.appendChild(h);
+      if (!HISTORY.length) item("(nothing yet)", () => {});
+      for (const u of HISTORY.slice(0, 30)) item(u.replace(/^http:..(www.)?/, ""), () => go(u));
+    } else if (mode === "search") {
+      title.textContent = "Search";
+      const box = document.createElement("div");
+      box.className = "ie-side-tools";
+      box.innerHTML = `<input type="text" style="width:100%" spellcheck="false" placeholder="Search the Web">`;
+      const inp = box.querySelector("input");
+      inp.addEventListener("keydown", e => {
+        e.stopPropagation();
+        if (e.key === "Enter") go("http://search.msn.com/results?q=" + encodeURIComponent(inp.value.trim()));
+      });
+      body.appendChild(box);
+    }
+    syncBarBtns();
+  }
+  function syncBarBtns() {
+    els.search.classList.toggle("on", sideMode === "search");
+    els.favs.classList.toggle("on", sideMode === "favs");
+    els.hist.classList.toggle("on", sideMode === "hist");
+  }
+
+  /* ---------- Add to Favorites / Organize Favorites ---------- */
+  function addFavDialog() {
+    if (!url || url === "about:blank") return;
+    els.afName.value = pageTitle || url;
+    els.afUrl.textContent = url;
+    hooks.openWin("win-addfav");
+    setTimeout(() => { els.afName.focus(); els.afName.select(); }, 50);
+  }
+  function commitAddFav() {
+    const label = els.afName.value.trim().slice(0, 40) || url;
+    if (!FAVS().some(f => key(f.u) === key(url))) {
+      FAVS().push({ label, u: url }); store.save();
+    } else {
+      FAVS().find(f => key(f.u) === key(url)).label = label; store.save();
+    }
+    hooks.closeWin("win-addfav");
+    if (sideMode === "favs") { sideMode = null; sidebar("favs"); }
+  }
+  function orgFavDialog() {
+    renderOrgFav();
+    hooks.openWin("win-orgfav");
+  }
+  let orgSel = 0;
+  function renderOrgFav() {
+    const host = els.ofList; host.innerHTML = "";
+    FAVS().forEach((f, i) => {
+      const d = document.createElement("div");
+      d.className = "ie-side-it" + (i === orgSel ? " on" : "");
+      d.innerHTML = "<b></b>";
+      d.querySelector("b").textContent = f.label;
+      d.addEventListener("click", () => { orgSel = i; renderOrgFav(); });
+      d.addEventListener("dblclick", () => { hooks.closeWin("win-orgfav"); go(f.u); });
+      host.appendChild(d);
+    });
+    const f = FAVS()[orgSel];
+    els.ofInfo.textContent = f ? f.u : "";
+  }
+  function orgFavAction(what) {
+    const favs = FAVS();
+    const f = favs[orgSel];
+    if (!f) return;
+    if (what === "delete") { favs.splice(orgSel, 1); orgSel = Math.max(0, orgSel - 1); }
+    if (what === "rename") {
+      els.afName.value = f.label; els.afUrl.textContent = f.u;
+      hooks.openWin("win-addfav");
+      els.afName.dataset.renaming = orgSel;
+      setTimeout(() => { els.afName.focus(); els.afName.select(); }, 50);
+      return;
+    }
+    if (what === "up" && orgSel > 0) { favs.splice(orgSel - 1, 0, favs.splice(orgSel, 1)[0]); orgSel--; }
+    if (what === "down" && orgSel < favs.length - 1) { favs.splice(orgSel + 1, 0, favs.splice(orgSel, 1)[0]); orgSel++; }
+    store.save(); renderOrgFav();
+    if (sideMode === "favs") { sideMode = null; sidebar("favs"); }
+  }
+
+  /* ---------- Internet Options: the seven tabs ---------- */
+  /* the Advanced tree is the real list, and two of its switches actually do
+     something: Show pictures, and Show friendly HTTP error messages */
+  const ADVANCED = [
+    ["Accessibility", ["Always expand ALT text for images", "Move system caret with focus/selection changes"]],
+    ["Browsing", ["Close unused folders in History and Favorites", "Disable script debugging",
+      "Display a notification about every script error", "Enable folder view for FTP sites",
+      "Enable Install On Demand (Internet Explorer)", "Enable Install On Demand (Other)",
+      "Enable offline items to be synchronized on a schedule", "Enable page transitions",
+      "Enable Personalized Favorites Menu", "Enable third-party browser extensions",
+      "Enable visual styles on buttons and controls in web pages", "Notify when downloads complete",
+      "Reuse windows for launching shortcuts", "Show friendly HTTP error messages*",
+      "Show friendly URLs", "Show Go button in Address bar", "Underline links: Always",
+      "Use inline AutoComplete", "Use Passive FTP", "Use smooth scrolling"]],
+    ["HTTP 1.1 settings", ["Use HTTP 1.1", "Use HTTP 1.1 through proxy connections"]],
+    ["Microsoft VM", ["Java console enabled (requires restart)", "Java logging enabled",
+      "JIT compiler for virtual machine enabled (requires restart)"]],
+    ["Multimedia", ["Don't display online media content in the media bar", "Enable Automatic Image Resizing",
+      "Enable Image Toolbar (requires restart)", "Play animations in web pages",
+      "Play sounds in web pages", "Play videos in web pages", "Show image download placeholders",
+      "Show pictures*", "Smart image dithering"]],
+    ["Printing", ["Print background colors and images"]],
+    ["Search from the Address bar", ["Display results, and go to the most likely site"]],
+    ["Security", ["Check for publisher's certificate revocation", "Check for server certificate revocation (requires restart)",
+      "Check for signatures on downloaded programs", "Do not save encrypted pages to disk",
+      "Empty Temporary Internet Files folder when browser is closed",
+      "Enable Integrated Windows Authentication (requires restart)", "Enable Profile Assistant",
+      "Use SSL 2.0", "Use SSL 3.0", "Use TLS 1.0", "Warn about invalid site certificates",
+      "Warn if changing between secure and not secure mode", "Warn if forms submittal is being redirected"]],
+  ];
+  function advDefaults() {
+    if (!store.data.ieAdv) {
+      store.data.ieAdv = {};
+      for (const [, items] of ADVANCED) for (const it of items)
+        store.data.ieAdv[it] = !/Java logging|Do not save|Empty Temporary|Use SSL 2.0|Print background|caret|ALT text|media bar/.test(it);
+      store.save();
+    }
+    return store.data.ieAdv;
+  }
+  function inetOptions() {
+    const adv = advDefaults();
+    els.ioHome.value = store.data.ieHome || HOME;
+    els.ioCache.textContent = "Current location: C:\\Documents and Settings\\Administrator\\Local Settings\\Temporary Internet Files\\  Amount of disk space to use: 596 MB  (" +
+      Math.round((store.data.ieCacheKB || 0)) + " KB in use)";
+    const host = els.ioAdv; host.innerHTML = "";
+    for (const [group, items] of ADVANCED) {
+      const g = document.createElement("div");
+      g.className = "io-advgroup";
+      g.textContent = group;
+      host.appendChild(g);
+      for (const it of items) {
+        const row = document.createElement("label");
+        row.className = "io-advrow";
+        const cb = document.createElement("input"); cb.type = "checkbox";
+        cb.checked = !!adv[it];
+        cb.addEventListener("change", () => { adv[it] = cb.checked; store.save(); applyAdvanced(); });
+        row.appendChild(cb);
+        row.appendChild(document.createTextNode(it.replace(/\*$/, "")));
+        host.appendChild(row);
+      }
+    }
+    hooks.openWin("win-inetopts");
+  }
+  function applyAdvanced() {
+    const adv = advDefaults();
+    els.page.classList.toggle("noimg", !adv["Show pictures*"]);
+  }
+  function homeUrl() { return store.data.ieHome || HOME; }
 
   /* ---------- chrome ---------- */
   els.back.addEventListener("click", () => {
@@ -1022,23 +875,57 @@ ${srcHTML}
     sysSnd("nav", .4); go(u, { replace: true });
   });
   els.stop.addEventListener("click", stop);
-  els.refresh.addEventListener("click", () => go(url || HOME, { replace: true }));
-  els.home.addEventListener("click", () => go(HOME));
-  els.search.addEventListener("click", () => go("http://search.msn.com/"));
+  els.refresh.addEventListener("click", () => go(url || homeUrl(), { replace: true }));
+  els.home.addEventListener("click", () => go(homeUrl()));
+  /* the three panel buttons toggle the Explorer bar, exactly like IE6 */
+  els.search.addEventListener("click", () => sidebar("search"));
+  els.favs.addEventListener("click", () => sidebar("favs"));
+  els.hist.addEventListener("click", () => sidebar("hist"));
   els.media.addEventListener("click", () => hooks.openWin("win-amp"));
   els.mail.addEventListener("click", () => hooks.openLobby());
   els.print.addEventListener("click", noPrinter);
-  els.favs.addEventListener("click", e => {
-    const r = e.currentTarget.getBoundingClientRect();
-    showMenu(FAVS.map(f => ({ label: f.label, action: () => go(f.u) })), r.left, r.bottom + 2);
-  });
-  els.hist.addEventListener("click", e => {
-    const r = e.currentTarget.getBoundingClientRect();
-    showMenu(HISTORY.length
-      ? HISTORY.slice(0, 12).map(u => ({ label: u.replace(/^http:\/\/(www\.)?/, ""), action: () => go(u) }))
-      : [{ label: "(nothing yet)", disabled: 1 }], r.left, r.bottom + 2);
-  });
   els.go.addEventListener("click", () => go(els.addr.value));
+  /* Add to Favorites / Organize Favorites / Internet Options wiring */
+  if (els.afOk) {
+    els.afOk.addEventListener("click", () => {
+      const ren = els.afName.dataset.renaming;
+      if (ren !== undefined && ren !== "") {
+        FAVS()[+ren].label = els.afName.value.trim().slice(0, 40) || FAVS()[+ren].label;
+        delete els.afName.dataset.renaming;
+        store.save(); hooks.closeWin("win-addfav"); renderOrgFav();
+        return;
+      }
+      commitAddFav();
+    });
+    els.afCancel.addEventListener("click", () => { delete els.afName.dataset.renaming; hooks.closeWin("win-addfav"); });
+    els.ofRename.addEventListener("click", () => orgFavAction("rename"));
+    els.ofDelete.addEventListener("click", () => orgFavAction("delete"));
+    els.ofUp.addEventListener("click", () => orgFavAction("up"));
+    els.ofDown.addEventListener("click", () => orgFavAction("down"));
+    els.ofClose.addEventListener("click", () => hooks.closeWin("win-orgfav"));
+    els.ioOk.addEventListener("click", () => {
+      store.data.ieHome = els.ioHome.value.trim() || HOME; store.save();
+      hooks.closeWin("win-inetopts");
+    });
+    els.ioCancel.addEventListener("click", () => hooks.closeWin("win-inetopts"));
+    els.ioUseCur.addEventListener("click", () => { els.ioHome.value = url || HOME; });
+    els.ioUseDef.addEventListener("click", () => { els.ioHome.value = HOME; });
+    els.ioUseBlank.addEventListener("click", () => { els.ioHome.value = "about:blank"; });
+    els.ioDelCookies.addEventListener("click", () => showError("Delete Cookies",
+      "Delete all cookies in the Temporary Internet Files folder?\n\nDone. Both of them.", true));
+    els.ioDelFiles.addEventListener("click", () => {
+      store.data.ieCacheKB = 0; store.save();
+      els.ioCache.textContent = els.ioCache.textContent.replace(/\(\d+ KB in use\)/, "(0 KB in use)");
+    });
+    els.ioClearHist.addEventListener("click", () => {
+      HISTORY.length = 0;
+      if (sideMode === "hist") { sideMode = null; sidebar("hist"); }
+      syncAutocomplete();
+    });
+    els.ioCerts.addEventListener("click", () => hooks.openWin("win-cert"));
+    els.ioDialSet.addEventListener("click", () => els.dlSettings.click());
+    els.sideX.addEventListener("click", () => sidebar(null));
+  }
   els.addr.addEventListener("keydown", e => {
     e.stopPropagation();
     if (e.key === "Enter") go(els.addr.value);
@@ -1055,11 +942,11 @@ ${srcHTML}
   buttons(); progress(null); status("Done");
 
   /* openWin calls this on the way in: an empty browser dials out by itself */
-  function boot() { if (!url && !loading) go(HOME); }
+  function boot() { if (!url && !loading) go(homeUrl()); }
   function open() { hooks.openWin("win-ie"); }
 
   return {
-    open, boot, go, menu, stop, hangup, popup,
+    open, boot, go, menu, stop, hangup,
     url: () => url,
     isOnline: () => online,
     /* dev: skip the handshake and be on the wire already */

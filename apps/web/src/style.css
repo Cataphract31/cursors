@@ -1130,3 +1130,24 @@ body.typing,body.typing *{cursor:none!important}
 #arena.rot .cur>img.curskin{transform:rotate(-90deg)}
 .cur.dueling img.curskin{animation:shake .13s infinite;filter:drop-shadow(0 0 3px #FF3B20) drop-shadow(0 0 7px rgba(255,40,20,.55))}
 #arena.rot .cur.dueling img.curskin{animation:shakeRot .13s infinite}
+
+/* ---------- IE: the Explorer bar, Find, Internet Options ---------- */
+.ie-main{flex:1;display:flex;min-height:0}
+.ie-main .ie-doc{flex:1}
+.ie-side{width:184px;flex:none;background:#EFF3FB;border-right:1px solid #ACA899;display:flex;flex-direction:column;min-height:0}
+.ie-side-h{display:flex;justify-content:space-between;align-items:center;padding:4px 7px;font-weight:bold;background:linear-gradient(180deg,#F8FBFF,#DCE9FB 60%,#C9DCF6);border-bottom:1px solid #ACA899}
+#ie-side-x{font-style:normal;cursor:pointer;padding:0 2px}
+.ie-side-body{flex:1;overflow:auto;padding:4px 0}
+.ie-side-it{padding:3px 9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:default}
+.ie-side-it:hover b{color:#1B5FAE;text-decoration:underline}
+.ie-side-it.on{background:#316AC5;color:#fff}
+.ie-side-tools{padding:3px 8px 6px;border-bottom:1px solid #D6DFF0;margin-bottom:3px}
+.ie-side-tools a{color:#1B5FAE;text-decoration:underline;margin-right:9px;cursor:default}
+.ie-side-group{padding:3px 8px;font-weight:bold;color:#215DC6}
+.ie-findbar{display:flex;gap:6px;align-items:center;padding:4px 7px;background:#ECE9D8;border-bottom:1px solid #ACA899;flex:none}
+.ie-findbar input{flex:1}
+.ie-doc mark{background:#316AC5;color:#fff}
+.ie-doc.noimg img{display:none}
+.io-advgroup{font-weight:bold;padding:3px 2px 1px}
+.io-advrow{display:flex;gap:6px;align-items:flex-start;padding:1px 2px 1px 14px;font-size:11px}
+.ex-tb.on{background:#fff;border-color:#ACA899;box-shadow:inset 1px 1px 2px rgba(0,0,0,.12)}
