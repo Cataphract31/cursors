@@ -89,7 +89,12 @@ export function initMessenger(deps) {
     EMO, IMG, $, store, sysSnd, playerName, wireWindow,
     openWin, closeWin, isOpen, showMenu, showError, desk, rnd,
     lobbyNet,   /* (text)=>bool — true means the beta server took it */
+    netLive,    /* ()=>bool — connected to the beta server */
   } = deps;
+  /* When the server is live the contacts marked "bot" are exactly that: they
+     play with real (play) money under the same rules, and they do not talk.
+     Offline, the sandbox still needs someone in the room. */
+  const quiet = () => !!(netLive && netLive());
 
   const pick = a => a[Math.floor(Math.random() * a.length)];
   const rand = (a, b) => a + Math.random() * (b - a);
@@ -195,6 +200,7 @@ export function initMessenger(deps) {
       /* online, the lobby is real people: the server echoes it back to everyone */
       if (c.id === "lobby" && lobbyNet && lobbyNet(t)) return;
       say(c.id, playerName(), t, true);
+      if (quiet()) { botSilence(c.id); return; }
       if (c.id === "lobby") { if (Math.random() < .55) scheduleLobbyReply(); }
       else scheduleReply(c.id, t);
     };
@@ -278,6 +284,14 @@ export function initMessenger(deps) {
       conv(id).statusEl.textContent = "";
       say(id, who, line, false);
     }, think + rand(900, 1900));
+  }
+  /* said once per conversation, so a DM to a bot is not a silence you have to
+     guess at — and so nobody thinks a bot is a person who is ignoring them */
+  const told = new Set();
+  function botSilence(id) {
+    if (id === "lobby" || told.has(id)) return;
+    told.add(id);
+    setTimeout(() => sys(id, byId(id).name + " is a bot. It plays, it does not reply."), 500);
   }
   function scheduleLobbyReply() {
     const c = pick(CONTACTS.filter(x => state[x.id] === "online"));
@@ -447,6 +461,7 @@ export function initMessenger(deps) {
 
   /* ---------- presence drift ---------- */
   function drift() {
+    if (quiet()) return;   /* online, the bots are always in — they are the liquidity floor */
     const c = pick(CONTACTS);
     const was = state[c.id];
     const next = pick(["online", "online", "online", "away", "busy", "brb", "offline"]);
@@ -463,6 +478,7 @@ export function initMessenger(deps) {
   function lobbySys(text) { sys("lobby", text); }
   function lobbySay(who, text) { say("lobby", who, text, who === playerName()); }
   function botChat(kind, vars) {
+    if (quiet()) return;
     const now = Date.now();
     if (now - lastLobbyAt < 2600 || Math.random() < .45) return;
     lastLobbyAt = now;

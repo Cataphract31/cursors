@@ -304,8 +304,16 @@ rush, ~18.5s the crash dialog, ~27s the recovered arena).
 
 ## 7. Remaining roadmap, in the owner's priority order
 
-**Owner directive: visible + fun first.** cmd.exe, gpedit.msc, Device Manager, regedit are
-explicitly **parked** ("stuff only 2% of users would search for"). Run… jokes about them.
+**Owner directive: visible + fun first.**
+
+**REVERSED 2026-08-09 (late).** The owner now wants exactly the parked list, built properly:
+*"your pending tasks should be OS and shit related... CMD, gpedit.msc, services, device
+manager, control panel etc. all usable and exists, carbon copy of XP, high in-depth not
+slop looking."* Also named in the same message: **YouTube embedded in IE, async, with
+takeover/queue like plug.dj**, and **Paint pictures saved async and served to every player**
+behind an anti-spam / anti-sybil gate (a cooldown, or one publish per N deploys). And again,
+in the owner's words: *"not your shitty ass designed 'retro' websites thats not funny"* -
+the handmade web stays as it is; do not add pages to it.
 
 1. ~~Phase M step 2 — the mobile shell~~ **SHIPPED 2026-08-09.** Below 760px (decided once
    at boot, `body.mobile`): apps are full-screen sheets (one at a time, `.fixed` dialogs
@@ -427,6 +435,14 @@ epochs, global guestbook + gallery, cursorTV watch-together.
 **What is left, in order** (owner, 2026-08-09: *"we dont care about simulations, or audits
 or economics until the design is fully done"* — finish the product first, prove the money
 second):
+0. **The XP applications track — the owner's current priority.** Carbon copies, in depth:
+   **Control Panel** (a real applet grid, not a joke box), **cmd.exe** (a real interpreter
+   over the C:\ tree `explorer.js` already models — dir/cd/type/echo/ver/tree, plus the
+   game's own state as commands), **services.msc**, **Device Manager**, **gpedit.msc**.
+   Then **cursorTV as a real embedded YouTube player** with a shared clock, a queue and
+   paid-or-fair-rotation takeover, and **the Paint gallery served to everyone** behind a
+   non-sybillable gate. `explorer.js` models the filesystem as functions, which is the right
+   substrate for cmd and Device Manager to read from.
 1. **Design/UX still owed** — a real-device pass on a phone (the keyboard path above is
    unverified on hardware), Paint's Fonts toolbar and Stretch/Skew, IE Favorites editing and
    an IE-specific right-click menu, a real Search Companion.
@@ -485,6 +501,41 @@ escrow (replacement, not hardening); no graceful shutdown.
 ---
 
 ## 10. Known open items
+
+**Playtest fixes, 2026-08-09 (late) - all from one owner session on a phone:**
+- *"cursors stuck and bugged around top... on top of each other so realistically they should
+  be fighting but not"* - they were **same-owner** cursors, which by design never duel, and
+  `centroid()` was actively pulling them onto one pixel. Own cursors now hold a 34px personal
+  space (repel inside it, regroup beyond 90px). Over three sim-minutes, stacked pairs per
+  frame went **0.52 -> 0.03**, excluding legitimate 700ms duel freezes.
+- *"stuck around top"* - the edge margin was 30px with a weak 4.5 rad/s turn, so anything
+  chasing a cursor pinned to a wall slid along it for seconds. M=64, turn 7, and the hard
+  clamp moved from 6px to 24px inside the field. Edge-hugging cursor-frames **1.31 -> 0.32**.
+- *"me and another cursor just draw circles in a loop"* - turn radius is speed/turn-rate:
+  ~100px/s at 2.6 rad/s is a 38px circle and contact needs 20px, so an attacker could orbit
+  its target forever. Inside 130px the turn rate triples, **and attacking is 12% faster while
+  defending is 10% slower**, so a hunt terminates. DEFEND still buys time; it is no longer
+  immortality. Duel odds are untouched, so EV does not move. Kills went **45.7 -> 48/min**.
+- *"i seem to always deploy from the same place"* - correct, and it was the same place for
+  every player: humans spawned in a 120px band at bottom-centre. The edge is sampled properly
+  now and the emptiest of eight candidates wins. Recall glides out through your own nearest
+  edge point instead of every recall funnelling to (40, AH).
+- **xp.css draws checkboxes through an ADJACENT label** (the input is `position:fixed;
+  opacity:0`). Every checkbox in this app is wrapped *inside* its label, so all of them had
+  been rendering as bare text with nothing to tick - "Save this user name and password", the
+  CRT toggle, DST, Mute. Fixed once, globally, with a `label>input[type=checkbox]` rule.
+- The `"max live"` deploy rejection was balloon-ed, so a fast double-tap produced a stream of
+  "beta server" notifications about something the button already shows. No longer sent.
+- Bots do not talk when the server is live (`netLive` -> messenger `quiet()`): no lobby
+  chatter, no 1:1 replies, no status drift. A DM to a bot says once that it is a bot.
+- The arena has a visible frame (`#arena:before`), so the fixed 1280x800 field reads as a
+  field rather than cursors wandering off under the taskbar.
+- Tray: the speaker opens XP's **volume flyout** (slider + Mute), which is the master gain
+  for every sound and persists. The clock's **Time Zone** tab is real - it reads the machine's
+  zone through `Intl` and lists live world times, replacing a grey box reading "map data went
+  home". Dev hashes: `#desktop-vol`, `#desktop-clock`, `#desktop-clock-tz`.
+- Phone dialogs measure the desktop at fit time instead of trusting a cached height, and
+  scroll their own body rather than putting their buttons below the fold.
 
 - Mobile: the phone keyboard path (`--kb`, `body.mobile.kb`) is written from the spec and
   has never run on a real iPhone — first real-device pass should start there

@@ -71,16 +71,17 @@ const T_SHUT=12, T_CRASH=5, EPOCH_MIN=110, EPOCH_MAX=195;
 const RECALL_SECS=3, DUEL_MS=700;
 
 /* ================= audio ================= */
-let AC=null, muted=false;
+let AC=null, muted=false, masterVol=.7;   /* the tray slider, 0..1 — see volFlyout() */
+const vol=v=>(v==null?.55:v)*masterVol;
 function ac(){ if(!AC) AC=new (window.AudioContext||window.webkitAudioContext)(); return AC; }
-function tone(f,dur,type,vol,delay,slide){
+function tone(f,dur,type,v,delay,slide){
   if(muted) return;
   try{
     const c=ac(),t=c.currentTime+(delay||0);
     const o=c.createOscillator(),g=c.createGain();
     o.type=type||"square"; o.frequency.setValueAtTime(f,t);
     if(slide) o.frequency.exponentialRampToValueAtTime(Math.max(30,f+slide),t+dur);
-    g.gain.setValueAtTime(vol||.05,t);
+    g.gain.setValueAtTime((v||.05)*masterVol,t);
     g.gain.exponentialRampToValueAtTime(.0001,t+dur);
     o.connect(g).connect(c.destination); o.start(t); o.stop(t+dur+.03);
   }catch(e){}
@@ -95,11 +96,11 @@ const sRound =()=>[392,523,659].forEach((f,i)=>tone(f,.12,"square",.045,i*.09));
 const sShut  =()=>{tone(220,.3,"sawtooth",.07,0,-60);tone(220,.3,"sawtooth",.07,.4,-60);};
 const sRes   =()=>{tone(700,.08,"square",.05);tone(500,.1,"square",.05,.1);};
 /* -- OS sounds: the real 2001 scheme (see assets.js) -- */
-function sysSnd(name,vol){
+function sysSnd(name,v){
   if(muted) return;
   try{
     const a=new Audio(SNDF[name]);
-    a.volume=vol==null?.55:vol;
+    a.volume=Math.min(1,vol(v));
     a.play().catch(()=>{});
   }catch(e){}
 }
@@ -113,7 +114,7 @@ const sMaxi  =()=>sysSnd("restore");
 const sError =()=>sysSnd("critical",.6);
 const sBalloon=()=>sysSnd("balloon",.6);
 const sNudge =()=>sysSnd("msnNudge",.65);
-function noiseBurst(dur,vol,delay){
+function noiseBurst(dur,v,delay){
   if(muted) return;
   try{
     const c=ac(), t=c.currentTime+(delay||0);
@@ -121,14 +122,41 @@ function noiseBurst(dur,vol,delay){
     const d=b.getChannelData(0);
     for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*(1-i/d.length);
     const n=c.createBufferSource(); n.buffer=b;
-    const g=c.createGain(); g.gain.value=vol;
+    const g=c.createGain(); g.gain.value=v*masterVol;
     n.connect(g).connect(c.destination); n.start(t);
   }catch(e){}
 }
 const sCrunch=()=>sysSnd("recycle",.6);
 const chime  =()=>sysSnd("logon",.7);
 addEventListener("pointerdown",()=>{ if(AC&&AC.state==="suspended") AC.resume(); },{capture:true});
-$("#sndico").addEventListener("click",()=>{ muted=!muted; $("#sndico").classList.toggle("muted",muted); });
+/* XP's tray volume: one click opens the little panel, the slider is the master
+   for every sound the machine makes, and Mute is a checkbox, not a hidden
+   toggle you discover by clicking the icon and losing your audio. */
+const volf=$("#volflyout");
+function volSync(){
+  $("#sndico").classList.toggle("muted",muted||masterVol<=0);
+  $("#vf-slider").value=Math.round(masterVol*100);
+  $("#vf-mute").checked=muted;
+  $("#sndico").dataset.tip=muted?"Volume: muted":"Volume: "+Math.round(masterVol*100)+"%";
+  store.data.vol={v:masterVol,m:muted?1:0}; store.save();
+}
+function volOpen(on){
+  volf.classList.toggle("on",on);
+  if(!on) return;
+  const r=$("#sndico").getBoundingClientRect(), tb=$("#taskbar").getBoundingClientRect();
+  volf.style.left=Math.max(4,Math.min(innerWidth-72,Math.round(r.left+r.width/2-32)))+"px";
+  volf.style.top=Math.round(tb.top-volf.offsetHeight-2)+"px";
+}
+$("#sndico").addEventListener("click",e=>{ e.stopPropagation(); volOpen(!volf.classList.contains("on")); });
+$("#vf-slider").addEventListener("input",e=>{
+  masterVol=(+e.target.value)/100;
+  if(masterVol>0&&muted) muted=false;
+  volSync();
+});
+$("#vf-slider").addEventListener("change",()=>{ if(!muted) sysSnd("balloon",.5); });   /* XP previews on release */
+$("#vf-mute").addEventListener("change",e=>{ muted=e.target.checked; volSync(); });
+volf.addEventListener("pointerdown",e=>e.stopPropagation());
+addEventListener("pointerdown",()=>volOpen(false),true);
 
 /* ================= shell persistence ================= */
 const store={
@@ -307,14 +335,20 @@ function fitWin(el){
   if(MOBILE&&!el.classList.contains("fixed")) return; /* sheets: CSS owns the rect */
   const r=el.getBoundingClientRect();
   if(!r.width&&!r.height) return;
-  if(r.height>H-6) el.style.height=(H-10)+"px";
-  const h=Math.min(r.height,H-10), w=Math.min(r.width,W-4);
-  if(r.width>W-4) el.style.width=w+"px";
-  if(MOBILE){ /* dialogs on the phone: centered, upper third, clear of the HUD */
-    el.style.left=Math.max(2,Math.round((W-w)/2))+"px";
-    el.style.top=Math.max(8,Math.round((H-h)/3))+"px";
+  /* Measure the desktop NOW rather than trusting the cached W/H. On iOS the
+     visible height moves with the URL bar between resize events, and a dialog
+     placed against a stale height is a dialog whose buttons are below the fold
+     — which is exactly how the dial-up box became unreachable on a phone. */
+  const dh=desktop.clientHeight||H, dw=desktop.clientWidth||W;
+  if(r.height>dh-6) el.style.height=(dh-10)+"px";
+  const h=Math.min(r.height,dh-10), w=Math.min(r.width,dw-4);
+  if(r.width>dw-4) el.style.width=w+"px";
+  if(MOBILE){ /* dialogs on the phone: centred, high, and never past the bottom */
+    el.style.left=Math.max(2,Math.round((dw-w)/2))+"px";
+    el.style.top=clamp(Math.round((dh-h)/3),6,Math.max(6,dh-h-6))+"px";
     return;
   }
+  H=dh; W=dw;
   if(r.top+h>H-2||r.top<0) el.style.top=clamp(H-h-2,0,Math.max(0,H-h-2))+"px";
   if(r.left+w>W-2) el.style.left=Math.max(2,W-w-2)+"px";
   if(r.left<0) el.style.left="2px";
@@ -1520,11 +1554,80 @@ function drawClock(){
   g.beginPath(); g.moveTo(cx,cy); g.lineTo(cx+Math.sin(sc)*(r-9),cy-Math.cos(sc)*(r-9)); g.stroke();
   $("#digiclock").textContent=n.toLocaleTimeString([],{hour12:false});
 }
-setInterval(()=>{ if($("#win-datetime").style.display==="flex") drawClock(); },1000);
-$("#clock").addEventListener("dblclick",()=>{ calM=null; renderCal(); drawClock(); openWin("win-datetime"); });
+/* The Time Zone tab. XP had a world map here; we cannot ship one, so the space
+   does the job a time zone tab is actually for — it reads the machine's real
+   zone and shows you what time it is in the other ones. Nothing invented. */
+const TZWORLD=[["Los Angeles","America/Los_Angeles"],["New York","America/New_York"],
+  ["London","Europe/London"],["Berlin","Europe/Berlin"],["Dubai","Asia/Dubai"],
+  ["Singapore","Asia/Singapore"],["Tokyo","Asia/Tokyo"],["Sydney","Australia/Sydney"],
+  ["UTC","UTC"]];
+function tzLocal(){ try{ return Intl.DateTimeFormat().resolvedOptions().timeZone||"UTC"; }catch(e){ return "UTC"; } }
+function tzOffsetLabel(zone,d){
+  try{
+    const p=new Intl.DateTimeFormat("en-US",{timeZone:zone,timeZoneName:"longOffset"}).formatToParts(d);
+    const o=p.find(x=>x.type==="timeZoneName");
+    return o?o.value.replace("GMT","GMT").replace(/^GMT$/,"GMT+00:00"):"GMT";
+  }catch(e){ return "GMT"; }
+}
+function tzTime(zone,d){
+  try{ return d.toLocaleTimeString("en-GB",{timeZone:zone,hour:"2-digit",minute:"2-digit"}); }
+  catch(e){ return "--:--"; }
+}
+function renderTz(){
+  const d=new Date(), here=tzLocal();
+  const sel=$("#tz-sel");
+  if(!sel.options.length){
+    /* the machine's own zone first, then the zones a lobby actually spans */
+    const zones=[here].concat(TZWORLD.map(z=>z[1]).filter(z=>z!==here));
+    for(const z of zones){
+      const o=document.createElement("option");
+      o.value=z; o.textContent=`(${tzOffsetLabel(z,d)}) ${z.replace(/_/g," ")}`;
+      sel.appendChild(o);
+    }
+    sel.value=here;
+    /* the checkbox is disabled and honest about why: the browser reports the
+       machine's DST state, it does not let a page change it */
+    $("#tz-dst").checked=tzIsDst(here,d);
+    $("#tz-dst").title="This is what your operating system reports. A web page cannot change it.";
+  }
+  const host=$("#tz-world"); host.innerHTML="";
+  /* the machine's own zone always appears, even when it is not on the list */
+  const rows=TZWORLD.some(z=>z[1]===here)?TZWORLD:[[here.split("/").pop().replace(/_/g," "),here]].concat(TZWORLD);
+  for(const [city,zone] of rows){
+    const row=document.createElement("div");
+    if(zone===here||zone===sel.value) row.className="here";
+    row.innerHTML=`<span>${city}</span><b>${tzTime(zone,d)} ${tzOffsetLabel(zone,d)}</b>`;
+    host.appendChild(row);
+  }
+}
+/* DST = this zone is currently further from UTC than its own winter offset */
+function tzMinutes(zone,d){
+  try{
+    const v=new Intl.DateTimeFormat("en-US",{timeZone:zone,timeZoneName:"longOffset"})
+      .formatToParts(d).find(x=>x.type==="timeZoneName").value;
+    const m=/GMT([+-])(\d{1,2}):?(\d{2})?/.exec(v);
+    return m?(m[1]==="-"?-1:1)*(+m[2]*60+(+m[3]||0)):0;
+  }catch(e){ return 0; }
+}
+function tzIsDst(zone,d){
+  const jan=tzMinutes(zone,new Date(d.getFullYear(),0,1));
+  const jul=tzMinutes(zone,new Date(d.getFullYear(),6,1));
+  return tzMinutes(zone,d)>Math.min(jan,jul);
+}
+$("#tz-sel").addEventListener("change",renderTz);
+setInterval(()=>{ if($("#win-datetime").style.display==="flex"){ drawClock(); renderTz(); } },1000);
+function openClockProps(){ calM=null; renderCal(); drawClock(); renderTz(); openWin("win-datetime"); }
+/* XP opened this on a double-click. A phone has no double-click worth the
+   name, so a tap is enough there. */
+$("#clock").addEventListener("dblclick",openClockProps);
+if(MOBILE) $("#clock").addEventListener("click",openClockProps);
 $("#dt-ok").addEventListener("click",()=>closeWin("win-datetime"));
 $("#dt-cancel").addEventListener("click",()=>closeWin("win-datetime"));
-$("#dt-apply").addEventListener("click",()=>showError("Date and Time","You do not have permission to change the time. The house controls the clock."));
+/* XP's own string, verbatim — the clock reads the machine and a web page may
+   not set it, which is exactly what Windows says when you lack the right. */
+$("#dt-apply").addEventListener("click",()=>showError("Date and Time",`You do not have permission to perform this task.
+
+Contact your computer administrator.`));
 
 /* ================= task manager ================= */
 let duelPulse=0, tmSel=null, tmHist=[];
@@ -1592,6 +1695,10 @@ const msn=initMessenger({
   isOpen:id=>openApps.has(id)&&!openApps.get(id).min,
   showMenu, showError, desk:desktop,
   lobbyNet:t=>{ if(!MP.on) return false; mpSend({t:"chat",text:t}); return true; },
+  /* Online, the buddy list is real people and the bots are programs. Programs
+     do not make small talk, and scripted chatter in a room with real players in
+     it is just noise pretending to be company. */
+  netLive:()=>MP.on,
 });
 const chatSys=t=>msn.lobbySys(t);
 const botChat=(kind,vars)=>{ if(!MP.on) msn.botChat(kind,vars); };
@@ -1801,13 +1908,25 @@ function makeCur(owner,isMine){
   el.className="cur grace"+(isMine?" me":"");
   el.innerHTML=CURSVG+`<div class="tag"><span class="nm">${owner}</span><span class="bt"></span><span class="mx"></span></div>`;
   curlayer.appendChild(el);
+  /* pick the emptiest of eight candidate landing spots — deploying into an
+     existing scrum is the arena choosing your fight for you (see server sim) */
   let x,y,ax,ay;
-  if(isMine){ x=clamp(AW/2+rand(-60,60),arena.x0+20,arena.x1-20); y=arena.y1-8; ax=x; ay=arena.y1-80; }
-  else{
-    const side=Math.floor(rand(0,4));
-    x=side===0?arena.x0+6:side===1?arena.x1-6:rand(arena.x0+40,arena.x1-40);
-    y=side===2?arena.y0+6:side===3?arena.y1-6:rand(arena.y0+40,arena.y1-40);
-    ax=clamp(x+rand(-40,40),arena.x0+50,arena.x1-50); ay=clamp(y+rand(-40,40),arena.y0+50,arena.y1-50);
+  { let bd=-1;
+    for(let i=0;i<8;i++){
+      let cx,cy;
+      if(isMine){ cx=rand(arena.x0+70,arena.x1-70); cy=arena.y1-22; }
+      else{
+        const side=Math.floor(rand(0,4));
+        cx=side===0?arena.x0+22:side===1?arena.x1-22:rand(arena.x0+50,arena.x1-50);
+        cy=side===2?arena.y0+22:side===3?arena.y1-22:rand(arena.y0+50,arena.y1-50);
+      }
+      let d=1e9;
+      for(const o of curs){ const q=(o.x-cx)**2+(o.y-cy)**2; if(q<d) d=q; }
+      if(d>bd){ bd=d; x=cx; y=cy; }
+      if(d>200*200) break;
+    }
+    if(isMine){ ax=x; ay=arena.y1-80; }
+    else{ ax=clamp(x+rand(-40,40),arena.x0+50,arena.x1-50); ay=clamp(y+rand(-40,40),arena.y0+50,arena.y1-50); }
   }
   const c={owner,isMine,el,x,y,ax,ay,bounty:ENTRY,
     h:rand(0,Math.PI*2),spd:rand(78,124),mode:"hold",prevMode:"roam",recallT:0,
@@ -2187,10 +2306,11 @@ function nearestEnemy(c){
 }
 function move(c,dt){
   if(c.grace>0){ c.grace-=dt; if(c.grace<=0) c.el.classList.remove("grace"); }
-  let tx=null,ty=null,turn=2.4;
+  let tx=null,ty=null,turn=2.4,sped=1;
   if(c.mode==="recall"){
     c.recallT-=dt;
-    const dx=40-c.x, dy=(AH-8)-c.y, dist=Math.hypot(dx,dy);
+    /* out through your own nearest edge point, not one shared corner */
+    const dx=clamp(c.x,60,AW-60)-c.x, dy=(AH-18)-c.y, dist=Math.hypot(dx,dy);
     if(c.recallT<=0){ bank(c,false); return; }
     const sp=dist/Math.max(.2,c.recallT);
     c.x+=dx/Math.max(1,dist)*sp*dt; c.y+=dy/Math.max(1,dist)*sp*dt;
@@ -2205,15 +2325,30 @@ function move(c,dt){
     const aggr=phase==="battle"?(.7+1.5*clamp((epochLen-phaseT)/epochLen,0,1)):1;
     turn=2.6*aggr;
     if(best){
-      if(st==="attack"&&bd<520*520){ tx=best.x; ty=best.y; }
+      if(bd<130*130) turn*=2.8;   /* close in: a 38px turn radius cannot reach a 20px contact */
+      if(st==="attack"&&bd<520*520){ tx=best.x; ty=best.y; sped=1.12; }
       else if(st==="defend"&&bd<300*300){
-        tx=c.x+(c.x-best.x); ty=c.y+(c.y-best.y);
+        tx=c.x+(c.x-best.x); ty=c.y+(c.y-best.y); sped=.90;
       }
     }
-    const cen=centroid(c.owner,c);
-    if(cen&&((cen.x-c.x)**2+(cen.y-c.y)**2)>75*75){
-      tx=tx===null?cen.x:(tx*.65+cen.x*.35);
-      ty=ty===null?cen.y:(ty*.65+cen.y*.35);
+    /* your own cursors regroup but never stack — they cannot fight each other,
+       so a pile of them just looks broken (see the server sim for the whole note) */
+    const SEP=34;
+    let rx=0,ry=0;
+    for(const o of curs){
+      if(o===c||o.owner!==c.owner) continue;
+      const dx=c.x-o.x, dy=c.y-o.y, d2=dx*dx+dy*dy;
+      if(d2>SEP*SEP) continue;
+      const d=Math.max(4,Math.sqrt(d2));
+      rx+=dx/d*(SEP-d); ry+=dy/d*(SEP-d);
+    }
+    if(rx||ry){ tx=c.x+rx*3; ty=c.y+ry*3; turn=Math.max(turn,5.5); }
+    else{
+      const cen=centroid(c.owner,c);
+      if(cen&&((cen.x-c.x)**2+(cen.y-c.y)**2)>90*90){
+        tx=tx===null?cen.x:(tx*.65+cen.x*.35);
+        ty=ty===null?cen.y:(ty*.65+cen.y*.35);
+      }
     }
   }
   if(tx!==null){
@@ -2221,15 +2356,19 @@ function move(c,dt){
     c.h+=clamp(angDiff(want-c.h),-1,1)*turn*dt;
   }
   c.h+=(Math.random()-.5)*(c.mode==="hold"?2.2:3.0)*dt;
-  const M=30;
-  if(c.x<arena.x0+M) c.h+=clamp(angDiff(0-c.h),-1,1)*4.5*dt;
-  if(c.x>arena.x1-M) c.h+=clamp(angDiff(Math.PI-c.h),-1,1)*4.5*dt;
-  if(c.y<arena.y0+M) c.h+=clamp(angDiff(Math.PI/2-c.h),-1,1)*4.5*dt;
-  if(c.y>arena.y1-M) c.h+=clamp(angDiff(-Math.PI/2-c.h),-1,1)*4.5*dt;
+  /* a wide, firm margin: at M=30 a cursor chasing something pinned to the wall
+     slid along it for seconds, which is what "stuck at the top" was */
+  const M=64, WT=7;
+  if(c.x<arena.x0+M) c.h+=clamp(angDiff(0-c.h),-1,1)*WT*dt;
+  if(c.x>arena.x1-M) c.h+=clamp(angDiff(Math.PI-c.h),-1,1)*WT*dt;
+  if(c.y<arena.y0+M) c.h+=clamp(angDiff(Math.PI/2-c.h),-1,1)*WT*dt;
+  if(c.y>arena.y1-M) c.h+=clamp(angDiff(-Math.PI/2-c.h),-1,1)*WT*dt;
   const weight=1+.25*(c.s-1);
-  const sp=c.spd*(c.mode==="hold"?.5:1)/weight;
-  c.x=clamp(c.x+Math.cos(c.h)*sp*dt,arena.x0+6,arena.x1-6);
-  c.y=clamp(c.y+Math.sin(c.h)*sp*dt,arena.y0+6,arena.y1-6);
+  /* attacking is 12% faster, defending 10% slower, so a hunt can actually end
+     instead of the two of them orbiting forever. Duel odds never move. */
+  const sp=c.spd*sped*(c.mode==="hold"?.5:1)/weight;
+  c.x=clamp(c.x+Math.cos(c.h)*sp*dt,arena.x0+24,arena.x1-24);
+  c.y=clamp(c.y+Math.sin(c.h)*sp*dt,arena.y0+24,arena.y1-24);
   c.el.style.transform=`translate(${c.x-8}px,${c.y-4}px)`;
 }
 function startDuel(a,b){
@@ -3214,6 +3353,8 @@ function frame(t){
 /* ================= boot ================= */
 syncArena();
 renderIcons();
+if(store.data.vol){ masterVol=clamp(+store.data.vol.v||0,0,1); muted=!!store.data.vol.m; }
+volSync();
 setWallpaper(store.data.wallpaper);
 renderWplist();
 $("#sv-sel").value=store.data.saver.t;
@@ -3258,13 +3399,13 @@ function enterDesktop(){
 function playStartup(){
   if(muted) return;
   try{
-    const a=new Audio(SNDF.startup); a.volume=.6;
+    const a=new Audio(SNDF.startup); a.volume=Math.min(1,vol(.6));
     a.play().catch(()=>{
       /* autoplay blocked: play on the first gesture that isn't already a logon click */
       const once=e=>{
         removeEventListener("pointerdown",once,true);
         if(e.target.closest(".lg-tile")) return;
-        try{ const b=new Audio(SNDF.startup); b.volume=.6; b.play().catch(()=>{}); }catch(err){}
+        try{ const b=new Audio(SNDF.startup); b.volume=Math.min(1,vol(.6)); b.play().catch(()=>{}); }catch(err){}
       };
       addEventListener("pointerdown",once,true);
     });
@@ -3477,6 +3618,16 @@ if(location.hash.indexOf("#desktop-cx")===0) setTimeout(()=>{ /* dev: capture a 
       lost:485,mult:5,peak:485,odds:71,kills:3,lived:88,round:roundNo,at:"09:41:12"});
     deathCert(binDead[0]);
   }
+},900);
+if(location.hash==="#desktop-vol") setTimeout(()=>{ /* dev: the tray volume flyout */
+  $("#balloon").style.display="none"; $("#sndico").click();
+},900);
+if(location.hash==="#desktop-clock") setTimeout(()=>{ /* dev: Date and Time Properties, real zones */
+  $("#balloon").style.display="none"; openClockProps();
+},900);
+if(location.hash==="#desktop-clock-tz") setTimeout(()=>{ /* dev: the Time Zone tab */
+  $("#balloon").style.display="none"; openClockProps();
+  setTimeout(()=>$$("#win-datetime .xtab").find(t=>t.dataset.pane==="dt-tz").click(),200);
 },900);
 if(location.hash.indexOf("#desktop-disk")===0) setTimeout(()=>{ /* dev: the disk at a chosen fill — bar, tray chip, bin icon */
   const pc=parseInt(location.hash.replace("#desktop-disk","").replace("-",""),10);

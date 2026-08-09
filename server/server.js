@@ -161,7 +161,10 @@ function handle(c, m) {
       sys(`${name} signed in — ${conns.size} player${conns.size === 1 ? "" : "s"} online`);
       break;
     }
-    case "deploy": { const err = sim.requestDeploy(c.key); if (err && err !== "deploys closed") send(c, { t: "err", msg: err }); break; }
+    /* "max live" and "deploys closed" are states the client's own button
+       already shows; balloon-ing them turns a fast double-tap into a stream of
+       notifications about something the player can see for themselves. */
+    case "deploy": { const err = sim.requestDeploy(c.key); if (err && err !== "deploys closed" && err !== "max live") send(c, { t: "err", msg: err }); break; }
     case "recall": sim.requestRecall(c.key); break;
     case "recallOne": if (Number.isInteger(m.id)) sim.recallOne(c.key, m.id); break;
     case "stance": sim.setStance(c.key, m.s); break;

@@ -764,6 +764,29 @@ body.mobile #bsod{font-size:11px;padding:16px 14px}
 .cal td{width:24px;text-align:center;padding:3px 0;cursor:default}
 .cal td.today{background:#316AC5;color:#fff;border-radius:2px}
 .cal td.dim3{color:#AAA}
+/* xp.css draws a checkbox entirely through an ADJACENT label — the input
+   itself is position:fixed and opacity:0. Every checkbox in this app is
+   wrapped inside its label instead, so all of them have been rendering as
+   nothing but text: "Save this user name and password" with no box to tick.
+   Give the wrapped form its own XP-accurate box. */
+label>input[type=checkbox]{position:static;opacity:1;flex:none;display:inline-block;
+  width:13px;height:13px;margin:0;background:#fff;
+  box-shadow:inset -1px -1px #fff,inset 1px 1px grey,inset -2px -2px #dfdfdf,inset 2px 2px #0a0a0a}
+label>input[type=checkbox]:checked{background:#fff url("data:image/svg+xml;charset=utf-8,%3Csvg width='7' height='7' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath fill-rule='evenodd' clip-rule='evenodd' d='M7 0H6v1H5v1H4v1H3v1H2V3H1V2H0v3h1v1h1v1h1V6h1V5h1V4h1V3h1V0z' fill='%23000'/%3E%3C/svg%3E") no-repeat 3px 3px}
+label>input[type=checkbox]:active{background-color:#ECE9D8}
+label>input[type=checkbox][disabled]{background-color:#ECE9D8}
+label>input[type=checkbox][disabled]:checked{background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg width='7' height='7' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath fill-rule='evenodd' clip-rule='evenodd' d='M7 0H6v1H5v1H4v1H3v1H2V3H1V2H0v3h1v1h1v1h1V6h1V5h1V4h1V3h1V0z' fill='gray'/%3E%3C/svg%3E")}
+
+.tz-chk{display:flex;align-items:center;gap:5px;margin:9px 0 0;color:#555}
+.tz-chk input{margin:0}
+/* the old Time Zone tab was a grey box saying "map data went home". XP put a
+   world map there; we cannot ship one, so the space holds the one thing a time
+   zone tab is actually for — what time it is somewhere else. */
+.tz-world{margin-top:9px;border:1px solid #7F9DB9;background:#fff;max-height:104px;overflow:auto}
+.tz-world div{display:flex;justify-content:space-between;padding:2px 7px;font-size:11px;border-bottom:1px solid #EEE}
+.tz-world div:last-child{border-bottom:0}
+.tz-world div.here{background:#316AC5;color:#fff}
+.tz-world b{font-family:"Lucida Console",Consolas,monospace;font-weight:normal}
 .calnav{display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;font-weight:bold}
 .calnav button{width:20px;min-width:0}
 #anaclock{display:block;margin:0 auto}
@@ -839,6 +862,10 @@ body.mobile #desktop>.window:not(.fixed){left:0 !important;top:0 !important;widt
 body.mobile #desktop>.window:not(.fixed) .title-bar{padding:5px 5px 5px 3px}
 body.mobile #desktop>.window:not(.fixed) .paper{max-height:none}
 body.mobile .title-bar-controls button{min-width:26px;min-height:26px}
+/* a dialog taller than the phone scrolls its own body rather than running off
+   the bottom of the screen with its buttons on it */
+body.mobile #desktop>.window.fixed{max-height:calc(100% - 12px)}
+body.mobile #desktop>.window.fixed>.win-body{overflow:auto;-webkit-overflow-scrolling:touch}
 body.mobile .ms-body{overflow:auto}
 
 /* the Start menu becomes a full-screen launcher (HUD stays visible) */
@@ -875,5 +902,25 @@ body.mobile.kb #desktop{inset:0 calc(var(--rail) + var(--sar)) var(--kb) 0}
 body.mobile #ie-addr,body.mobile #ex-addr,body.mobile #hlp-search,
 body.mobile #run-in,body.mobile #lg-user,body.mobile .conv-input textarea,
 body.mobile .renamer,body.mobile .usertxtarea{font-size:16px}
+
+/* ---------- the arena is a place, so it has edges ---------- */
+/* The field is a fixed 1280x800 for fairness, letterboxed into whatever room
+   the desktop has. Without a frame that boundary is invisible and cursors look
+   like they are wandering off under the taskbar. */
+#arena:before{content:"";position:absolute;inset:0;pointer-events:none;
+  border:1px solid rgba(255,255,255,.28);
+  box-shadow:inset 0 0 0 1px rgba(0,0,0,.30),inset 0 0 26px rgba(0,0,0,.14),0 0 0 1px rgba(0,0,0,.22)}
+
+/* ---------- tray: the volume flyout ---------- */
+#volflyout{position:fixed;display:none;flex-direction:column;align-items:center;gap:6px;z-index:9700;
+  width:74px;padding:7px 6px 7px;background:#ECE9D8;border:1px solid #808080;
+  box-shadow:1px 1px 0 #404040,inset 1px 1px 0 #fff,2px 3px 8px rgba(0,0,0,.35);font-size:11px}
+#volflyout.on{display:flex}
+.vf-title{font-weight:bold}
+#vf-slider{writing-mode:vertical-lr;direction:rtl;-webkit-appearance:slider-vertical;appearance:slider-vertical;
+  width:20px;height:92px;margin:0;accent-color:#316AC5}
+.vf-mute{display:flex;align-items:center;gap:3px;white-space:nowrap;font-size:11px}
+.vf-mute input{margin:0}
+.trayico.muted{opacity:.45}
 
 @media (prefers-reduced-motion:reduce){*{animation-duration:.01s !important;transition:none !important}}

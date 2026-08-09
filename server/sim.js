@@ -100,14 +100,35 @@ export function createSim(opts) {
   }
 
   /* ---------- cursors ---------- */
-  function spawnCur(p) {
-    let x, y;
-    if (!p.bot) { x = clamp(AW / 2 + rand(-60, 60), 20, AW - 20); y = AH - 8; }
-    else {
-      const side = Math.floor(rand(0, 4));
-      x = side === 0 ? 6 : side === 1 ? AW - 6 : rand(40, AW - 40);
-      y = side === 2 ? 6 : side === 3 ? AH - 6 : rand(40, AH - 40);
+  /* Where a cursor lands matters. Every human used to deploy at the bottom
+     centre inside a 120px band, so two players joining together spawned on top
+     of each other and fought the moment grace lifted — the arena picking the
+     fight instead of the players. Now the edge is sampled properly and, of
+     eight candidates, the one furthest from anyone already out there wins. It
+     costs nothing and it means a crowded arena spreads instead of piling. */
+  function nearestCurDist2(x, y) {
+    let bd = 1e9;
+    for (const o of curs) { const d = (o.x - x) ** 2 + (o.y - y) ** 2; if (d < bd) bd = d; }
+    return bd;
+  }
+  function spawnPoint(bot) {
+    let best = null, bestD = -1;
+    for (let i = 0; i < 8; i++) {
+      let x, y;
+      if (!bot) { x = rand(70, AW - 70); y = AH - 22; }   /* humans come up from their own edge */
+      else {
+        const side = Math.floor(rand(0, 4));
+        x = side === 0 ? 22 : side === 1 ? AW - 22 : rand(50, AW - 50);
+        y = side === 2 ? 22 : side === 3 ? AH - 22 : rand(50, AH - 50);
+      }
+      const d = nearestCurDist2(x, y);
+      if (d > bestD) { bestD = d; best = { x, y }; }
+      if (d > 200 * 200) break;                            /* far enough, stop looking */
     }
+    return best;
+  }
+  function spawnCur(p) {
+    const { x, y } = spawnPoint(p.bot);
     const c = {
       id: nextCurId++, key: p.key, owner: p.name, bot: p.bot,
       x, y, h: rand(0, Math.PI * 2), spd: rand(78, 124),
@@ -199,7 +220,9 @@ export function createSim(opts) {
   function move(c, dt) {
     if (c.mode === "recall") {
       c.recallT -= dt;
-      const dx = 40 - c.x, dy = (AH - 8) - c.y, dist = Math.hypot(dx, dy);
+      /* out through the nearest point on your own edge, not one shared corner
+         — every recall funnelling to (40, AH) made a permanent scrum there */
+      const dx = clamp(c.x, 60, AW - 60) - c.x, dy = (AH - 18) - c.y, dist = Math.hypot(dx, dy);
       if (c.recallT <= 0) { bank(c, rushAt !== null); return; }
       const sp = dist / Math.max(.2, c.recallT);
       c.x += dx / Math.max(1, dist) * sp * dt; c.y += dy / Math.max(1, dist) * sp * dt;
@@ -215,28 +238,60 @@ export function createSim(opts) {
     let tx = null, ty = null, turn = 2.6 * aggr;
     const { best, bd } = nearestEnemy(c);
     if (best) {
+      /* Turn radius is speed/turn-rate: at 2.6 rad/s and ~100 px/s that is a
+         38px circle, and contact needs 20px — so an attacker could literally
+         orbit its target forever without touching it. Close in, turn hard. */
+      if (bd < 130 * 130) turn *= 2.8;
       if (st === "attack" && bd < 520 * 520) { tx = best.x; ty = best.y; }
       else if (st === "defend" && bd < 300 * 300) { tx = c.x + (c.x - best.x); ty = c.y + (c.y - best.y); }
     }
-    const cen = centroid(c);
-    if (cen && ((cen.x - c.x) ** 2 + (cen.y - c.y) ** 2) > 75 * 75) {
-      tx = tx === null ? cen.x : (tx * .65 + cen.x * .35);
-      ty = ty === null ? cen.y : (ty * .65 + cen.y * .35);
+    /* Your own cursors regroup, but they must never stack. They cannot fight
+       each other, so a pile of them reads as a bug — two arrows sitting in the
+       same pixel with the tags overprinting, apparently refusing to duel. So
+       the squad has a personal space: pull together beyond 90px, shove apart
+       inside SEP, and the flock holds a loose formation instead of a point. */
+    const SEP = 34;
+    let rx = 0, ry = 0;
+    for (const o of curs) {
+      if (o === c || o.key !== c.key) continue;
+      const dx = c.x - o.x, dy = c.y - o.y, d2 = dx * dx + dy * dy;
+      if (d2 > SEP * SEP) continue;
+      const d = Math.max(4, Math.sqrt(d2));
+      rx += dx / d * (SEP - d); ry += dy / d * (SEP - d);
+    }
+    if (rx || ry) { tx = c.x + rx * 3; ty = c.y + ry * 3; turn = Math.max(turn, 5.5); }
+    else {
+      const cen = centroid(c);
+      if (cen && ((cen.x - c.x) ** 2 + (cen.y - c.y) ** 2) > 90 * 90) {
+        tx = tx === null ? cen.x : (tx * .65 + cen.x * .35);
+        ty = ty === null ? cen.y : (ty * .65 + cen.y * .35);
+      }
     }
     if (tx !== null) {
       const want = Math.atan2(ty - c.y, tx - c.x);
       c.h += clamp(angDiff(want - c.h), -1, 1) * turn * dt;
     }
     c.h += (rng.next() - .5) * 3.0 * dt;
-    const M = 30;
-    if (c.x < M) c.h += clamp(angDiff(0 - c.h), -1, 1) * 4.5 * dt;
-    if (c.x > AW - M) c.h += clamp(angDiff(Math.PI - c.h), -1, 1) * 4.5 * dt;
-    if (c.y < M) c.h += clamp(angDiff(Math.PI / 2 - c.h), -1, 1) * 4.5 * dt;
-    if (c.y > AH - M) c.h += clamp(angDiff(-Math.PI / 2 - c.h), -1, 1) * 4.5 * dt;
+    /* Edges: a wide, firm margin. At M=30 a cursor chasing something pinned to
+       the wall slid along it for seconds, which is what "stuck at the top"
+       was. Turning earlier and harder means the field is used, not its rim. */
+    const M = 64, WT = 7;
+    if (c.x < M) c.h += clamp(angDiff(0 - c.h), -1, 1) * WT * dt;
+    if (c.x > AW - M) c.h += clamp(angDiff(Math.PI - c.h), -1, 1) * WT * dt;
+    if (c.y < M) c.h += clamp(angDiff(Math.PI / 2 - c.h), -1, 1) * WT * dt;
+    if (c.y > AH - M) c.h += clamp(angDiff(-Math.PI / 2 - c.h), -1, 1) * WT * dt;
     const weight = 1 + .25 * (c.s - 1);
-    const sp = c.spd / weight;
-    c.x = clamp(c.x + Math.cos(c.h) * sp * dt, 6, AW - 6);
-    c.y = clamp(c.y + Math.sin(c.h) * sp * dt, 6, AH - 6);
+    let sp = c.spd / weight;
+    /* A hunt has to be able to end. Everyone moved at the same speed, so an
+       attacker could never close on a fleeing defender and the two of them
+       orbited each other until something else interrupted — the circles.
+       Attacking is 12% faster, defending 10% slower: DEFEND still buys you
+       time, which is what it is for, but it is no longer a way to live
+       forever. Duel odds are untouched, so none of this moves the EV. */
+    if (best && st === "attack" && bd < 520 * 520) sp *= 1.12;
+    else if (best && st === "defend" && bd < 300 * 300) sp *= .90;
+    c.x = clamp(c.x + Math.cos(c.h) * sp * dt, 24, AW - 24);
+    c.y = clamp(c.y + Math.sin(c.h) * sp * dt, 24, AH - 24);
   }
 
   /* ---------- duels ---------- */
