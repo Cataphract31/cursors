@@ -393,6 +393,18 @@ body.mobile .conv-right{display:none}
 
 /* ---------- game layer ---------- */
 #arena{position:absolute;left:0;top:0;width:1280px;height:800px;transform-origin:0 0;z-index:5000;pointer-events:none}
+/* the crash hiccup: filter-only, because syncArena owns this element's transform */
+#arena.crashed{animation:crashfx .9s steps(1) both}
+@keyframes crashfx{
+  0%{filter:invert(1) saturate(3)}
+  12%{filter:none}
+  24%{filter:invert(1) hue-rotate(90deg)}
+  36%{filter:none}
+  52%{filter:contrast(3) saturate(0)}
+  64%{filter:none}
+  78%{filter:invert(1)}
+  100%{filter:none}
+}
 #curlayer,#fxlayer{position:absolute;inset:0;pointer-events:none}
 #fxlayer{z-index:2}
 .cur{position:absolute;left:0;top:0;will-change:transform}

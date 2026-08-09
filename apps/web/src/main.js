@@ -28,7 +28,12 @@ const fmtS=u=>((u<0?"-":"")+(Math.abs(u)/1000).toFixed(3));
 const fmtSign=u=>(u<0?"-":"+")+(Math.abs(u)/1000).toFixed(3);
 
 /* ---- round timing (seconds) ---- */
-const T_JOIN=10, T_BATTLE=60, T_SHUT=12, T_RESULTS=6;
+/* The game is continuous: one perpetual battle, deploys always open. Epochs
+   exist underneath (the fairness ceremony will need bounded seed windows),
+   but the player never sees a round end — they see the system CRASH, bank
+   everyone in full, and come straight back. Length is randomized so the
+   crash cannot be camped by the clock. */
+const T_SHUT=12, T_CRASH=3, EPOCH_MIN=110, EPOCH_MAX=195;
 const RECALL_SECS=3, DUEL_MS=700;
 
 /* ================= audio ================= */
@@ -1497,6 +1502,7 @@ function syncArena(){
 }
 
 let phase="boot", phaseT=0, roundNo=0, roundId=0;
+let epochLen=150, upT=0, epochStart=0;   /* uptime never resets: the desktop stays up, only CURSORS.EXE crashes */
 let R=null;
 function newRoundRecord(){ return {pot:0,deploys:0,myIn:0,myOut:0,myKills:0,bigBank:null,deaths:0}; }
 
@@ -1544,31 +1550,21 @@ const myCurs=()=>curs.filter(c=>c.isMine&&!c.dead);
 
 /* ================= phases ================= */
 function setPhase(p,t){ phase=p; phaseT=t; renderPhase(); }
-function startJoin(){
+function startEpoch(){
   roundNo++; roundId++;
   R=newRoundRecord();
-  closeWin("win-results",{silent:true});
-  setPhase("join",T_JOIN);
-  sRound();
-  log(`— round ${roundNo}: deploys open —`);
-  chatSys(`round ${roundNo} — deploys open`);
-  botChat("join");
+  epochLen=rand(EPOCH_MIN,EPOCH_MAX);
+  epochStart=upT;
+  shutFired=false;
+  setPhase("battle",epochLen);
+  if(roundNo===1){ log("system online — deploys are open"); }
+  else{ log(`CURSORS.EXE restarted (epoch ${roundNo}) — deploys are open`); botChat("join"); }
+  /* the bots pile back in over the first ten seconds, like nothing happened */
   const rid=roundId;
   for(const b of BOTS){
     const n=pick([1,1,2,2,3]);
-    for(let i=0;i<n;i++) setTimeout(()=>{ if(roundId===rid&&phase==="join") botDeploy(b.name); },rand(500,(T_JOIN-2)*1000));
+    for(let i=0;i<n;i++) setTimeout(()=>{ if(roundId===rid&&phase==="battle"&&!shutFired) botDeploy(b.name); },rand(600,9500));
   }
-  if(auto.on){
-    for(let i=0;i<auto.count;i++) setTimeout(()=>{ if(roundId===rid&&phase==="join") deploy(true); },400+i*400);
-  }
-  updatePanel();
-}
-function startBattle(){
-  const owners=new Set(curs.map(c=>c.owner));
-  if(owners.size<2){ cancelRound(); return; }
-  setPhase("battle",T_BATTLE);
-  for(const c of curs){ c.mode="roam"; c.prevMode="roam"; }
-  log("battle begins");
   updatePanel();
 }
 let shutFired=false;
@@ -1576,7 +1572,7 @@ function startShutdownRush(){
   shutFired=true;
   openWin("win-shutdown",{silent:true});
   sShut();
-  chatSys("system is shutting down — all cursors recalling");
+  chatSys("CURSORS.EXE is not responding — all cursors recalling");
   botChat("shutdown");
   for(const c of curs) if(!c.dead&&c.mode!=="duel") forceRecall(c);
   updatePanel();
@@ -1584,72 +1580,64 @@ function startShutdownRush(){
 function forceRecall(c){
   if(c.mode!=="recall"){ c.mode="recall"; c.prevMode="recall"; c.recallT=RECALL_SECS; }
 }
-function endBattle(){
+/* the epoch boundary, dressed as what it is: a crash that banks everyone */
+function crashSystem(){
   for(const c of [...curs]) if(!c.dead) bank(c,true);
   closeWin("win-shutdown",{silent:true});
-  startResults();
-}
-function cancelRound(){
-  for(const c of [...curs]){
-    if(c.isMine){ wallet+=STAKE; myTickets-=200; R.myIn-=STAKE; }
-    removeCur(c);
-  }
-  log("round cancelled — not enough players. refunded.");
-  chatSys("round cancelled — refunds issued");
-  startResults();
-}
-function startResults(){
-  setPhase("results",T_RESULTS);
-  const net=R.myOut-R.myIn;
-  const lines=[
-    `round ${roundNo}`,
-    `pot&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: ${fmtS(R.pot)} SOL · ${R.deploys} cursors`,
-    `graveyard&nbsp;: ${R.deaths} dead`,
-    R.bigBank?`top bank&nbsp;&nbsp;: ${R.bigBank.owner} ${fmtS(R.bigBank.amt)} (×${(R.bigBank.amt/ENTRY).toFixed(1)})`:`top bank&nbsp;&nbsp;: —`,
-    `you&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: in ${fmtS(R.myIn)} · out ${fmtS(R.myOut)} · <b>${fmtSign(net)}</b>`,
-    `<span class="dim">next round in ${T_RESULTS}s…</span>`
-  ];
-  $("#resultsbody").innerHTML=lines.join("<br>");
-  if(R.myIn>0) openWin("win-results");
   const share=myTickets>0?myTickets/(globalTickets+myTickets):0;
   rakeAccrued+=share*R.deploys*FEE_RAKE;
-  log(`round ${roundNo} over. pot ${fmtS(R.pot)}`);
+  const net=R.myOut-R.myIn;
+  $("#resultsbody").innerHTML=[
+    `epoch&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: ${roundNo} · up ${fmtUp(upT-epochStart)}`,
+    `pot&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: ${fmtS(R.pot)} SOL · ${R.deploys} cursors`,
+    `graveyard&nbsp;: ${R.deaths} dead`,
+    R.bigBank?`top bank&nbsp;&nbsp;: ${R.bigBank.owner} ${fmtS(R.bigBank.amt)} (×${(R.bigBank.amt/ENTRY).toFixed(1)})`:`top bank&nbsp;&nbsp;: —`,
+    `you&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: in ${fmtS(R.myIn)} · out ${fmtS(R.myOut)} · <b>${fmtSign(net)}</b>`,
+  ].join("<br>");
+  openWin("win-results",{silent:true});
+  sError();
+  /* the whole playfield hiccups; nothing about the money does */
+  $("#arena").classList.add("crashed");
+  setTimeout(()=>$("#arena").classList.remove("crashed"),900);
+  setPhase("crash",T_CRASH);
+  log(`CURSORS.EXE crashed. epoch ${roundNo}: pot ${fmtS(R.pot)}, ${R.deaths} dead.`);
+  chatSys("it crashed again. everyone got banked. we go again");
   updatePanel();
 }
 function phaseTick(dt){
   if(phase==="boot") return;
-  phaseT-=dt;
-  if(phase==="join"&&phaseT<=0){ shutFired=false; startBattle(); }
-  else if(phase==="battle"){
-    const elapsed=T_BATTLE-phaseT;
+  upT+=dt; phaseT-=dt;
+  if(phase==="battle"){
     if(!shutFired&&phaseT<=T_SHUT) startShutdownRush();
     if(shutFired) $("#shuttimer").textContent="0:"+String(Math.max(0,Math.ceil(phaseT))).padStart(2,"0");
-    if(phaseT<=0||(elapsed>3&&curs.length===0)) endBattle();
+    if(phaseT<=0) crashSystem();
   }
-  else if(phase==="results"&&phaseT<=0) startJoin();
+  else if(phase==="crash"&&phaseT<=0){ closeWin("win-results",{silent:true}); startEpoch(); }
   renderPhase();
 }
+function fmtUp(s){ const t=Math.floor(s); return `${Math.floor(t/60)}:${String(t%60).padStart(2,"0")}`; }
 let lastPhaseText="";
 function renderPhase(){
-  const t=Math.max(0,Math.ceil(phaseT));
-  const mm="0:"+String(t).padStart(2,"0");
-  const txt=phase==="join"?`ROUND ${roundNo} · JOIN ${mm}`
-    :phase==="battle"?(shutFired?`SHUTDOWN ${mm}`:`BATTLE ${mm}`)
-    :phase==="results"?`RESULTS · next ${mm}`:"BOOT";
+  const mm="0:"+String(Math.max(0,Math.ceil(phaseT))).padStart(2,"0");
+  const live=curs.reduce((s,c)=>s+c.bounty,0);
+  const txt=phase==="battle"
+    ?(shutFired?`⚠ SHUTDOWN ${mm} — BANKING ALL`:`UPTIME ${fmtUp(upT)} · ${fmtS(live)} LIVE`)
+    :phase==="crash"?"☠ CRASHED · RESTARTING…":"BOOT";
   if(txt===lastPhaseText) return;
   lastPhaseText=txt;
+  const urgent=shutFired||phase==="crash";
   const pl=$("#phaseline");
   pl.textContent=txt;
-  pl.classList.toggle("battle",phase==="battle");
-  const chip=`R${roundNo} · ${txt.replace(`ROUND ${roundNo} · `,"")}`;
+  pl.classList.toggle("battle",urgent);
+  const chip=phase==="crash"?`R${roundNo} · CRASHED`:shutFired?`R${roundNo} · SHUTDOWN ${mm}`:`R${roundNo} · UP ${fmtUp(upT)}`;
   $("#phasechip").textContent=chip;
   const mp=$("#mh-phase");
   mp.textContent=chip;
-  mp.classList.toggle("battle",phase==="battle");
+  mp.classList.toggle("battle",urgent);
 }
 
 /* ================= deploy / recall / bank ================= */
-function canDeploy(){ return phase==="join"||(phase==="battle"&&!shutFired); }
+function canDeploy(){ return phase==="battle"&&!shutFired; }
 function deploy(silent){
   if(!canDeploy()||myCurs().length>=MAXCUR||wallet<STAKE) return;
   wallet-=STAKE;
@@ -1657,7 +1645,7 @@ function deploy(silent){
   R.myIn+=STAKE;
   R.pot+=ENTRY; R.deploys++;
   const c=makeCur(playerName(),true);
-  if(phase==="battle"){ c.mode="roam"; c.prevMode="roam"; }
+  c.mode="roam"; c.prevMode="roam";
   curs.push(c);
   if(!silent) sysSnd("hwin",.5);   /* new hardware detected: 1 cursor */
   log(`you deployed 0.100 (${myCurs().length}/${MAXCUR})`);
@@ -1667,24 +1655,25 @@ function botDeploy(name){
   if(!canDeploy()) return;
   if(curs.filter(c=>c.owner===name).length>=3) return;
   const c=makeCur(name,false);
-  if(phase==="battle"){ c.mode="roam"; c.prevMode="roam"; }
+  c.mode="roam"; c.prevMode="roam";
   curs.push(c);
   R.pot+=ENTRY; R.deploys++;
   globalTickets+=200;
   updatePanel();
 }
 function recallAll(){
-  if(phase==="join"){
-    for(const c of [...myCurs()]){
+  let refunded=0, recalled=0;
+  for(const c of [...myCurs()]){
+    if(c.grace>0){
+      /* the misclick window: spawn protection means it cannot have fought yet,
+         so undeploying inside it refunds in full with nothing to game */
       wallet+=STAKE; myTickets-=200; R.myIn-=STAKE; R.pot-=ENTRY; R.deploys--;
-      removeCur(c);
-    }
-    sClick(); log("undeployed — refunded in full");
-  }else if(phase==="battle"){
-    let n=0;
-    for(const c of myCurs()) if(c.mode==="roam"){ forceRecall(c); n++; }
-    if(n){ sClick(); log(`recalling ${n} cursor${n>1?"s":""} — banking in ${RECALL_SECS}s`); }
+      removeCur(c); refunded++;
+    }else if(c.mode==="roam"){ forceRecall(c); recalled++; }
   }
+  if(refunded) log(`undeployed ${refunded} in grace — refunded in full`);
+  if(recalled) log(`recalling ${recalled} cursor${recalled>1?"s":""} — banking in ${RECALL_SECS}s`);
+  if(refunded||recalled) sClick();
   updatePanel();
 }
 $("#btn-deploy").addEventListener("click",()=>deploy(false));
@@ -1722,11 +1711,16 @@ $("#ap-toggle").addEventListener("click",()=>{
 });
 $$(".apc").forEach(b=>b.addEventListener("click",()=>{ sClick(); auto.count=+b.dataset.c; $$(".apc").forEach(x=>x.classList.toggle("on",x===b)); }));
 $$(".apb").forEach(b=>b.addEventListener("click",()=>{ sClick(); auto.bankAt=+b.dataset.b; $$(".apb").forEach(x=>x.classList.toggle("on",x===b)); }));
+/* liquidity: the arena keeps a live bot population instead of coin-flipping.
+   The target wobbles per epoch so the field breathes; play-money only — the
+   real-money bot policy is a disclosed design still owed (see HANDOFF). */
 setInterval(()=>{
   if(!canDeploy()) return;
   if(auto.on&&myCurs().length<auto.count&&wallet>=STAKE) deploy(true);
-  if(phase==="battle"&&Math.random()<.35) botDeploy(pick(BOTS).name);
-},2200);
+  const botCurs=curs.filter(c=>!c.isMine&&!c.dead).length;
+  const target=7+(roundNo*3)%5;
+  if(botCurs<target||Math.random()<.15) botDeploy(pick(BOTS).name);
+},1800);
 
 /* ================= movement / duels ================= */
 function angDiff(a){ while(a>Math.PI)a-=2*Math.PI; while(a<-Math.PI)a+=2*Math.PI; return a; }
@@ -1760,7 +1754,8 @@ function move(c,dt){
   else{
     const st=c.isMine?stance:(c.bounty/ENTRY>=c.riskAt*.7?"defend":"attack");
     const {best,bd}=nearestEnemy(c);
-    const aggr=phase==="battle"?(.7+1.5*(T_BATTLE-phaseT)/T_BATTLE):1;
+    /* aggression ramps across the epoch: calm after a restart, frenzy before the crash */
+    const aggr=phase==="battle"?(.7+1.5*clamp((epochLen-phaseT)/epochLen,0,1)):1;
     turn=2.6*aggr;
     if(best){
       if(st==="attack"&&bd<520*520){ tx=best.x; ty=best.y; }
@@ -2012,10 +2007,12 @@ function updatePanel(){
   dep.disabled=!canDeploy()||mine.length>=MAXCUR||wallet<STAKE;
   dep.textContent=wallet<STAKE?"▸ INSUFFICIENT FUNDS"
     :mine.length>=MAXCUR?"▸ MAX 5 CURSORS LIVE"
-    :canDeploy()?"▸ DEPLOY 0.1 SOL":"▸ DEPLOYS OPEN NEXT ROUND";
+    :canDeploy()?"▸ DEPLOY 0.1 SOL"
+    :phase==="crash"?"▸ RESTARTING…":"▸ SHUTDOWN IN PROGRESS";
   const rec=$("#btn-recall");
-  rec.disabled=!mine.length||phase==="results"||(phase==="battle"&&!mine.some(c=>c.mode==="roam"));
-  rec.textContent=phase==="join"?"◂ UNDEPLOY (refund)":`◂ RECALL ALL (${RECALL_SECS}s)`;
+  const graced=mine.some(c=>c.grace>0);
+  rec.disabled=phase==="crash"||!mine.some(c=>c.mode==="roam"||c.grace>0);
+  rec.textContent=graced?"◂ UNDEPLOY (refund)":`◂ RECALL ALL (${RECALL_SECS}s)`;
   $("#st-attack").classList.toggle("on",stance==="attack");
   $("#st-defend").classList.toggle("on",stance==="defend");
   $("#livecount").textContent=mine.length;
@@ -2027,10 +2024,10 @@ function updatePanel(){
   /* the thumb bar shows the same state in fewer letters */
   const hd=$("#mh-deploy");
   hd.disabled=dep.disabled;
-  hd.textContent=wallet<STAKE?"NO FUNDS":mine.length>=MAXCUR?"MAX 5 LIVE":canDeploy()?"▸ DEPLOY 0.1":"NEXT ROUND";
+  hd.textContent=wallet<STAKE?"NO FUNDS":mine.length>=MAXCUR?"MAX 5 LIVE":canDeploy()?"▸ DEPLOY 0.1":phase==="crash"?"REBOOT…":"SHUTDOWN";
   const hrc=$("#mh-recall");
   hrc.disabled=rec.disabled;
-  hrc.textContent=phase==="join"?"◂ UNDO":"◂ RECALL";
+  hrc.textContent=graced?"◂ UNDO":"◂ RECALL";
   $("#mh-attack").classList.toggle("on",stance==="attack");
   $("#mh-defend").classList.toggle("on",stance==="defend");
   $("#mh-live").textContent=`${mine.length}/5 · ${fmtS(liveVal)}`;
@@ -2058,7 +2055,7 @@ let last=performance.now();
 function frame(t){
   const dt=Math.min(.05,(t-last)/1000); last=t;
   phaseTick(dt);
-  if(phase==="battle"||phase==="join"){
+  if(phase==="battle"){
     for(const c of [...curs]) if(!c.dead&&c.mode!=="duel") move(c,dt);
   }
   if(phase==="battle"){
@@ -2109,7 +2106,7 @@ if(MOBILE){
 }
 chatSys("welcome to the desktop. say gm.");
 renderBin(); updatePanel();
-startJoin();
+startEpoch();
 requestAnimationFrame(frame);
 
 /* ================= login / power flow ================= */
@@ -2228,6 +2225,9 @@ if(location.hash.indexOf("#desktop-exp")===0) setTimeout(()=>{ /* dev: capture E
   if(p==="-props"){ explorer.go("C:\\"); setTimeout(()=>explorer.driveProperties(),400); }
   if(p==="-sysprops") setTimeout(()=>{ $("#sp-user").textContent=playerNameFull(); openWin("win-sysprops"); },300);
 },600);
+if(location.hash==="#desktop-crash") setTimeout(()=>{ /* dev: fast-forward to the shutdown rush and crash */
+  phaseT=Math.min(phaseT,T_SHUT+3);
+},2500);
 if(location.hash==="#desktop-binlive") setTimeout(()=>{ /* dev: does the open folder fill up as cursors actually die? */
   openWin("win-explorer"); explorer.go("Recycle Bin"); explorer.setView("details");
 },600);

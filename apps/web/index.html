@@ -50,7 +50,7 @@
       <div class="walletrow"><span>WALLET</span><span class="amt" id="walletamt">5.000 SOL</span></div>
       <div class="hr"></div>
       <button class="xbtn big" id="btn-deploy">▸ DEPLOY 0.1 SOL</button>
-      <div class="small dim" style="margin-top:4px">0.100 = 0.097 arena + 0.001 fee + 0.002 rakeback · deploys open all battle</div>
+      <div class="small dim" style="margin-top:4px">0.100 = 0.097 arena + 0.001 fee + 0.002 rakeback · deploys always open · a crash banks everyone in full</div>
       <div class="small" style="margin-top:4px">live <b id="livecount">0</b>/5 · in play <b class="mono" id="liveval">0.000</b></div>
       <div class="chiprow" style="margin-top:6px">
         <button class="xbtn chip on" id="st-attack">⚔ ATTACK</button>
@@ -59,7 +59,7 @@
       <button class="xbtn big" id="btn-recall" style="margin-top:2px">◂ RECALL ALL (3s)</button>
       <div class="hr"></div>
       <div class="aprow"><span class="lb">AUTOPLAY</span><button class="xbtn chip" id="ap-toggle" style="flex:1">OFF</button></div>
-      <div class="aprow"><span class="lb">per round</span><span class="chiprow" style="flex:1;margin:0"><button class="xbtn chip apc" data-c="1">1</button><button class="xbtn chip apc on" data-c="3">3</button><button class="xbtn chip apc" data-c="5">5</button></span></div>
+      <div class="aprow"><span class="lb">keep live</span><span class="chiprow" style="flex:1;margin:0"><button class="xbtn chip apc" data-c="1">1</button><button class="xbtn chip apc on" data-c="3">3</button><button class="xbtn chip apc" data-c="5">5</button></span></div>
       <div class="aprow"><span class="lb">bank at</span><span class="chiprow" style="flex:1;margin:0"><button class="xbtn chip apb on" data-b="2">×2</button><button class="xbtn chip apb" data-b="5">×5</button><button class="xbtn chip apb" data-b="0">ride</button></span></div>
       <div class="hr"></div>
       <div class="small mono" id="rakeline">rakeback: 0 tk · 0.00% · +0.0000 SOL</div>
@@ -582,19 +582,28 @@ icons/sounds: winXP (MIT)</div>
     <div class="win-body" style="display:flex;gap:12px;align-items:center">
       <svg style="width:36px;height:36px;flex:none"><use href="#ic-warn"/></svg>
       <div>
-        <div>This desktop is shutting down. All cursors are recalling to start.</div>
+        <div>CURSORS.EXE is not responding. All cursors are recalling to bank before the crash.</div>
         <div class="mono" style="font-size:20px;font-weight:bold;margin-top:6px" id="shuttimer">0:12</div>
       </div>
     </div>
   </div>
 
-  <!-- Round results -->
-  <div class="window fixed" id="win-results" style="left:calc(50% - 170px);top:100px;width:340px">
+  <!-- The crash: the epoch boundary, dressed as an XP error report -->
+  <div class="window fixed" id="win-results" style="left:calc(50% - 186px);top:96px;width:372px">
     <div class="title-bar">
-      <div class="tb-l"><i class="xico tb-ico" data-ico="@ic-app"></i><div class="title-bar-text">Round results</div></div>
+      <div class="tb-l"><i class="xico tb-ico" data-ico="err16"></i><div class="title-bar-text">CURSORS.EXE</div></div>
       <div class="title-bar-controls"><button aria-label="Close"></button></div>
     </div>
-    <div class="win-body mono" id="resultsbody" style="line-height:1.9"></div>
+    <div class="win-body">
+      <div style="display:flex;gap:10px;align-items:flex-start">
+        <i class="xico" data-ico="err32" style="width:32px;height:32px;flex:none"></i>
+        <div style="font-size:11px;line-height:1.5">CURSORS.EXE has encountered a problem and needs to restart.<br>
+        <b>All live cursors were banked in full.</b> No value was lost.</div>
+      </div>
+      <div class="hr"></div>
+      <div class="mono" id="resultsbody" style="line-height:1.9"></div>
+      <div class="small dim" style="margin-top:6px">restarting automatically…</div>
+    </div>
   </div>
 
   <!-- Log Off dialog -->
@@ -626,7 +635,7 @@ icons/sounds: winXP (MIT)</div>
   <div id="ql"><span class="ql-grip"></span><button class="qlb" id="ql-desk" data-tip="Show Desktop"><svg><use href="#ic-desk"/></svg></button><button class="qlb" data-app="win-amp" data-tip="Winamp"><i class="xico" data-ico="amp16"></i></button><button class="qlb" data-app="win-chat" data-tip="Windows Messenger"><i class="xico" data-ico="msn16"></i></button><span class="ql-grip"></span></div>
   <div id="tabs"></div>
   <div id="tray">
-    <span id="phasechip" data-tip="Round status">R0 · BOOT</span>
+    <span id="phasechip" data-tip="System status">R0 · BOOT</span>
     <i class="xico trayico" id="sndico" data-ico="trayVol" data-tip="Volume: click to mute"></i>
     <i class="xico trayico" data-ico="trayUsb" data-tip="Safely Remove Hardware: never"></i>
     <i class="xico trayico" data-ico="trayRisk" data-tip="Your computer might be at risk"></i>

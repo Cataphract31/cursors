@@ -111,8 +111,23 @@ the **real 80-emoticon MSN retro set** with ~110 text shortcuts and a picker. Bo
 per-contact reply pools and answer you; presence drifts; sign-ins raise stacking toasts.
 
 **The game** — deploy/recall/stances, duels with odds display, gold bursts, kill streaks,
-BSOD on losing your last cursor, shutdown rush, results, rakeback tracking, autoplay. Every
-death writes a certificate (`certify()` in main.js) that the Recycle Bin renders.
+BSOD on losing your last cursor, rakeback tracking, autoplay. Every death writes a
+certificate (`certify()` in main.js) that the Recycle Bin renders.
+
+**Continuous play (owner-directed, 2026-08-09).** The join→battle→results loop is gone.
+The game is one perpetual battle: deploys always open, an UPTIME counter instead of a
+round clock, bots hold a live population (target wobbles per epoch). Internal epochs
+remain — randomized 110–195s, needed later for commit-reveal seed windows — but the player
+never sees a round end: the 12s shutdown rush fires, **everyone banks in full** (the crash
+can never cost money), then a 3s XP error dialog ("CURSORS.EXE has encountered a problem")
+shows the epoch receipt while the arena does a filter-glitch flicker, and bots pile back in.
+Uptime never resets — only CURSORS.EXE crashes, the desktop stays up. Epoch length is
+randomized so the crash can't be camped by the clock (camping it = instant-banker strategy,
+same EV, fine). Undeploy survives as a misclick window: full refund only while a cursor is
+still in spawn grace (it cannot have fought yet, so nothing to game). Autoplay's "per
+round" count became "keep live" — a maintained population. Economics untouched.
+Dev hash: `#desktop-crash` fast-forwards the first epoch (~9s settle catches the shutdown
+rush, ~18.5s the crash dialog, ~27s the recovered arena).
 
 ---
 
@@ -254,4 +269,6 @@ escrow (replacement, not hardening); no graceful shutdown.
 - Artifact viewer may hand the page a desktop-width viewport on phones; real hosting won't
 - `main.js` should keep shedding modules as apps grow (minesweeper/messenger set the pattern)
 - Bot/liquidity policy for dead hours needs a disclosed design before real money
-- Round timings are feel-tuned, not measured
+- Epoch timings (110–195s, 12s shutdown, 3s crash) are feel-tuned, not measured
+- The crash dialog auto-opens for everyone every epoch; if playtests find it annoying,
+  the candidate fix is showing it only when the player had money in, with a balloon otherwise
