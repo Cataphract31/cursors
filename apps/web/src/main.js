@@ -1,5 +1,7 @@
+import "xp.css";
 import "./style.css";
 import WebampImport from "webamp";
+import { IMG, SNDF } from "./assets.js";
 const Webamp = (WebampImport && WebampImport.default) ? WebampImport.default : WebampImport;
 
 "use strict";
@@ -36,7 +38,7 @@ function tone(f,dur,type,vol,delay,slide){
     o.connect(g).connect(c.destination); o.start(t); o.stop(t+dur+.03);
   }catch(e){}
 }
-const sClick =()=>tone(1200,.04,"square",.025);
+/* -- game synths (game flavor stays ours) -- */
 const sDeploy=()=>tone(280,.2,"sawtooth",.05,0,520);
 const sDuel  =()=>{tone(880,.06,"square",.04);tone(660,.06,"square",.04,.09);};
 const sKill  =()=>{tone(190,.16,"sawtooth",.08,0,-110);tone(1568,.09,"square",.05,.13);tone(2093,.13,"square",.05,.21);};
@@ -45,15 +47,31 @@ const sBank  =()=>[523,659,784,1046].forEach((f,i)=>tone(f,.11,"square",.05,i*.0
 const sRound =()=>[392,523,659].forEach((f,i)=>tone(f,.12,"square",.045,i*.09));
 const sShut  =()=>{tone(220,.3,"sawtooth",.07,0,-60);tone(220,.3,"sawtooth",.07,.4,-60);};
 const sRes   =()=>{tone(700,.08,"square",.05);tone(500,.1,"square",.05,.1);};
-const sChat  =()=>tone(1000,.05,"square",.03);
-const sNudge =()=>tone(90,.3,"sawtooth",.09,0,-30);
-const sOpen  =()=>{tone(620,.07,"triangle",.05);tone(830,.09,"triangle",.04,.05);};
-const sClose =()=>{tone(830,.07,"triangle",.05);tone(540,.09,"triangle",.04,.05);};
-const sMini  =()=>tone(680,.13,"triangle",.05,0,-330);
-const sMaxi  =()=>tone(420,.13,"triangle",.05,0,330);
-const sMenu  =()=>tone(1500,.03,"square",.016);
-const sError =()=>{tone(415,.22,"sine",.09);tone(311,.3,"sine",.08,.02);};
-const sBalloon=()=>{tone(1046,.08,"triangle",.05);tone(1568,.1,"triangle",.04,.09);};
+/* -- OS sounds: the real 2001 scheme (see assets.js) -- */
+function sysSnd(name,vol){
+  if(muted) return;
+  try{
+    const a=new Audio(SNDF[name]);
+    a.volume=vol==null?.55:vol;
+    a.play().catch(()=>{});
+  }catch(e){}
+}
+const sClick =()=>{};                 /* XP buttons are silent */
+const sChat  =()=>{};
+const sMenu  =()=>{};
+const sOpen  =()=>{};                 /* XP opens windows silently */
+const sClose =()=>{};
+const sMini  =()=>sysSnd("minimize");
+const sMaxi  =()=>sysSnd("restore");
+const sError =()=>sysSnd("critical",.6);
+const sBalloon=()=>sysSnd("balloon",.6);
+const sNudge =()=>sysSnd("msnNudge",.65);
+let lastAlert=0;
+function msnAlert(){
+  const now=performance.now();
+  if(now-lastAlert<3500) return;
+  lastAlert=now; sysSnd("msnAlert",.45);
+}
 function noiseBurst(dur,vol,delay){
   if(muted) return;
   try{
@@ -66,29 +84,10 @@ function noiseBurst(dur,vol,delay){
     n.connect(g).connect(c.destination); n.start(t);
   }catch(e){}
 }
-const sCrunch=()=>{noiseBurst(.2,.14);tone(170,.13,"sawtooth",.05,.03,-70);};
-function chime(){
-  if(muted) return;
-  try{
-    const c=ac(), t0=c.currentTime;
-    [[392,0,.9],[523.25,.12,.9],[659.25,.24,1],[783.99,.36,1.5]].forEach(([f,d,dur])=>{
-      const o=c.createOscillator(),g=c.createGain();
-      o.type="triangle"; o.frequency.value=f;
-      g.gain.setValueAtTime(0,t0+d);
-      g.gain.linearRampToValueAtTime(.12,t0+d+.06);
-      g.gain.exponentialRampToValueAtTime(.001,t0+d+dur);
-      o.connect(g).connect(c.destination); o.start(t0+d); o.stop(t0+d+dur+.05);
-    });
-    const o=c.createOscillator(),g=c.createGain();
-    o.type="sine"; o.frequency.value=130.81;
-    g.gain.setValueAtTime(0,t0);
-    g.gain.linearRampToValueAtTime(.055,t0+.3);
-    g.gain.exponentialRampToValueAtTime(.001,t0+1.9);
-    o.connect(g).connect(c.destination); o.start(t0); o.stop(t0+2);
-  }catch(e){}
-}
+const sCrunch=()=>sysSnd("recycle",.6);
+const chime  =()=>sysSnd("logon",.7);
 addEventListener("pointerdown",()=>{ if(AC&&AC.state==="suspended") AC.resume(); },{capture:true});
-$("#sndico").addEventListener("click",()=>{ muted=!muted; $("#sndico").textContent=muted?"🔇":"🔊"; });
+$("#sndico").addEventListener("click",()=>{ muted=!muted; $("#sndico").classList.toggle("muted",muted); });
 
 /* ================= shell persistence ================= */
 const store={
@@ -106,12 +105,78 @@ const store={
 };
 store.load();
 
+/* ================= real XP assets into the static shell ================= */
+function icoNode(key){
+  if(key&&key[0]==="@"){
+    const box=document.createElement("span");
+    box.className="svgbox";
+    box.innerHTML=`<svg viewBox="0 0 32 32" style="width:100%;height:100%;display:block"><use href="#${key.slice(1)}"/></svg>`;
+    return box;
+  }
+  const img=document.createElement("img");
+  img.src=IMG[key]||IMG[key.replace(/16$/,"32")]||IMG.folder16;
+  img.alt=""; img.draggable=false;
+  return img;
+}
+$$(".xico[data-ico]").forEach(el=>{ el.appendChild(icoNode(el.dataset.ico)); });
+$("#startbtn").src=IMG.startBtn;
+$("#sm-ava").src=IMG.user48;
+$("#sm-allarrow").src=IMG.allProg;
+$("#lg-avaimg").src=IMG.user48;
+$("#lg-offimg").src=IMG.off32;
+$$(".boot-flag,.lg-flag").forEach(el=>{ el.src=IMG.flag; });
+/* legacy saved icons (pre-asset builds) get real icons */
+for(const u of store.data.userIcons) if(!u.ico) u.ico=u.kind==="folder"?"folder32":"note32";
+
 /* ================= window manager ================= */
-let zTop=100;
+/* One process table is the single source of truth. The taskbar is a pure
+   render of it — rebuilt on every mutation, never patched in place. Webamp
+   is a normal entry (kind:"webamp"), so zombie tabs are impossible. */
+let webamp=null;
+function wampWrap(){ return document.getElementById("webamp-wrap"); }
+function showWamp(){ const w=wampWrap(); if(w) w.style.display=""; }
+function hideWamp(){ const w=wampWrap(); if(w) w.style.display="none"; }
+let zTop=100, focusedId=null;
 const openApps=new Map();
-const NOTAB=new Set(["win-logoff","win-shutdown","win-results","win-error","win-confirm","win-props"]);
-function tabIconHref(id){ const u=$("#"+id+" .titlebar use"); return u?u.getAttribute("href"):"#ic-app"; }
-function tabTitle(id){ return $("#"+id+" .titlebar .tt").textContent; }
+const NOTAB=new Set(["win-logoff","win-shutdown","win-results","win-error","win-confirm","win-props","win-run"]);
+function tabTitle(id){ const a=openApps.get(id); if(a&&a.title) return a.title; const t=$("#"+id+" .title-bar-text"); return t?t.textContent:id; }
+function tabIconHTML(id){
+  const el=$("#"+id+" .title-bar .tb-ico");
+  if(!el) return "";
+  const img=el.querySelector("img");
+  if(img) return `<img src="${img.src}" alt="">`;
+  const u=el.querySelector("use");
+  return u?`<svg><use href="${u.getAttribute("href")}"/></svg>`:"";
+}
+function renderTaskbar(){
+  const host=$("#tabs"); host.innerHTML="";
+  for(const [id,a] of openApps){
+    if(a.notab) continue;
+    const tab=document.createElement("button");
+    tab.className="task-tab"+(id===focusedId&&!a.min?" on":"");
+    tab.dataset.win=id;
+    tab.innerHTML=`${a.icon}<span></span>`;
+    tab.querySelector("span").textContent=tabTitle(id);
+    tab.addEventListener("click",()=>tabClick(id));
+    host.appendChild(tab);
+    a.tabEl=tab;
+  }
+}
+function tabClick(id){
+  const a=openApps.get(id); if(!a) return;
+  if(a.kind==="webamp"){
+    if(a.min){ a.min=false; focusedId=id; showWamp(); try{ webamp.reopen(); }catch(e){} }
+    else{ a.min=true; if(focusedId===id) focusedId=null; hideWamp(); }
+    renderTaskbar(); return;
+  }
+  if(a.min) restoreWin(id);
+  else if(id===focusedId) minWin(id);
+  else focusWin(id);
+}
+function tbInactive(el,inactive){
+  const tb=el&&el.querySelector?el.querySelector(".title-bar"):null;
+  if(tb) tb.classList.toggle("inactive",inactive);
+}
 function saveWinRect(el){
   store.data.wins[el.id]={l:el.style.left,t:el.style.top,w:el.style.width||"",h:el.style.height||"",max:el.classList.contains("maxed")?1:0};
   store.save();
@@ -132,29 +197,16 @@ function openWin(id,opts){
   if(!was&&!el._rectApplied){ applyWinRect(el); el._rectApplied=true; }
   el.style.display="flex";
   if(!was){
-    let tab=null;
-    if(!NOTAB.has(id)){
-      tab=document.createElement("button");
-      tab.className="task-tab"; tab.dataset.win=id;
-      tab.innerHTML=`<svg><use href="${tabIconHref(id)}"/></svg><span>${tabTitle(id)}</span>`;
-      tab.addEventListener("click",()=>{
-        const a=openApps.get(id);
-        if(a.min) restoreWin(id);
-        else if(el.classList.contains("focused")) minWin(id);
-        else focusWin(id);
-      });
-      $("#tabs").appendChild(tab);
-    }
-    openApps.set(id,{el,tab,min:false});
-    if(!opts.silent) sOpen();
-  }else{
-    const a=openApps.get(id);
-    if(a.min) restoreWin(id);
+    openApps.set(id,{el,min:false,notab:NOTAB.has(id),icon:tabIconHTML(id)});
+    if(id==="win-chat"&&!opts.silent) sysSnd("msnOnline",.5);
   }
+  else if(openApps.get(id).min){ restoreWin(id); return; }
   focusWin(id);
+  if(id==="win-run") setTimeout(()=>{ const i=$("#run-in"); i.value=""; i.focus(); },0);
 }
 function restoreWin(id){
   const a=openApps.get(id); if(!a) return;
+  if(a.kind==="webamp"){ if(a.min) tabClick(id); return; }
   a.min=false;
   a.el.style.display="flex";
   a.el.style.opacity="0"; a.el.style.transform="scale(.92)";
@@ -163,21 +215,26 @@ function restoreWin(id){
     a.el.style.opacity=""; a.el.style.transform="";
     setTimeout(()=>{ a.el.style.transition=""; },140);
   });
+  sysSnd("restore",.5);
   focusWin(id);
 }
 function closeWin(id,opts){
+  if(id==="win-amp"){ winampApp.close(); return; }
   const a=openApps.get(id); if(!a) return;
   a.el.style.display="none"; a.el.classList.remove("focused");
-  if(a.tab) a.tab.remove();
   openApps.delete(id);
-  if(!(opts&&opts.silent)) sClose();
+  if(focusedId===id) focusedId=null;
+  renderTaskbar();
 }
 function minWin(id){
   const a=openApps.get(id); if(!a||a.min) return;
+  if(a.kind==="webamp"){ tabClick(id); return; }
   a.min=true;
+  if(focusedId===id) focusedId=null;
+  renderTaskbar();
   const el=a.el, r=el.getBoundingClientRect();
   let tx=40;
-  if(a.tab){ const tr=a.tab.getBoundingClientRect(); tx=tr.left+tr.width/2; }
+  if(a.tabEl){ const tr=a.tabEl.getBoundingClientRect(); tx=tr.left+tr.width/2; }
   el.style.transition="transform .17s ease-in,opacity .17s ease-in";
   el.style.transformOrigin="0 100%";
   el.style.transform=`translate(${tx-r.left}px,${H-r.top}px) scale(.06)`;
@@ -185,7 +242,7 @@ function minWin(id){
   sMini();
   setTimeout(()=>{ el.style.display="none"; el.style.transition=""; el.style.transform=""; el.style.opacity=""; el.style.transformOrigin=""; },180);
   el.classList.remove("focused"); el.classList.add("inactive");
-  if(a.tab) a.tab.classList.remove("on");
+  tbInactive(el,true);
 }
 function maxWin(id){
   const el=document.getElementById(id);
@@ -194,7 +251,7 @@ function maxWin(id){
     el.classList.remove("maxed");
     const p=el._prevRect;
     if(p){ el.style.left=p.l; el.style.top=p.t; el.style.width=p.w; el.style.height=p.h; }
-    sOpen();
+    sysSnd("restore",.5);
   }else{
     el._prevRect={l:el.style.left,t:el.style.top,w:el.style.width,h:el.style.height};
     el.classList.add("maxed");
@@ -204,14 +261,17 @@ function maxWin(id){
   saveWinRect(el);
 }
 function focusWin(id){
-  zTop++;
+  zTop++; focusedId=id;
   for(const [k,a] of openApps){
+    if(a.kind==="webamp") continue;
     const on=k===id;
     a.el.classList.toggle("focused",on);
     a.el.classList.toggle("inactive",!on);
-    if(a.tab) a.tab.classList.toggle("on",on&&!a.min);
+    tbInactive(a.el,!on);
   }
-  document.getElementById(id).style.zIndex=zTop;
+  const el=document.getElementById(id);
+  if(el) el.style.zIndex=zTop;
+  renderTaskbar();
 }
 const CURMAP={n:"n-resize",s:"s-resize",e:"e-resize",w:"w-resize",ne:"ne-resize",nw:"nw-resize",se:"se-resize",sw:"sw-resize"};
 function edgeDir(w,e){
@@ -225,16 +285,17 @@ function edgeDir(w,e){
 let reszActive=null;
 $$(".window").forEach(w=>{
   w.addEventListener("pointerdown",()=>{ if(openApps.has(w.id)) focusWin(w.id); });
-  const tb=w.querySelector(".titlebar");
-  const btnMin=w.querySelector(".tbtn.min"), btnClose=w.querySelector(".tbtn.close");
+  const tb=w.querySelector(".title-bar");
+  const btnMin=w.querySelector('.title-bar-controls button[aria-label="Minimize"]');
+  const btnClose=w.querySelector('.title-bar-controls button[aria-label="Close"]');
   if(btnMin) btnMin.addEventListener("click",e=>{e.stopPropagation();minWin(w.id);});
   if(btnClose) btnClose.addEventListener("click",e=>{e.stopPropagation();closeWin(w.id);});
   if(!w.classList.contains("fixed")&&btnClose){
     const btnMax=document.createElement("button");
-    btnMax.className="tbtn max"; btnMax.setAttribute("aria-label","Maximize"); btnMax.textContent="❐";
+    btnMax.setAttribute("aria-label","Maximize");
     btnClose.before(btnMax);
     btnMax.addEventListener("click",e=>{e.stopPropagation();maxWin(w.id);});
-    tb.addEventListener("dblclick",e=>{ if(!e.target.closest(".tbtn")) maxWin(w.id); });
+    tb.addEventListener("dblclick",e=>{ if(!e.target.closest(".title-bar-controls")) maxWin(w.id); });
     w.addEventListener("pointermove",e=>{
       if(reszActive) return;
       const d=w.classList.contains("maxed")?"":edgeDir(w,e);
@@ -242,7 +303,7 @@ $$(".window").forEach(w=>{
     });
     w.addEventListener("pointerdown",e=>{
       if(w.classList.contains("maxed")) return;
-      if(e.target.closest(".tbtn")) return;
+      if(e.target.closest(".title-bar-controls")) return;
       const d=edgeDir(w,e); if(!d) return;
       e.stopPropagation(); e.preventDefault();
       if(openApps.has(w.id)) focusWin(w.id);
@@ -264,7 +325,7 @@ $$(".window").forEach(w=>{
     },true);
   }
   tb.addEventListener("pointerdown",e=>{
-    if(e.target.closest(".tbtn")) return;
+    if(e.target.closest(".title-bar-controls")) return;
     if(w.classList.contains("maxed")) return;
     const r=w.getBoundingClientRect(), dx=e.clientX-r.left, dy=e.clientY-r.top;
     const move=ev=>{
@@ -278,13 +339,14 @@ $$(".window").forEach(w=>{
 
 /* ================= desktop icons ================= */
 const SYSICONS=[
-  {id:"computer",label:"My Computer",href:"#ic-computer",app:"win-computer",sys:1},
-  {id:"recycle",label:"Recycle Bin",href:"#ic-bin",app:"win-recycle",sys:1},
-  {id:"cursors",label:"CURSORS.EXE",href:"#ic-app",app:"win-cursors",sys:1},
-  {id:"chat",label:"Messenger",href:"#ic-fly",app:"win-chat",sys:1},
-  {id:"amp",label:"Winamp",href:"#ic-amp",app:"win-amp",sys:1},
-  {id:"log",label:"fights.log",href:"#ic-note",app:"win-log",sys:1},
-  {id:"readme",label:"README.txt",href:"#ic-txt",app:"win-readme",sys:1},
+  {id:"computer",label:"My Computer",ico:"computer32",app:"win-computer",sys:1},
+  {id:"recycle",label:"Recycle Bin",ico:"bin32",app:"win-recycle",sys:1},
+  {id:"cursors",label:"CURSORS.EXE",ico:"@ic-app",app:"win-cursors",sys:1},
+  {id:"ie",label:"Internet Explorer",ico:"ie32",app:"win-ie",sys:1},
+  {id:"chat",label:"Windows Messenger",ico:"msn32",app:"win-chat",sys:1},
+  {id:"amp",label:"Winamp",ico:"amp16",app:"win-amp",sys:1},
+  {id:"log",label:"fights.log",ico:"note32",app:"win-log",sys:1},
+  {id:"readme",label:"README.txt",ico:"note32",app:"win-readme",sys:1},
 ];
 const CELLW=84, CELLH=86, GX=12, GY=8;
 let curTxtIcon=null, binFiles=[];
@@ -311,8 +373,9 @@ function renderIcons(){
     const el=document.createElement("div");
     el.className="icon"; el.dataset.iid=ic.id;
     el.style.left=(GX+p.c*CELLW)+"px"; el.style.top=(GY+p.r*CELLH)+"px";
-    el.innerHTML=`<svg><use href="${ic.href}"/></svg><div class="lbl"></div>`;
-    el.querySelector(".lbl").textContent=ic.label;
+    el.appendChild(icoNode(ic.ico));
+    const lbl=document.createElement("div"); lbl.className="lbl"; lbl.textContent=ic.label;
+    el.appendChild(lbl);
     hookIcon(el,ic);
     host.appendChild(el);
   }
@@ -349,14 +412,18 @@ function hookIcon(el,ic){
   });
   el.addEventListener("dblclick",()=>{ sClick(); openIcon(ic); });
 }
+function openFolderWin(name){
+  $("#win-folder .title-bar-text").textContent=name;
+  $("#folderbody").innerHTML=`This folder is empty.<br><span style="color:#8A8A7A">0 objects · 0 bytes of conviction</span>`;
+  openWin("win-folder");
+}
 function openIcon(ic){
+  sysSnd("nav",.5);
   if(ic.app==="folder"){
-    $("#win-folder .tt").textContent=ic.label;
-    $("#folderbody").innerHTML=`This folder is empty.<br><span style="color:#8A8A7A">0 objects · 0 bytes of conviction</span>`;
-    openWin("win-folder");
+    openFolderWin(ic.label);
   }else if(ic.app==="usertxt"){
     curTxtIcon=ic;
-    $("#win-usertxt .tt").textContent=ic.label+" - Notepad";
+    $("#win-usertxt .title-bar-text").textContent=ic.label+" - Notepad";
     $("#usertxtarea").value=store.data.texts[ic.id]||"";
     openWin("win-usertxt");
   }else openWin(ic.app);
@@ -367,13 +434,13 @@ $("#usertxtarea").addEventListener("input",()=>{
 let userN=(store.data.userIcons.reduce((m,i)=>Math.max(m,+(i.id.split("_")[1])||0),0))+1;
 function newFolder(){
   const p=firstFreeCell();
-  const ic={id:"user_"+userN++,label:"New Folder",href:"#ic-folder",app:"folder",kind:"folder"};
+  const ic={id:"user_"+userN++,label:"New Folder",ico:"folder32",app:"folder",kind:"folder"};
   store.data.userIcons.push(ic); store.data.icons[ic.id]=p; store.save();
   renderIcons(); startRename(ic);
 }
 function newTextDoc(){
   const p=firstFreeCell();
-  const ic={id:"user_"+userN++,label:"New Text Document.txt",href:"#ic-txt",app:"usertxt",kind:"txt"};
+  const ic={id:"user_"+userN++,label:"New Text Document.txt",ico:"note32",app:"usertxt",kind:"txt"};
   store.data.userIcons.push(ic); store.data.icons[ic.id]=p; store.save();
   renderIcons(); startRename(ic);
 }
@@ -442,17 +509,17 @@ desktop.addEventListener("pointerdown",e=>{
 /* ================= shared dialogs ================= */
 let confirmCb=null;
 function showError(title,text){
-  $("#win-error .tt").textContent=title;
+  $("#win-error .title-bar-text").textContent=title;
   $("#errtext").textContent=text;
   openWin("win-error",{silent:true}); sError();
 }
 function showConfirm(title,text,cb){
-  $("#win-confirm .tt").textContent=title;
+  $("#win-confirm .title-bar-text").textContent=title;
   $("#conftext").textContent=text;
   confirmCb=cb; openWin("win-confirm");
 }
 function showProps(ic){
-  $("#prop-ico").setAttribute("href",ic.href);
+  const host=$("#prop-ico"); host.innerHTML=""; host.appendChild(icoNode(ic.ico));
   $("#prop-name").textContent=ic.label;
   const type=ic.sys?"System file":(ic.kind==="folder"?"File Folder":"Text Document");
   $("#prop-rows").innerHTML=`Type: <b>${type}</b><br>Location: <b>C:\\Desktop</b><br>Size: <b>4.00 KB (4,096 bytes of nostalgia)</b><br>Created: <b>Tuesday, August 24, 2001</b>`;
@@ -530,6 +597,7 @@ function iconMenu(ic){
   return items;
 }
 function winMenu(id){
+  if(id==="win-amp") return [{label:"Close",bold:1,action:()=>closeWin("win-amp")}];
   const el=document.getElementById(id);
   const fixed=el.classList.contains("fixed");
   return [
@@ -577,7 +645,7 @@ document.addEventListener("contextmenu",e=>{
     return;
   }
   const icon=e.target.closest(".icon");
-  const tb=e.target.closest(".titlebar");
+  const tb=e.target.closest(".title-bar");
   const tab=e.target.closest(".task-tab");
   const tray=e.target.closest("#tray");
   const bar=e.target.closest("#taskbar");
@@ -601,12 +669,12 @@ $("#ql-desk").addEventListener("click",()=>{
     if(deskStash.length) deskStash.forEach(minWin); else deskStash=null;
   }
 });
-$$("#ql .qlb[data-app]").forEach(b=>b.addEventListener("click",()=>{ sClick(); openWin(b.dataset.app); }));
+$$("#ql .qlb[data-app]").forEach(b=>b.addEventListener("click",()=>{ sysSnd("nav",.5); openWin(b.dataset.app); }));
 function showDesktopToggle(){ $("#ql-desk").click(); }
 function cascadeWins(){
   let i=0;
   for(const [id,a] of openApps){
-    if(NOTAB.has(id)) continue;
+    if(NOTAB.has(id)||a.kind==="webamp") continue;
     if(a.min){ a.min=false; a.el.style.display="flex"; }
     a.el.classList.remove("maxed");
     a.el.style.left=(36+i*26)+"px"; a.el.style.top=(24+i*26)+"px";
@@ -637,11 +705,85 @@ const startmenu=$("#startmenu");
 function closeStart(){ startmenu.classList.remove("open"); }
 $("#startbtn").addEventListener("click",e=>{ e.stopPropagation(); sClick(); startmenu.classList.toggle("open"); });
 addEventListener("pointerdown",e=>{ if(!e.target.closest("#startmenu,#startbtn")) closeStart(); });
-addEventListener("keydown",e=>{ if(e.key==="Escape"){ closeStart(); hideMenu(); } });
-$$(".sm-item").forEach(it=>it.addEventListener("click",()=>{ sClick(); closeStart(); openWin(it.dataset.app); }));
+addEventListener("keydown",e=>{
+  if(e.key==="Escape"){ closeStart(); hideMenu(); }
+  if(e.ctrlKey&&e.shiftKey&&e.key==="Escape"){ openWin("win-taskmgr"); }
+});
+function allProgramsMenu(){
+  const go=id=>()=>{ closeStart(); sysSnd("nav",.5); openWin(id); };
+  return [
+    {label:"CURSORS.EXE",bold:1,action:go("win-cursors")},
+    {label:"Internet Explorer",action:go("win-ie")},
+    {label:"Windows Messenger",action:go("win-chat")},
+    {label:"Winamp",action:go("win-amp")},
+    {sep:1},
+    {label:"Accessories",sub:[
+      {label:"Notepad",action:go("win-readme")},
+      {label:"Paint",action:()=>{ closeStart(); showError("Paint","mspaint.exe ships in a later update. Draw your losses from memory."); }},
+      {label:"Calculator",action:()=>{ closeStart(); showError("Calculator","Cannot compute expected value: it is zero. It is always zero. Read the README."); }}]},
+    {label:"Games",sub:[
+      {label:"Minesweeper",action:()=>{ closeStart(); showError("Minesweeper","winmine.exe ships in a later update. This whole desktop is the minefield."); }},
+      {label:"Solitaire",action:()=>{ closeStart(); showError("Solitaire","You are already gambling."); }}]},
+    {sep:1},
+    {label:"Windows Update",action:()=>{ closeStart(); showError("Windows Update","0 critical updates available. The house is already patched."); }},
+  ];
+}
+function smAction(act,itemEl){
+  switch(act){
+    case "email": showError("Outlook Express","No mail account is configured. Nobody writes anymore. Try the Messenger."); break;
+    case "wmp": showError("Windows Media Player","Another application (winamp.exe) has exclusive control of the llama."); break;
+    case "mydocs": openFolderWin("My Documents"); break;
+    case "mypics": openFolderWin("My Pictures"); break;
+    case "connect": showError("Network Connections","Dial-up to Solana Mainnet: no dial tone. Ships with the chain update."); break;
+    case "printers": showError("Printers and Faxes","CURSORS-PRINTER is out of ink. It was printing money."); break;
+    case "search": showError("Search Companion","The puppy looked everywhere. Whatever you lost is in the Recycle Bin."); break;
+    case "allprograms":{
+      const r=itemEl.getBoundingClientRect();
+      showMenu(allProgramsMenu(),r.right+4,Math.max(8,r.top-180));
+      return;
+    }
+  }
+}
+$$(".sm-item").forEach(it=>it.addEventListener("click",()=>{
+  if(it.dataset.app){ closeStart(); sysSnd("nav",.5); openWin(it.dataset.app); }
+  else if(it.dataset.act){
+    const act=it.dataset.act;
+    if(act!=="allprograms"){ closeStart(); sysSnd("nav",.5); }
+    smAction(act,it);
+  }
+}));
 $("#sm-logoff").addEventListener("click",()=>{ closeStart(); openWin("win-logoff"); });
-$("#sm-off").addEventListener("click",()=>{ closeStart(); $("#shutdown").style.display="grid"; });
-$("#shutdown").addEventListener("click",()=>{ $("#shutdown").style.display="none"; $("#login").style.display="flex"; $("#login").style.opacity=""; });
+$("#sm-off").addEventListener("click",()=>{ closeStart(); sysSnd("shutdown",.55); $("#shutdown").style.display="grid"; });
+$("#shutdown").addEventListener("click",()=>{ $("#shutdown").style.display="none"; showBootThenLogin(); });
+
+/* ---- Run dialog ---- */
+const RUNMAP={
+  "cursors":"win-cursors","cursors.exe":"win-cursors",
+  "taskmgr":"win-taskmgr","taskmgr.exe":"win-taskmgr",
+  "winamp":"win-amp","winamp.exe":"win-amp",
+  "msnmsgr":"win-chat","msmsgs":"win-chat",
+  "iexplore":"win-ie","iexplore.exe":"win-ie",
+  "notepad":"win-readme","notepad.exe":"win-readme",
+  "control":"win-dispprops","desk.cpl":"win-dispprops",
+  "timedate.cpl":"win-datetime",
+};
+function runCommand(){
+  const v=$("#run-in").value.trim();
+  closeWin("win-run");
+  if(!v) return;
+  const k=v.toLowerCase();
+  if(RUNMAP[k]){ sysSnd("nav",.5); openWin(RUNMAP[k]); return; }
+  if(k==="cmd"||k==="cmd.exe"||k==="command"){ showError("cmd.exe","The console subsystem ships in the next update. The house always ships."); return; }
+  if(k==="gpedit.msc"){ showError("Group Policy","You do not have permission to edit Group Policy. The house edge is a policy."); return; }
+  if(k==="devmgmt.msc"){ showError("Device Manager","1 unknown device detected: your luck. Driver ships in the next update."); return; }
+  if(k==="regedit"||k==="regedit.exe"){ showError("Registry Editor","HKEY_CURRENT_LOSER is locked by another process."); return; }
+  if(k==="format c:"||k==="format c"){ showError("Format Local Disk (C:)","The disk is in use by CURSORS.EXE. Your losses are load-bearing and cannot be erased."); return; }
+  showError("Run","Windows cannot find '"+v+"'. Make sure you typed the name correctly, and then try again.");
+}
+$("#run-ok").addEventListener("click",runCommand);
+$("#run-cancel").addEventListener("click",()=>closeWin("win-run"));
+$("#run-browse").addEventListener("click",()=>showError("Browse","There is nothing else. This is the whole computer."));
+$("#run-in").addEventListener("keydown",e=>{ e.stopPropagation(); if(e.key==="Enter") runCommand(); if(e.key==="Escape") closeWin("win-run"); });
 $("#btn-logoff-no").addEventListener("click",()=>{ sClick(); closeWin("win-logoff"); });
 function tickClock(){ $("#clock").textContent=new Date().toLocaleTimeString([],{hour:"numeric",minute:"2-digit"}); }
 tickClock(); setInterval(tickClock,10000);
@@ -662,10 +804,15 @@ $$(".xtabs").forEach(tabs=>{
 });
 
 /* ================= display properties ================= */
-const WALLPAPERS=[["bliss","Bliss"],["autumn","Autumn Vale"],["azure","Azure"],["night","Midnight"],["teal","Classic Teal"]];
-let wpSel=store.data.wallpaper;
+const WALLPAPERS=[["bliss","Bliss"],["none","(None)"]];
+let wpSel=WALLPAPERS.some(w=>w[0]===store.data.wallpaper)?store.data.wallpaper:"bliss";
+function wpApplyTo(el,id){
+  el.style.backgroundImage=id==="bliss"?`url(${IMG.bliss})`:"none";
+  el.style.backgroundColor="#3A6EA5";
+}
 function setWallpaper(id){
-  $$("#bliss .wp").forEach(g=>g.classList.toggle("on",g.id==="wp-"+id));
+  if(!WALLPAPERS.some(w=>w[0]===id)) id="bliss";
+  wpApplyTo($("#wallpaper"),id);
   store.data.wallpaper=id; store.save();
 }
 function renderWplist(){
@@ -673,9 +820,10 @@ function renderWplist(){
   for(const [id,name] of WALLPAPERS){
     const d=document.createElement("div"); d.textContent=name;
     d.classList.toggle("on",id===wpSel);
-    d.addEventListener("click",()=>{ wpSel=id; renderWplist(); $("#dp-prevuse").setAttribute("href","#wp-"+id); sClick(); });
+    d.addEventListener("click",()=>{ wpSel=id; renderWplist(); });
     host.appendChild(d);
   }
+  wpApplyTo($("#dp-prev"),wpSel);
 }
 function applySaverUI(){
   store.data.saver.t=$("#sv-sel").value;
@@ -886,7 +1034,12 @@ setInterval(()=>{
   $("#tmfoot").textContent=`Processes: ${TMPROCS.length} · CPU Usage: ${cpu}%`;
 },700);
 $("#tm-end").addEventListener("click",()=>{ if(tmSel&&openApps.has(tmSel)){ closeWin(tmSel); tmSel=null; } });
-$("#tm-switch").addEventListener("click",()=>{ if(tmSel&&openApps.has(tmSel)) focusWin(tmSel); });
+$("#tm-switch").addEventListener("click",()=>{
+  if(!tmSel||!openApps.has(tmSel)) return;
+  const a=openApps.get(tmSel);
+  if(a.kind==="webamp"){ if(a.min) tabClick(tmSel); }
+  else focusWin(tmSel);
+});
 
 /* ================= chat (messenger) ================= */
 const chatmsgs=$("#chatmsgs");
@@ -922,7 +1075,7 @@ function botChat(kind,vars){
   if(!L) return;
   let t=pick(L);
   if(vars) for(const k in vars) t=t.split("{"+k+"}").join(vars[k]);
-  setTimeout(()=>chatMsg(pick(BOTS).name,t),rand(300,1400));
+  setTimeout(()=>{ chatMsg(pick(BOTS).name,t); msnAlert(); },rand(300,1400));
 }
 function sendChat(){
   const inp=$("#chatin"), t=inp.value.trim();
@@ -1233,49 +1386,56 @@ function queueRenders(){
 }
 setTimeout(queueRenders,300); /* eager: tracks are usually all baked before the player is first opened */
 
-/* -- lifecycle: real Webamp windows + our taskbar tab --
+/* -- lifecycle: Webamp is a normal process-table entry (kind:"webamp").
    #webamp-wrap is OURS (webamp replaces the inner slot only), so hide/show
-   never depends on webamp's internal DOM. */
-let webamp=null, webampTab=null;
-function wampWrap(){ return document.getElementById("webamp-wrap"); }
-function showWamp(){ const w=wampWrap(); if(w) w.style.display=""; }
-function hideWamp(){ const w=wampWrap(); if(w) w.style.display="none"; }
-function wampHidden(){ const w=wampWrap(); return !w||w.style.display==="none"; }
-function mkTab(){
-  if(webampTab) return;
-  webampTab=document.createElement("button");
-  webampTab.className="task-tab on";
-  webampTab.innerHTML='<svg><use href="#ic-amp"/></svg><span>Winamp</span>';
-  webampTab.addEventListener("click",()=>{
-    if(wampHidden()){ showWamp(); try{ webamp.reopen(); }catch(e){} }
-    else hideWamp();
-  });
-  $("#tabs").appendChild(webampTab);
+   never depends on webamp's internal DOM, and the taskbar tab is just a
+   render of openApps like every other window. */
+function wampEntry(){
+  return {el:null,min:false,kind:"webamp",notab:false,title:"Winamp",icon:`<img src="${IMG.amp16}" alt="">`};
 }
-function rmTab(){ if(webampTab){ webampTab.remove(); webampTab=null; } }
 function openWinamp(){
   queueRenders();
-  if(webamp){
-    showWamp(); mkTab();
+  const ex=openApps.get("win-amp");
+  if(ex){
+    ex.min=false; focusedId="win-amp";
+    showWamp();
     try{ webamp.reopen(); }catch(e){ console.error("[winamp] reopen failed:",e); }
-    sOpen(); return;
+    renderTaskbar(); return;
   }
-  try{
-    webamp=new Webamp({
-      initialTracks:wavURL.map((u,i)=>u?toTrack(i):null).filter(Boolean),
-      zIndex:4800
+  if(!webamp){
+    try{
+      webamp=new Webamp({
+        initialTracks:wavURL.map((u,i)=>u?toTrack(i):null).filter(Boolean),
+        zIndex:4800
+      });
+    }catch(e){
+      console.error("[winamp] boot failed:",e); webamp=null;
+      showError("winamp.exe","WINAMP caused a General Protection Fault in module LOADER.DLL. Reboot (F5) and try again.");
+      return;
+    }
+    webamp.onClose(()=>closeWinamp());
+    webamp.onMinimize(()=>{
+      const a=openApps.get("win-amp");
+      if(a){ a.min=true; if(focusedId==="win-amp") focusedId=null; }
+      hideWamp(); sMini(); renderTaskbar();
     });
-  }catch(e){
-    console.error("[winamp] boot failed:",e); webamp=null;
-    showError("winamp.exe","WINAMP caused a General Protection Fault in module LOADER.DLL. Reboot (F5) and try again.");
-    return;
+    webamp.renderWhenReady(document.getElementById("webamp-slot")).then(()=>showWamp());
+  }else{
+    showWamp();
+    try{ webamp.reopen(); }catch(e){}
   }
-  webamp.onClose(()=>{ hideWamp(); rmTab(); sClose(); });
-  webamp.onMinimize(()=>{ hideWamp(); sMini(); });
-  webamp.renderWhenReady(document.getElementById("webamp-slot")).then(()=>{ showWamp(); mkTab(); });
-  sOpen();
+  openApps.set("win-amp",wampEntry());
+  focusedId="win-amp";
+  renderTaskbar();
 }
-return {open:openWinamp};
+function closeWinamp(){
+  hideWamp();
+  if(openApps.delete("win-amp")){
+    if(focusedId==="win-amp") focusedId=null;
+    renderTaskbar();
+  }
+}
+return {open:openWinamp,close:closeWinamp};
 })();
 
 /* ================= geocities ================= */
@@ -1452,7 +1612,7 @@ function deploy(silent){
   const c=makeCur(playerName(),true);
   if(phase==="battle"){ c.mode="roam"; c.prevMode="roam"; }
   curs.push(c);
-  if(!silent) sDeploy();
+  if(!silent) sysSnd("hwin",.5);   /* new hardware detected: 1 cursor */
   log(`you deployed 0.100 (${myCurs().length}/${MAXCUR})`);
   updatePanel();
 }
@@ -1490,7 +1650,7 @@ function bank(c,atShutdown){
   if(c.isMine){
     wallet+=c.bounty; R.myOut+=c.bounty;
     stats.best=Math.max(stats.best,c.bounty/ENTRY);
-    sBank();
+    if(c.bounty>=ENTRY*10) sysSnd("tada",.6); else sBank();
     float(fmtSign(c.bounty)+" ×"+m,c.x,c.y,false);
     goldBurst(c.x,c.y);
     log(`you banked ${fmtS(c.bounty)} (×${m})${atShutdown?" at shutdown":""}`);
@@ -1741,7 +1901,8 @@ $("#btn-logoff-yes").addEventListener("click",()=>{
   logpaper.textContent="";
   log("session reset. welcome back.");
   closeWin("win-logoff",{silent:true});
-  $("#login").style.display="flex"; $("#login").style.opacity="";
+  sysSnd("logoff",.7);
+  showLogin(true);
   updatePanel();
 });
 
@@ -1785,8 +1946,7 @@ if(SMALL){
 syncArena();
 renderIcons();
 setWallpaper(store.data.wallpaper);
-wpSel=store.data.wallpaper; renderWplist();
-$("#dp-prevuse").setAttribute("href","#wp-"+wpSel);
+renderWplist();
 $("#sv-sel").value=store.data.saver.t;
 $("#sv-wait").value=store.data.saver.wait;
 R=newRoundRecord();
@@ -1806,16 +1966,43 @@ let desktopEntered=false;
 function desktopActive(){
   return desktopEntered
     &&$("#login").style.display!=="flex"
-    &&$("#boot").style.display!=="grid"
+    &&$("#boot").style.display!=="block"
     &&$("#shutdown").style.display!=="grid";
 }
 function enterDesktop(){
   desktopEntered=true;
   $("#login").style.opacity="0";
   setTimeout(()=>{
-    $("#login").style.display="none"; $("#login").style.opacity="";
+    const lg=$("#login");
+    lg.style.display="none"; lg.style.opacity=""; lg.classList.remove("welcoming");
     showBalloon();
   },520);
+}
+function playStartup(){
+  if(muted) return;
+  try{
+    const a=new Audio(SNDF.startup); a.volume=.6;
+    a.play().catch(()=>{
+      /* autoplay blocked: play on the first gesture that isn't already a logon click */
+      const once=e=>{
+        removeEventListener("pointerdown",once,true);
+        if(e.target.closest(".lg-tile")) return;
+        try{ const b=new Audio(SNDF.startup); b.volume=.6; b.play().catch(()=>{}); }catch(err){}
+      };
+      addEventListener("pointerdown",once,true);
+    });
+  }catch(e){}
+}
+function showLogin(skipStartup){
+  const lg=$("#login");
+  lg.style.display="flex"; lg.style.opacity=""; lg.classList.remove("welcoming");
+  if(!skipStartup) playStartup();
+}
+function showBootThenLogin(){
+  $("#boot").style.display="block";
+  const toLogin=()=>{ $("#boot").style.display="none"; showLogin(); };
+  const bt=setTimeout(toLogin,4300);
+  $("#boot").addEventListener("pointerdown",()=>{ clearTimeout(bt); toLogin(); },{once:true});
 }
 /* ---- user identity: picked at the login screen, Phantom wallet later ---- */
 let PLAYER=store.data.userName||null;
@@ -1829,8 +2016,9 @@ function syncIdentity(){
 function logon(){
   sessionStorage.setItem("cxp.booted","1");
   syncIdentity();
+  $("#login").classList.add("welcoming");
   chime();
-  enterDesktop();
+  setTimeout(enterDesktop,1500);
 }
 function commitUserName(){
   const raw=$("#lg-user").value.trim().replace(/[^\w .$-]/g,"").slice(0,14);
@@ -1859,13 +2047,12 @@ $("#tile-guest").addEventListener("click",()=>{
   $("#guest-sub").textContent="gambling requires conviction";
   sError();
 });
-$("#lg-off").addEventListener("click",()=>{ $("#shutdown").style.display="grid"; });
+$("#lg-off").addEventListener("click",()=>{ sysSnd("shutdown",.55); $("#login").style.display="none"; $("#shutdown").style.display="grid"; });
+if(location.hash.indexOf("#desktop")===0) sessionStorage.setItem("cxp.booted","1"); /* dev: skip boot/login */
+if(location.hash==="#desktop-start") setTimeout(()=>$("#startmenu").classList.add("open"),400); /* dev: capture start menu */
 if(sessionStorage.getItem("cxp.booted")){
   desktopEntered=true;
   setTimeout(showBalloon,900);
 }else{
-  $("#boot").style.display="grid";
-  const toLogin=()=>{ $("#boot").style.display="none"; $("#login").style.display="flex"; };
-  const bt=setTimeout(toLogin,2500);
-  $("#boot").addEventListener("pointerdown",()=>{ clearTimeout(bt); toLogin(); },{once:true});
+  showBootThenLogin();
 }

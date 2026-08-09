@@ -15,9 +15,49 @@ Standing rules for every phase:
 
 Monolithic `prototype/index.html` retired. Now: npm workspace, `apps/web` Vite app (`src/main.js` + `src/style.css` + `index.html`), Webamp from npm, `vite-plugin-singlefile` build → `dist/artifact.html` for the artifact URL. Build chain runs a node smoke test (stub-DOM execution of the whole module) before bundling. Winamp lifecycle hardened same pass: owned `#webamp-wrap` container for hide/show, taskbar tab wired to it, eager track rendering from page load, render errors surfaced to console instead of swallowed.
 
-## Phase 0.5 — Carbon-copy pass on the shell (NEXT)
+## THE OS REBUILD — carbon-copy Windows XP (owner directive 2026-08-09)
 
-Owner: Phase 0 gets the same treatment as the player — the real thing, not a resemblance. Real Luna chrome metrics (xp.css/98.css-grade or hand-matched pixel-for-pixel from screenshots), real XP icon set (archived assets — fetch online), real Bliss, real cursor sprites, authentic sound scheme, authentic boot/login screens. Now feasible cleanly: Vite imports assets and inlines them at build.
+Owner, after the Winamp zombie-tab bug and the "satire joke" boot screen: *"it might be an underlying OS engine issue… fucking go make carbon copy windows xp, engine, os logic… go crazy, even have shit like device manager or task manager or gpedit.msc, like cmd and shit, each filled with easter eggs."* This supersedes the old Phase 0.5 stub. The desktop is not themed chrome around a game anymore — it IS a Windows XP, built from real archived assets and real libraries, with the game as its killer app.
+
+### Asset & library sources (researched 2026-08-09)
+
+| What | Source | Notes |
+|---|---|---|
+| Luna window chrome, buttons, controls, tabs | **xp.css** (npm, MIT, botoxparty/XP.css) | Real Luna titlebar gradients, red X, form controls. Extension of 98.css. |
+| Winamp | **Webamp** (npm, MIT) | Already shipped. |
+| XP icon set (100+ named + shell32-numbered PNGs), taskbar art, start button | **ShizukuIchi/winXP** repo assets (MIT) — `src/assets/windowsIcons/` | recycle-bin-empty/full, mspaint, notepad, minesweeper, ie, user, folder, taskbar-bg.png, start button, speaker, run-dialog… raw.githubusercontent download. |
+| XP sound scheme (45 WAVs) | **MCPlayer2015/all-windows-sounds** repo, `(2001) Windows XP/` | Startup, Logon, Logoff, Shutdown, Balloon, Critical Stop, Error, Exclamation, Ding, Notify, Hardware Insert/Remove, Recycle, Menu Command, Minimize, Restore, Start (the navigation click), tada… |
+| MSN Messenger 7 sounds | **archive.org/details/nudge_202411** | newalert.wav (message), nudge.wav, online.wav, newemail.wav. |
+| Bliss | **archive.org/details/windows-xp-bliss-wallpaper** | Original-crop 1920×1080 JPG, 360 KB. |
+| XP logo / wordmark vectors | Wikimedia Commons SVGs | For boot screen + welcome screen + start button flag. |
+| Login/boot layout truth | Reference recreations (lucasgmelo/xp, winXP) + screenshots | Colors hand-matched against the real Welcome screen. |
+| Cursors | rw-designer XP cursor set (.cur works in CSS `cursor:url()`) | Nice-to-have; game cursors are already own sprites. |
+
+Held line, unchanged: no shipping copyrighted **music** files. OS icons/sounds/wallpaper are the same category as Webamp's embedded skin — this is crypto slop cosplay, owner accepts it explicitly.
+
+### Phase A — The engine + the shell, carbon copy (THIS SESSION)
+
+1. **OS engine rewrite** — the actual bug-fix: one process table as the single source of truth; the taskbar is a pure render of that state (rebuilt on every open/close/minimize/focus mutation, never patched imperatively). Webamp becomes a normal process entry (its onClose/onMinimize route through the same state transitions). Zombie tabs become impossible by construction.
+2. **Boot screen** — black, real XP logo, the blue three-block marquee crawling its rounded track, "Copyright © Microsoft Corporation" bottom-left. Timed like the real thing, into…
+3. **Welcome screen** — the real layout: dark blue top/bottom bands, the center blue field, glowing XP logo left with "To begin, click your user name", user tiles right with picture frames, orange divider accent, "Turn off computer" bottom-left, **Startup.wav on arrival, Logon.wav on tile click**, "welcome" interstitial.
+4. **Luna chrome** — xp.css window chrome on every window (real titlebar gradient, real close/min/max buttons); carbon-copy taskbar (winXP's own taskbar-bg + start button art, tray inset, task tab states) and the two-column XP start menu (blue user header band, white pinned column, light-blue system column, Log Off / Turn Off footer).
+5. **Real assets wired** — every desktop/menu/titlebar icon from the archived XP set; full sound scheme replacing the synth beeps for OS events (game kill/bank sounds stay ours); Bliss as default wallpaper; MSN sounds into Messenger (newalert on message, nudge.wav on nudge, online.wav on sign-in).
+
+### Phase B — cmd.exe + Task Manager, for real (NEXT)
+
+- **cmd.exe**: real console (black, Lucida Console, blinking block cursor), working commands: `dir` (fake FS), `cd`, `cls`, `ver`, `echo`, `ping` (fake latency to the house), `tasklist`/`taskkill` (wired to the REAL process table — killing explorer.exe restarts the shell), `format c:`, `tree`, `color`, easter eggs (`sol`, odds calculators, ASCII-art). Command history, tab completion.
+- **Task Manager rebuilt on the real process table**: Applications = actual open windows with End Task that actually ends them; Processes list with the game's real entities (each live cursor = a process, bounty = mem usage); Performance graph driven by real duel activity; Ctrl+Shift+Esc opens it.
+
+### Phase C — System depths, each an easter-egg vessel
+
+- **Device Manager**: tree of this "machine" — Mice (one per live cursor, live!), Display adapters ("LUNA-compatible 4800 zIndex"), Sound/video, Network (Dial-Up to Solana Mainnet - DISCONNECTED until chain phase), warning-triangle devices with joke problem codes.
+- **gpedit.msc**: Group Policy tree; every policy is a real game setting or a joke ("Prevent user from losing money" — Not Configured, greyed out).
+- **Run… dialog** (start menu): launches apps by name (`cmd`, `taskmgr`, `mspaint`, `devmgmt.msc`, `gpedit.msc`, `winamp`), cheat strings, `format c:`.
+- **Control Panel** folder view routing to Display Properties, Sounds, System Properties (General tab: CURSORS XP, 1 cursor @ 3.2 GHz).
+- **regedit** (stretch): HKEY_CURRENT_LOSER tree.
+- BSOD variants; msconfig joke; `defrag` that defragments the desktop icons.
+
+Then the existing app phases continue below (Messenger, Explorer, Recycle Bin, Notepad/Paint, CURSORS.EXE production pass, IE, Start menu completeness) — each now inherits the carbon-copy asset base instead of homemade art.
 
 ## Phase 0 — Shell foundation (everything sits on this) — ✅ SHIPPED 2026-08-09 (superseded visually by Phase 0.5)
 

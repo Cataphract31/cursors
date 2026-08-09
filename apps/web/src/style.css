@@ -1,52 +1,53 @@
+/* CURSORS.EXE shell — sits on top of xp.css (imported first in main.js).
+   Taskbar + start menu values ported from ShizukuIchi/winXP (MIT). */
+
 *{margin:0;padding:0;box-sizing:border-box;user-select:none}
 html,body{height:100%}
-body{overflow:hidden;background:#5A7EDC;font:11px Tahoma,"Segoe UI",Verdana,sans-serif;cursor:default;color:#000;touch-action:manipulation}
-button{font:inherit}
+body{margin:0;overflow:hidden;background:#5A7EDC;font:11px Tahoma,"Segoe UI",Verdana,sans-serif;cursor:default;color:#000;touch-action:manipulation}
+button,input,select,textarea{font-family:Tahoma,"Segoe UI",Verdana,sans-serif}
 input{user-select:text}
+.xico img,.xico svg{width:100%;height:100%;display:block}
+.xico{display:inline-block;flex:none}
+.svgbox{display:block;width:100%;height:100%}
 
 /* ---------- desktop ---------- */
 #desktop{position:absolute;inset:0 0 30px 0;overflow:hidden}
-#bliss{position:absolute;inset:0;width:100%;height:100%;display:block}
-#bliss .wp{display:none}
-#bliss .wp.on{display:inline}
+#wallpaper{position:absolute;inset:0;background:#3A6EA5;background-position:center;background-size:cover;background-repeat:no-repeat}
 
 /* ---------- desktop icons ---------- */
 .icon{position:absolute;left:12px;width:78px;text-align:center;padding:5px 2px;border:1px solid transparent}
-.icon svg{width:34px;height:34px;filter:drop-shadow(1px 2px 2px rgba(0,0,0,.45))}
+.icon img,.icon svg,.icon>span{width:32px;height:32px;filter:drop-shadow(1px 2px 2px rgba(0,0,0,.45))}
+.icon>span{margin:0 auto}
 .icon .lbl{margin-top:3px;color:#fff;font-size:11px;line-height:1.2;text-shadow:1px 1px 2px #000,0 0 3px rgba(0,0,0,.8);padding:0 2px}
 .icon.sel .lbl{background:#316AC5;text-shadow:none}
-.icon.sel svg{opacity:.8}
-@media (max-width:700px){.icon{width:62px}.icon svg{width:26px;height:26px}.icon .lbl{font-size:10px}}
+.icon.sel img,.icon.sel svg,.icon.sel>span{opacity:.8}
+@media (max-width:700px){.icon{width:62px}.icon img,.icon svg,.icon>span{width:26px;height:26px}.icon .lbl{font-size:10px}}
 
 #marquee{position:absolute;border:1px solid #316AC5;background:rgba(49,106,197,.28);display:none;z-index:60;pointer-events:none}
 
-/* ---------- windows (Luna) ---------- */
-.window{position:absolute;display:none;min-width:220px;max-width:96vw;padding:3px;padding-top:0;background:#0855DD;border-radius:8px 8px 3px 3px;box-shadow:1px 3px 12px rgba(0,0,0,.45);z-index:100}
-.window.inactive{background:#7A96DF}
-.titlebar{height:26px;display:flex;align-items:center;gap:5px;margin:0 -3px;padding:0 3px 0 6px;border-radius:8px 8px 0 0;color:#fff;font:bold 12px "Trebuchet MS",Tahoma,sans-serif;text-shadow:1px 1px 1px rgba(0,0,0,.55);background:linear-gradient(180deg,#0997FF 0%,#0053EE 10%,#0050EE 38%,#0048DC 86%,#003AB9 96%,#0855DD 100%);cursor:default}
-.window.inactive .titlebar{background:linear-gradient(180deg,#9DB9EB 0%,#7A96DF 20%,#7A96DF 100%)}
-.titlebar svg{width:15px;height:15px;flex:none}
-.titlebar .tt{flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;pointer-events:none}
-.tbtn{width:21px;height:21px;margin-left:1px;flex:none;border:1px solid #fff;border-radius:3px;color:#fff;display:grid;place-items:center;font:bold 12px Tahoma;line-height:1;background:linear-gradient(180deg,#4D8EF5,#2B6CDB 45%,#1B54C4);box-shadow:inset 0 1px 1px rgba(255,255,255,.6);cursor:pointer;padding:0}
-.tbtn.close{background:linear-gradient(180deg,#EC8F7D,#D8543A 45%,#B52D10)}
-.tbtn:hover{filter:brightness(1.15)}
-.tbtn:active{filter:brightness(.88)}
-.win-body{background:#ECE9D8;padding:9px;font-size:11px}
-.win-body.pad{background:#fff;padding:0}
-.menubar{background:#ECE9D8;padding:3px 7px;display:flex;gap:13px;color:#111;border-bottom:1px solid #D4D0C8}
+/* ---------- windows: xp.css chrome + our layout ---------- */
+.window{position:absolute;display:none;flex-direction:column;min-width:220px;max-width:96vw;z-index:100}
+.window.maxed{border-radius:0}
+.title-bar{flex:none}
+.tb-l{display:flex;align-items:center;gap:4px;overflow:hidden;min-width:0;padding-left:2px}
+.tb-ico{width:16px;height:16px}
+.title-bar-text{overflow:hidden;white-space:nowrap;text-overflow:ellipsis;pointer-events:none}
+.win-body{flex:1;min-height:0;background:#ECE9D8;padding:9px;font-size:11px;margin:0 3px}
+.win-body.pad{background:#fff;padding:0;display:flex;flex-direction:column;min-height:0;overflow:hidden}
+/* xp.css ships no inactive state — real Luna pale-blue it is */
+.title-bar.inactive{background:linear-gradient(180deg,#9DB9EB,#8CA9E4 8%,#8CA9E4 40%,#7A96DF 88%,#7A96DF 93%,#7A96DF 95%,#5F82D9 96%,#5F82D9)}
+.title-bar.inactive .title-bar-text{color:#D8E4F8}
+.title-bar.inactive .title-bar-controls button{filter:saturate(.55) brightness(1.06)}
+.menubar{background:#ECE9D8;padding:3px 7px;display:flex;gap:13px;color:#111;border-bottom:1px solid #D4D0C8;flex:none}
 .menubar span:hover{background:#316AC5;color:#fff;padding:0 3px;margin:0 -3px}
-.paper{font:11px "Lucida Console",Consolas,monospace;padding:7px;height:150px;overflow-y:auto;white-space:pre-wrap;line-height:1.55;color:#111}
+.paper{font:11px "Lucida Console",Consolas,monospace;padding:7px;flex:1;height:150px;overflow-y:auto;white-space:pre-wrap;line-height:1.55;color:#111;background:#fff}
 .paper.tall{height:250px}
 
-/* ---------- XP controls ---------- */
-.xbtn{font:11px Tahoma;padding:4px 12px;border:1px solid #003C74;border-radius:3px;background:linear-gradient(180deg,#fff,#F1EFE2 55%,#D8D0C0);cursor:pointer;color:#000}
-.xbtn:hover:not(:disabled){box-shadow:inset 0 0 0 2px rgba(255,178,83,.65)}
-.xbtn:active:not(:disabled){background:linear-gradient(180deg,#D8D0C0,#F1EFE2)}
-.xbtn:disabled{color:#9A9484;border-color:#B8B0A0;cursor:default}
-.xbtn:focus-visible{outline:1px dotted #000;outline-offset:-4px}
-.xbtn.big{width:100%;padding:8px;font-weight:bold;font-size:12px}
+/* ---------- controls: xp.css does the look, we do layout ---------- */
+.xbtn{min-width:0}
+.xbtn.big{width:100%;padding:7px;font-weight:bold;font-size:12px;min-height:0;height:auto}
 .chiprow{display:flex;gap:4px;margin:4px 0}
-.chip{flex:1;padding:4px 0;text-align:center}
+.chip{flex:1;padding:3px 0;text-align:center;min-width:0}
 .chip.on{box-shadow:inset 0 0 0 2px #2A66C9;background:linear-gradient(180deg,#DCE9FB,#BDD4F2);font-weight:bold}
 .hr{border-top:1px solid #C9C4B4;border-bottom:1px solid #fff;margin:8px 0}
 .mono{font-family:"Lucida Console",Consolas,monospace}
@@ -60,57 +61,76 @@ input{user-select:text}
 .aprow{display:flex;align-items:center;gap:6px;margin:4px 0}
 .aprow .lb{width:70px;color:#555}
 
-/* ---------- taskbar ---------- */
-#taskbar{position:fixed;left:0;right:0;bottom:0;height:30px;display:flex;align-items:stretch;z-index:9000;background:linear-gradient(180deg,#1E52B7 0%,#3A80E6 3%,#2E6FE0 6%,#245EDB 10%,#245EDB 52%,#1941A5 90%,#0C2F81 100%);box-shadow:inset 0 1px 0 rgba(255,255,255,.25)}
-#startbtn{display:flex;align-items:center;gap:6px;padding:0 24px 0 10px;border:0;color:#fff;font:bold italic 15px "Franklin Gothic Medium","Segoe UI",Tahoma;text-shadow:1px 1px 2px rgba(0,0,0,.6);background:linear-gradient(180deg,#7ADB58 0%,#4CB648 7%,#3C9838 14%,#2E8830 55%,#2D7D25 85%,#1E6A1E 100%);border-radius:0 12px 12px 0;box-shadow:2px 0 6px rgba(0,0,0,.35),inset 0 1px 1px rgba(255,255,255,.4);cursor:pointer}
-#startbtn:hover{filter:brightness(1.08)}
-#startbtn svg{width:19px;height:19px;filter:drop-shadow(1px 1px 1px rgba(0,0,0,.5))}
-#tabs{flex:1;display:flex;gap:3px;padding:3px 5px;overflow:hidden}
-.task-tab{min-width:90px;max-width:170px;display:flex;align-items:center;gap:5px;padding:0 8px;color:#fff;font:11px Tahoma;border:0;border-radius:3px;white-space:nowrap;overflow:hidden;cursor:pointer;background:linear-gradient(180deg,#4E91F5 0%,#3B7DE9 8%,#2E6CD8 42%,#2A63CD 100%);box-shadow:inset 0 1px 0 rgba(255,255,255,.35)}
-.task-tab.on{background:linear-gradient(180deg,#1E4FA8,#2559B9 90%);box-shadow:inset 1px 1px 3px rgba(0,0,0,.45)}
-.task-tab svg{width:14px;height:14px;flex:none}
-#tray{display:flex;align-items:center;gap:9px;padding:0 12px 0 14px;color:#fff;font:11px Tahoma;background:linear-gradient(180deg,#1290E9 0%,#19A5F0 4%,#1290E9 9%,#0D6FC9 85%,#0B5CB0 100%);box-shadow:inset 2px 1px 3px rgba(0,0,0,.3)}
+/* ---------- taskbar (winXP values) ---------- */
+#taskbar{position:fixed;left:0;right:0;bottom:0;height:30px;display:flex;align-items:stretch;z-index:9000;background:linear-gradient(to bottom,#1f2f86 0,#3165c4 3%,#3682e5 6%,#4490e6 10%,#3883e5 12%,#2b71e0 15%,#2663da 18%,#235bd6 20%,#2258d5 23%,#2157d6 38%,#245ddb 54%,#2562df 86%,#245fdc 89%,#2158d4 92%,#1d4ec0 95%,#1941a5 98%)}
+#startbtn{height:30px;width:auto;cursor:pointer;flex:none}
+#startbtn:hover{filter:brightness(105%)}
+#startbtn:active{filter:brightness(85%)}
+#ql{display:flex;align-items:center;padding:0 2px;flex:none}
+.ql-grip{width:5px;align-self:stretch;margin:4px 2px;border-left:1px dotted rgba(255,255,255,.45)}
+.qlb{width:25px;height:24px;min-height:0;background:none;border:0;border-radius:3px;padding:3px;cursor:pointer;display:grid;place-items:center;min-width:0;box-shadow:none}
+.qlb:hover{background:rgba(255,255,255,.22)}
+.qlb svg,.qlb .xico{width:16px;height:16px}
+#tabs{flex:1;display:flex;gap:3px;padding:0 4px;overflow:hidden;align-items:flex-start}
+.task-tab{height:22px;min-height:0;margin-top:2px;flex:1;max-width:150px;min-width:0;display:flex;align-items:center;gap:4px;padding:0 8px;color:#fff;font:11px Tahoma;border:0;border-radius:2px;white-space:nowrap;overflow:hidden;cursor:default;background-image:none;background-color:#3c81f3;box-shadow:inset -1px 0px rgba(0,0,0,.3),inset 1px 1px 1px rgba(255,255,255,.2)}
+.task-tab:hover{background-color:#53a3ff}
+.task-tab:active,.task-tab.on{background-color:#1e52b7;box-shadow:inset 0 0 1px 1px rgba(0,0,0,.3),inset 1px 0 1px rgba(0,0,0,.7)}
+.task-tab.on:hover{background-color:#2560c4}
+.task-tab img,.task-tab svg{width:15px;height:15px;flex:none}
+.task-tab span{overflow:hidden;text-overflow:ellipsis}
+#tray{display:flex;align-items:center;gap:7px;padding:0 10px;margin-left:10px;color:#fff;font:11px Tahoma;flex:none;border-left:1px solid #1042af;box-shadow:inset 1px 0 1px #18bbff;background:linear-gradient(to bottom,#0c59b9 1%,#139ee9 6%,#18b5f2 10%,#139beb 14%,#1290e8 19%,#0d8dea 63%,#0d9ff1 81%,#0f9eed 88%,#119be9 91%,#1392e2 94%,#137ed7 97%,#095bc9 100%)}
+.trayico{width:15px;height:15px;cursor:pointer}
+#sndico.muted{filter:grayscale(1) opacity(.55)}
 #phasechip{font-family:"Lucida Console",Consolas,monospace;font-size:10px;white-space:nowrap}
-#sndico{cursor:pointer;font-size:13px}
-#clock{font-variant-numeric:tabular-nums}
-@media (max-width:700px){#clock{display:none}.task-tab span{display:none}.task-tab{min-width:34px}}
+#clock{margin:0 5px;font-variant-numeric:tabular-nums}
+@media (max-width:700px){#clock{display:none}.task-tab span{display:none}.task-tab{min-width:34px;flex:none;width:38px}}
 
-/* ---------- start menu ---------- */
-#startmenu{position:fixed;left:0;bottom:30px;width:min(392px,96vw);display:none;z-index:9500;border-radius:6px 6px 0 0;overflow:hidden;box-shadow:3px -2px 14px rgba(0,0,0,.5);background:#2E70CE;padding:0 2px}
-#startmenu.open{display:block}
-.sm-head{height:58px;display:flex;align-items:center;gap:10px;padding:0 10px;color:#fff;font:bold 14px "Trebuchet MS",Tahoma;text-shadow:1px 1px 2px rgba(0,0,0,.5);background:linear-gradient(180deg,#1C5FBE 0%,#3A8AE8 12%,#2470D4 30%,#1C5FBE 80%,#1650A8 100%)}
-.sm-head .ava{width:40px;height:40px;border:2px solid #fff;border-radius:4px;background:linear-gradient(160deg,#8EC440,#3D7D1E);display:grid;place-items:center;box-shadow:1px 1px 4px rgba(0,0,0,.4)}
-.sm-head .ava svg{width:26px;height:26px}
-.sm-cols{display:flex;border-top:1px solid #1650A8}
-.sm-left{width:53%;background:#fff;padding:7px 3px;display:flex;flex-direction:column}
-.sm-right{width:47%;background:#D3E5FA;border-left:1px solid #96BEE4;padding:7px 3px;color:#0C327D;display:flex;flex-direction:column}
-.sm-item{display:flex;gap:8px;align-items:center;padding:6px 8px;cursor:pointer;border-radius:2px}
-.sm-item:hover{background:#316AC5;color:#fff}
-.sm-item svg{width:24px;height:24px;flex:none}
-.sm-item b{display:block}
-.sm-item .sub{font-size:10px;color:#8A8A8A}
-.sm-item:hover .sub{color:#D6E4F7}
-.sm-sep{border-top:1px solid #D4D0C8;margin:5px 8px}
-.sm-right .sm-sep{border-color:#96BEE4}
-.sm-foot{height:38px;display:flex;justify-content:flex-end;align-items:center;gap:14px;padding:0 14px;color:#fff;background:linear-gradient(180deg,#1C5FBE 0%,#3A8AE8 10%,#2470D4 26%,#1C5FBE 80%,#1650A8 100%)}
-.sm-foot span{display:flex;align-items:center;gap:6px;cursor:pointer;padding:3px 6px;border-radius:3px}
-.sm-foot span:hover{background:rgba(255,255,255,.18)}
-.sm-foot i{width:20px;height:20px;border-radius:3px;display:grid;place-items:center;font:bold 12px Tahoma;font-style:normal}
-.i-off{background:linear-gradient(180deg,#F0977F,#C33D14)}
-.i-log{background:linear-gradient(180deg,#F7D77C,#C79A18)}
+/* ---------- start menu (winXP values) ---------- */
+#startmenu{position:fixed;left:0;bottom:30px;display:none;flex-direction:column;z-index:9500;font-size:11px;line-height:14px;background-color:#4282d6;border-top-left-radius:5px;border-top-right-radius:5px;box-shadow:2px -2px 6px rgba(0,0,0,.4)}
+#startmenu.open{display:flex}
+.sm-head{position:relative;display:flex;align-items:center;color:#fff;height:54px;padding:6px 5px 5px;border-radius:5px 5px 0 0;overflow:hidden;background:linear-gradient(to bottom,#1868ce 0%,#0e60cb 12%,#0e60cb 20%,#1164cf 32%,#1667cf 33%,#1b6cd3 47%,#1e70d9 54%,#2476dc 60%,#297ae0 65%,#3482e3 77%,#3786e5 79%,#428ee9 90%,#4791eb 100%)}
+.sm-head:before{content:"";position:absolute;top:1px;left:0;width:100%;height:3px;background:linear-gradient(to right,transparent 0,rgba(255,255,255,.3) 1%,rgba(255,255,255,.5) 2%,rgba(255,255,255,.5) 95%,rgba(255,255,255,.3) 98%,rgba(255,255,255,.2) 99%,transparent 100%);box-shadow:inset 0 -1px 1px #0e60cb}
+.sm-ava{width:42px;height:42px;margin-right:5px;border-radius:3px;border:2px solid rgba(222,222,222,.8);background:#fff}
+#sm-user{font-size:14px;font-weight:700;text-shadow:1px 1px rgba(0,0,0,.7)}
+.sm-menu{display:flex;margin:0 2px;position:relative;border-top:1px solid #385de7;box-shadow:0 1px #385de7}
+.orange-hr{position:absolute;left:0;right:0;top:0;display:block;height:2px;background:linear-gradient(to right,rgba(0,0,0,0) 0%,#da884a 50%,rgba(0,0,0,0) 100%);border:0}
+.sm-left{background:#fff;padding:6px 5px 0;width:190px;display:flex;flex-direction:column}
+.sm-right{background-color:#cbe3ff;border-left:solid #3a3aff5e 1px;padding:6px 5px 5px;width:190px;color:#00136b}
+.sm-item{padding:1px;display:flex;align-items:center;margin-bottom:4px;cursor:default}
+.sm-left .sm-item{height:32px}
+.sm-left .sm-item.two{height:34px}
+.sm-left .sm-item.allprog{height:24px}
+.sm-right .sm-item{height:26px;line-height:13px}
+.sm-item:hover{color:#fff;background-color:#2f71cd}
+.sm-item:hover .sm-sub{color:#fff}
+.sm-left .sm-item>.xico{width:30px;height:30px;margin-right:3px}
+.sm-right .sm-item>.xico{width:22px;height:22px;margin-right:3px}
+.sm-texts{display:flex;flex-direction:column;justify-content:center;min-width:0}
+.sm-text{overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.sm-text.b{font-weight:700}
+.sm-sub{color:rgba(0,0,0,.4);line-height:12px;margin-bottom:1px}
+.sm-sep{height:7.5px;background:linear-gradient(to right,rgba(0,0,0,0) 0%,rgba(0,0,0,.1) 50%,rgba(0,0,0,0) 100%);border-top:3px solid transparent;border-bottom:3px solid transparent;background-clip:content-box}
+.sm-right .sm-sep{background:linear-gradient(to right,rgba(0,0,0,0) 0%,#87b3e2b5 50%,rgba(0,0,0,0) 100%);background-clip:content-box}
+.sm-allarrow{height:18px;margin-left:5px}
+.sm-foot{display:flex;justify-content:flex-end;align-items:center;color:#fff;height:36px;width:100%;background:linear-gradient(to bottom,#4282d6 0%,#3b85e0 3%,#418ae3 5%,#418ae3 17%,#3c87e2 21%,#3786e4 26%,#3482e3 29%,#2e7ee1 39%,#2374df 49%,#2072db 57%,#196edb 62%,#176bd8 72%,#1468d5 75%,#1165d2 83%,#0f61cb 88%)}
+.sm-fitem{padding:3px;display:flex;margin-right:10px;align-items:center;cursor:default}
+.sm-fitem:hover{background-color:rgba(60,80,210,.5)}
+.sm-fitem:hover:active>*{transform:translate(1px,1px)}
+.sm-fitem .xico{width:22px;height:22px;margin-right:2px;border-radius:3px}
+@media (max-width:420px){.sm-left,.sm-right{width:47vw}}
 
 /* ---------- messenger ---------- */
-.msn-head{display:flex;align-items:center;gap:8px;padding:6px 9px;background:linear-gradient(180deg,#F6F9FE,#DDE9F9 60%,#CBDCF3);border-bottom:1px solid #A8C0DE}
-.msn-head svg{width:24px;height:24px;flex:none}
+.msn-head{display:flex;align-items:center;gap:8px;padding:6px 9px;background:linear-gradient(180deg,#F6F9FE,#DDE9F9 60%,#CBDCF3);border-bottom:1px solid #A8C0DE;flex:none}
+.msn-fly{width:24px;height:24px}
 .msn-head .to{font-size:11px;color:#3A5A80;line-height:1.35}
 .msn-head .to b{color:#16569E}
-.msn-msgs{background:#fff;height:158px;overflow-y:auto;padding:6px 9px;line-height:1.5}
+.msn-msgs{background:#fff;flex:1;min-height:60px;height:158px;overflow-y:auto;padding:6px 9px;line-height:1.5}
 .msn-msgs .who{color:#54708C;margin-top:5px}
 .msn-msgs .who b{color:#16569E;font-weight:normal}
 .msn-msgs .txt{color:#000;padding-left:14px;word-wrap:break-word}
 .msn-msgs .sys{color:#94A4B4;font-style:italic;margin-top:4px}
-.msn-input{display:flex;gap:5px;padding:6px;background:#EAF2FB;border-top:1px solid #A8C0DE}
-.msn-input input{flex:1;min-width:40px;border:1px solid #7F9DB9;padding:4px 6px;font:11px Tahoma;background:#fff;color:#000}
+.msn-input{display:flex;gap:5px;padding:6px;background:#EAF2FB;border-top:1px solid #A8C0DE;flex:none}
+.msn-input input{flex:1;min-width:40px}
 #win-chat.nudged{animation:nudge .5s}
 @keyframes nudge{0%,100%{transform:translate(0,0)}20%{transform:translate(-6px,4px)}40%{transform:translate(5px,-5px)}60%{transform:translate(-5px,-4px)}80%{transform:translate(6px,5px)}}
 
@@ -119,7 +139,7 @@ input{user-select:text}
 #webamp-slot{position:absolute;left:0;top:0;width:0;height:0}
 
 /* ---------- geocities ---------- */
-.geo{background:#000 radial-gradient(#fff 1px,transparent 1.2px);background-size:70px 70px;color:#0f0;font-family:"Comic Sans MS","Trebuchet MS",cursive;padding:12px;text-align:center;line-height:1.6}
+.geo{background:#000 radial-gradient(#fff 1px,transparent 1.2px);background-size:70px 70px;color:#0f0;font-family:"Comic Sans MS","Trebuchet MS",cursive;padding:12px;text-align:center;line-height:1.6;display:block}
 .geo-marq{overflow:hidden;background:#001;border:1px solid #0f0;margin-bottom:8px}
 .geo-marq span{display:inline-block;white-space:nowrap;padding-left:100%;animation:ampmarq 13s linear infinite;color:#ff0;font-size:12px;line-height:20px}
 .geo h1{font-size:17px;color:#f0f;text-shadow:2px 2px #005;margin:4px 0}
@@ -130,10 +150,11 @@ input{user-select:text}
 .geo a{color:#59f;cursor:pointer;text-decoration:underline}
 .geo .small{color:#aaa;font-size:9px}
 
-/* ---------- balloon ---------- */
-#balloon{position:fixed;right:14px;bottom:48px;width:236px;background:#FFFFE1;border:1px solid #000;border-radius:8px;padding:9px 11px;display:none;z-index:9600;box-shadow:2px 3px 8px rgba(0,0,0,.35);line-height:1.45}
+/* ---------- balloon (XP notification) ---------- */
+#balloon{position:fixed;right:14px;bottom:48px;width:236px;background:#FFFFE1;border:1px solid #000;border-radius:7px;padding:9px 22px 9px 11px;display:none;z-index:9600;box-shadow:2px 3px 8px rgba(0,0,0,.35);line-height:1.45}
 #balloon:after{content:"";position:absolute;right:28px;bottom:-11px;border:11px solid transparent;border-top-color:#FFFFE1;border-bottom:0}
 #balloon b{display:block;margin-bottom:3px}
+#balloon-x{position:absolute;right:6px;top:5px;font-size:9px;border:1px solid #8A867A;padding:0 2px;cursor:pointer;background:#ECE9D8}
 
 /* ---------- game layer ---------- */
 #curlayer,#fxlayer{position:absolute;inset:0;z-index:5000;pointer-events:none;overflow:hidden}
@@ -161,52 +182,65 @@ input{user-select:text}
 .float.sm{font-size:10px;color:#fff}
 @keyframes rise{to{transform:translateY(-48px);opacity:0}}
 
-/* ---------- BSOD / shutdown screen ---------- */
+/* ---------- BSOD / power-off screen ---------- */
 #bsod{position:fixed;inset:0;background:#0000AA;color:#fff;font:14px "Lucida Console",Consolas,monospace;padding:8% 10%;display:none;z-index:99999;line-height:1.7;white-space:pre-wrap}
 #shutdown{position:fixed;inset:0;background:#000;display:none;z-index:99999;place-items:center}
-#shutdown div{color:#FFB300;font:bold 22px "Lucida Console",Consolas,monospace;text-align:center;line-height:2}
+#shutdown div{color:#FFB300;font:bold 24px "Lucida Console",Consolas,monospace;text-align:center;line-height:1.8}
+#shutdown .shut-sub{font-size:12px;color:#666;font-weight:normal}
 .blink{animation:blink 1s steps(1) infinite}
 @keyframes blink{50%{opacity:0}}
 
-/* ---------- boot / login ---------- */
-#boot{position:fixed;inset:0;background:#000;z-index:100006;display:none;place-items:center}
-.boot-logo{display:flex;align-items:center;gap:14px}
-.boot-logo svg{width:52px;height:52px}
-.boot-name{font:bold italic 34px "Franklin Gothic Medium","Segoe UI",Tahoma;color:#fff}
-.boot-name span{color:#F7941D;font-size:22px;vertical-align:top;margin-left:2px}
-.boot-bar{width:190px;height:16px;border:2px solid #7A7A7A;border-radius:9px;margin:34px auto 0;overflow:hidden;position:relative}
-.boot-bar span{position:absolute;top:3px;width:9px;height:8px;background:linear-gradient(180deg,#6FA0FF,#2A5FD8);border-radius:2px;animation:bootmove 1.5s linear infinite}
-.boot-bar span:nth-child(2){animation-delay:.13s}
-.boot-bar span:nth-child(3){animation-delay:.26s}
-@keyframes bootmove{from{left:-14px}to{left:196px}}
+/* ---------- boot screen ---------- */
+#boot{position:fixed;inset:0;background:#000;z-index:100006;display:none}
+.boot-mid{position:absolute;left:50%;top:40%;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center}
+.boot-flag{width:92px;margin-bottom:10px;filter:drop-shadow(0 0 16px rgba(80,110,240,.28))}
+.boot-word{font:15px "Franklin Gothic Medium","Segoe UI",Tahoma;color:#D8D8D8;letter-spacing:.5px;align-self:flex-start}
+.boot-word .rg,.boot-ms .rg{font-size:8px;vertical-align:top}
+.boot-name{font:bold 46px "Franklin Gothic Medium","Segoe UI",Tahoma;color:#fff;line-height:1.05;letter-spacing:-1px}
+.boot-name .xp{color:#F7941D;font-size:27px;font-weight:bold;vertical-align:top;margin-left:1px}
+.boot-edition{align-self:flex-end;color:#A8A8A8;font:16px "Franklin Gothic Medium","Segoe UI",Tahoma;margin-top:2px}
+.boot-track{margin-top:52px;width:154px;height:14px;border:1px solid #9A9A9A;border-radius:8px;position:relative;overflow:hidden}
+.bb{position:absolute;top:2px;width:8px;height:8px;border-radius:1px;background:linear-gradient(180deg,#93AAF6,#4A5FD8 55%,#2333B8);animation:bootmove 1.7s linear infinite}
+.bb:nth-child(2){animation-delay:.12s}
+.bb:nth-child(3){animation-delay:.24s}
+@keyframes bootmove{from{left:-12px}to{left:160px}}
+.boot-copy{position:absolute;left:24px;bottom:20px;font:12px Tahoma;color:#B8B8B8}
+.boot-ms{position:absolute;right:26px;bottom:16px;font:bold italic 21px "Franklin Gothic Medium","Segoe UI",Tahoma;color:#fff}
+
+/* ---------- welcome screen ---------- */
 #login{position:fixed;inset:0;z-index:100005;display:none;flex-direction:column;transition:opacity .5s}
-.lg-top,.lg-bot{height:62px;background:linear-gradient(180deg,#16327E,#0B1E55);flex:none}
-.lg-top{border-bottom:2px solid #E0A02B}
-.lg-bot{border-top:2px solid #E0A02B;display:flex;align-items:center;justify-content:space-between;padding:0 26px}
-.lg-mid{flex:1;display:flex;align-items:center;background:radial-gradient(ellipse at 50% 40%,#7FA2E8 0%,#4A74D4 55%,#2F55B4 100%)}
-.lg-left{flex:1;display:flex;flex-direction:column;align-items:flex-end;gap:16px;padding-right:38px}
-.lg-brand{display:flex;align-items:center;gap:10px}
-.lg-brand svg{width:44px;height:44px;filter:drop-shadow(2px 2px 3px rgba(0,0,0,.4))}
-.lg-brand div{font:bold italic 30px "Franklin Gothic Medium","Segoe UI",Tahoma;color:#fff;text-shadow:2px 2px 3px rgba(0,0,0,.35)}
-.lg-brand span{color:#F7941D;font-size:19px;vertical-align:top}
-.lg-hint{color:#DCE6FA;font-size:13px}
+.lg-top,.lg-bot{height:64px;background:linear-gradient(180deg,#1C3E9C 0%,#122A78 60%,#0C1E5E 100%);flex:none}
+.lg-top{border-bottom:1px solid rgba(255,255,255,.35)}
+.lg-orange{height:2px;flex:none;background:linear-gradient(90deg,#7A4E16 0%,#F0A94E 22%,#C77C24 55%,rgba(199,124,36,.12) 92%,transparent 100%)}
+.lg-bot{display:flex;align-items:center;justify-content:space-between;padding:0 26px}
+.lg-mid{flex:1;display:flex;align-items:center;background:radial-gradient(ellipse 70% 90% at 30% 42%,#91B0EA 0%,#5A7EDC 55%,#3D63C0 100%)}
+.lg-left{flex:1;display:flex;flex-direction:column;align-items:flex-end;gap:20px;padding-right:40px}
+.lg-brand{display:flex;align-items:center;gap:14px}
+.lg-flag{width:74px;filter:drop-shadow(2px 3px 4px rgba(0,0,0,.3))}
+.lg-brandtext{font:bold 44px "Franklin Gothic Medium","Segoe UI",Tahoma;color:#fff;letter-spacing:-1px;text-shadow:2px 3px 4px rgba(0,0,0,.3)}
+.lg-brandtext .xp{color:#F7941D;font-size:26px;vertical-align:top;margin-left:1px}
+.lg-hint{color:#E6EEFC;font:16px "Franklin Gothic Medium","Segoe UI",Tahoma;font-weight:normal}
 .lg-div{width:2px;align-self:stretch;margin:40px 0;background:linear-gradient(180deg,transparent,rgba(255,255,255,.55),transparent)}
-.lg-right{flex:1;padding-left:38px;display:flex;flex-direction:column;gap:14px}
-.lg-tile{display:flex;align-items:center;gap:12px;padding:8px 12px;border-radius:6px;cursor:pointer;color:#fff;max-width:280px}
+.lg-right{flex:1;padding-left:40px;display:flex;flex-direction:column;gap:12px}
+.lg-tile{display:flex;align-items:center;gap:12px;padding:8px 12px;border-radius:6px;cursor:pointer;color:#fff;max-width:290px}
 .lg-tile:hover{background:rgba(255,255,255,.16);box-shadow:0 0 12px rgba(255,255,255,.15)}
-.lg-tile b{font-size:15px}
+.lg-tile b{font:20px "Franklin Gothic Medium","Segoe UI",Tahoma;font-weight:normal}
 .lg-sub{font-size:11px;color:#CFDCF6}
-.lg-ava{width:50px;height:50px;flex:none;border:2px solid #fff;border-radius:6px;background:linear-gradient(160deg,#8EC440,#3D7D1E);display:grid;place-items:center;box-shadow:1px 2px 5px rgba(0,0,0,.35)}
-.lg-ava svg{width:30px;height:30px}
+.lg-ava{width:52px;height:52px;flex:none;border:2px solid #fff;border-radius:5px;background:#fff;overflow:hidden;display:grid;place-items:center;box-shadow:1px 2px 5px rgba(0,0,0,.35)}
+.lg-ava img{width:100%;height:100%;display:block}
 .lg-ava.guest{background:linear-gradient(160deg,#9AA6BC,#5A6478);font:bold 24px Tahoma;color:#fff}
 .lg-tile.shake{animation:nudge .4s}
 .lg-inputrow{display:flex;gap:5px;margin-top:7px}
-.lg-inputrow input{flex:1;min-width:60px;width:130px;border:1px solid #7F9DB9;border-radius:3px;padding:4px 7px;font:12px Tahoma;color:#000;background:#fff;outline:none}
-.lg-inputrow button{width:30px;flex:none;border:1px solid #fff;border-radius:3px;background:linear-gradient(180deg,#8CC63F,#4E9A06);color:#fff;font:bold 14px Tahoma;cursor:pointer;box-shadow:1px 1px 3px rgba(0,0,0,.3)}
+.lg-inputrow input{flex:1;min-width:60px;width:130px}
+.lg-inputrow button{width:30px;flex:none;border:1px solid #fff;border-radius:3px;background:linear-gradient(180deg,#8CC63F,#4E9A06);color:#fff;font:bold 14px Tahoma;cursor:pointer;box-shadow:1px 1px 3px rgba(0,0,0,.3);min-width:0}
 .lg-inputrow button:hover{filter:brightness(1.12)}
-#lg-off{background:none;border:1px solid rgba(255,255,255,.4);border-radius:4px;color:#fff;padding:5px 12px;cursor:pointer;font-size:12px}
+.lg-welcome{display:none;flex:1;text-align:center;font:bold italic 48px "Franklin Gothic Medium","Segoe UI",Tahoma;color:#fff;text-shadow:2px 3px 5px rgba(0,0,0,.4)}
+#login.welcoming .lg-left,#login.welcoming .lg-div,#login.welcoming .lg-right{display:none}
+#login.welcoming .lg-welcome{display:block}
+#lg-off{background:none;border:0;color:#fff;padding:5px 10px;cursor:pointer;font:13px Tahoma;display:flex;align-items:center;gap:8px;border-radius:4px;min-width:0;box-shadow:none}
 #lg-off:hover{background:rgba(255,255,255,.14)}
-.lg-note{color:#B9C8EC;font-size:11px}
+#lg-off img{width:26px;height:26px}
+.lg-note{color:#B9C8EC;font-size:11px;max-width:44%;text-align:right}
 
 /* ---------- context menus / tooltip ---------- */
 #ctx{position:fixed;display:none;z-index:99990;background:#fff;border:1px solid #8A867A;box-shadow:3px 3px 7px rgba(0,0,0,.32);padding:3px;min-width:186px;font-size:11px}
@@ -229,7 +263,7 @@ input{user-select:text}
 .xpane.on{display:block}
 .dlg-foot{display:flex;justify-content:flex-end;gap:7px;padding:9px 11px;border-top:1px solid #D4D0C8;flex:none}
 .monframe{width:170px;margin:0 auto 10px;text-align:center}
-.monframe .scr{border:9px solid #D6D3CE;border-radius:6px;background:#000;box-shadow:inset 0 0 3px #000,1px 2px 5px rgba(0,0,0,.3);display:block;width:170px;height:110px}
+.monframe .scr{border:9px solid #D6D3CE;border-radius:6px;background:#000;box-shadow:inset 0 0 3px #000,1px 2px 5px rgba(0,0,0,.3);display:block;width:170px;height:110px;background-position:center;background-size:cover}
 .monframe .foot{width:56px;height:9px;background:#B8B5AE;margin:0 auto;border-radius:0 0 3px 3px}
 .wplist{border:1px solid #7F9DB9;background:#fff;height:96px;overflow-y:auto;font-size:11px}
 .wplist div{padding:3px 8px;cursor:default}
@@ -240,7 +274,7 @@ input{user-select:text}
 .cal td.today{background:#316AC5;color:#fff;border-radius:2px}
 .cal td.dim3{color:#AAA}
 .calnav{display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;font-weight:bold}
-.calnav button{width:20px}
+.calnav button{width:20px;min-width:0}
 #anaclock{display:block;margin:0 auto}
 .tm-list{font:11px "Lucida Console",Consolas,monospace;background:#fff;border:1px solid #7F9DB9;height:150px;overflow-y:auto}
 .tm-list .row{display:flex;justify-content:space-between;padding:3px 8px;cursor:default}
@@ -248,17 +282,6 @@ input{user-select:text}
 .tm-stat{display:flex;gap:18px;padding:5px 9px;border-top:1px solid #D4D0C8;color:#555;font-size:10px;flex:none}
 #saver{position:fixed;inset:0;z-index:100008;display:none;background:#000;cursor:none}
 .renamer{width:76px;font:11px Tahoma;border:1px solid #316AC5;text-align:center}
-#ql{display:flex;align-items:center;padding:0 3px;flex:none}
-.ql-grip{width:5px;align-self:stretch;margin:4px 2px;border-left:1px dotted rgba(255,255,255,.45)}
-.qlb{width:25px;height:24px;background:none;border:0;border-radius:3px;padding:2px;cursor:pointer;display:grid;place-items:center}
-.qlb:hover{background:rgba(255,255,255,.22)}
-.qlb svg{width:17px;height:17px}
-.usertxtarea{flex:1;border:0;resize:none;font:12px "Lucida Console",Consolas,monospace;padding:7px;outline:none;background:#fff;color:#111;min-height:120px}
-.window{flex-direction:column}
-.window.maxed{border-radius:0}
-.win-body{flex:1;min-height:0}
-.win-body.pad{display:flex;flex-direction:column;min-height:0;overflow:hidden}
-.paper{flex:1}
-.msn-msgs{flex:1;min-height:60px}
+.usertxtarea{flex:1;border:0;resize:none;font:12px "Lucida Console",Consolas,monospace;padding:7px;outline:none;background:#fff;color:#111;min-height:120px;box-shadow:none}
 
 @media (prefers-reduced-motion:reduce){*{animation-duration:.01s !important;transition:none !important}}

@@ -6,6 +6,8 @@ export default defineConfig({
   build: {
     target: "es2020",
     assetsInlineLimit: 100000000,
-    chunkSizeWarningLimit: 4096
+    chunkSizeWarningLimit: 4096,
+    /* xp.css ships a selector lightningcss rejects (`:before:not(...)`) */
+    cssMinify: "esbuild"
   }
 });

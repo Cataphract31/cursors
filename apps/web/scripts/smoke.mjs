@@ -9,10 +9,15 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 let src = readFileSync(join(root, "src", "main.js"), "utf8");
 
-// strip browser-only imports; stub the Webamp constructor
+// strip browser-only imports; stub the Webamp constructor and asset maps.
+// css imports vanish; named-import lines from local modules become stub consts.
 src = src
-  .replace('import "./style.css";', "")
+  .replace(/^import\s+"[^"]*";\s*$/gm, "")
   .replace('import WebampImport from "webamp";', "")
+  .replace(
+    'import { IMG, SNDF } from "./assets.js";',
+    "const IMG = globalThis.__AssetStub; const SNDF = globalThis.__AssetStub;"
+  )
   .replace(
     "const Webamp = (WebampImport && WebampImport.default) ? WebampImport.default : WebampImport;",
     "const Webamp = globalThis.__WebampStub;"
@@ -32,8 +37,12 @@ const stub = new Proxy(function () {}, {
   has() { return true; }
 });
 
+// asset stub: any property access returns a data: URI string
+const assetStub = new Proxy({}, { get: () => "data:,", has: () => true });
+
 const g = globalThis;
 g.__WebampStub = stub;
+g.__AssetStub = assetStub;
 g.window = stub;
 g.document = stub;
 g.localStorage = { getItem: () => null, setItem() {}, removeItem() {} };
@@ -44,6 +53,7 @@ g.requestAnimationFrame = () => 0;
 g.cancelAnimationFrame = () => {};
 g.innerWidth = 1280;
 g.innerHeight = 800;
+g.location = { hash: "", href: "http://localhost/" };
 g.Audio = function () { return stub; };
 g.OfflineAudioContext = function () { return stub; };
 g.Response = g.Response || function () { return stub; };

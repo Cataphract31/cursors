@@ -8,15 +8,6 @@
 <body>
 <svg width="0" height="0" style="position:absolute">
   <defs>
-    <linearGradient id="g-sky" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#2565C7"/><stop offset=".45" stop-color="#5C9EDE"/><stop offset=".68" stop-color="#A6CDEC"/>
-    </linearGradient>
-    <linearGradient id="g-hill" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#8EC440"/><stop offset=".35" stop-color="#66A52E"/><stop offset="1" stop-color="#3D7D1E"/>
-    </linearGradient>
-    <linearGradient id="g-scr" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#4A9DE8"/><stop offset=".6" stop-color="#8CC4F0"/><stop offset=".62" stop-color="#7DBB2F"/><stop offset="1" stop-color="#4E8A1E"/>
-    </linearGradient>
     <symbol id="ic-cursor" viewBox="0 0 14 22">
       <path d="M2 1 L2 17 L6.2 13.4 L8.7 19.6 L11.2 18.5 L8.7 12.4 L13 12.4 Z" fill="#fff" stroke="#000" stroke-width="1.1" stroke-linejoin="round"/>
     </symbol>
@@ -25,151 +16,31 @@
       <rect x="4" y="4" width="24" height="24" rx="4" fill="none" stroke="#7FB2EC" stroke-width="1"/>
       <path d="M11 7 L11 22 L15 18.6 L17.4 24.4 L19.8 23.3 L17.5 17.7 L21.5 17.7 Z" fill="#fff" stroke="#0A2A5C" stroke-width="1" stroke-linejoin="round"/>
     </symbol>
-    <symbol id="ic-computer" viewBox="0 0 32 32">
-      <rect x="3" y="4" width="26" height="19" rx="2" fill="#D6D3CE" stroke="#7A7A6E"/>
-      <rect x="6" y="7" width="20" height="13" fill="url(#g-scr)" stroke="#4A4A42"/>
-      <rect x="12" y="23" width="8" height="3" fill="#B8B5AE"/>
-      <rect x="9" y="26" width="14" height="3" rx="1" fill="#D6D3CE" stroke="#7A7A6E"/>
-    </symbol>
-    <symbol id="ic-bin" viewBox="0 0 32 32">
-      <path d="M8 9 L24 9 L22 29 L10 29 Z" fill="#AFC8E8" fill-opacity=".85" stroke="#5A7FB0"/>
-      <ellipse cx="16" cy="9" rx="8" ry="2.6" fill="#D8E6F6" stroke="#5A7FB0"/>
-      <path d="M12 13 L13 25 M16 13 L16 25 M20 13 L19 25" stroke="#7FA3CE" stroke-width="1.4" fill="none"/>
-      <path d="M13 5 L19 3 L20 6" stroke="#3D7D1E" stroke-width="2" fill="none"/>
-    </symbol>
-    <symbol id="ic-note" viewBox="0 0 32 32">
-      <rect x="5" y="3" width="22" height="27" fill="#fff" stroke="#7A7A6E"/>
-      <rect x="5" y="3" width="22" height="5" fill="#4A9DE8"/>
-      <circle cx="9" cy="5.5" r="1" fill="#fff"/><circle cx="13" cy="5.5" r="1" fill="#fff"/><circle cx="17" cy="5.5" r="1" fill="#fff"/><circle cx="21" cy="5.5" r="1" fill="#fff"/>
-      <path d="M8 12 h16 M8 16 h16 M8 20 h12 M8 24 h14" stroke="#A9C4DE" stroke-width="1.4"/>
-    </symbol>
-    <symbol id="ic-txt" viewBox="0 0 32 32">
-      <path d="M6 2 L21 2 L27 8 L27 30 L6 30 Z" fill="#fff" stroke="#7A7A6E"/>
-      <path d="M21 2 L21 8 L27 8 Z" fill="#D6D3CE" stroke="#7A7A6E"/>
-      <path d="M10 13 h13 M10 17 h13 M10 21 h9 M10 25 h11" stroke="#8A8A8A" stroke-width="1.4"/>
-    </symbol>
-    <symbol id="ic-ie" viewBox="0 0 32 32">
-      <circle cx="16" cy="16" r="10" fill="none" stroke="#2E77D2" stroke-width="4.5"/>
-      <path d="M4 20 C10 26 26 24 30 12" stroke="#F1B802" stroke-width="3" fill="none" stroke-linecap="round"/>
-    </symbol>
-    <symbol id="ic-wallet" viewBox="0 0 32 32">
-      <rect x="3" y="8" width="26" height="18" rx="3" fill="#66A52E" stroke="#3D6E1A"/>
-      <rect x="20" y="14" width="9" height="6" rx="2" fill="#8EC440" stroke="#3D6E1A"/>
-      <text x="10" y="21" font-size="12" font-weight="bold" fill="#fff" font-family="Tahoma">$</text>
-    </symbol>
-    <symbol id="ic-fly" viewBox="0 0 32 32">
-      <path d="M15 16 C 8 4 2 6 3 13 C 4 19 10 20 15 17 Z" fill="#5B9BD5"/>
-      <path d="M17 16 C 24 4 30 6 29 13 C 28 19 22 20 17 17 Z" fill="#7DBB2F"/>
-      <path d="M15 17 C 9 20 6 26 9 28 C 12 30 15 24 16 20 Z" fill="#3F7FC4"/>
-      <path d="M17 17 C 23 20 26 26 23 28 C 20 30 17 24 16 20 Z" fill="#66A52E"/>
-      <ellipse cx="16" cy="17" rx="1.6" ry="4" fill="#2B4A6E"/>
-    </symbol>
-    <symbol id="ic-amp" viewBox="0 0 32 32">
-      <rect x="3" y="5" width="26" height="22" rx="3" fill="#1A1A24" stroke="#4A4A5A"/>
-      <path d="M7 22 V14 M11 22 V10 M15 22 V16 M19 22 V9 M23 22 V13" stroke="#16E05A" stroke-width="2.4"/>
-    </symbol>
     <symbol id="ic-warn" viewBox="0 0 32 32">
       <path d="M16 3 L30 28 L2 28 Z" fill="#F7D440" stroke="#B98A00" stroke-linejoin="round"/>
       <rect x="14.6" y="11" width="2.8" height="9" rx="1.2" fill="#000"/>
       <circle cx="16" cy="24" r="1.7" fill="#000"/>
-    </symbol>
-    <symbol id="ic-error" viewBox="0 0 32 32">
-      <circle cx="16" cy="16" r="13" fill="#E1442C" stroke="#8E1F0E"/>
-      <circle cx="16" cy="16" r="11" fill="none" stroke="#F58C7A" stroke-width="1"/>
-      <path d="M11 11 L21 21 M21 11 L11 21" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
-    </symbol>
-    <symbol id="ic-folder" viewBox="0 0 32 32">
-      <path d="M3 8 L3 26 L29 26 L29 11 L15 11 L12 8 Z" fill="#F7D06B" stroke="#B98A00"/>
-      <path d="M3 13 L29 13 L29 26 L3 26 Z" fill="#FCE49A" stroke="#B98A00"/>
-    </symbol>
-    <symbol id="ic-time" viewBox="0 0 32 32">
-      <circle cx="16" cy="16" r="12" fill="#fff" stroke="#4A6FA5" stroke-width="2"/>
-      <path d="M16 9 L16 16 L21 19" stroke="#1A3A6E" stroke-width="2" fill="none" stroke-linecap="round"/>
-      <circle cx="16" cy="16" r="1.4" fill="#C33"/>
     </symbol>
     <symbol id="ic-desk" viewBox="0 0 32 32">
       <rect x="4" y="6" width="24" height="17" rx="2" fill="#DCE9FB" stroke="#4A6FA5"/>
       <path d="M8 10 h10 M8 14 h8" stroke="#7FA3CE" stroke-width="1.6"/>
       <path d="M20 24 L26 15 L29 18 L23 27 Z" fill="#F1B802" stroke="#8A6A00"/>
     </symbol>
-    <symbol id="ic-tm" viewBox="0 0 32 32">
-      <rect x="3" y="5" width="26" height="22" rx="2" fill="#0A2A0A" stroke="#4A6FA5"/>
-      <path d="M5 22 L10 15 L14 19 L20 9 L27 17" stroke="#2FD858" stroke-width="2" fill="none"/>
-    </symbol>
-    <linearGradient id="g-au-sky" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#8A4A2E"/><stop offset=".45" stop-color="#D8874A"/><stop offset=".68" stop-color="#F2C88A"/>
-    </linearGradient>
-    <linearGradient id="g-au-hill" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#C89A3E"/><stop offset=".4" stop-color="#8A6420"/><stop offset="1" stop-color="#5A3E14"/>
-    </linearGradient>
-    <linearGradient id="g-az-sky" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#0B3B8C"/><stop offset="1" stop-color="#2E6FD8"/>
-    </linearGradient>
-    <linearGradient id="g-ni-sky" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#050810"/><stop offset="1" stop-color="#121F42"/>
-    </linearGradient>
-    <symbol id="ic-flag" viewBox="0 0 20 20">
-      <g transform="rotate(-6 10 10)">
-        <rect x="2" y="3" width="7.4" height="6.4" rx="1.6" fill="#E1442C"/>
-        <rect x="10.4" y="3" width="7.4" height="6.4" rx="1.6" fill="#7DBB2F"/>
-        <rect x="2" y="10.4" width="7.4" height="6.4" rx="1.6" fill="#2E9BE8"/>
-        <rect x="10.4" y="10.4" width="7.4" height="6.4" rx="1.6" fill="#F1B802"/>
-      </g>
-    </symbol>
   </defs>
 </svg>
 
 <div id="desktop">
-  <svg id="bliss" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
-    <g id="wp-bliss" class="wp on">
-      <rect width="1600" height="640" fill="url(#g-sky)"/>
-      <g fill="#fff" opacity=".85">
-        <ellipse cx="330" cy="140" rx="130" ry="30"/><ellipse cx="420" cy="120" rx="90" ry="24"/>
-        <ellipse cx="1130" cy="200" rx="160" ry="32"/><ellipse cx="1240" cy="180" rx="100" ry="24"/>
-        <ellipse cx="780" cy="80" rx="110" ry="22" opacity=".7"/>
-      </g>
-      <path d="M0,560 C 320,440 640,470 900,505 C 1150,538 1400,520 1600,462 L1600,900 L0,900 Z" fill="url(#g-hill)"/>
-      <path d="M0,620 C 300,560 600,580 900,600 C 1200,620 1450,600 1600,560 L1600,900 L0,900 Z" fill="#4E8A1E" opacity=".45"/>
-    </g>
-    <g id="wp-autumn" class="wp">
-      <rect width="1600" height="640" fill="url(#g-au-sky)"/>
-      <circle cx="1180" cy="200" r="58" fill="#F7E3A8" opacity=".9"/>
-      <g fill="#F2D8B4" opacity=".55">
-        <ellipse cx="380" cy="170" rx="150" ry="26"/><ellipse cx="900" cy="110" rx="120" ry="20"/>
-      </g>
-      <path d="M0,580 C 350,470 700,500 950,525 C 1200,550 1420,535 1600,485 L1600,900 L0,900 Z" fill="url(#g-au-hill)"/>
-      <path d="M0,640 C 320,580 640,600 960,620 C 1240,637 1460,620 1600,585 L1600,900 L0,900 Z" fill="#4A3210" opacity=".5"/>
-    </g>
-    <g id="wp-azure" class="wp">
-      <rect width="1600" height="900" fill="url(#g-az-sky)"/>
-      <path d="M0,520 C 260,460 520,560 800,520 C 1080,480 1340,570 1600,520 L1600,900 L0,900 Z" fill="#1E5BC8" opacity=".85"/>
-      <path d="M0,620 C 300,560 600,660 900,620 C 1200,580 1400,660 1600,620 L1600,900 L0,900 Z" fill="#3E7EE4" opacity=".8"/>
-      <path d="M0,720 C 280,670 560,760 880,720 C 1200,680 1420,760 1600,720 L1600,900 L0,900 Z" fill="#6FA6F2" opacity=".7"/>
-      <g fill="#fff" opacity=".5">
-        <circle cx="300" cy="200" r="2"/><circle cx="720" cy="130" r="2"/><circle cx="1220" cy="240" r="2"/><circle cx="1480" cy="120" r="2"/>
-      </g>
-    </g>
-    <g id="wp-night" class="wp">
-      <rect width="1600" height="900" fill="url(#g-ni-sky)"/>
-      <g fill="#fff">
-        <circle cx="140" cy="120" r="1.6"/><circle cx="360" cy="240" r="1.2"/><circle cx="520" cy="90" r="1.8"/><circle cx="760" cy="180" r="1.2"/>
-        <circle cx="940" cy="70" r="1.5"/><circle cx="1120" cy="220" r="1.2"/><circle cx="1330" cy="110" r="1.8"/><circle cx="1490" cy="260" r="1.2"/>
-        <circle cx="240" cy="380" r="1.2"/><circle cx="680" cy="330" r="1.4"/><circle cx="1240" cy="380" r="1.4"/><circle cx="880" cy="430" r="1.1"/>
-      </g>
-      <path d="M1210,170 a52,52 0 1 0 44,80 a42,42 0 1 1 -44,-80 Z" fill="#E8E2C8" opacity=".9"/>
-      <path d="M0,720 C 400,650 900,700 1600,660 L1600,900 L0,900 Z" fill="#0A1424"/>
-    </g>
-    <g id="wp-teal" class="wp">
-      <rect width="1600" height="900" fill="#3A6EA5"/>
-    </g>
-  </svg>
+  <div id="wallpaper"></div>
 
   <div id="icons"></div>
   <div id="marquee"></div>
 
   <!-- CURSORS.EXE control panel -->
   <div class="window" id="win-cursors" style="left:calc(100% - 348px);top:44px;width:318px">
-    <div class="titlebar"><svg><use href="#ic-app"/></svg><span class="tt">CURSORS.EXE</span><button class="tbtn min" aria-label="Minimize">–</button><button class="tbtn close" aria-label="Close">✕</button></div>
+    <div class="title-bar">
+      <div class="tb-l"><i class="xico tb-ico" data-ico="@ic-app"></i><div class="title-bar-text">CURSORS.EXE</div></div>
+      <div class="title-bar-controls"><button aria-label="Minimize"></button><button aria-label="Close"></button></div>
+    </div>
     <div class="win-body">
       <div class="phaseline" id="phaseline">BOOTING…</div>
       <div class="walletrow"><span>WALLET</span><span class="amt" id="walletamt">5.000 SOL</span></div>
@@ -194,14 +65,17 @@
 
   <!-- Messenger -->
   <div class="window" id="win-chat" style="left:96px;top:calc(100% - 302px);width:308px">
-    <div class="titlebar"><svg><use href="#ic-fly"/></svg><span class="tt">everyone — Conversation</span><button class="tbtn min" aria-label="Minimize">–</button><button class="tbtn close" aria-label="Close">✕</button></div>
+    <div class="title-bar">
+      <div class="tb-l"><i class="xico tb-ico" data-ico="msn16"></i><div class="title-bar-text">everyone — Conversation</div></div>
+      <div class="title-bar-controls"><button aria-label="Minimize"></button><button aria-label="Close"></button></div>
+    </div>
     <div class="win-body pad">
-      <div class="msn-head"><svg><use href="#ic-fly"/></svg><div class="to">To: <b>everyone on this desktop</b><br><span class="dim">Desktop Messenger Service</span></div></div>
+      <div class="msn-head"><i class="xico msn-fly" data-ico="msn32"></i><div class="to">To: <b>everyone on this desktop</b><br><span class="dim">.NET Messenger Service</span></div></div>
       <div class="msn-msgs" id="chatmsgs"></div>
       <div class="msn-input">
         <input id="chatin" maxlength="120" placeholder="type a message">
         <button class="xbtn" id="chatsend">Send</button>
-        <button class="xbtn" id="chatnudge" title="Nudge">⚡</button>
+        <button class="xbtn" id="chatnudge" title="Send a nudge">⚡</button>
       </div>
     </div>
   </div>
@@ -211,7 +85,10 @@
 
   <!-- fights.log -->
   <div class="window" id="win-log" style="left:calc(100% - 348px);top:calc(100% - 258px);width:318px">
-    <div class="titlebar"><svg><use href="#ic-note"/></svg><span class="tt">fights.log - Notepad</span><button class="tbtn min" aria-label="Minimize">–</button><button class="tbtn close" aria-label="Close">✕</button></div>
+    <div class="title-bar">
+      <div class="tb-l"><i class="xico tb-ico" data-ico="note16"></i><div class="title-bar-text">fights.log - Notepad</div></div>
+      <div class="title-bar-controls"><button aria-label="Minimize"></button><button aria-label="Close"></button></div>
+    </div>
     <div class="win-body pad">
       <div class="menubar"><span>File</span><span>Edit</span><span>Format</span><span>View</span><span>Help</span></div>
       <div class="paper" id="logpaper"></div>
@@ -220,7 +97,10 @@
 
   <!-- README -->
   <div class="window" id="win-readme" style="left:330px;top:52px;width:340px">
-    <div class="titlebar"><svg><use href="#ic-txt"/></svg><span class="tt">README.txt - Notepad</span><button class="tbtn min" aria-label="Minimize">–</button><button class="tbtn close" aria-label="Close">✕</button></div>
+    <div class="title-bar">
+      <div class="tb-l"><i class="xico tb-ico" data-ico="note16"></i><div class="title-bar-text">README.txt - Notepad</div></div>
+      <div class="title-bar-controls"><button aria-label="Minimize"></button><button aria-label="Close"></button></div>
+    </div>
     <div class="win-body pad">
       <div class="menubar"><span>File</span><span>Edit</span><span>Format</span><span>View</span><span>Help</span></div>
       <div class="paper tall">CURSORS.EXE — rules
@@ -263,7 +143,10 @@ play money prototype. chain later.</div>
 
   <!-- Recycle Bin -->
   <div class="window" id="win-recycle" style="left:390px;top:150px;width:290px">
-    <div class="titlebar"><svg><use href="#ic-bin"/></svg><span class="tt">Recycle Bin</span><button class="tbtn min" aria-label="Minimize">–</button><button class="tbtn close" aria-label="Close">✕</button></div>
+    <div class="title-bar">
+      <div class="tb-l"><i class="xico tb-ico" data-ico="bin32"></i><div class="title-bar-text">Recycle Bin</div></div>
+      <div class="title-bar-controls"><button aria-label="Minimize"></button><button aria-label="Close"></button></div>
+    </div>
     <div class="win-body pad">
       <div class="menubar"><span>File</span><span>Edit</span><span>View</span><span>Help</span></div>
       <div class="paper" id="binpaper">(empty)</div>
@@ -272,13 +155,19 @@ play money prototype. chain later.</div>
 
   <!-- My Computer -->
   <div class="window" id="win-computer" style="left:300px;top:56px;width:300px">
-    <div class="titlebar"><svg><use href="#ic-computer"/></svg><span class="tt">My Computer</span><button class="tbtn min" aria-label="Minimize">–</button><button class="tbtn close" aria-label="Close">✕</button></div>
+    <div class="title-bar">
+      <div class="tb-l"><i class="xico tb-ico" data-ico="computer16"></i><div class="title-bar-text">My Computer</div></div>
+      <div class="title-bar-controls"><button aria-label="Minimize"></button><button aria-label="Close"></button></div>
+    </div>
     <div class="win-body mono" id="syspaper" style="line-height:1.9">loading…</div>
   </div>
 
   <!-- Internet Explorer: cursor$land -->
   <div class="window" id="win-ie" style="left:180px;top:90px;width:470px">
-    <div class="titlebar"><svg><use href="#ic-ie"/></svg><span class="tt">cursor$land - Microsoft Internet Explorer</span><button class="tbtn min" aria-label="Minimize">–</button><button class="tbtn close" aria-label="Close">✕</button></div>
+    <div class="title-bar">
+      <div class="tb-l"><i class="xico tb-ico" data-ico="ie16"></i><div class="title-bar-text">cursor$land - Microsoft Internet Explorer</div></div>
+      <div class="title-bar-controls"><button aria-label="Minimize"></button><button aria-label="Close"></button></div>
+    </div>
     <div class="win-body pad geo">
       <div class="geo-marq"><span>★•*¨*•.¸¸ welcome to cursor$land ¸¸.•*¨*•★ the #1 cursor fightring on the information superhighway ★ winner takes all ★ tell your friends ★</span></div>
       <h1>~ cursor$land ~</h1>
@@ -295,7 +184,10 @@ play money prototype. chain later.</div>
 
   <!-- Display Properties -->
   <div class="window fixed" id="win-dispprops" style="left:calc(50% - 190px);top:60px;width:380px">
-    <div class="titlebar"><svg><use href="#ic-computer"/></svg><span class="tt">Display Properties</span><button class="tbtn close" aria-label="Close">✕</button></div>
+    <div class="title-bar">
+      <div class="tb-l"><i class="xico tb-ico" data-ico="cpanel16"></i><div class="title-bar-text">Display Properties</div></div>
+      <div class="title-bar-controls"><button aria-label="Close"></button></div>
+    </div>
     <div class="win-body pad" style="background:#ECE9D8">
       <div class="xtabs">
         <span class="xtab on" data-pane="dp-desk">Desktop</span>
@@ -303,7 +195,7 @@ play money prototype. chain later.</div>
         <span class="xtab" data-pane="dp-app">Appearance</span>
       </div>
       <div class="xpane on" id="dp-desk">
-        <div class="monframe"><svg class="scr" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice"><use id="dp-prevuse" href="#wp-bliss"/></svg><div class="foot"></div></div>
+        <div class="monframe"><div class="scr" id="dp-prev"></div><div class="foot"></div></div>
         <div class="small dim" style="margin:2px 0 3px">Background:</div>
         <div class="wplist" id="wplist"></div>
       </div>
@@ -317,7 +209,7 @@ play money prototype. chain later.</div>
             <option value="none">(None)</option>
           </select>
         </div>
-        <div class="aprow"><span class="lb">Wait</span><input type="number" id="sv-wait" min="1" max="60" value="3" style="width:52px;font:11px Tahoma;border:1px solid #7F9DB9;padding:2px 4px"> <span class="small dim">minutes, then the desktop dreams</span></div>
+        <div class="aprow"><span class="lb">Wait</span><input type="number" id="sv-wait" min="1" max="60" value="3" style="width:52px"> <span class="small dim">minutes, then the desktop dreams</span></div>
         <div style="text-align:right;margin-top:6px"><button class="xbtn" id="sv-test">Preview</button></div>
       </div>
       <div class="xpane" id="dp-app">
@@ -332,7 +224,10 @@ play money prototype. chain later.</div>
 
   <!-- Date and Time Properties -->
   <div class="window fixed" id="win-datetime" style="left:calc(50% - 200px);top:90px;width:400px">
-    <div class="titlebar"><svg><use href="#ic-time"/></svg><span class="tt">Date and Time Properties</span><button class="tbtn close" aria-label="Close">✕</button></div>
+    <div class="title-bar">
+      <div class="tb-l"><i class="xico tb-ico" data-ico="cpanel16"></i><div class="title-bar-text">Date and Time Properties</div></div>
+      <div class="title-bar-controls"><button aria-label="Close"></button></div>
+    </div>
     <div class="win-body pad" style="background:#ECE9D8">
       <div class="xtabs">
         <span class="xtab on" data-pane="dt-main">Date &amp; Time</span>
@@ -364,7 +259,10 @@ play money prototype. chain later.</div>
 
   <!-- Task Manager -->
   <div class="window" id="win-taskmgr" data-minw="310" data-minh="300" style="left:120px;top:80px;width:344px">
-    <div class="titlebar"><svg><use href="#ic-tm"/></svg><span class="tt">Task Manager</span><button class="tbtn min" aria-label="Minimize">–</button><button class="tbtn close" aria-label="Close">✕</button></div>
+    <div class="title-bar">
+      <div class="tb-l"><i class="xico tb-ico" data-ico="@ic-app"></i><div class="title-bar-text">Windows Task Manager</div></div>
+      <div class="title-bar-controls"><button aria-label="Minimize"></button><button aria-label="Close"></button></div>
+    </div>
     <div class="win-body pad" style="background:#ECE9D8">
       <div class="menubar"><span>File</span><span>Options</span><span>View</span><span>Shut Down</span><span>Help</span></div>
       <div class="xtabs">
@@ -387,12 +285,31 @@ play money prototype. chain later.</div>
     </div>
   </div>
 
+  <!-- Run dialog -->
+  <div class="window fixed" id="win-run" style="left:8px;top:calc(100% - 190px);width:346px">
+    <div class="title-bar">
+      <div class="tb-l"><i class="xico tb-ico" data-ico="run16"></i><div class="title-bar-text">Run</div></div>
+      <div class="title-bar-controls"><button aria-label="Close"></button></div>
+    </div>
+    <div class="win-body">
+      <div style="display:flex;gap:11px;align-items:flex-start;padding:4px 2px 12px">
+        <i class="xico" data-ico="run32" style="width:32px;height:32px;flex:none"></i>
+        <div style="line-height:1.5">Type the name of a program, folder, document, or Internet resource, and Windows will open it for you.</div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;padding:0 2px 12px"><span>Open:</span><input id="run-in" style="flex:1" autocomplete="off" spellcheck="false"></div>
+      <div style="display:flex;gap:7px;justify-content:flex-end"><button class="xbtn" id="run-ok" style="min-width:74px">OK</button><button class="xbtn" id="run-cancel" style="min-width:74px">Cancel</button><button class="xbtn" id="run-browse" style="min-width:74px">Browse...</button></div>
+    </div>
+  </div>
+
   <!-- Error dialog -->
   <div class="window fixed" id="win-error" style="left:calc(50% - 172px);top:calc(50% - 84px);width:344px">
-    <div class="titlebar"><svg><use href="#ic-error"/></svg><span class="tt">Error</span><button class="tbtn close" aria-label="Close">✕</button></div>
+    <div class="title-bar">
+      <div class="tb-l"><div class="title-bar-text">Error</div></div>
+      <div class="title-bar-controls"><button aria-label="Close"></button></div>
+    </div>
     <div class="win-body">
       <div style="display:flex;gap:13px;align-items:center;padding:8px 4px 12px">
-        <svg style="width:34px;height:34px;flex:none"><use href="#ic-error"/></svg>
+        <i class="xico" data-ico="err32" style="width:32px;height:32px;flex:none"></i>
         <div id="errtext" style="line-height:1.55">Something happened.</div>
       </div>
       <div style="text-align:center"><button class="xbtn" id="err-ok" style="min-width:82px">OK</button></div>
@@ -401,10 +318,13 @@ play money prototype. chain later.</div>
 
   <!-- Confirm dialog -->
   <div class="window fixed" id="win-confirm" style="left:calc(50% - 165px);top:calc(50% - 80px);width:330px">
-    <div class="titlebar"><svg><use href="#ic-warn"/></svg><span class="tt">Confirm</span><button class="tbtn close" aria-label="Close">✕</button></div>
+    <div class="title-bar">
+      <div class="tb-l"><div class="title-bar-text">Confirm</div></div>
+      <div class="title-bar-controls"><button aria-label="Close"></button></div>
+    </div>
     <div class="win-body">
       <div style="display:flex;gap:13px;align-items:center;padding:8px 4px 12px">
-        <svg style="width:34px;height:34px;flex:none"><use href="#ic-warn"/></svg>
+        <svg style="width:32px;height:32px;flex:none"><use href="#ic-warn"/></svg>
         <div id="conftext" style="line-height:1.55">Are you sure?</div>
       </div>
       <div style="text-align:center;display:flex;gap:8px;justify-content:center"><button class="xbtn" id="conf-yes" style="min-width:76px">Yes</button><button class="xbtn" id="conf-no" style="min-width:76px">No</button></div>
@@ -413,10 +333,13 @@ play money prototype. chain later.</div>
 
   <!-- Icon properties -->
   <div class="window fixed" id="win-props" style="left:calc(50% - 152px);top:calc(50% - 118px);width:304px">
-    <div class="titlebar"><svg><use href="#ic-txt"/></svg><span class="tt">Properties</span><button class="tbtn close" aria-label="Close">✕</button></div>
+    <div class="title-bar">
+      <div class="tb-l"><div class="title-bar-text">Properties</div></div>
+      <div class="title-bar-controls"><button aria-label="Close"></button></div>
+    </div>
     <div class="win-body">
       <div style="display:flex;gap:11px;align-items:center;border-bottom:1px solid #D4D0C8;padding-bottom:9px;margin-bottom:9px">
-        <svg style="width:32px;height:32px"><use id="prop-ico" href="#ic-app"/></svg><b id="prop-name">—</b>
+        <span id="prop-ico" style="width:32px;height:32px;display:inline-block"></span><b id="prop-name">—</b>
       </div>
       <div class="small" id="prop-rows" style="line-height:2.1"></div>
       <div style="text-align:right;margin-top:10px"><button class="xbtn" id="prop-ok" style="min-width:76px">OK</button></div>
@@ -425,7 +348,10 @@ play money prototype. chain later.</div>
 
   <!-- Folder viewer -->
   <div class="window" id="win-folder" data-minw="260" data-minh="170" style="left:240px;top:120px;width:330px">
-    <div class="titlebar"><svg><use href="#ic-folder"/></svg><span class="tt">New Folder</span><button class="tbtn min" aria-label="Minimize">–</button><button class="tbtn close" aria-label="Close">✕</button></div>
+    <div class="title-bar">
+      <div class="tb-l"><i class="xico tb-ico" data-ico="folder16"></i><div class="title-bar-text">New Folder</div></div>
+      <div class="title-bar-controls"><button aria-label="Minimize"></button><button aria-label="Close"></button></div>
+    </div>
     <div class="win-body pad">
       <div class="menubar"><span>File</span><span>Edit</span><span>View</span><span>Help</span></div>
       <div class="paper" id="folderbody" style="background:#fff"></div>
@@ -434,7 +360,10 @@ play money prototype. chain later.</div>
 
   <!-- User notepad -->
   <div class="window" id="win-usertxt" data-minw="280" data-minh="200" style="left:280px;top:100px;width:360px">
-    <div class="titlebar"><svg><use href="#ic-txt"/></svg><span class="tt">Untitled - Notepad</span><button class="tbtn min" aria-label="Minimize">–</button><button class="tbtn close" aria-label="Close">✕</button></div>
+    <div class="title-bar">
+      <div class="tb-l"><i class="xico tb-ico" data-ico="note16"></i><div class="title-bar-text">Untitled - Notepad</div></div>
+      <div class="title-bar-controls"><button aria-label="Minimize"></button><button aria-label="Close"></button></div>
+    </div>
     <div class="win-body pad">
       <div class="menubar"><span>File</span><span>Edit</span><span>Format</span><span>View</span><span>Help</span></div>
       <textarea class="usertxtarea" id="usertxtarea" spellcheck="false"></textarea>
@@ -443,7 +372,9 @@ play money prototype. chain later.</div>
 
   <!-- Shutdown warning -->
   <div class="window fixed" id="win-shutdown" style="left:calc(50% - 160px);top:calc(50% - 90px);width:320px">
-    <div class="titlebar"><svg><use href="#ic-warn"/></svg><span class="tt">System Shutdown</span></div>
+    <div class="title-bar">
+      <div class="tb-l"><div class="title-bar-text">System Shutdown</div></div>
+    </div>
     <div class="win-body" style="display:flex;gap:12px;align-items:center">
       <svg style="width:36px;height:36px;flex:none"><use href="#ic-warn"/></svg>
       <div>
@@ -455,13 +386,19 @@ play money prototype. chain later.</div>
 
   <!-- Round results -->
   <div class="window fixed" id="win-results" style="left:calc(50% - 170px);top:100px;width:340px">
-    <div class="titlebar"><svg><use href="#ic-app"/></svg><span class="tt">Round results</span><button class="tbtn close" aria-label="Close">✕</button></div>
+    <div class="title-bar">
+      <div class="tb-l"><i class="xico tb-ico" data-ico="@ic-app"></i><div class="title-bar-text">Round results</div></div>
+      <div class="title-bar-controls"><button aria-label="Close"></button></div>
+    </div>
     <div class="win-body mono" id="resultsbody" style="line-height:1.9"></div>
   </div>
 
   <!-- Log Off dialog -->
   <div class="window fixed" id="win-logoff" style="left:calc(50% - 140px);top:calc(50% - 70px);width:280px">
-    <div class="titlebar"><svg><use href="#ic-flag"/></svg><span class="tt">Log Off Windows</span><button class="tbtn close" aria-label="Close">✕</button></div>
+    <div class="title-bar">
+      <div class="tb-l"><i class="xico tb-ico" data-ico="flag16"></i><div class="title-bar-text">Log Off Windows</div></div>
+      <div class="title-bar-controls"><button aria-label="Close"></button></div>
+    </div>
     <div class="win-body" style="text-align:center;padding:16px 12px">
       <p>Log off and reset the session?<br>Wallet returns to 5.000 SOL.</p>
       <div style="display:flex;gap:8px;justify-content:center;margin-top:13px">
@@ -477,69 +414,96 @@ play money prototype. chain later.</div>
 
 <!-- taskbar -->
 <div id="taskbar">
-  <button id="startbtn" data-tip="Click here to begin. Or don't."><svg><use href="#ic-flag"/></svg>start</button>
-  <div id="ql"><span class="ql-grip"></span><button class="qlb" id="ql-desk" data-tip="Show Desktop"><svg><use href="#ic-desk"/></svg></button><button class="qlb" data-app="win-amp" data-tip="Winamp"><svg><use href="#ic-amp"/></svg></button><button class="qlb" data-app="win-chat" data-tip="Messenger"><svg><use href="#ic-fly"/></svg></button><span class="ql-grip"></span></div>
+  <img id="startbtn" alt="start" draggable="false" data-tip="Click here to begin">
+  <div id="ql"><span class="ql-grip"></span><button class="qlb" id="ql-desk" data-tip="Show Desktop"><svg><use href="#ic-desk"/></svg></button><button class="qlb" data-app="win-amp" data-tip="Winamp"><i class="xico" data-ico="amp16"></i></button><button class="qlb" data-app="win-chat" data-tip="Windows Messenger"><i class="xico" data-ico="msn16"></i></button><span class="ql-grip"></span></div>
   <div id="tabs"></div>
-  <div id="tray"><span id="phasechip" data-tip="Round status">R0 · BOOT</span><span id="sndico" data-tip="Sounds: click to mute">🔊</span><span id="clock" data-tip="@clock">--:--</span></div>
+  <div id="tray">
+    <span id="phasechip" data-tip="Round status">R0 · BOOT</span>
+    <i class="xico trayico" id="sndico" data-ico="trayVol" data-tip="Volume: click to mute"></i>
+    <i class="xico trayico" data-ico="trayUsb" data-tip="Safely Remove Hardware: never"></i>
+    <i class="xico trayico" data-ico="trayRisk" data-tip="Your computer might be at risk"></i>
+    <span id="clock" data-tip="@clock">--:--</span>
+  </div>
 </div>
 
 <!-- start menu -->
 <div id="startmenu">
-  <div class="sm-head"><span class="ava"><svg><use href="#ic-cursor"/></svg></span><span id="sm-user">Administrator</span></div>
-  <div class="sm-cols">
+  <header class="sm-head"><img class="sm-ava" id="sm-ava" alt=""><span id="sm-user">Administrator</span></header>
+  <section class="sm-menu">
+    <hr class="orange-hr">
     <div class="sm-left">
-      <div class="sm-item" data-app="win-cursors"><svg><use href="#ic-app"/></svg><span><b>CURSORS.EXE</b><span class="sub">winner takes all</span></span></div>
-      <div class="sm-item" data-app="win-chat"><svg><use href="#ic-fly"/></svg><span><b>Messenger</b><span class="sub">everyone is online</span></span></div>
-      <div class="sm-item" data-app="win-amp"><svg><use href="#ic-amp"/></svg><span><b>Winamp</b><span class="sub">it really whips the llama's ass</span></span></div>
-      <div class="sm-item" data-app="win-ie"><svg><use href="#ic-ie"/></svg><span><b>Internet Explorer</b><span class="sub">the information superhighway</span></span></div>
+      <div class="sm-item two" data-app="win-ie"><i class="xico" data-ico="ie32"></i><div class="sm-texts"><div class="sm-text b">Internet</div><div class="sm-sub">Internet Explorer</div></div></div>
+      <div class="sm-item two" data-act="email"><i class="xico" data-ico="outlook32"></i><div class="sm-texts"><div class="sm-text b">E-mail</div><div class="sm-sub">Outlook Express</div></div></div>
       <div class="sm-sep"></div>
-      <div class="sm-item" data-app="win-log"><svg><use href="#ic-note"/></svg><span>fights.log</span></div>
-      <div class="sm-item" data-app="win-readme"><svg><use href="#ic-txt"/></svg><span>README.txt</span></div>
+      <div class="sm-item" data-app="win-cursors"><i class="xico" data-ico="@ic-app"></i><div class="sm-texts"><div class="sm-text">CURSORS.EXE</div></div></div>
+      <div class="sm-item" data-app="win-chat"><i class="xico" data-ico="msn32"></i><div class="sm-texts"><div class="sm-text">Windows Messenger</div></div></div>
+      <div class="sm-item" data-app="win-amp"><i class="xico" data-ico="amp16"></i><div class="sm-texts"><div class="sm-text">Winamp</div></div></div>
+      <div class="sm-item" data-act="wmp"><i class="xico" data-ico="wmp32"></i><div class="sm-texts"><div class="sm-text">Windows Media Player</div></div></div>
+      <div class="sm-item" data-app="win-log"><i class="xico" data-ico="note32"></i><div class="sm-texts"><div class="sm-text">fights.log</div></div></div>
+      <div style="flex:1"></div>
+      <div class="sm-sep"></div>
+      <div class="sm-item allprog" data-act="allprograms"><i class="xico empty"></i><div class="sm-texts"><div class="sm-text b">All Programs</div></div><img class="sm-allarrow" id="sm-allarrow" alt=""></div>
     </div>
     <div class="sm-right">
-      <div class="sm-item" data-app="win-cursors"><svg><use href="#ic-wallet"/></svg><span>My Wallet</span></div>
-      <div class="sm-item" data-app="win-computer"><svg><use href="#ic-computer"/></svg><span>My Computer</span></div>
-      <div class="sm-item" data-app="win-recycle"><svg><use href="#ic-bin"/></svg><span>Recycle Bin</span></div>
+      <div class="sm-item" data-act="mydocs"><i class="xico" data-ico="docs32"></i><div class="sm-texts"><div class="sm-text b">My Documents</div></div></div>
+      <div class="sm-item" data-act="mypics"><i class="xico" data-ico="pics32"></i><div class="sm-texts"><div class="sm-text b">My Pictures</div></div></div>
+      <div class="sm-item" data-app="win-amp"><i class="xico" data-ico="music32"></i><div class="sm-texts"><div class="sm-text b">My Music</div></div></div>
+      <div class="sm-item" data-app="win-computer"><i class="xico" data-ico="computer32"></i><div class="sm-texts"><div class="sm-text b">My Computer</div></div></div>
+      <div class="sm-sep"></div>
+      <div class="sm-item" data-app="win-dispprops"><i class="xico" data-ico="cpanel32"></i><div class="sm-texts"><div class="sm-text">Control Panel</div></div></div>
+      <div class="sm-item" data-act="connect"><i class="xico" data-ico="connect32"></i><div class="sm-texts"><div class="sm-text">Connect To</div></div></div>
+      <div class="sm-item" data-act="printers"><i class="xico" data-ico="printer32"></i><div class="sm-texts"><div class="sm-text">Printers and Faxes</div></div></div>
+      <div class="sm-sep"></div>
+      <div class="sm-item" data-app="win-readme"><i class="xico" data-ico="help32"></i><div class="sm-texts"><div class="sm-text">Help and Support</div></div></div>
+      <div class="sm-item" data-act="search"><i class="xico" data-ico="search32"></i><div class="sm-texts"><div class="sm-text">Search</div></div></div>
+      <div class="sm-item" data-app="win-run"><i class="xico" data-ico="run32"></i><div class="sm-texts"><div class="sm-text">Run...</div></div></div>
     </div>
-  </div>
-  <div class="sm-foot">
-    <span id="sm-logoff"><i class="i-log">⇦</i>Log Off</span>
-    <span id="sm-off"><i class="i-off">⏻</i>Turn Off Computer</span>
-  </div>
+  </section>
+  <footer class="sm-foot">
+    <div class="sm-fitem" id="sm-logoff"><i class="xico" data-ico="lock32"></i><span>Log Off</span></div>
+    <div class="sm-fitem" id="sm-off"><i class="xico" data-ico="off32"></i><span>Turn Off Computer</span></div>
+  </footer>
 </div>
 
-<div id="balloon"><b>ℹ CURSORS.EXE</b>auto-battler. deploy any time. attack or defend from the dashboard. bank before shutdown.</div>
+<div id="balloon"><span id="balloon-x">✕</span><b>Take a tour of CURSORS.EXE</b>auto-battler. deploy any time. attack or defend from the dashboard. bank before shutdown.</div>
 
 <div id="bsod"></div>
-<div id="shutdown"><div>It is now safe to lose your money.<br><span style="font-size:13px;color:#888">click anywhere to log back in</span></div></div>
+<div id="shutdown"><div>It is now safe to turn off<br>your computer.<br><span class="shut-sub">click anywhere to log back in</span></div></div>
 
 <canvas id="saver"></canvas>
 <div id="ctx"></div>
 <div id="xptip"></div>
 
 <div id="boot">
-  <div style="text-align:center">
-    <div class="boot-logo"><svg><use href="#ic-flag"/></svg><div class="boot-name">cursors<span>xp</span></div></div>
-    <div class="boot-bar"><span></span><span></span><span></span></div>
+  <div class="boot-mid">
+    <img class="boot-flag" alt="">
+    <div class="boot-word">Microsoft<span class="rg">®</span></div>
+    <div class="boot-name">Windows<span class="xp">xp</span></div>
+    <div class="boot-edition">Professional</div>
+    <div class="boot-track"><span class="bb"></span><span class="bb"></span><span class="bb"></span></div>
   </div>
+  <div class="boot-copy">Copyright © Microsoft Corporation</div>
+  <div class="boot-ms">Microsoft<span class="rg">®</span></div>
 </div>
 
 <div id="login">
   <div class="lg-top"></div>
   <div class="lg-mid">
     <div class="lg-left">
-      <div class="lg-brand"><svg><use href="#ic-flag"/></svg><div>cursors<span>xp</span></div></div>
+      <div class="lg-brand"><img class="lg-flag" alt=""><div class="lg-brandtext">Windows<span class="xp">xp</span></div></div>
       <div class="lg-hint">To begin, click your user name</div>
     </div>
     <div class="lg-div"></div>
     <div class="lg-right">
-      <div class="lg-tile" id="tile-admin"><span class="lg-ava"><svg><use href="#ic-cursor"/></svg></span><div style="flex:1"><b id="lg-name">Administrator</b><div class="lg-sub" id="lg-sub">5.000 SOL and dreams</div>
+      <div class="lg-tile" id="tile-admin"><span class="lg-ava"><img id="lg-avaimg" alt=""></span><div style="flex:1"><b id="lg-name">Administrator</b><div class="lg-sub" id="lg-sub">5.000 SOL and dreams</div>
         <div class="lg-inputrow" id="lg-inputrow" style="display:none"><input id="lg-user" maxlength="14" placeholder="type a user name" autocomplete="off" spellcheck="false"><button id="lg-go" title="Log on">→</button></div>
       </div></div>
-      <div class="lg-tile" id="tile-guest"><span class="lg-ava guest">?</span><div><b>Guest</b><div class="lg-sub" id="guest-sub">account disabled</div></div></div>
+      <div class="lg-tile" id="tile-guest"><span class="lg-ava guest">?</span><div><b>Guest</b><div class="lg-sub" id="guest-sub">account is disabled</div></div></div>
     </div>
+    <div class="lg-welcome" id="lg-welcome">welcome</div>
   </div>
-  <div class="lg-bot"><button id="lg-off">⏻ Turn off computer</button><div class="lg-note">After you log on, you can add or lose funds.</div></div>
+  <div class="lg-orange"></div>
+  <div class="lg-bot"><button id="lg-off"><img id="lg-offimg" alt="">Turn off computer</button><div class="lg-note">After you log on, you can add or lose funds.</div></div>
 </div>
 <script type="module" src="/src/main.js"></script>
 </body>
