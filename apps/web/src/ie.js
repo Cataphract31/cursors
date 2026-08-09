@@ -22,8 +22,12 @@ export function initIE(deps) {
   const key = u => String(u).trim().toLowerCase()
     .replace(/^https?:\/\//, "").replace(/^www\./, "").replace(/\/+$/, "");
 
-  /* ---------- the guestbook is real, and it persists ---------- */
+  /* ---------- the guestbook is real, and it persists ----------
+     online it is GLOBAL: the beta server owns it and everyone reads the same
+     page. offline it falls back to the local store, as before. */
   function guests() {
+    const net = hooks.netGuests && hooks.netGuests();
+    if (net) return net;
     if (!store.data.guest) {
       store.data.guest = [
         { who: "mumu", when: "14 Aug 2003", txt: "first!!! also i am up 4.2 SOL all time (this account)" },
@@ -266,6 +270,8 @@ ${RING}
     { n: "deg404 // RNG CRACKED", u: "http://deg404.neocities.org/", d: "sells a bot. read it for the education.", ok: 1 },
     { n: "bobo's homepage", u: "http://www.angelfire.com/biz/bobo/", d: "under construction since 2003.", ok: 1 },
     { n: "MSN Search", u: "http://search.msn.com/", d: "indexes the entire web. all ten pages of it, counting the 404.", ok: 1 },
+    { n: "cursorTV", u: "http://tv.cursor.land/", d: "one screen, everyone watches. bring a link.", ok: 1 },
+    { n: "the gallery", u: "http://gallery.cursor.land/", d: "what the lobby painted. curated by nobody.", ok: 1 },
     { n: "cursor tactics quarterly", u: "http://www.cursortactics.com/", d: "host suspended", ok: 0 },
     { n: "XP_CHAD SYSTEM (works!!)", u: "http://xpchad.tripod.com/system/", d: "account deleted by tripod", ok: 0 },
     { n: "the cursor graveyard", u: "http://graveyard.cursor.land/", d: "domain expired", ok: 0 },
@@ -428,6 +434,81 @@ ${RING}
 </center>`,
   });
 
+  /* ---------- cursorTV: the lobby watches one video together ---------- */
+  /* the player, the queue and the sync all live in main.js (hooks.tvMounted);
+     this page is only the 2003 chrome around them */
+  site("http://tv.cursor.land/", {
+    title: "cursorTV - now showing",
+    cls: "geo",
+    mounted: p => hooks.tvMounted && hooks.tvMounted(p),
+    body: () => hooks.mpOn && hooks.mpOn() ? `<center>
+<h1>~ cursorTV ~</h1>
+<font size="1">one screen &#183; everyone watches &#183; fair queue &#183; skip by vote</font>
+<div class="rainbow"></div>
+${NAV}
+<div class="rainbow"></div>
+<table border="1" cellpadding="0" cellspacing="0" class="sidebox" width="94%"><tr><td>
+  <div id="tv-slot" style="width:100%;height:300px;background:#000"></div>
+</td></tr></table>
+<div id="tv-now" style="margin:6px 0"></div>
+<a id="tv-sound"><span class="badge">&#128266; CLICK FOR SOUND (the browser makes us start muted)</span></a>
+<br><br>
+<table border="0" cellpadding="3" cellspacing="0"><tr>
+  <td><input id="tv-in" class="gbin" style="width:280px" placeholder="paste a youtube link" spellcheck="false"></td>
+  <td><a id="tv-add"><b>[ queue it ]</b></a></td>
+  <td>&nbsp;&#183;&nbsp;</td>
+  <td><a id="tv-skip">[ vote skip ]</a></td>
+</tr></table>
+<br>
+<table border="1" cellpadding="6" cellspacing="0" class="sidebox" width="80%"><tr><td align="left">
+  <b>up next</b>
+  <div id="tv-queue"></div>
+</td></tr></table>
+<p><font size="1">3 in the queue per person, first come first played. nobody pays
+for the aux. yet.</font></p>
+<div class="rainbow"></div>
+${RING}
+</center>` : `<center>
+<h1>~ cursorTV ~</h1>
+<div class="rainbow"></div>
+<p>the antenna is the beta server, and you are not connected to it.</p>
+<p><font size="1">cursorTV is live only on the hosted beta, where the whole lobby
+watches one screen. offline there is nothing on. there is not even static.</font></p>
+<div class="constr"></div>
+</center>`,
+  });
+
+  /* ---------- the gallery: what the lobby painted ---------- */
+  site("http://gallery.cursor.land/", {
+    title: "the cursor$land gallery",
+    cls: "geo",
+    mounted: p => hooks.galleryMounted && hooks.galleryMounted(p),
+    body: () => {
+      const list = hooks.netGallery && hooks.netGallery();
+      if (!list) return `<center>
+<h1>~ the gallery ~</h1>
+<div class="rainbow"></div>
+<p>the gallery hangs on the beta server, and you are offline.</p>
+<p><font size="1">connect, open Paint, make something, File &gt; Publish to Gallery.</font></p>
+<div class="constr"></div>
+</center>`;
+      const items = list.length ? list.map(g => `<table border="1" cellpadding="6" cellspacing="0" class="gbentry" style="display:inline-table;margin:6px" width="260"><tr><td>
+  <img src="${g.png}" style="max-width:240px;max-height:170px;background:#fff"><br>
+  <b>${esc(g.name)}</b> <font size="1" color="#888">by ${esc(g.by)}</font>
+</td></tr></table>`).join("") : `<p><font size="1">nothing hangs here yet. open Paint. File &gt; Publish to Gallery. make history.</font></p>`;
+      return `<center>
+<h1>~ the gallery ~</h1>
+<font size="1">${list.length} works &#183; curated by nobody &#183; latest 16 survive</font>
+<div class="rainbow"></div>
+${NAV}
+<div class="rainbow"></div>
+${items}
+<div class="rainbow"></div>
+${RING}
+</center>`;
+    },
+  });
+
   /* ---------- the search engine, which indexes the entire web ---------- */
   const RESULTS = [
     { t: "cursor$land - the #1 cursor fightring on the net", u: "http://www.cursor.land/",
@@ -524,7 +605,7 @@ Internet Explorer</p>
   function resolve(u) {
     const k = key(u);
     if (!k || k === "about:blank") return { url: "about:blank", title: "about:blank", cls: "", html: "" };
-    if (SITES[k]) { const s = SITES[k]; return { url: s.url, title: s.title, cls: s.cls, html: s.body(), pop: s.pop }; }
+    if (SITES[k]) { const s = SITES[k]; return { url: s.url, title: s.title, cls: s.cls, html: s.body(), pop: s.pop, mounted: s.mounted }; }
     /* search results keep the query in the address bar, like the real thing */
     const m = /^search\.msn\.com\/results\?q=(.*)$/.exec(k);
     if (m) {
@@ -588,6 +669,7 @@ Internet Explorer</p>
     srcHTML = r.html;
     els.page.innerHTML = r.html;
     els.page.scrollTop = 0;
+    if (r.mounted) try { r.mounted(els.page); } catch (e) {}
     setTitle(r.title);
     status("Done");
     buttons();
@@ -727,6 +809,10 @@ Internet Explorer</p>
       const who = els.page.querySelector("#gb-who"), txt = els.page.querySelector("#gb-txt");
       const t = ((txt && txt.value) || "").trim();
       if (!t) { showError("Guestbook", "Write something first.", true); return; }
+      if (hooks.postGuest && hooks.postGuest(((who && who.value) || "").trim().slice(0, 18), t.slice(0, 220))) {
+        sysSnd("ding", .5);   /* the server broadcast re-renders the page */
+        return;
+      }
       const d = new Date();
       const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
       guests().unshift({
@@ -768,6 +854,8 @@ Internet Explorer</p>
     { label: "guestbook", u: "http://www.cursor.land/guest.html" },
     { label: "THE CURSOR WEBRING", u: "http://www.cursorwebring.org/" },
     { label: "MSN Search", u: "http://search.msn.com/" },
+    { label: "cursorTV", u: "http://tv.cursor.land/" },
+    { label: "the gallery", u: "http://gallery.cursor.land/" },
   ];
   function srcName() {
     const last = key(url || "").split("/").pop();

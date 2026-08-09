@@ -1,2 +1,6 @@
 node_modules/
 dist/
+
+# server: local dev DB + deps
+server/*.db
+server/*.db-*

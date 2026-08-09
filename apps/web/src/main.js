@@ -7,6 +7,7 @@ import { initMessenger } from "./messenger.js";
 import { initPaint } from "./paint.js";
 import { initExplorer } from "./explorer.js";
 import { initIE } from "./ie.js";
+import { initNet } from "./net.js";
 const Webamp = (WebampImport && WebampImport.default) ? WebampImport.default : WebampImport;
 
 "use strict";
@@ -620,6 +621,7 @@ const ctx=$("#ctx");
 let menuShownAt=0; /* a long-press opens the menu under the finger — the release must not pick an item */
 function buildMenu(host,items){
   for(const it of items){
+    if(!it) continue;   /* menus may hold conditional entries */
     if(it.sep){ const s=document.createElement("div"); s.className="csep"; host.appendChild(s); continue; }
     const d=document.createElement("div");
     d.className="cit"+(it.disabled?" dis":"")+(it.bold?" bold":"")+(it.check?" chk":"");
@@ -801,6 +803,7 @@ const paint=initPaint({
     status:$("#pt-status"), st1:$("#pt-st1"), st2:$("#pt-st2"), st3:$("#pt-st3"),
   },
   store, sysSnd, showError, showMenu, showConfirm,
+  publish:png=>mpPublishPainting("untitled by "+playerName(),png),
   setWallpaperFrom,
   close:()=>closeWin("win-paint"),
   setTitle:name=>{ $("#win-paint .title-bar-text").textContent=name+" - Paint"; renderTaskbar(); },
@@ -866,6 +869,9 @@ const explorer=initExplorer({
     openIcon:ic=>openIcon(ic),
     desktopFiles:()=>allIcons(),
     deadCount:()=>binDead.length,
+    serverDisk:()=>{ if(!MP.on||!MP.disk) return null;
+      const base=MP.disk.total-MP.corpses*MP.disk.corpse;
+      return {used:base+Math.round(MP.fill*MP.corpses)*MP.disk.corpse,total:MP.disk.total}; },
     binContents:()=>({
       files:binFiles,
       deaths:binDead.map(d=>Object.assign({lostStr:fmtS(d.lost)},d)),
@@ -1430,9 +1436,10 @@ const msn=initMessenger({
   wireWindow, openWin, closeWin,
   isOpen:id=>openApps.has(id)&&!openApps.get(id).min,
   showMenu, showError, desk:desktop,
+  lobbyNet:t=>{ if(!MP.on) return false; mpSend({t:"chat",text:t}); return true; },
 });
 const chatSys=t=>msn.lobbySys(t);
-const botChat=(kind,vars)=>msn.botChat(kind,vars);
+const botChat=(kind,vars)=>{ if(!MP.on) msn.botChat(kind,vars); };
 
 /* ================= Winamp — the real thing (Webamp, MIT, (c) Jordan Eldredge) ================= */
 const winampApp=(()=>{
@@ -1560,6 +1567,12 @@ ie=initIE({
     balloon:(h,t)=>showBalloon(h,t),
     setNet:on=>{ $("#netico").style.display=on?"":"none"; },
     hall:ieHall,
+    mpOn:()=>MP.on,
+    netGuests:()=>mpGuestData(),
+    postGuest:(who,txt)=>mpGuestPost(who,txt),
+    netGallery:()=>mpGalleryData(),
+    tvMounted:p=>mpTvMounted(p),
+    galleryMounted:()=>mpGalleryOpen(),
   },
 });
 /* the toolbar is the real IE6 button set, same archive as Explorer's */
@@ -1741,8 +1754,9 @@ let lastPhaseText="";
 function renderPhase(){
   const mm="0:"+String(Math.max(0,Math.ceil(phaseT))).padStart(2,"0");
   const live=curs.reduce((s,c)=>s+c.bounty,0);
+  const dsk=MP.on?` · C: ${Math.min(99,Math.round(MP.fill*100))}% FULL`:"";
   const txt=phase==="battle"
-    ?(shutFired?`⚠ SHUTDOWN ${mm} — BANKING ALL`:`UPTIME ${fmtUp(upT)} · ${fmtS(live)} LIVE`)
+    ?(shutFired?`⚠ SHUTDOWN ${mm} — BANKING ALL`:`UPTIME ${fmtUp(upT)} · ${fmtS(live)} LIVE${dsk}`)
     :phase==="crash"?"☠ CRASHED · RESTARTING…":"BOOT";
   if(txt===lastPhaseText) return;
   lastPhaseText=txt;
@@ -1750,7 +1764,8 @@ function renderPhase(){
   const pl=$("#phaseline");
   pl.textContent=txt;
   pl.classList.toggle("battle",urgent);
-  const chip=phase==="crash"?`R${roundNo} · CRASHED`:shutFired?`R${roundNo} · SHUTDOWN ${mm}`:`R${roundNo} · UP ${fmtUp(upT)}`;
+  const chip=phase==="crash"?`R${roundNo} · CRASHED`:shutFired?`R${roundNo} · SHUTDOWN ${mm}`
+    :MP.on?`R${roundNo} · C: ${Math.min(99,Math.round(MP.fill*100))}%`:`R${roundNo} · UP ${fmtUp(upT)}`;
   $("#phasechip").textContent=chip;
   const mp=$("#mh-phase");
   mp.textContent=chip;
@@ -1761,6 +1776,7 @@ function renderPhase(){
 function canDeploy(){ return phase==="battle"&&!shutFired; }
 function deploy(silent){
   if(!canDeploy()||myCurs().length>=MAXCUR||wallet<STAKE) return;
+  if(MP.on){ mpSend({t:"deploy"}); if(!silent) sysSnd("hwin",.5); return; }
   wallet-=STAKE;
   myTickets+=200;
   R.myIn+=STAKE; stats.deploys++; stats.tIn+=STAKE;
@@ -1783,6 +1799,7 @@ function botDeploy(name){
   updatePanel();
 }
 function recallAll(){
+  if(MP.on){ mpSend({t:"recall"}); sClick(); return; }
   let refunded=0, recalled=0;
   for(const c of [...myCurs()]){
     if(c.grace>0){
@@ -1799,13 +1816,13 @@ function recallAll(){
 }
 $("#btn-deploy").addEventListener("click",()=>deploy(false));
 $("#btn-recall").addEventListener("click",recallAll);
-$("#st-attack").addEventListener("click",()=>{ stance="attack"; sClick(); updatePanel(); });
-$("#st-defend").addEventListener("click",()=>{ stance="defend"; sClick(); updatePanel(); });
+$("#st-attack").addEventListener("click",()=>{ stance="attack"; sClick(); mpSend({t:"stance",s:"attack"}); updatePanel(); });
+$("#st-defend").addEventListener("click",()=>{ stance="defend"; sClick(); mpSend({t:"stance",s:"defend"}); updatePanel(); });
 /* the mobile thumb bar mirrors the dashboard verbs; the info row opens the full app */
 $("#mh-deploy").addEventListener("click",()=>deploy(false));
 $("#mh-recall").addEventListener("click",recallAll);
-$("#mh-attack").addEventListener("click",()=>{ stance="attack"; sClick(); updatePanel(); });
-$("#mh-defend").addEventListener("click",()=>{ stance="defend"; sClick(); updatePanel(); });
+$("#mh-attack").addEventListener("click",()=>{ stance="attack"; sClick(); mpSend({t:"stance",s:"attack"}); updatePanel(); });
+$("#mh-defend").addEventListener("click",()=>{ stance="defend"; sClick(); mpSend({t:"stance",s:"defend"}); updatePanel(); });
 $("#mh-info").addEventListener("click",()=>openWin("win-cursors"));
 function bank(c,atShutdown){
   const m=(c.bounty/ENTRY).toFixed(1);
@@ -1876,6 +1893,7 @@ function renderCxRake(){
 }
 $("#cx-rake").addEventListener("click",e=>{
   if(e.target.id!=="rk-claim"||rakeAccrued<=0) return;
+  if(MP.on){ mpSend({t:"rake"}); sysSnd("tada",.4); return; }
   wallet+=rakeAccrued;
   log(`rakeback claimed: ${(rakeAccrued/1000).toFixed(4)} SOL`);
   rakeAccrued=0;
@@ -1920,10 +1938,15 @@ function renderCxVerify(){
         cxKV(`epoch ${prevSeedEpoch} — revealed`,"check it yourself")+
         `<div class="cx-seed">seed:   ${prevSeed}\nsha256: ${prevCommit||"…"}</div>`
       : "")+
-    `<div class="cx-note">the contract: a random seed is committed (its hash published) before
+    (MP.on
+      ? `<div class="cx-note">the contract: a random seed is committed (its hash published) before
+     each epoch and revealed at the crash — hash the seed yourself and it must match. On this
+     beta server every duel and every movement draw comes from that committed seed. Full replay
+     verification (seed + input log) ships with the real-money engine.</div>`
+      : `<div class="cx-note">the contract: a random seed is committed (its hash published) before
      each epoch and revealed at the crash — hash the seed yourself and it must match. This
-     prototype's duels still draw from the browser RNG; wiring the sim to the committed seed
-     ships with the server. The ceremony is real today so you can hold us to it tomorrow.</div>`;
+     offline sandbox still draws from the browser RNG; connect to the beta server and the
+     duels draw from the committed seed for real.</div>`);
 }
 
 /* ================= autoplay ================= */
@@ -1941,6 +1964,7 @@ $$(".apb").forEach(b=>b.addEventListener("click",()=>{ sClick(); auto.bankAt=+b.
 setInterval(()=>{
   if(!canDeploy()) return;
   if(auto.on&&myCurs().length<auto.count&&wallet>=STAKE) deploy(true);
+  if(MP.on) return;   /* the server runs the bots */
   const botCurs=curs.filter(c=>!c.isMine&&!c.dead).length;
   const target=7+(roundNo*3)%5;
   if(botCurs<target||Math.random()<.15) botDeploy(pick(BOTS).name);
@@ -2335,10 +2359,343 @@ $("#btn-logoff-yes").addEventListener("click",()=>{
   updatePanel();
 });
 
+/* ================= multiplayer ================= */
+/* The beta server (server/ in this repo) is the single authority: it runs the
+   same sim, owns every balance, and commits its RNG seed before each epoch.
+   Online, this client is a display — deploys/recalls/stances are requests,
+   positions arrive as 10Hz snapshots we interpolate, deaths and banks arrive
+   as events and reuse the exact solo FX paths. Offline (no server, dev
+   hashes, file://) the local sandbox sim runs untouched. */
+const MP={on:false,name:null,fill:0,disk:null,guest:null,gallery:null,tv:{now:null,queue:[]},chatSeeded:false};
+function mpUrl(){
+  try{
+    const q=new URLSearchParams(location.search).get("server");
+    if(q==="off") return null;
+    if(q) return q;
+    if(location.hash.indexOf("#desktop-mp")===0) return "ws://localhost:8788";
+    if(location.hash.indexOf("#desktop")===0) return null;      /* dev screenshots stay deterministic */
+    if(typeof location.hostname!=="string"||!location.hostname) return null;  /* smoke runner, odd hosts */
+    if(location.protocol==="file:") return null;
+    if(/^(localhost|127\.|192\.168\.)/.test(location.hostname)) return null;
+    return "wss://cursors.34-70-75-204.sslip.io";
+  }catch(e){ return null; }
+}
+const MPURL=mpUrl();
+function mpSend(o){ if(MP.on) net.send(o); }
+function mpHello(){
+  if(!net||!net.up()||MP.on) return;
+  net.send({t:"hello",token:store.data.mpToken||undefined,name:PLAYER||undefined});
+}
+
+/* ---- server cursors: same DOM, same tag scaling, positions interpolated ---- */
+const mpCurs=new Map();   /* id -> cursor record (also pushed into curs[]) */
+function mpMakeCur(id,owner,x,y,bounty,graceSecs){
+  const el=document.createElement("div");
+  el.className="cur"+(graceSecs>0?" grace":"")+(owner===MP.name?" me":"");
+  el.innerHTML=CURSVG+`<div class="tag"><span class="nm">${esc(owner)}</span><span class="bt"></span><span class="mx"></span></div>`;
+  curlayer.appendChild(el);
+  const c={id,owner,isMine:owner===MP.name,el,x,y,tx:x,ty:y,bounty,
+    mode:"roam",prevMode:"roam",recallT:0,grace:graceSecs,riskAt:99,dead:false,
+    s:1,r:10,h:0,spd:0,ax:x,ay:y,kills:0,peak:bounty,born:performance.now(),round:roundNo};
+  el.style.transform=`translate(${x-8}px,${y-4}px)`;
+  mpCurs.set(id,c); curs.push(c);
+  updateTag(c);
+  return c;
+}
+function mpRemove(c){ if(!c) return; mpCurs.delete(c.id); removeCur(c); }
+function mpPurge(){ for(const c of [...curs]) removeCur(c); mpCurs.clear(); }
+const MPMODE={r:"roam",c:"recall",d:"duel"};
+
+function mpFrame(dt){
+  for(const c of mpCurs.values()){
+    c.x+=(c.tx-c.x)*Math.min(1,dt*10);
+    c.y+=(c.ty-c.y)*Math.min(1,dt*10);
+    c.el.style.transform=`translate(${c.x-8}px,${c.y-4}px)`;
+    if(c.grace>0){ c.grace-=dt; if(c.grace<=0) c.el.classList.remove("grace"); }
+    /* client-side auto-bank: the "bank at ×N" knob rides along in autoplay */
+    if(c.isMine&&auto.on&&auto.bankAt>0&&c.mode==="roam"&&!c._bankReq&&c.bounty>=auto.bankAt*ENTRY){
+      c._bankReq=true; mpSend({t:"recallOne",id:c.id});
+    }
+  }
+  if(shutFired&&phaseT>0){ phaseT-=dt; renderPhase(); }
+}
+
+/* ---- event handlers: each one re-uses the solo game's FX verbatim ---- */
+function mpWelcome(m){
+  MP.on=true; MP.name=m.name;
+  store.data.mpToken=m.token; store.save();
+  if(PLAYER!==m.name){ PLAYER=m.name; store.data.userName=m.name; store.save(); syncIdentity(); try{ msn.renderMe(); }catch(e){} }
+  mpPurge();
+  roundNo=m.epoch.no; R=newRoundRecord();
+  R.pot=m.epoch.pot; R.deploys=m.epoch.deploys; R.deaths=m.epoch.deaths;
+  upT=m.epoch.up; epochStart=upT;
+  phase=m.epoch.phase; shutFired=m.epoch.rush!=null; phaseT=shutFired?m.epoch.rush:999;
+  commitHex=m.epoch.commit; seedHex=null;
+  MP.fill=m.epoch.fill; MP.disk=m.epoch.disk; MP.corpses=m.epoch.corpses||64;
+  for(const sc of m.epoch.curs){
+    const c=mpMakeCur(sc.id,sc.owner,sc.x,sc.y,sc.bounty,sc.grace);
+    c.mode=MPMODE[sc.mode]||"roam";
+    if(c.mode==="duel") c.el.classList.add("dueling");
+  }
+  wallet=m.balance; walletShown=wallet;
+  $("#walletamt").textContent=fmtS(Math.round(wallet))+" SOL";
+  $("#mh-wallet").textContent=fmtS(Math.round(wallet))+" SOL";
+  myTickets=m.tickets; globalTickets=m.glob; rakeAccrued=m.rake;
+  MP.tv=m.tv||MP.tv;
+  if(!MP.chatSeeded){
+    MP.chatSeeded=true;
+    for(const e of (m.chat||[])) e.who==="*"?msn.lobbySys(e.text):msn.lobbySay(e.who,e.text);
+  }
+  mpSend({t:"guest"}); mpSend({t:"gallery"});
+  log(`connected to the beta arena as ${MP.name} — epoch ${roundNo}, ${m.online.length} online`);
+  showBalloon("Connected to the beta arena",
+    `Live multiplayer, play money. You are ${MP.name}. ${m.online.length} player${m.online.length===1?"":"s"} online — everyone starts with 5 SOL.`);
+  updatePanel(); renderPhase();
+}
+function mpSnap(m){
+  upT=m.up; R.pot=m.pot; MP.fill=m.fill;
+  const seen=new Set();
+  for(const row of m.p){
+    seen.add(row[0]);
+    const c=mpCurs.get(row[0]);
+    if(!c) continue;                       /* spawn event is in flight */
+    c.tx=row[1]; c.ty=row[2];
+    if(c.bounty!==row[3]){ c.bounty=row[3]; updateTag(c); }
+    const mode=MPMODE[row[4]]||"roam";
+    if(mode!==c.mode){
+      c.mode=mode;
+      c.el.classList.toggle("dueling",mode==="duel");
+      if(mode!=="duel") c._bankReq=false;
+    }
+  }
+  /* reconciliation after a hiccup: anything the server no longer has is gone */
+  for(const c of [...mpCurs.values()]) if(!seen.has(c.id)) mpRemove(c);
+  renderPhase();
+}
+function mpSpawn(m){
+  if(mpCurs.has(m.id)) return;
+  const c=mpMakeCur(m.id,m.owner,m.x,m.y,m.bounty,m.grace);
+  if(c.isMine){
+    R.myIn+=STAKE; stats.deploys++; stats.tIn+=STAKE;
+    log(`you deployed 0.100 (${myCurs().length}/${MAXCUR})`);
+  }
+  updatePanel();
+}
+function mpDuel(m){
+  const a=mpCurs.get(m.a), b=mpCurs.get(m.b);
+  if(!a||!b) return;
+  duelPulse=Math.min(4,duelPulse+1);
+  a.mode=b.mode="duel";
+  a.el.classList.add("dueling"); b.el.classList.add("dueling");
+  sDuel();
+  const mx=(a.x+b.x)/2, my=(a.y+b.y)/2;
+  const big=(a.bounty+b.bounty)>=ENTRY*5;
+  const fx=document.createElement("div");
+  fx.className="duelfx"+(big?" big":"");
+  fx.innerHTML=`<span class="hg">⌛</span><br>${m.pA}:${100-m.pA}`;
+  fx.style.left=(mx-28)+"px"; fx.style.top=(my-(big?58:46))+"px";
+  fxlayer.appendChild(fx);
+  setTimeout(()=>fx.remove(),DUEL_MS);
+}
+function mpKill(m){
+  const w=mpCurs.get(m.w), l=mpCurs.get(m.l);
+  MP.fill=m.fill;
+  const cert=m.cert;
+  cert.mine=m.lOwner===MP.name;
+  cert.killerMine=m.wOwner===MP.name;
+  cert.at=new Date().toLocaleTimeString([],{hour12:false});
+  binDead.unshift(cert); renderBin();
+  R.deaths++;
+  if(l){ explode(l); mpRemove(l); }
+  if(w){
+    w.bounty+=m.pot; w.kills++; w.mode="roam";
+    w.el.classList.remove("dueling");
+    updateTag(w);
+  }
+  log(`${m.wOwner} > ${m.lOwner}  +${fmtS(m.pot)}`);
+  if(cert.mine){
+    stats.deaths++;
+    if(myCurs().length===0){ sDie(); if(!auto.on) deathCert(binDead[0]); }
+    else if(l) float("cursor lost",l.x,l.y,true);
+  }else if(cert.killerMine){
+    stats.kills++; R.myKills++;
+    if(w){ stats.best=Math.max(stats.best,w.bounty/ENTRY); sKill(); float(fmtSign(m.pot),w.x,w.y,false);
+      if(R.myKills>=2) float(`${R.myKills} KILL STREAK`,w.x,w.y-24,false); }
+  }else if(w) float(fmtSign(m.pot),w.x,w.y,true);
+  updatePanel();
+}
+function mpBank(m){
+  const c=mpCurs.get(m.id);
+  const mine=m.owner===MP.name;
+  if(!R.bigBank||m.amt>R.bigBank.amt) R.bigBank={owner:m.owner,amt:m.amt};
+  if(mine){
+    R.myOut+=m.amt;
+    stats.best=Math.max(stats.best,m.amt/ENTRY);
+    stats.banks++; stats.tOut+=m.amt; stats.bigBank=Math.max(stats.bigBank,m.amt);
+    const x=c?c.x:AW/2, y=c?c.y:AH/2;
+    if(m.amt>=ENTRY*10){
+      sysSnd("tada",.6);
+      for(let i=0;i<3;i++) setTimeout(()=>goldBurst(x+rand(-44,44),y+rand(-30,30)),i*170);
+      jackpot(m.amt);
+    }else sBank();
+    float(fmtSign(m.amt)+" ×"+m.mult.toFixed(1),x,y,false);
+    goldBurst(x,y);
+    log(`you banked ${fmtS(m.amt)} (×${m.mult.toFixed(1)})${m.shut?" at shutdown":""}`);
+  }else if(m.amt>=ENTRY*2) log(`${m.owner} banked ${fmtS(m.amt)} (×${m.mult.toFixed(1)})`);
+  if(c) mpRemove(c);
+  updatePanel();
+}
+function mpCrash(m){
+  closeWin("win-shutdown",{silent:true});
+  R.pot=m.pot; R.deploys=m.deploys; R.deaths=m.deaths; R.bigBank=m.top;
+  epochHist.unshift({no:m.no,up:fmtUp(m.up),pot:m.pot,deploys:m.deploys,deaths:m.deaths,
+    top:m.top,net:R.myOut-R.myIn,myIn:R.myIn});
+  epochHist=epochHist.slice(0,30);
+  prevSeed=m.seed; prevCommit=m.commit; prevSeedEpoch=m.no;
+  phase="crash"; shutFired=false;
+  bsodShow(crashBsodText());
+  sError();
+  log(`CURSORS.EXE crashed. epoch ${m.no}: pot ${fmtS(m.pot)}, ${m.deaths} dead.`);
+  mpPurge();
+  updatePanel(); renderPhase();
+}
+function mpEpoch(m){
+  bsodEl.style.display="none";
+  roundNo=m.no; R=newRoundRecord();
+  commitHex=m.commit; seedHex=null;
+  phase="battle"; shutFired=false; phaseT=999;
+  MP.fill=0; epochStart=upT;
+  $("#arena").classList.add("crashed");
+  setTimeout(()=>$("#arena").classList.remove("crashed"),900);
+  degauss();
+  log(`CURSORS.EXE restarted (epoch ${m.no}) — deploys are open`);
+  updatePanel(); renderPhase(); renderCx();
+}
+function mpDown(){
+  if(!MP.on) return;
+  MP.on=false; MP.name=null; MP.chatSeeded=false;
+  mpPurge();
+  showBalloon("Connection lost","The beta server went away. You are in the offline sandbox until it comes back — the bots here are local and the money is even less real.");
+  log("connection lost — offline sandbox running");
+  startEpoch();   /* the local sim takes back over */
+}
+function mpMsg(m){
+  switch(m.t){
+    case "welcome": mpWelcome(m); break;
+    case "snap": if(MP.on) mpSnap(m); break;
+    case "spawn": if(MP.on) mpSpawn(m); break;
+    case "duel": if(MP.on) mpDuel(m); break;
+    case "kill": if(MP.on) mpKill(m); break;
+    case "bank": if(MP.on) mpBank(m); break;
+    case "refund": if(MP.on){ const c=mpCurs.get(m.id); if(c&&c.isMine){ R.myIn-=STAKE; stats.deploys--; stats.tIn-=STAKE; log("undeployed in grace — refunded in full"); } mpRemove(c); updatePanel(); } break;
+    case "bal": if(MP.on){ wallet=m.balance; myTickets=m.tickets; globalTickets=m.glob; rakeAccrued=m.rake; updatePanel(); } break;
+    case "rush": if(MP.on){ shutFired=true; phaseT=m.secs; openWin("win-shutdown",{silent:true}); sShut(); renderPhase(); updatePanel(); } break;
+    case "crash": if(MP.on) mpCrash(m); break;
+    case "epoch": if(MP.on) mpEpoch(m); break;
+    case "chat": if(MP.on) msn.lobbySay(m.who,m.text); break;
+    case "sys": if(MP.on) msn.lobbySys(m.text); break;
+    case "join": break;   /* the sys line covers it */
+    case "part": if(MP.on) msn.lobbySys(`${m.name} signed out`); break;
+    case "guest": MP.guest=m.list; mpRefreshIe("guest.html"); break;
+    case "gallery": MP.gallery=m.list; mpRefreshIe("gallery"); break;
+    case "tv": MP.tv={now:m.now,queue:m.queue}; mpTvSync(); break;
+    case "err": if(m.msg) showBalloon("beta server",m.msg); break;
+  }
+}
+const net=MPURL?initNet({url:MPURL,onMsg:mpMsg,onUp:()=>{ if(PLAYER) mpHello(); },onDown:mpDown}):null;
+if(net) net.start();
+
+/* ---- IE integration: the online guestbook, the gallery, cursorTV ---- */
+function mpRefreshIe(urlPart){
+  if(ie&&ie.url()&&ie.url().indexOf(urlPart)>=0) ie.go(ie.url(),{replace:true});
+}
+const MONS=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+function fmtWhen(at){ const d=new Date(at); return `${d.getDate()} ${MONS[d.getMonth()]} ${d.getFullYear()}`; }
+function mpGuestData(){
+  if(!MP.on||!MP.guest) return null;
+  return MP.guest.map(e=>({who:e.who,when:fmtWhen(e.at),txt:e.txt}));
+}
+function mpGuestPost(who,txt){
+  if(!MP.on) return false;
+  mpSend({t:"guestPost",who,text:txt});
+  return true;
+}
+function mpGuestOpen(){ if(MP.on) mpSend({t:"guest"}); }
+function mpGalleryData(){ return MP.on?(MP.gallery||[]):null; }
+function mpGalleryOpen(){ if(MP.on) mpSend({t:"gallery"}); }
+function mpPublishPainting(name,png){
+  if(!MP.on){ showError("Gallery","The gallery lives on the beta server. You are offline — nothing to publish to.",true); return; }
+  if(png.length>400000){ showError("Gallery","That painting is over 400 KB. Fewer pixels, more soul.",true); return; }
+  mpSend({t:"galleryPost",name,png});
+  showError("Gallery","Sent to the cursor$land gallery.\nEveryone on the server can see it now, which is either great or a problem.",true);
+}
+
+/* ---- cursorTV: the lobby watches one YouTube video together ---- */
+/* Sync model: the server owns {video, startedAt, queue}; every client seeks to
+   the shared elapsed time. Playback starts muted (browser autoplay law) with a
+   click-for-sound overlay. Queue is a fair FIFO, 3 pending per player, skip by
+   vote. This is turntable.fm wearing an IE6 costume. */
+let ytApi=0, ytPlayer=null, tvPage=null;
+function mpTvMounted(page){
+  tvPage=page;
+  if(!MP.on) return;
+  mpTvRenderQueue();
+  const inp=page.querySelector("#tv-in");
+  const add=()=>{
+    const m=/([\w-]{11})(?:[?&#]|$)/.exec((inp.value||"").trim().replace(/.*(?:v=|youtu\.be\/|shorts\/|embed\/)/,""));
+    if(m){ mpSend({t:"tvQueue",vid:m[1]}); inp.value=""; }
+    else showError("cursorTV","Paste a YouTube link (or the 11-character video id).",true);
+  };
+  page.querySelector("#tv-add").addEventListener("click",add);
+  inp.addEventListener("keydown",e=>{ e.stopPropagation(); if(e.key==="Enter") add(); });
+  page.querySelector("#tv-skip").addEventListener("click",()=>mpSend({t:"tvSkip"}));
+  const snd=page.querySelector("#tv-sound");
+  if(snd) snd.addEventListener("click",()=>{ try{ ytPlayer.unMute(); snd.style.display="none"; }catch(e){} });
+  if(ytApi===2) mpTvPlayer();
+  else{
+    window.onYouTubeIframeAPIReady=()=>{ ytApi=2; mpTvPlayer(); };
+    if(!ytApi){ ytApi=1; const sc=document.createElement("script"); sc.src="https://www.youtube.com/iframe_api"; document.head.appendChild(sc); }
+  }
+}
+function mpTvPlayer(){
+  if(!tvPage||!tvPage.isConnected||!MP.tv.now) return;
+  const slot=tvPage.querySelector("#tv-slot");
+  if(!slot) return;
+  const elapsed=Math.max(0,(Date.now()-MP.tv.now.startedAt)/1000);
+  ytPlayer=new YT.Player(slot,{
+    width:"100%",height:"100%",videoId:MP.tv.now.vid,
+    playerVars:{autoplay:1,mute:1,start:Math.floor(elapsed),rel:0,modestbranding:1},
+    events:{onStateChange:e=>{ if(e.data===0) mpSend({t:"tvEnded",vid:MP.tv.now&&MP.tv.now.vid}); }},
+  });
+}
+function mpTvSync(){
+  if(!tvPage||!tvPage.isConnected) return;
+  mpTvRenderQueue();
+  if(!MP.tv.now){ try{ ytPlayer&&ytPlayer.stopVideo(); }catch(e){} return; }
+  if(ytApi!==2){ return; }
+  try{
+    const elapsed=Math.max(0,(Date.now()-MP.tv.now.startedAt)/1000);
+    if(ytPlayer&&ytPlayer.loadVideoById) ytPlayer.loadVideoById(MP.tv.now.vid,elapsed);
+    else mpTvPlayer();
+  }catch(e){ mpTvPlayer(); }
+}
+function mpTvRenderQueue(){
+  if(!tvPage||!tvPage.isConnected) return;
+  const nowEl=tvPage.querySelector("#tv-now"), qEl=tvPage.querySelector("#tv-queue");
+  if(nowEl) nowEl.innerHTML=MP.tv.now
+    ? `now playing: <b>${esc(MP.tv.now.vid)}</b> <font size="1">(queued by ${esc(MP.tv.now.by)})</font>`
+    : `<font size="1">dead air. queue something.</font>`;
+  if(qEl) qEl.innerHTML=MP.tv.queue.length
+    ? MP.tv.queue.map((q,i)=>`<div>${i+1}. ${esc(q.vid)} <font size="1" color="#888">— ${esc(q.by)}</font></div>`).join("")
+    : `<font size="1">queue is empty</font>`;
+}
+
 /* ================= main loop ================= */
 let last=performance.now();
 function frame(t){
   const dt=Math.min(.05,(t-last)/1000); last=t;
+  if(MP.on){ mpFrame(dt); }
+  else{
   phaseTick(dt);
   if(phase==="battle"){
     for(const c of [...curs]) if(!c.dead&&c.mode!=="duel") move(c,dt);
@@ -2357,6 +2714,7 @@ function frame(t){
       if(!c.isMine&&c.bounty/ENTRY>=c.riskAt&&Math.random()<dt*.5) forceRecall(c);
       if(c.isMine&&auto.on&&auto.bankAt>0&&c.bounty>=auto.bankAt*ENTRY) forceRecall(c);
     }
+  }
   }
   if(Math.abs(walletShown-wallet)>.5){
     walletShown+=(wallet-walletShown)*Math.min(1,dt*7);
@@ -2461,6 +2819,7 @@ function commitUserName(){
   }
   PLAYER=raw;
   store.data.userName=raw; store.save();
+  mpHello();
   logon();
 }
 $("#tile-admin").addEventListener("click",e=>{
@@ -2534,6 +2893,106 @@ if(location.hash.indexOf("#desktop-ie")===0) setTimeout(()=>{ /* dev: capture th
     it.dispatchEvent(new PointerEvent("pointerup",{bubbles:true,pointerType:"mouse"}));
   },1400);
 },700);
+if(location.hash.indexOf("#desktop-mp")===0) setTimeout(()=>{ /* dev: drive the LIVE local server (npm start in server/) */
+  PLAYER=PLAYER||("shot"+Math.floor(Math.random()*900+100));
+  mpHello();   /* the socket may have opened before the name existed */
+  const p=location.hash.replace("#desktop-mp","");
+  const when=fn=>{ const w=()=>{ MP.on?fn():setTimeout(w,300); }; w(); };
+  if(p==="-play") when(()=>{ deploy(false); setTimeout(()=>deploy(false),500); });
+  if(p==="-chat") when(()=>{
+    msn.openConv("lobby");
+    const c=document.getElementById(msn.convIdFor("lobby"));
+    c.querySelector("textarea").value="anyone alive in here";
+    c.querySelector(".conv-send").click();
+  });
+  if(p==="-tv"||p==="-gal"||p==="-guest") when(()=>{
+    ie.connectNow(); openWin("win-ie");
+    ie.go(p==="-tv"?"http://tv.cursor.land/":p==="-gal"?"http://gallery.cursor.land/":"http://www.cursor.land/guest.html",{replace:true});
+  });
+},700);
+if(location.hash==="#desktop-crash") setTimeout(()=>{ /* dev: fast-forward to the shutdown rush and crash */
+  phaseT=Math.min(phaseT,T_SHUT+3);
+},2500);
+if(location.hash.indexOf("#desktop-cx")===0) setTimeout(()=>{ /* dev: capture a CURSORS.EXE pane */
+  openWin("win-cursors");   /* the phone boots to a bare desktop */
+  const p=location.hash.replace("#desktop-cx-","");
+  if(["stats","rake","hist","verify"].indexOf(p)>=0) cxShow("cx-"+p);
+  if(p==="hist"||p==="stats"){ /* fake a played session so the pane has flesh */
+    stats={kills:4,deaths:2,best:6.2,deploys:11,banks:6,bigBank:601,tIn:1100,tOut:1289};
+    epochHist=[
+      {no:3,up:"2:41",pot:2140,deploys:22,deaths:9,top:{owner:"mumu",amt:388},net:112,myIn:300},
+      {no:2,up:"3:05",pot:1750,deploys:18,deaths:11,top:{owner:playerName(),amt:601},net:301,myIn:300},
+      {no:1,up:"1:58",pot:970,deploys:10,deaths:7,top:{owner:"bobo",amt:194},net:-200,myIn:200},
+    ];
+    renderCx();
+  }
+  if(p==="jackpot") jackpot(ENTRY*11);   /* dev: the VHS moment */
+  if(p==="death"){ /* your last cursor dies -> certificate, not a bluescreen */
+    binDead.unshift({id:++deathN,name:playerName(),mine:true,killer:"mumu",killerMine:false,
+      lost:485,mult:5,peak:485,odds:71,kills:3,lived:88,round:roundNo,at:"09:41:12"});
+    deathCert(binDead[0]);
+  }
+},900);
+if(location.hash==="#desktop-binlive") setTimeout(()=>{ /* dev: does the open folder fill up as cursors actually die? */
+  openWin("win-explorer"); explorer.go("Recycle Bin"); explorer.setView("details");
+},600);
+if(location.hash.indexOf("#desktop-bin")===0&&location.hash!=="#desktop-binlive") setTimeout(()=>{ /* dev: capture the Recycle Bin with a body count */
+  const names=["mumu","bobo","clippy","bonk","solja","xp_chad","deg404",playerName()];
+  for(let i=0;i<9;i++){
+    const mult=[1,1,1.9,2.4,3.7,1,6.2,2.1,11.4][i];
+    const mine=i===2||i===6;
+    binDead.push({id:++deathN,name:mine?playerName():names[i%names.length],mine,
+      killer:names[(i+3)%7],killerMine:i===4,lost:Math.round(ENTRY*mult),mult,
+      peak:Math.round(ENTRY*mult*1.1),odds:[8,34,71,45,12,58,92,27,19][i],
+      kills:[0,1,2,0,3,1,5,0,7][i],lived:[6,19,44,11,71,23,108,15,133][i],
+      round:9+i,at:"09:4"+i+":1"+i});
+  }
+  binFiles.push({id:"user_dev1",label:"screenshot.png",ico:"pics32",app:"usertxt",kind:"txt"});
+  openWin("win-explorer"); explorer.go("Recycle Bin");
+  const p=location.hash.replace("#desktop-bin","");
+  if(p==="-cert") setTimeout(()=>deathCert(binDead[6]),400);
+  if(p==="-hall") setTimeout(()=>hallOfPain(),400);
+  if(p==="-det") explorer.setView("details");
+  /* dev: the two verbs, driven through the task pane exactly as a finger would */
+  const task=t=>[...$$("#ex-tasks .ex-task")].find(a=>a.textContent.indexOf(t)>=0);
+  if(p==="-empty") setTimeout(()=>task("Empty").click(),400);
+  if(p==="-restore") setTimeout(()=>task("Restore").click(),400);
+},600);
+if(location.hash.indexOf("#desktop-paint")===0) setTimeout(()=>{ /* dev: capture Paint with art on the canvas */
+  openWin("win-paint");
+  const box=$("#pt-box"), cvv=$("#pt-canvas");
+  const at=(x,y)=>{ const r=cvv.getBoundingClientRect(); return {clientX:r.left+x,clientY:r.top+y}; };
+  const stroke=(pts,btn)=>{
+    const opts={bubbles:true,button:btn||0,pointerId:1,pointerType:"mouse"};
+    box.dispatchEvent(new PointerEvent("pointerdown",{...opts,...at(pts[0][0],pts[0][1])}));
+    for(const p of pts.slice(1)) box.dispatchEvent(new PointerEvent("pointermove",{...opts,...at(p[0],p[1])}));
+    dispatchEvent(new PointerEvent("pointerup",{...opts,...at(pts[pts.length-1][0],pts[pts.length-1][1])}));
+  };
+  const swatch=hex=>$(`#pt-colors .pt-sw[data-hex="${hex}"]`).click();
+  const tool=i=>$$("#pt-tools .pt-tool")[i].click();
+  tool(7); swatch("#FF0000");                            /* brush, red */
+  stroke([[40,40],[70,90],[110,45],[150,95],[190,50]]);
+  tool(14); swatch("#0000FF");                           /* ellipse, blue */
+  stroke([[210,40],[300,110]]);
+  tool(12); swatch("#008000");                           /* rectangle, green */
+  stroke([[40,130],[170,210]]);
+  tool(3); swatch("#FFFF00");                            /* fill, yellow */
+  stroke([[100,170]]);
+  tool(8); swatch("#FF00FF");                            /* airbrush, magenta */
+  stroke([[230,150],[250,170],[270,150],[290,180],[250,200]]);
+  tool(10); swatch("#000000");                           /* line */
+  stroke([[210,230],[330,230]]);
+  tool(9);                                               /* text, left on the box */
+  if(location.hash==="#desktop-paint-wall"||location.hash==="#desktop-paint-props") setTimeout(()=>{  /* dev: the meme machine, end to end */
+    const f=$$("#win-paint .menubar span")[0];
+    f.click();
+    const items=[...$("#ctx").children].filter(c=>c.classList.contains("cit"));
+    const tiled=items.find(c=>c.textContent.indexOf("Tiled")>=0);
+    tiled.dispatchEvent(new PointerEvent("pointerup",{bubbles:true,pointerType:"mouse"}));
+    minWin("win-paint");
+    if(location.hash==="#desktop-paint-props") setTimeout(()=>openWin("win-dispprops"),300);
+  },700);
+},600);
 if(location.hash.indexOf("#desktop-mine")===0) setTimeout(()=>{ /* dev: capture minesweeper mid-game */
   const w=$("#win-mine"); w.style.left="8px"; w.style.top="8px";
   openWin("win-mine");

@@ -21,7 +21,8 @@ export function initExplorer(deps) {
 
   /* every dead cursor is a file on this disk, and that is why it is filling up */
   function deadBytes() { return hooks.deadCount() * 12 * MB; }
-  function usedBytes() { return 2.71 * GB + deadBytes(); }
+  /* online, the beta server owns the disk — its epoch corpses are the meter */
+  function usedBytes() { const o = hooks.serverDisk && hooks.serverDisk(); return o ? o.used : 2.71 * GB + deadBytes(); }
   function freeBytes() { return Math.max(64 * MB, DISK - usedBytes()); }
 
   const BIN = "Recycle Bin";

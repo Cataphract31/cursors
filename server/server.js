@@ -1,0 +1,251 @@
+/* CURSORS.EXE beta server — one Node process, same shape as THIN ICE's:
+   built-in node:sqlite, a ws server, no external database, single writer.
+   Play money only: every visitor gets 5.000 SOL, bots are full economic
+   participants, and the faucet refills anyone who busts. The sim (sim.js) is
+   the single authority; this file is sockets, persistence, chat, the
+   guestbook, the gallery, and the TV queue.
+
+   Run: PORT=8788 DB_PATH=/var/lib/cursors/cursors.db node server.js
+   Env: CORPSES=64 (deaths per epoch — the disk), FAST=1 (tiny epochs, dev) */
+
+import { createServer } from "node:http";
+import { randomBytes } from "node:crypto";
+import { WebSocketServer } from "ws";
+import { createSim, BOT_NAMES } from "./sim.js";
+import { openDb } from "./db.js";
+
+const PORT = +(process.env.PORT || 8788);
+const DB_PATH = process.env.DB_PATH || "./cursors.db";
+const CORPSES = process.env.FAST ? 8 : +(process.env.CORPSES || 64);
+
+const db = openDb(DB_PATH);
+const conns = new Set();          /* live sockets with a completed hello */
+const byKey = new Map();          /* token -> conn (latest wins) */
+const chatLog = [];               /* ring buffer of {who,text,at} */
+const saveTimers = new Map();
+
+/* ---------- broadcast plumbing ---------- */
+function send(c, msg) { if (c.ws.readyState === 1) c.ws.send(JSON.stringify(msg)); }
+function broadcast(msg) { const s = JSON.stringify(msg); for (const c of conns) if (c.ws.readyState === 1) c.ws.send(s); }
+function sys(text) { pushChat("*", text); broadcast({ t: "sys", text }); }
+function pushChat(who, text) { chatLog.push({ who, text, at: Date.now() }); if (chatLog.length > 40) chatLog.shift(); }
+
+function balMsg(key) {
+  const p = sim.players.get(key); if (!p) return null;
+  let glob = 0;
+  for (const o of sim.players.values()) if (o !== p) glob += o.tickets;
+  return { t: "bal", balance: p.balance, tickets: Math.round(p.tickets), glob: Math.round(glob), rake: p.rake };
+}
+function schedSave(key) {
+  if (key.startsWith("bot:")) return;
+  clearTimeout(saveTimers.get(key));
+  saveTimers.set(key, setTimeout(() => persistPlayer(key), 2000));
+}
+function persistPlayer(key) {
+  const p = sim.players.get(key); if (!p || p.bot) return;
+  db.savePlayer({ token: key, name: p.name, balance: p.balance, tickets: p.tickets,
+    ticketsAt: p.ticketsAt, rake: p.rake, totIn: p.totIn, totOut: p.totOut, created: p.created });
+}
+
+/* ---------- the sim ---------- */
+const sim = createSim({
+  corpses: CORPSES,
+  emit(evt) {
+    switch (evt.t) {
+      case "money": {
+        const c = byKey.get(evt.key);
+        if (c) { const m = balMsg(evt.key); if (m) send(c, m); }
+        schedSave(evt.key);
+        break;
+      }
+      case "crash": {
+        db.epochAdd(evt);
+        for (const key of byKey.keys()) persistPlayer(key);
+        broadcast(evt);
+        pushChat("*", "it crashed again. everyone got banked. we go again");
+        break;
+      }
+      case "sys": sys(evt.text); break;
+      default: broadcast(evt);
+    }
+  },
+});
+
+/* one tick per pass, never a catch-up burst (the THIN ICE lesson) */
+let lastTick = Date.now();
+setInterval(() => {
+  const t = Date.now();
+  const dt = Math.min(.1, (t - lastTick) / 1000);
+  lastTick = t;
+  try { sim.tick(dt); } catch (e) { console.error("sim tick failed:", e); }
+}, 50);
+setInterval(() => { if (conns.size) broadcast(sim.snapshot()); }, 100);
+
+/* ---------- TV: the lobby watches one video together ---------- */
+const tv = { now: null, queue: [] };
+function tvMsg() { return { t: "tv", now: tv.now, queue: tv.queue }; }
+let skipVotes = new Set();
+function tvAdvance() {
+  tv.now = tv.queue.length ? { ...tv.queue.shift(), startedAt: Date.now() } : null;
+  skipVotes = new Set();
+  broadcast(tvMsg());
+}
+
+/* ---------- per-connection protocol ---------- */
+function sanitizeName(raw) {
+  return String(raw || "").trim().replace(/[^\w .$-]/g, "").slice(0, 14);
+}
+function uniqueName(want, token) {
+  const base = sanitizeName(want) || "guest";
+  const taken = n => BOT_NAMES.includes(n.toLowerCase())
+    || [...sim.players.values()].some(p => p.key !== token && p.name.toLowerCase() === n.toLowerCase())
+    || db.nameTaken(n, token);
+  if (!taken(base)) return base;
+  for (let i = 2; i <= 9; i++) if (!taken(base + i)) return base + i;
+  return (base + "-" + randomBytes(2).toString("hex")).slice(0, 14);
+}
+
+function handle(c, m) {
+  const now = Date.now();
+  switch (m.t) {
+    case "hello": {
+      const token = /^[0-9a-f]{32}$/.test(m.token || "") ? m.token : randomBytes(16).toString("hex");
+      c.key = token;
+      const persisted = db.loadPlayer(token);
+      const name = uniqueName(m.name || (persisted && persisted.name), token);
+      const p = sim.registerPlayer(token, name, false, persisted ? {
+        balance: persisted.balance, tickets: persisted.tickets, ticketsAt: persisted.ticketsAt,
+        rake: persisted.rake, totIn: persisted.totIn, totOut: persisted.totOut, created: persisted.created,
+      } : null);
+      p.name = name;
+      const old = byKey.get(token);
+      if (old && old !== c) { send(old, { t: "err", msg: "signed in elsewhere" }); old.ws.close(); }
+      byKey.set(token, c);
+      c.hello = true;
+      conns.add(c);
+      persistPlayer(token);
+      const b = balMsg(token);
+      send(c, {
+        t: "welcome", token, name,
+        balance: b.balance, tickets: b.tickets, glob: b.glob, rake: b.rake,
+        epoch: sim.welcomeState(), chat: chatLog.slice(-25),
+        online: [...byKey.values()].filter(x => x.hello).map(x => sim.players.get(x.key)?.name).filter(Boolean),
+        tv: { now: tv.now, queue: tv.queue },
+      });
+      broadcast({ t: "join", name });
+      sys(`${name} signed in — ${conns.size} player${conns.size === 1 ? "" : "s"} online`);
+      break;
+    }
+    case "deploy": { const err = sim.requestDeploy(c.key); if (err && err !== "deploys closed") send(c, { t: "err", msg: err }); break; }
+    case "recall": sim.requestRecall(c.key); break;
+    case "recallOne": if (Number.isInteger(m.id)) sim.recallOne(c.key, m.id); break;
+    case "stance": sim.setStance(c.key, m.s); break;
+    case "rake": sim.claimRake(c.key); break;
+    case "chat": {
+      const text = String(m.text || "").slice(0, 200).trim();
+      if (!text || now - c.lastChat < 1200) return;
+      c.lastChat = now;
+      const who = sim.players.get(c.key)?.name || "?";
+      pushChat(who, text);
+      broadcast({ t: "chat", who, text });
+      break;
+    }
+    case "guest": send(c, { t: "guest", list: db.guestList() }); break;
+    case "guestPost": {
+      if (now - c.lastGuest < 30000) return send(c, { t: "err", msg: "one entry per 30s" });
+      const txt = String(m.text || "").slice(0, 220).trim();
+      if (!txt) return;
+      c.lastGuest = now;
+      db.guestPost(sanitizeName(m.who) || sim.players.get(c.key)?.name || "anonymous", txt);
+      broadcast({ t: "guest", list: db.guestList() });
+      break;
+    }
+    case "gallery": send(c, { t: "gallery", list: db.galleryList() }); break;
+    case "galleryPost": {
+      if (now - c.lastGallery < 60000) return send(c, { t: "err", msg: "one painting per minute" });
+      const png = String(m.png || "");
+      if (!png.startsWith("data:image/png;base64,") || png.length > 400000)
+        return send(c, { t: "err", msg: "png only, 400 KB max" });
+      c.lastGallery = now;
+      const title = String(m.name || "").replace(/[^\w .$'-]/g, "").slice(0, 28) || "untitled";
+      db.galleryPost(title, sim.players.get(c.key)?.name || "?", png);
+      broadcast({ t: "gallery", list: db.galleryList() });
+      sys(`${sim.players.get(c.key)?.name} published a painting to the gallery`);
+      break;
+    }
+    case "tvQueue": {
+      const vid = String(m.vid || "");
+      if (!/^[\w-]{11}$/.test(vid)) return send(c, { t: "err", msg: "that is not a youtube video id" });
+      const who = sim.players.get(c.key)?.name || "?";
+      if (tv.queue.filter(q => q.by === who).length >= 3) return send(c, { t: "err", msg: "3 queued max — let it rotate" });
+      tv.queue.push({ vid, by: who });
+      if (!tv.now) tvAdvance(); else broadcast(tvMsg());
+      break;
+    }
+    case "tvEnded":
+      if (tv.now && tv.now.vid === m.vid && now - tv.now.startedAt > 20000) tvAdvance();
+      break;
+    case "tvSkip": {
+      if (!tv.now) return;
+      skipVotes.add(c.key);
+      const need = conns.size <= 2 ? 1 : Math.ceil(conns.size / 3);
+      if (skipVotes.size >= need) { sys("the lobby voted to skip"); tvAdvance(); }
+      else broadcast({ t: "sys", text: `skip vote: ${skipVotes.size}/${need}` });
+      break;
+    }
+    case "ping": send(c, { t: "pong" }); break;
+  }
+}
+
+/* ---------- http + ws ---------- */
+const http = createServer((req, res) => {
+  if (req.url === "/health") {
+    res.writeHead(200, { "content-type": "application/json", "access-control-allow-origin": "*" });
+    res.end(JSON.stringify({
+      ok: true, game: "cursors", epoch: sim.epochNo(), phase: sim.phase(),
+      players: conns.size, cursors: sim.cursCount(),
+      disk: { used: sim.diskUsed(), total: sim.DISK_TOTAL },
+    }));
+    return;
+  }
+  res.writeHead(404); res.end("CURSORS.EXE beta server. The game is elsewhere; this is only the wire.");
+});
+const wss = new WebSocketServer({ server: http, maxPayload: 512 * 1024 });
+
+wss.on("connection", ws => {
+  const c = { ws, key: null, hello: false, lastChat: 0, lastGuest: 0, lastGallery: 0, alive: true };
+  ws.on("pong", () => { c.alive = true; });
+  ws.on("message", data => {
+    let m; try { m = JSON.parse(data); } catch { return; }
+    if (!c.hello && m.t !== "hello") return;
+    try { handle(c, m); } catch (e) { console.error("handle failed:", m.t, e); }
+  });
+  ws.on("close", () => {
+    conns.delete(c);
+    if (c.key) {
+      persistPlayer(c.key);
+      if (byKey.get(c.key) === c) {
+        byKey.delete(c.key);
+        const name = sim.players.get(c.key)?.name;
+        if (name && c.hello) broadcast({ t: "part", name });
+      }
+    }
+  });
+});
+setInterval(() => {
+  for (const c of conns) {
+    if (!c.alive) { c.ws.terminate(); continue; }
+    c.alive = false;
+    try { c.ws.ping(); } catch {}
+  }
+}, 30000);
+
+function shutdown() {
+  for (const key of byKey.keys()) persistPlayer(key);
+  db.close();
+  process.exit(0);
+}
+process.on("SIGINT", shutdown);
+process.on("SIGTERM", shutdown);
+
+http.listen(PORT, () => console.log(`CURSORS.EXE beta server on :${PORT} — epoch ${sim.epochNo()}, ${CORPSES} corpses to a crash`));

@@ -59,6 +59,9 @@ g.cancelAnimationFrame = () => {};
 g.innerWidth = 1280;
 g.innerHeight = 800;
 g.location = { hash: "", href: "http://localhost/" };
+// node 22 ships a real global WebSocket — without this the smoke run would
+// genuinely dial the production game server and never exit
+g.WebSocket = undefined;
 g.Audio = function () { return stub; };
 g.OfflineAudioContext = function () { return stub; };
 g.Response = g.Response || function () { return stub; };

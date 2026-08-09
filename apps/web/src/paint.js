@@ -863,6 +863,11 @@ export function initPaint(deps) {
       { label: "New", action: () => { snapshot(); newImage(); } },
       { label: "Open...", action: openFile },
       { label: "Save As...", action: saveAs },
+      deps.publish && { label: "Publish to Gallery", action: () => {
+        cancelPending();
+        let url; try { url = cv.toDataURL("image/png"); } catch (e) { return; }
+        deps.publish(url);
+      } },
       { sep: 1 },
       { label: "Set As Background (Tiled)", action: () => setAsWallpaper("tile") },
       { label: "Set As Background (Centered)", action: () => setAsWallpaper("center") },

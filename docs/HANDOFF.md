@@ -31,6 +31,7 @@ Second game alongside **THIN ICE** (`c:\ZINC`), the owner's other Solana casino 
 | Dev | `npm run dev` in `C:\CURSORS` → http://localhost:5173 |
 | Build | `npm run build` → smoke test → Vite → `dist/artifact.html` (single self-contained file) |
 | Deploy | `upload/cursors/index.html` — committed build output, served by the owner's Vercel project (Root Directory = `upload/cursors`, no build step; see the README in that folder). **Claude artifacts are deprecated** (owner, 2026-08-09) — do not publish them |
+| Server | `server/` — the beta multiplayer server (Node 22, `ws`, node:sqlite). Live at `wss://cursors.34-70-75-204.sslip.io` on the THIN ICE GCP box (separate service/port/host — see `server/DEPLOY.md`). Local dev: `cd server && FAST=1 node server.js`, client hash `#desktop-mp` |
 | Sibling repo | `c:\ZINC` = THIN ICE. **Copy from it, never edit it.** |
 
 Source layout (`apps/web/src/`):
@@ -142,6 +143,34 @@ tone, carrier hiss, ~8s, Cancel actually shuts it up), a tray connection icon, a
 "Connected at 56.6 Kbps" balloon. Work Offline gives the real offline page; reconnecting
 re-dials. One popup fires on deg404 (1,000,000th visitor; the prize is nothing). Explorer's
 Favorites folder holds six .url shortcuts that really navigate, and Run… now takes URLs.
+
+**LIVE MULTIPLAYER BETA (2026-08-09, owner-directed).** The game is now server-
+authoritative: `server/` runs the same sim (a faithful port of main.js's rules — same
+movement, same a/(a+b) duels, same fees) as the single authority over every balance.
+Play money: every visitor gets 5.000 SOL, a beta faucet refills anyone who busts, the
+7 bots play server-side as full economic participants. The client becomes a display
+when connected (deploys/stances/recalls are requests; positions arrive as 10Hz snapshots,
+lerped client-side; deaths/banks arrive as events and reuse the solo FX paths verbatim) and
+falls back to the untouched offline sandbox when the server is unreachable — dev hashes
+always stay offline, `#desktop-mp*` forces localhost, `?server=` overrides. Names are
+server-unique (welcome may rename you), identity is a bearer token in localStorage
+(`store.data.mpToken`), balances persist in sqlite. Pot conservation is asserted at every
+crash (`INVARIANT VIOLATION` in the journal if it ever breaks — it hasn't).
+**Epochs now end when the disk fills, not on a timer** (the owner's design): every death
+writes a 12 MB corpse; at 64 corpses (`CORPSES` env) C: is full and the system BSODs —
+everyone banked in full first, receipt in the stop screen, corpses archived, restart. The
+fill % lives in the CURSORS.EXE header, the tray chip, and Explorer's real C: pie chart.
+Shutdown rush fires 6 corpses before full (12s cap so an empty arena still crashes). A
+predictable crash is exploit-free because the crash banks everyone — forcing it early just
+pays the room at fair odds. **The RNG is honest now:** every epoch's sim randomness draws
+from one sfc32 stream (ZINC's audited generator, ported); sha256(seed) is committed at
+epoch start, revealed at the crash, and the Verify pane says exactly what is and isn't
+provable yet. Also live on the wire: the **lobby is real chat** (Messenger's "everyone"
+window, server-echoed, bot chatter muted online), the **guestbook is global**, Paint has
+**File > Publish to Gallery** (server-hosted, latest 16, `gallery.cursor.land` in IE), and
+**cursorTV** (`tv.cursor.land`) — the whole lobby watches one YouTube video in an IE6
+window via the official iframe API, synced by the server: fair FIFO queue (3/person),
+skip by vote, muted-start with a click-for-sound badge (browser autoplay law).
 
 **The game** — deploy/recall/stances, duels with odds display, gold bursts, kill streaks,
 BSOD on losing your last cursor, rakeback tracking, autoplay. Every death writes a
@@ -281,20 +310,12 @@ explicitly **parked** ("stuff only 2% of users would search for"). Run… jokes 
    period GIFs (no MIT-clean animated set turned up).
 7. **Start menu completeness** — All Programs roster, recent apps, Help & Support.
 
-**Owner direction (2026-08-09 evening), superseding the order above where it conflicts:**
-- **Next big push: live multiplayer beta on the Vercel domain.** Play money — every
-  visitor gets a 5 SOL fake balance — with bots kept on as the liquidity floor, so there
-  are always cursors to fight while we collect feedback during development. This pulls the
-  engine track forward: server-authoritative sim, browser becomes a display.
-- **Under consideration, not yet requested:** epochs ending when the C: drive fills with
-  dead cursors instead of on a random timer (the disk pie chart becomes the doom meter,
-  BSOD on disk-full); shared/async app state once the server exists (global guestbook,
-  Paint gallery); a watch-together YouTube embed in IE with a fair DJ queue
-  (turntable.fm-style — official embed API, not arbitrary browsing, which frame-blocking
-  makes impractical).
-- **Content note:** owner explicitly does not want more AI-authored joke copy filling
-  surfaces (called the IE fake-web text "AI slop"). Keep authored gag text minimal;
-  prefer real systems and real player content over pastiche.
+**Owner direction (2026-08-09 evening) — ALL SHIPPED same night, see §5:** live
+multiplayer beta (server-authoritative, play money, bots as liquidity floor), disk-full
+epochs, global guestbook + gallery, cursorTV watch-together.
+- **Content note, standing:** owner explicitly does not want more AI-authored joke copy
+  filling surfaces (called the IE fake-web text "AI slop"). Keep authored gag text
+  minimal; prefer real systems and real player content over pastiche.
 
 **Parallel engine track (blocks real money, not UI):** port THIN ICE's sim skeleton and
 **prove the invariants** — pot conservation, and EV per deploy = stake × 0.97 for *every*
@@ -349,6 +370,11 @@ escrow (replacement, not hardening); no graceful shutdown.
 - `main.js` should keep shedding modules as apps grow (minesweeper/messenger set the pattern)
 - Bot/liquidity policy for dead hours needs a disclosed design before real money
 - Epoch timings (110–195s, 12s shutdown, 5s BSOD) are feel-tuned, not measured
+- Multiplayer beta caveats: session identity is a bearer token at guest trust (play-money
+  grade, same as THIN ICE's); the e2-micro box runs both betas (cursors capped at 220MB);
+  cursorTV needs a real YouTube video id pasted (no search — no API key); TV/guestbook/
+  gallery pages still require IE's dial-up first (intended); epoch pace at CORPSES=64 is
+  feel-tuned, not measured — tune via systemd env
 - The dial-up ceremony is ~8s and runs once per session, on the first navigation. Charming
   the first time; if playtests find it tiresome, shorten it or remember "connected" in
   `store`

@@ -88,6 +88,7 @@ export function initMessenger(deps) {
   const {
     EMO, IMG, $, store, sysSnd, playerName, wireWindow,
     openWin, closeWin, isOpen, showMenu, showError, desk, rnd,
+    lobbyNet,   /* (text)=>bool — true means the beta server took it */
   } = deps;
 
   const pick = a => a[Math.floor(Math.random() * a.length)];
@@ -191,6 +192,8 @@ export function initMessenger(deps) {
       const t = rec.input.value.trim();
       if (!t) return;
       rec.input.value = "";
+      /* online, the lobby is real people: the server echoes it back to everyone */
+      if (c.id === "lobby" && lobbyNet && lobbyNet(t)) return;
       say(c.id, playerName(), t, true);
       if (c.id === "lobby") { if (Math.random() < .55) scheduleLobbyReply(); }
       else scheduleReply(c.id, t);
