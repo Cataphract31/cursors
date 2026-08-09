@@ -556,15 +556,19 @@ icons/sounds: winXP (MIT)</div>
       <div class="xpane" id="dp-saver">
         <div class="monframe"><canvas class="scr" id="sv-prev" width="170" height="110"></canvas><div class="foot"></div></div>
         <div class="aprow"><span class="lb">Screen saver</span>
-          <select id="sv-sel" style="flex:1">
-            <option value="stars">Starfield</option>
-            <option value="ribbons">Ribbons</option>
-            <option value="bounce">Bouncing CURSORS</option>
-            <option value="none">(None)</option>
-          </select>
+          <select id="sv-sel" style="flex:1"></select>
         </div>
-        <div class="aprow"><span class="lb">Wait</span><input type="number" id="sv-wait" min="1" max="60" value="3" style="width:52px"> <span class="small dim">minutes, then the desktop dreams</span></div>
-        <div style="text-align:right;margin-top:6px"><button class="xbtn" id="sv-test">Preview</button></div>
+        <div style="display:flex;gap:6px;justify-content:flex-end;margin:4px 0">
+          <button class="xbtn" id="sv-settings" style="min-width:74px">Settings...</button>
+          <button class="xbtn" id="sv-test" style="min-width:74px">Preview</button>
+        </div>
+        <div class="aprow"><span class="lb">Wait</span><input type="number" id="sv-wait" min="1" max="60" value="3" style="width:52px"> <span class="small dim">minutes</span>
+          <label style="display:flex;gap:5px;align-items:center;margin-left:8px"><input type="checkbox" id="sv-pass"> <span class="small">On resume, password protect</span></label>
+        </div>
+        <fieldset class="mo-fs" style="margin-top:7px"><legend>Monitor power</legend>
+          <div class="small dim" style="margin-bottom:4px">To adjust monitor power settings and save energy, click Power.</div>
+          <div style="text-align:right"><button class="xbtn" disabled style="min-width:74px">Power...</button></div>
+        </fieldset>
       </div>
       <div class="xpane" id="dp-app">
         <div class="aprow"><span class="lb">Scheme</span>
@@ -730,6 +734,21 @@ icons/sounds: winXP (MIT)</div>
         <div id="errtext" style="line-height:1.55">Something happened.</div>
       </div>
       <div style="text-align:center"><button class="xbtn" id="err-ok" style="min-width:82px">OK</button></div>
+    </div>
+  </div>
+
+  <!-- per-screensaver Settings dialog: content built by main.js -->
+  <div class="window fixed" id="win-saveropts" style="left:calc(50% - 160px);top:calc(50% - 90px);width:320px">
+    <div class="title-bar">
+      <div class="tb-l"><div class="title-bar-text">Settings</div></div>
+      <div class="title-bar-controls"><button aria-label="Close"></button></div>
+    </div>
+    <div class="win-body">
+      <div id="svo-body"></div>
+      <div style="display:flex;gap:7px;justify-content:flex-end;margin-top:10px">
+        <button class="xbtn" id="svo-ok" style="min-width:74px">OK</button>
+        <button class="xbtn" id="svo-cancel" style="min-width:74px">Cancel</button>
+      </div>
     </div>
   </div>
 

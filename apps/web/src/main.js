@@ -11,6 +11,7 @@ import { initSysApps } from "./sysapps.js";
 import { initCompanion } from "./companion.js";
 import { initNet } from "./net.js";
 import { initMouse } from "./mouse.js";
+import { initSavers } from "./savers.js";
 const Webamp = (WebampImport && WebampImport.default) ? WebampImport.default : WebampImport;
 
 "use strict";
@@ -172,7 +173,7 @@ const store={
     this.data.userIcons=this.data.userIcons||[];
     this.data.texts=this.data.texts||{};
     this.data.wallpaper=this.data.wallpaper||"bliss";
-    this.data.saver=this.data.saver||{t:"stars",wait:3};
+    this.data.saver=this.data.saver||{t:"pipes",wait:3};   /* Pipes. obviously. */
     /* desktop shell switches, all straight off XP's desktop menu */
     if(this.data.alignGrid==null) this.data.alignGrid=1;
     if(this.data.showIcons==null) this.data.showIcons=1;
@@ -1879,59 +1880,29 @@ $("#dp-cancel").addEventListener("click",()=>{ wpSel=store.data.wallpaper; rende
 $("#sv-test").addEventListener("click",()=>{ applySaverUI(); if($("#sv-sel").value!=="none") startSaver($("#sv-sel").value); });
 
 /* ================= screensavers ================= */
+/* the roster is XP's own, rendered by savers.js; this section owns only the
+   idle timer, the fullscreen canvas and the Display Properties preview */
+const savers=initSavers({store,IMG,hooks:{
+  /* My Pictures Slideshow: whatever the machine actually has - your Paint
+     saves, the painted wallpaper, the gallery, and Bliss as the floor */
+  pictures(){
+    const out=[];
+    for(const p of (store.data.pictures||[])) out.push(p.data);
+    if(store.data.wallpaperData) out.push(store.data.wallpaperData);
+    try{ for(const g of (mpGalleryData()||[])) out.push(g.png); }catch(e){}
+    out.push(IMG.bliss);
+    return out;
+  },
+}});
+/* the old three-saver ids live in stores in the wild; map them once */
+if(store.data.saver&&["ribbons","bounce"].includes(store.data.saver.t)) store.data.saver.t="pipes";
+if(store.data.saver&&!savers.has(store.data.saver.t)&&store.data.saver.t!=="none") store.data.saver.t="pipes";
 const saverCv=$("#saver");
 let saverOn=false, saverRaf=0, saverState=null, saverStartAt=0, lastAct=performance.now();
 ["pointermove","pointerdown","keydown","wheel"].forEach(ev=>addEventListener(ev,()=>{
   lastAct=performance.now();
   if(saverOn&&performance.now()-saverStartAt>450) stopSaver();
 },{passive:true}));
-function saverInit(type,w,h){
-  const st={type,w,h};
-  if(type==="stars") st.stars=Array.from({length:160},()=>({x:Math.random()*2-1,y:Math.random()*2-1,z:Math.random()*.9+.1}));
-  if(type==="ribbons") st.rib=Array.from({length:3},(_,i)=>({pts:[],x:Math.random()*w,y:Math.random()*h,a:Math.random()*6.28,hue:i*120}));
-  if(type==="bounce") st.b={x:w/2,y:h/2,dx:2.2,dy:1.7,hue:180};
-  return st;
-}
-function saverFrame(cv,g,st,dt){
-  const w=cv.width,h=cv.height;
-  if(st.type==="stars"){
-    g.fillStyle="rgba(0,0,0,.5)"; g.fillRect(0,0,w,h);
-    g.fillStyle="#fff";
-    for(const s of st.stars){
-      s.z-=dt*.28;
-      if(s.z<=.05){ s.x=Math.random()*2-1; s.y=Math.random()*2-1; s.z=1; }
-      const px=w/2+s.x/s.z*w*.5, py=h/2+s.y/s.z*h*.5;
-      const r=Math.max(.4,(1-s.z)*2.4*(w/800+.4));
-      if(px>=0&&px<w&&py>=0&&py<h){ g.beginPath(); g.arc(px,py,r,0,6.28); g.fill(); }
-    }
-  }else if(st.type==="ribbons"){
-    g.fillStyle="rgba(0,0,0,.06)"; g.fillRect(0,0,w,h);
-    for(const rb of st.rib){
-      rb.a+=(Math.random()-.5)*.55;
-      rb.x+=Math.cos(rb.a)*95*dt*(w/500+.3); rb.y+=Math.sin(rb.a)*95*dt*(w/500+.3);
-      if(rb.x<0||rb.x>w) rb.a=Math.PI-rb.a;
-      if(rb.y<0||rb.y>h) rb.a=-rb.a;
-      rb.x=clamp(rb.x,0,w); rb.y=clamp(rb.y,0,h);
-      rb.hue=(rb.hue+45*dt)%360;
-      rb.pts.push({x:rb.x,y:rb.y}); if(rb.pts.length>26) rb.pts.shift();
-      g.strokeStyle=`hsl(${rb.hue} 90% 60%)`; g.lineWidth=Math.max(1.5,w/320);
-      g.beginPath();
-      rb.pts.forEach((p,i)=>i?g.lineTo(p.x,p.y):g.moveTo(p.x,p.y));
-      g.stroke();
-    }
-  }else if(st.type==="bounce"){
-    g.fillStyle="#000"; g.fillRect(0,0,w,h);
-    const b=st.b, fs=Math.max(11,w/16);
-    g.font=`bold ${fs}px "Lucida Console",Consolas,monospace`;
-    const tw=g.measureText("CURSORS.EXE").width;
-    b.x+=b.dx*(w/600+.4); b.y+=b.dy*(w/600+.4);
-    if(b.x<4||b.x+tw>w-4){ b.dx*=-1; b.hue=(b.hue+67)%360; }
-    if(b.y<fs+4||b.y>h-8){ b.dy*=-1; b.hue=(b.hue+67)%360; }
-    b.x=clamp(b.x,4,Math.max(5,w-4-tw)); b.y=clamp(b.y,fs+4,h-8);
-    g.fillStyle=`hsl(${b.hue} 90% 60%)`;
-    g.fillText("CURSORS.EXE",b.x,b.y);
-  }
-}
 function startSaver(type){
   if(saverOn) return;
   saverOn=true; saverStartAt=performance.now();
@@ -1939,39 +1910,114 @@ function startSaver(type){
   saverCv.style.display="block";
   const g=saverCv.getContext("2d");
   g.fillStyle="#000"; g.fillRect(0,0,saverCv.width,saverCv.height);
-  saverState=saverInit(type,saverCv.width,saverCv.height);
+  saverState=savers.create(type,saverCv.width,saverCv.height);
   let last=performance.now();
   const loop=t=>{
     if(!saverOn) return;
     const dt=Math.min(.05,(t-last)/1000); last=t;
-    saverFrame(saverCv,g,saverState,dt);
+    saverState.frame(g,dt);
     saverRaf=requestAnimationFrame(loop);
   };
   saverRaf=requestAnimationFrame(loop);
 }
-function stopSaver(){ saverOn=false; cancelAnimationFrame(saverRaf); saverCv.style.display="none"; }
+function stopSaver(){
+  saverOn=false; cancelAnimationFrame(saverRaf);
+  if(saverState){ saverState.destroy(); saverState=null; }
+  saverCv.style.display="none";
+}
 setInterval(()=>{
   if(saverOn||!desktopActive()) return;
   if(store.data.saver.t==="none") return;
   if((performance.now()-lastAct)/60000>=store.data.saver.wait) startSaver(store.data.saver.t);
 },5000);
+/* the Screen Saver tab: XP's list, a working Settings... per saver, and the
+   tilted-monitor preview running the real thing at thumbnail size */
+{
+  const sel=$("#sv-sel");
+  sel.innerHTML="";
+  for(const s of savers.list()){
+    const o=document.createElement("option");
+    o.value=s.id; o.textContent=s.label;
+    sel.appendChild(o);
+  }
+  sel.value=savers.has(store.data.saver.t)?store.data.saver.t:"none";
+  sel.addEventListener("change",()=>{ $("#sv-settings").disabled=!(savers.list().find(s=>s.id===sel.value)||{}).settings; });
+  $("#sv-settings").disabled=!(savers.list().find(s=>s.id===sel.value)||{}).settings;
+}
 const svPrev=$("#sv-prev");
 let miniState=null, miniType=null, lastMini=0;
-(function miniLoop(t){
+(function miniLoop(){
   requestAnimationFrame(miniLoop);
-  if($("#win-dispprops").style.display!=="flex"||!$("#dp-saver").classList.contains("on")){ miniState=null; lastMini=0; return; }
+  if($("#win-dispprops").style.display!=="flex"||!$("#dp-saver").classList.contains("on")){
+    if(miniState){ miniState.destroy(); miniState=null; }
+    lastMini=0; return;
+  }
   const type=$("#sv-sel").value;
   const g=svPrev.getContext("2d");
-  if(type==="none"){ g.fillStyle="#000"; g.fillRect(0,0,svPrev.width,svPrev.height); miniState=null; return; }
+  if(type==="none"||!savers.has(type)){ g.fillStyle="#000"; g.fillRect(0,0,svPrev.width,svPrev.height); if(miniState){miniState.destroy();miniState=null;} return; }
   if(!miniState||miniType!==type){
-    miniType=type; miniState=saverInit(type,svPrev.width,svPrev.height);
+    miniType=type;
+    if(miniState) miniState.destroy();
+    miniState=savers.create(type,svPrev.width,svPrev.height);
     g.fillStyle="#000"; g.fillRect(0,0,svPrev.width,svPrev.height);
   }
   const now=performance.now();
   const dt=lastMini?Math.min(.05,(now-lastMini)/1000):.016;
   lastMini=now;
-  saverFrame(svPrev,g,miniState,dt);
+  miniState.frame(g,dt);
 })();
+/* per-saver Settings... - the real dialogs asked for text and joints */
+$("#sv-settings").addEventListener("click",()=>{
+  const id=$("#sv-sel").value, c=savers.cfgOf(id);
+  const host=$("#svo-body"); host.innerHTML="";
+  const row=(label,el)=>{ const d=document.createElement("div"); d.className="aprow";
+    const s=document.createElement("span"); s.className="lb"; s.textContent=label;
+    d.appendChild(s); d.appendChild(el); host.appendChild(d); return el; };
+  const fields={};
+  if(id==="pipes"){
+    $("#win-saveropts .title-bar-text").textContent="3D Pipes Settings";
+    const j=document.createElement("select");
+    for(const [v,l] of [["elbow","Elbows"],["ball","Ball"],["mixed","Mixed"]]){ const o=document.createElement("option"); o.value=v; o.textContent=l; j.appendChild(o); }
+    j.value=c.joint||"ball"; fields.joint=row("Joint type",j);
+    const m=document.createElement("input"); m.type="checkbox"; m.checked=c.multiple!==0;
+    const lb=document.createElement("label"); lb.style.cssText="display:flex;gap:6px;align-items:center;padding:2px 0";
+    lb.appendChild(m); lb.appendChild(document.createTextNode(" Multiple pipes"));
+    host.appendChild(lb); fields.multiple=m;
+  }else if(id==="text3d"){
+    $("#win-saveropts .title-bar-text").textContent="3D Text Settings";
+    const t=document.createElement("input"); t.type="text"; t.maxLength=16; t.value=c.text||"CURSORS"; t.style.flex="1";
+    fields.text=row("Custom text",t);
+    const r=document.createElement("select");
+    for(const [v,l] of [["spin","Spin"],["seesaw","See-Saw"],["wobble","Wobble"]]){ const o=document.createElement("option"); o.value=v; o.textContent=l; r.appendChild(o); }
+    r.value=c.rot||"spin"; fields.rot=row("Rotation type",r);
+  }else if(id==="marquee"){
+    $("#win-saveropts .title-bar-text").textContent="Marquee Setup";
+    const t=document.createElement("input"); t.type="text"; t.maxLength=60; t.value=c.text||"Your message here"; t.style.flex="1";
+    fields.text=row("Text",t);
+    const sp=document.createElement("input"); sp.type="range"; sp.min=1; sp.max=11; sp.value=c.speed||6; sp.style.flex="1";
+    fields.speed=row("Speed",sp);
+  }else if(id==="slideshow"){
+    $("#win-saveropts .title-bar-text").textContent="My Pictures Screen Saver Options";
+    const d=document.createElement("input"); d.type="number"; d.min=3; d.max=30; d.value=c.dwell||6; d.style.width="56px";
+    fields.dwell=row("Seconds per picture",d);
+  }else if(id==="stars"){
+    $("#win-saveropts .title-bar-text").textContent="Starfield Setup";
+    const n=document.createElement("input"); n.type="number"; n.min=20; n.max=500; n.value=c.n||160; n.style.width="64px";
+    fields.n=row("Number of stars",n);
+    const sp=document.createElement("input"); sp.type="range"; sp.min=1; sp.max=5; sp.value=c.speed||1; sp.style.flex="1";
+    fields.speed=row("Warp speed",sp);
+  }
+  $("#svo-ok").onclick=()=>{
+    for(const k in fields){
+      const f=fields[k];
+      c[k]=f.type==="checkbox"?(f.checked?1:0):f.type==="number"||f.type==="range"?+f.value:f.value;
+    }
+    store.save(); miniState=null; miniType=null;   /* preview rebuilds with new settings */
+    closeWin("win-saveropts");
+  };
+  $("#svo-cancel").onclick=()=>closeWin("win-saveropts");
+  openWin("win-saveropts");
+});
 
 /* ================= date & time ================= */
 let calM=null, calY=null;
@@ -4261,6 +4307,7 @@ if(location.hash.indexOf("#desktop-sys")===0) setTimeout(()=>{ /* dev: the XP ap
   if(p==="-gpprops"){ openWin("win-gpedit"); setTimeout(()=>$$("#pol-list .mmc-row")[1].dispatchEvent(new MouseEvent("dblclick",{bubbles:true})),300); }
 },900);
 if(location.hash==="#desktop-mouse") setTimeout(()=>mouse.open(),300); /* dev: Mouse Properties */
+if(location.hash.startsWith("#desktop-saver-")) setTimeout(()=>startSaver(location.hash.slice(15)),600); /* dev: any saver fullscreen */
 if(location.hash==="#desktop-mouse-bronze") setTimeout(()=>{ /* dev: the gold cursor, applied and visible on the field */
   mouse.applyScheme("bronze");
   setTimeout(()=>{ mouse.open(); $$("#win-mouse .xtab").find(t=>t.dataset.pane==="mo-ptr").click(); },250);
