@@ -85,7 +85,13 @@ export function initExplorer(deps) {
         act: () => showError("NTUSER.DAT", "Access is denied.\n\nEverything you have ever clicked is in this file.") }),
     ],
     [HOME + "\\Favorites"]: () => [
-      f("cursor$land.url", { size: 128, ico: "ie32", act: () => hooks.openWin("win-ie") }),
+      /* the Favorites folder is the browser's bookmark list, and these really navigate */
+      f("cursor$land.url", { size: 128, ico: "ie32", tile: "Internet Shortcut", act: () => hooks.browse("http://www.cursor.land/") }),
+      f("the odds.url", { size: 128, ico: "ie32", tile: "Internet Shortcut", act: () => hooks.browse("http://www.cursor.land/odds.html") }),
+      f("hall of fame.url", { size: 128, ico: "ie32", tile: "Internet Shortcut", act: () => hooks.browse("http://www.cursor.land/hall.html") }),
+      f("THE CURSOR WEBRING.url", { size: 128, ico: "ie32", tile: "Internet Shortcut", act: () => hooks.browse("http://www.cursorwebring.org/") }),
+      f("mumus page.url", { size: 128, ico: "ie32", tile: "Internet Shortcut", act: () => hooks.browse("http://mumu.tripod.com/") }),
+      f("cursorbot (do not).url", { size: 128, ico: "ie32", tile: "Internet Shortcut", act: () => hooks.browse("http://deg404.neocities.org/") }),
     ],
     [HOME + "\\Desktop"]: () => hooks.desktopFiles().map(ic => (
       ic.app === "bin"

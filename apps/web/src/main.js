@@ -6,6 +6,7 @@ import { initMinesweeper } from "./minesweeper.js";
 import { initMessenger } from "./messenger.js";
 import { initPaint } from "./paint.js";
 import { initExplorer } from "./explorer.js";
+import { initIE } from "./ie.js";
 const Webamp = (WebampImport && WebampImport.default) ? WebampImport.default : WebampImport;
 
 "use strict";
@@ -207,6 +208,7 @@ function applyWinRect(el){
   if(s.w) el.style.width=s.w;
   if(s.h) el.style.height=s.h;
 }
+let ie=null;   /* the browser, wired further down; openWin needs the handle */
 function openWin(id,opts){
   if(id==="win-amp"){ winampApp.open(); return; }
   opts=opts||{};
@@ -222,6 +224,7 @@ function openWin(id,opts){
   requestAnimationFrame(()=>fitWin(el));
   focusWin(id);
   if(id==="win-run") setTimeout(()=>{ const i=$("#run-in"); i.value=""; i.focus(); },0);
+  if(id==="win-ie"&&ie) ie.boot();   /* an empty browser dials out on its own */
 }
 /* no window may hang off the screen — the small-screen safety net */
 function fitWin(el){
@@ -772,6 +775,7 @@ $$(".menubar span").forEach(m=>m.addEventListener("click",e=>{
   }
   if(win.id==="win-paint"){ paint.menu(m.textContent,r.left,r.bottom+2); return; }
   if(win.id==="win-explorer"){ explorer.menu(m.textContent,r.left,r.bottom+2); return; }
+  if(win.id==="win-ie"){ ie.menu(m.textContent,r.left,r.bottom+2); return; }
   showMenu(menubarMenu(m.textContent,win.id),r.left,r.bottom+2);
 }));
 
@@ -858,6 +862,7 @@ const explorer=initExplorer({
     openWin, close:()=>closeWin("win-explorer"),
     playerName:()=>playerNameFull(),
     openStart:()=>startmenu.classList.add("open"),
+    browse:u=>{ openWin("win-ie"); ie.go(u); },
     openIcon:ic=>openIcon(ic),
     desktopFiles:()=>allIcons(),
     deadCount:()=>binDead.length,
@@ -1097,6 +1102,11 @@ function runCommand(){
   if(k==="devmgmt.msc"){ showError("Device Manager","1 unknown device detected: your luck. Driver ships in the next update."); return; }
   if(k==="regedit"||k==="regedit.exe"){ showError("Registry Editor","HKEY_CURRENT_LOSER is locked by another process."); return; }
   if(k==="format c:"||k==="format c"){ showError("Format Local Disk (C:)","The disk is in use by CURSORS.EXE. Your losses are load-bearing and cannot be erased."); return; }
+  /* Run took URLs in 2003, and so does this one */
+  if(!/\.(exe|msc|cpl|dll|bat|com|ini|sys|txt|log)$/i.test(k)&&
+     (/^(https?:\/\/|www\.)/i.test(k)||/^[a-z0-9-]+(\.[a-z0-9-]+)+(\/|$)/i.test(k))){
+    sysSnd("nav",.5); openWin("win-ie"); ie.go(v); return;
+  }
   showError("Run","Windows cannot find '"+v+"'. Make sure you typed the name correctly, and then try again.");
 }
 $("#run-ok").addEventListener("click",runCommand);
@@ -1505,11 +1515,65 @@ function closeWinamp(){
 return {open:openWinamp,close:closeWinamp};
 })();
 
-/* ================= geocities ================= */
-let geoN=133721;
-setInterval(()=>{ if($("#win-ie").style.display==="block"){ geoN+=Math.random()<.4?1:0; $("#geocnt").textContent=String(geoN).padStart(7,"0"); } },1500);
-$("#geo-guest").addEventListener("click",()=>msn.openConv("lobby"));
-$("#geo-deploy").addEventListener("click",()=>openWin("win-cursors"));
+/* ================= Internet Explorer ================= */
+/* the chrome is in index.html, the web it browses is in ie.js. the hall of
+   fame page reads live game state, so the handmade web is not a diorama. */
+function ieHall(){
+  const alive=curs.map(c=>({
+    name:c.owner,mine:c.isMine,mult:(c.peak||c.bounty)/ENTRY,
+    note:c.mode==="recall"?"banking out now":"still alive, carrying "+fmtS(c.bounty),
+  }));
+  const dead=binDead.map(d=>({
+    name:d.name,mine:d.mine,mult:d.mult,
+    note:"killed by "+d.killer+" — it was "+d.odds+"% to win that one",
+  }));
+  return {
+    top:alive.concat(dead).sort((a,b)=>b.mult-a.mult).slice(0,8),
+    uptime:fmtUp(upT),alive:curs.length,dead:binDead.length,
+    bigBank:stats.bigBank?fmtS(stats.bigBank)+" SOL":"nothing yet",
+  };
+}
+ie=initIE({
+  IMG,
+  els:{
+    back:$("#ie-back"), fwd:$("#ie-fwd"), stop:$("#ie-stop"), refresh:$("#ie-refresh"),
+    home:$("#ie-home"), search:$("#ie-search"), favs:$("#ie-favs"), media:$("#ie-media"),
+    hist:$("#ie-hist"), mail:$("#ie-mail"), print:$("#ie-print"),
+    addr:$("#ie-addr"), go:$("#ie-go"), links:$("#ie-links"), page:$("#ie-page"),
+    throb:$("#ie-throb"), prog:$("#ie-prog"), progbar:$("#ie-progbar"), st1:$("#ie-st1"),
+    dlUser:$("#dl-user"), dlConnect:$("#dl-connect"), dlOffline:$("#dl-offline"),
+    dlSettings:$("#dl-settings"),
+    dgText:$("#dg-text"), dgBar:$("#dg-bar"), dgCancel:$("#dg-cancel"),
+  },
+  store, sysSnd, showMenu, showError,
+  snd:{tone,noise:noiseBurst},
+  setTitle:t=>{ $("#win-ie .title-bar-text").textContent=t; renderTaskbar(); },
+  hooks:{
+    openWin, closeWin, wireWindow, desk:desktop,
+    close:()=>closeWin("win-ie"),
+    isOpen:()=>openApps.has("win-ie"),
+    playerName:()=>playerName(),
+    deploy:()=>deploy(false),
+    openLobby:()=>msn.openConv("lobby"),
+    hallOfPain:()=>hallOfPain(),
+    openText:openTextWindow,
+    balloon:(h,t)=>showBalloon(h,t),
+    setNet:on=>{ $("#netico").style.display=on?"":"none"; },
+    hall:ieHall,
+  },
+});
+/* the toolbar is the real IE6 button set, same archive as Explorer's */
+$("#ie-backi").src=IMG.navBack;   $("#ie-fwdi").src=IMG.navFwd;
+$("#ie-stopi").src=IMG.navStop;   $("#ie-refreshi").src=IMG.navRefresh;
+$("#ie-homei").src=IMG.navHome;   $("#ie-searchi").src=IMG.navSearch;
+$("#ie-favsi").src=IMG.navFav;    $("#ie-mediai").src=IMG.navMedia;
+$("#ie-histi").src=IMG.navHistory;$("#ie-maili").src=IMG.navMail;
+$("#ie-printi").src=IMG.printer32;$("#ie-linksi").src=IMG.navLinks;
+$("#ie-throbi").src=IMG.ie32;     $("#ie-addrico").src=IMG.ie16;
+$("#ie-zonei").src=IMG.earth16;
+/* shutting the dial-up box with the X means the same thing as Work Offline */
+$('#win-dialup .title-bar-controls button[aria-label="Close"]').addEventListener("click",()=>$("#dl-offline").click());
+$('#win-dialing .title-bar-controls button[aria-label="Close"]').addEventListener("click",()=>$("#dg-cancel").click());
 
 /* ================= game state ================= */
 const BOTS=["mumu","bobo","clippy","bonk","solja","xp_chad","deg404"].map(n=>({name:n}));
@@ -2446,89 +2510,30 @@ if(location.hash.indexOf("#desktop-exp")===0) setTimeout(()=>{ /* dev: capture E
   if(p==="-props"){ explorer.go("C:\\"); setTimeout(()=>explorer.driveProperties(),400); }
   if(p==="-sysprops") setTimeout(()=>{ $("#sp-user").textContent=playerNameFull(); openWin("win-sysprops"); },300);
 },600);
-if(location.hash==="#desktop-crash") setTimeout(()=>{ /* dev: fast-forward to the shutdown rush and crash */
-  phaseT=Math.min(phaseT,T_SHUT+3);
-},2500);
-if(location.hash.indexOf("#desktop-cx")===0) setTimeout(()=>{ /* dev: capture a CURSORS.EXE pane */
-  openWin("win-cursors");   /* the phone boots to a bare desktop */
-  const p=location.hash.replace("#desktop-cx-","");
-  if(["stats","rake","hist","verify"].indexOf(p)>=0) cxShow("cx-"+p);
-  if(p==="hist"||p==="stats"){ /* fake a played session so the pane has flesh */
-    stats={kills:4,deaths:2,best:6.2,deploys:11,banks:6,bigBank:601,tIn:1100,tOut:1289};
-    epochHist=[
-      {no:3,up:"2:41",pot:2140,deploys:22,deaths:9,top:{owner:"mumu",amt:388},net:112,myIn:300},
-      {no:2,up:"3:05",pot:1750,deploys:18,deaths:11,top:{owner:playerName(),amt:601},net:301,myIn:300},
-      {no:1,up:"1:58",pot:970,deploys:10,deaths:7,top:{owner:"bobo",amt:194},net:-200,myIn:200},
-    ];
-    renderCx();
-  }
-  if(p==="jackpot") jackpot(ENTRY*11);   /* dev: the VHS moment */
-  if(p==="death"){ /* your last cursor dies -> certificate, not a bluescreen */
-    binDead.unshift({id:++deathN,name:playerName(),mine:true,killer:"mumu",killerMine:false,
-      lost:485,mult:5,peak:485,odds:71,kills:3,lived:88,round:roundNo,at:"09:41:12"});
-    deathCert(binDead[0]);
-  }
-},900);
-if(location.hash==="#desktop-binlive") setTimeout(()=>{ /* dev: does the open folder fill up as cursors actually die? */
-  openWin("win-explorer"); explorer.go("Recycle Bin"); explorer.setView("details");
-},600);
-if(location.hash.indexOf("#desktop-bin")===0&&location.hash!=="#desktop-binlive") setTimeout(()=>{ /* dev: capture the Recycle Bin with a body count */
-  const names=["mumu","bobo","clippy","bonk","solja","xp_chad","deg404",playerName()];
-  for(let i=0;i<9;i++){
-    const mult=[1,1,1.9,2.4,3.7,1,6.2,2.1,11.4][i];
-    const mine=i===2||i===6;
-    binDead.push({id:++deathN,name:mine?playerName():names[i%names.length],mine,
-      killer:names[(i+3)%7],killerMine:i===4,lost:Math.round(ENTRY*mult),mult,
-      peak:Math.round(ENTRY*mult*1.1),odds:[8,34,71,45,12,58,92,27,19][i],
-      kills:[0,1,2,0,3,1,5,0,7][i],lived:[6,19,44,11,71,23,108,15,133][i],
-      round:9+i,at:"09:4"+i+":1"+i});
-  }
-  binFiles.push({id:"user_dev1",label:"screenshot.png",ico:"pics32",app:"usertxt",kind:"txt"});
-  openWin("win-explorer"); explorer.go("Recycle Bin");
-  const p=location.hash.replace("#desktop-bin","");
-  if(p==="-cert") setTimeout(()=>deathCert(binDead[6]),400);
-  if(p==="-hall") setTimeout(()=>hallOfPain(),400);
-  if(p==="-det") explorer.setView("details");
-  /* dev: the two verbs, driven through the task pane exactly as a finger would */
-  const task=t=>[...$$("#ex-tasks .ex-task")].find(a=>a.textContent.indexOf(t)>=0);
-  if(p==="-empty") setTimeout(()=>task("Empty").click(),400);
-  if(p==="-restore") setTimeout(()=>task("Restore").click(),400);
-},600);
-if(location.hash.indexOf("#desktop-paint")===0) setTimeout(()=>{ /* dev: capture Paint with art on the canvas */
-  openWin("win-paint");
-  const box=$("#pt-box"), cvv=$("#pt-canvas");
-  const at=(x,y)=>{ const r=cvv.getBoundingClientRect(); return {clientX:r.left+x,clientY:r.top+y}; };
-  const stroke=(pts,btn)=>{
-    const opts={bubbles:true,button:btn||0,pointerId:1,pointerType:"mouse"};
-    box.dispatchEvent(new PointerEvent("pointerdown",{...opts,...at(pts[0][0],pts[0][1])}));
-    for(const p of pts.slice(1)) box.dispatchEvent(new PointerEvent("pointermove",{...opts,...at(p[0],p[1])}));
-    dispatchEvent(new PointerEvent("pointerup",{...opts,...at(pts[pts.length-1][0],pts[pts.length-1][1])}));
-  };
-  const swatch=hex=>$(`#pt-colors .pt-sw[data-hex="${hex}"]`).click();
-  const tool=i=>$$("#pt-tools .pt-tool")[i].click();
-  tool(7); swatch("#FF0000");                            /* brush, red */
-  stroke([[40,40],[70,90],[110,45],[150,95],[190,50]]);
-  tool(14); swatch("#0000FF");                           /* ellipse, blue */
-  stroke([[210,40],[300,110]]);
-  tool(12); swatch("#008000");                           /* rectangle, green */
-  stroke([[40,130],[170,210]]);
-  tool(3); swatch("#FFFF00");                            /* fill, yellow */
-  stroke([[100,170]]);
-  tool(8); swatch("#FF00FF");                            /* airbrush, magenta */
-  stroke([[230,150],[250,170],[270,150],[290,180],[250,200]]);
-  tool(10); swatch("#000000");                           /* line */
-  stroke([[210,230],[330,230]]);
-  tool(9);                                               /* text, left on the box */
-  if(location.hash==="#desktop-paint-wall"||location.hash==="#desktop-paint-props") setTimeout(()=>{  /* dev: the meme machine, end to end */
-    const f=$$("#win-paint .menubar span")[0];
-    f.click();
-    const items=[...$("#ctx").children].filter(c=>c.classList.contains("cit"));
-    const tiled=items.find(c=>c.textContent.indexOf("Tiled")>=0);
-    tiled.dispatchEvent(new PointerEvent("pointerup",{bubbles:true,pointerType:"mouse"}));
-    minWin("win-paint");
-    if(location.hash==="#desktop-paint-props") setTimeout(()=>openWin("win-dispprops"),300);
-  },700);
-},600);
+if(location.hash.indexOf("#desktop-ie")===0) setTimeout(()=>{ /* dev: capture the handmade web */
+  const p=location.hash.replace("#desktop-ie","");
+  if(p!=="-dial"&&p!=="-dialgo") ie.connectNow();   /* skip the handshake unless that is the shot */
+  openWin("win-ie");
+  const to={"-odds":"http://www.cursor.land/odds.html","-hall":"http://www.cursor.land/hall.html",
+    "-guest":"http://www.cursor.land/guest.html","-ring":"http://www.cursorwebring.org/",
+    "-mumu":"http://mumu.tripod.com/","-deg":"http://deg404.neocities.org/",
+    "-bobo":"http://www.angelfire.com/biz/bobo/","-404":"http://www.cursortactics.com/",
+    "-search":"http://search.msn.com/results?q=how%20to%20win"};
+  if(to[p]) ie.go(to[p],{replace:true});
+  if(p==="-post") setTimeout(()=>{
+    ie.go("http://www.cursor.land/guest.html",{replace:true});
+    setTimeout(()=>{
+      $("#gb-txt").value="testing the guestbook. if you can read this it saved.";
+      $("#ie-page").querySelector("[data-act=gb-post]").click();
+    },1100);
+  },200);
+  if(p==="-dialgo") setTimeout(()=>$("#dl-connect").click(),200);   /* dev: the handshake, mid-screech */
+  if(p==="-src") setTimeout(()=>{                                    /* dev: View > Source, all the way to Notepad */
+    ie.menu("View",300,120);
+    const it=[...$("#ctx").children].find(c=>c.textContent==="Source");
+    it.dispatchEvent(new PointerEvent("pointerup",{bubbles:true,pointerType:"mouse"}));
+  },1400);
+},700);
 if(location.hash.indexOf("#desktop-mine")===0) setTimeout(()=>{ /* dev: capture minesweeper mid-game */
   const w=$("#win-mine"); w.style.left="8px"; w.style.top="8px";
   openWin("win-mine");

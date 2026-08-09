@@ -317,23 +317,89 @@ icons/sounds: winXP (MIT)</div>
     </div>
   </div>
 
-  <!-- Internet Explorer: cursor$land -->
-  <div class="window" id="win-ie" style="left:180px;top:90px;width:470px">
+  <!-- Internet Explorer 6 — the chrome. The web it browses lives in src/ie.js -->
+  <div class="window" id="win-ie" data-minw="430" data-minh="320" style="left:140px;top:40px;width:748px;height:544px">
     <div class="title-bar">
       <div class="tb-l"><i class="xico tb-ico" data-ico="ie16"></i><div class="title-bar-text">cursor$land - Microsoft Internet Explorer</div></div>
       <div class="title-bar-controls"><button aria-label="Minimize"></button><button aria-label="Close"></button></div>
     </div>
-    <div class="win-body pad geo">
-      <div class="geo-marq"><span>★•*¨*•.¸¸ welcome to cursor$land ¸¸.•*¨*•★ the #1 cursor fightring on the information superhighway ★ winner takes all ★ tell your friends ★</span></div>
-      <h1>~ cursor$land ~</h1>
-      <div>est. 2003 · webmaster: admin</div>
-      <div class="rainbow"></div>
-      <div>you are visitor <span class="cnt" id="geocnt">0133721</span></div>
-      <div class="constr" title="under construction"></div>
-      <div>[ <a id="geo-guest">sign my guestbook</a> ] · [ <a id="geo-deploy">enter the arena</a> ]</div>
-      <div style="margin-top:4px">webring: [ <a>&lt;&lt; prev</a> · <a>random</a> · <a>next &gt;&gt;</a> ]</div>
-      <div class="rainbow"></div>
-      <div class="small">best viewed in 800×600 · made with notepad · no rights reserved</div>
+    <div class="win-body pad ex-body">
+      <div class="menubar"><span>File</span><span>Edit</span><span>View</span><span>Favorites</span><span>Tools</span><span>Help</span></div>
+      <div class="ex-bar ie-bar">
+        <button class="ex-tb" id="ie-back"><img id="ie-backi" alt=""><span>Back</span></button>
+        <button class="ex-tb" id="ie-fwd"><img id="ie-fwdi" alt=""><span>Forward</span></button>
+        <button class="ex-tb" id="ie-stop"><img id="ie-stopi" alt=""></button>
+        <button class="ex-tb" id="ie-refresh"><img id="ie-refreshi" alt=""></button>
+        <button class="ex-tb" id="ie-home"><img id="ie-homei" alt=""></button>
+        <span class="ex-sep"></span>
+        <button class="ex-tb sm" id="ie-search"><img id="ie-searchi" alt=""><span>Search</span></button>
+        <button class="ex-tb sm" id="ie-favs"><img id="ie-favsi" alt=""><span>Favorites</span></button>
+        <button class="ex-tb sm" id="ie-media"><img id="ie-mediai" alt=""><span>Media</span></button>
+        <button class="ex-tb sm" id="ie-hist"><img id="ie-histi" alt=""><span>History</span></button>
+        <span class="ex-sep"></span>
+        <button class="ex-tb sm" id="ie-mail"><img id="ie-maili" alt=""></button>
+        <button class="ex-tb sm" id="ie-print"><img id="ie-printi" alt=""></button>
+        <span class="ie-throb" id="ie-throb"><img id="ie-throbi" alt=""></span>
+      </div>
+      <div class="ex-addrbar">
+        <span>Address</span>
+        <span class="ex-addrbox"><img id="ie-addrico" alt=""><input id="ie-addr" spellcheck="false" autocomplete="off"></span>
+        <button class="xbtn" id="ie-go" style="min-width:44px">Go</button>
+      </div>
+      <div class="ie-links" id="ie-links">
+        <img id="ie-linksi" alt=""><b>Links</b>
+        <a data-go="http://www.hotmail.com/">Free Hotmail</a>
+        <a data-go="http://windowsupdate.microsoft.com/">Windows Update</a>
+        <a data-go="http://www.cursorwebring.org/">The Cursor Webring</a>
+        <a data-go="http://search.msn.com/">Search the Web</a>
+      </div>
+      <div class="ie-doc" id="ie-page"></div>
+      <div class="ex-status ie-status">
+        <span id="ie-st1">Done</span>
+        <span class="ie-progcell"><span class="ie-prog" id="ie-prog"><i id="ie-progbar"></i></span></span>
+        <span class="ie-zone"><img id="ie-zonei" alt="">Internet</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Connect cursor$net: the dial-up dialog -->
+  <div class="window fixed" id="win-dialup" style="left:calc(50% - 172px);top:96px;width:344px">
+    <div class="title-bar">
+      <div class="tb-l"><i class="xico tb-ico" data-ico="connect16"></i><div class="title-bar-text">Connect cursor$net</div></div>
+      <div class="title-bar-controls"><button aria-label="Close"></button></div>
+    </div>
+    <div class="win-body" style="background:#ECE9D8">
+      <div class="dl-grid">
+        <label>User name:</label><input id="dl-user" spellcheck="false" value="Administrator">
+        <label>Password:</label><input id="dl-pass" type="password" value="hunter2">
+        <span></span><label class="dl-chk"><input type="checkbox" checked> Save this user name and password</label>
+        <label>Dial:</label><select id="dl-num"><option>555-0134</option><option>555-0135 (busy)</option></select>
+      </div>
+      <div class="small dim" style="margin:9px 2px 0">Standard 56000 bps Modem. Your telephone line will be
+        occupied for the duration of the session, which is the deal everyone agreed to in 2003.</div>
+      <div class="dlg-foot">
+        <button class="xbtn" id="dl-connect" style="min-width:70px">Dial</button>
+        <button class="xbtn" id="dl-offline" style="min-width:82px">Work Offline</button>
+        <button class="xbtn" id="dl-settings" style="min-width:76px">Properties</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- the handshake, in progress -->
+  <div class="window fixed" id="win-dialing" style="left:calc(50% - 160px);top:150px;width:320px">
+    <div class="title-bar">
+      <div class="tb-l"><i class="xico tb-ico" data-ico="connect16"></i><div class="title-bar-text">Connecting cursor$net...</div></div>
+      <div class="title-bar-controls"><button aria-label="Close"></button></div>
+    </div>
+    <div class="win-body" style="background:#ECE9D8">
+      <div style="display:flex;gap:11px;align-items:center">
+        <i class="xico" data-ico="connect32" style="width:32px;height:32px;flex:none"></i>
+        <div style="flex:1;min-width:0">
+          <div id="dg-text">Dialing 555-0134...</div>
+          <div class="dg-bar"><i id="dg-bar"></i></div>
+        </div>
+      </div>
+      <div class="dlg-foot"><button class="xbtn" id="dg-cancel" style="min-width:70px">Cancel</button></div>
     </div>
   </div>
 
@@ -635,6 +701,7 @@ icons/sounds: winXP (MIT)</div>
   <div id="tabs"></div>
   <div id="tray">
     <span id="phasechip" data-tip="System status">R0 · BOOT</span>
+    <i class="xico trayico" id="netico" data-ico="connect16" data-tip="cursor$net · 56.6 Kbps" style="display:none"></i>
     <i class="xico trayico" id="sndico" data-ico="trayVol" data-tip="Volume: click to mute"></i>
     <i class="xico trayico" data-ico="trayUsb" data-tip="Safely Remove Hardware: never"></i>
     <i class="xico trayico" data-ico="trayRisk" data-tip="Your computer might be at risk"></i>

@@ -119,6 +119,30 @@ lighten the lines. **Degauss** (a 0.9s filter wobble on body) fires at logon, af
 BSOD, and when the toggle is switched on. Toggle lives in Display Properties → Appearance
 → "CRT glass", persisted as `store.data.crt` (default ON), `body.crt-off` kills it.
 
+**Internet Explorer + the handmade web (2026-08-09).** `ie.js`, import-free sibling
+module. Real IE6 chrome: the genuine toolbar art (back/forward/stop/refresh/home/search/
+favorites/media/history/mail/print, all from the same winXP archive), address bar with a
+working Go, the Links bar, a spinning throbber, and a status bar whose chunked blue
+progress bar fills as the page "arrives". Ten pages of real 2003 tag soup — `<center>`,
+`<font>`, `<marquee>`, nested tables — because **View > Source is a feature** and the
+source has to look handmade. The sites: **cursor$land** (the geocities homepage, live hit
+counter), **the odds** (the honest-casino thesis as one ugly page: a/(a+b), P(×N)=1/N with
+a table, the 1%/2%/99% arithmetic, "bet size cannot change your variance"), **hall of fame**
+(reads live game state — alive cursors and bin deaths, ranked by peak), a **guestbook** that
+really persists your entry (`store.data.guest`), **THE CURSOR WEBRING** (10 members, 5 dead
+in period-accurate ways, prev/random/next actually ring), **mumu.tripod.com** (a rival's
+shrine, superstition presented as a system), **deg404** (sells CURSORBOT 9000 for 2 SOL at a
+"94% win rate", then admits in the footer that the seed is committed and revealed and the
+page would not be free if the RNG were crackable), bobo's eternally under-construction angelfire
+page, **MSN Search** (indexes all ten pages; searching for "how to win" promotes the odds
+page to #1 with a note saying so), and a carbon-copy **"The page cannot be displayed"** for
+everything else. Plus: a **dial-up ceremony** on the first navigation of a session — the
+real Connect dialog, then a synthesised 56k handshake (dial tone, DTMF, ringback, answer
+tone, carrier hiss, ~8s, Cancel actually shuts it up), a tray connection icon, and a
+"Connected at 56.6 Kbps" balloon. Work Offline gives the real offline page; reconnecting
+re-dials. One popup fires on deg404 (1,000,000th visitor; the prize is nothing). Explorer's
+Favorites folder holds six .url shortcuts that really navigate, and Run… now takes URLs.
+
 **The game** — deploy/recall/stances, duels with odds display, gold bursts, kill streaks,
 BSOD on losing your last cursor, rakeback tracking, autoplay. Every death writes a
 certificate (`certify()` in main.js) that the Recycle Bin renders.
@@ -156,8 +180,11 @@ rush, ~18.5s the crash dialog, ~27s the recovered arena).
   `#desktop-amptest`, `#desktop-logfill`, `#desktop-paint` (draws with 6 tools),
   `#desktop-paint-wall` (paints, then sets it as tiled wallpaper), `#desktop-paint-props`,
   `#desktop-exp` + `-c` / `-sys` / `-game` / `-det` / `-props` / `-sysprops`,
-  `#desktop-bin` (bin with 9 fixture deaths) + `-cert` / `-hall` / `-det` / `-empty` /
-  `-restore`, and `#desktop-binlive` (no fixture — opens the bin and watches it fill from
+  `#desktop-ie` (+ `-odds` / `-hall` / `-guest` / `-ring` / `-mumu` / `-deg` / `-bobo` /
+  `-404` / `-search`, plus `-dial` for the Connect box, `-dialgo` for the handshake in
+  progress, `-src` for View > Source into Notepad, and `-post` which really signs the
+  guestbook), `#desktop-bin` (bin with 9 fixture deaths) + `-cert` / `-hall` / `-det` /
+  `-empty` / `-restore`, and `#desktop-binlive` (no fixture — opens the bin and watches it fill from
   real kills; use a 36000ms settle, shot.mjs gives up at 40s).
 - **Smoke test** runs before every build: executes `main.js` in node under a stub DOM,
   catching strict-mode and load-time crashes. Sibling modules run for real, so keep them
@@ -245,7 +272,12 @@ explicitly **parked** ("stuff only 2% of users would search for"). Run… jokes 
    boot made it less urgent), cursor trails (DOM perf risk, skipped deliberately).
    Dev hashes: `#desktop-cx-stats/-rake/-hist/-verify` (stats/hist seed a fixture),
    `#desktop-cx-death` (last-cursor death → certificate).
-6. **IE + handmade web** — cursor$land at unicorn.meme density, webring, dial-up sequence.
+6. ~~IE + handmade web~~ **SHIPPED 2026-08-09.** See §5. The load-bearing page is
+   `cursor.land/odds.html`: the whole fairness argument, in the ugliest possible clothes,
+   one click from the arena — and MSN Search deliberately promotes it above every page that
+   claims to have a system. Not done: no Favorites *editing* (Add to Favorites is a joke
+   box), no cookies gag, no IE-specific right-click menu, and images are CSS rather than
+   period GIFs (no MIT-clean animated set turned up).
 7. **Start menu completeness** — All Programs roster, recent apps, Help & Support.
 
 **Parallel engine track (blocks real money, not UI):** port THIN ICE's sim skeleton and
@@ -301,6 +333,12 @@ escrow (replacement, not hardening); no graceful shutdown.
 - `main.js` should keep shedding modules as apps grow (minesweeper/messenger set the pattern)
 - Bot/liquidity policy for dead hours needs a disclosed design before real money
 - Epoch timings (110–195s, 12s shutdown, 5s BSOD) are feel-tuned, not measured
+- The dial-up ceremony is ~8s and runs once per session, on the first navigation. Charming
+  the first time; if playtests find it tiresome, shorten it or remember "connected" in
+  `store`
+- A CSS class collision cost an hour here (`.pop` was already the death-burst FX and it
+  dressed the IE popup up as a 34px fading circle). Same family as the old Webamp
+  `.window` bug — **namespace new page-level classes**
 - The crash BSOD takes the whole screen for ~5s every epoch; it is dismissible by
   click/key, but if playtests find it too much, shorten T_CRASH or skip the BSOD when
   the player had nothing in play

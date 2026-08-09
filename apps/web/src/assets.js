@@ -54,6 +54,17 @@ import navUp from "./assets/xp/icons/up.png";
 import navFolders from "./assets/xp/icons/folder.png";
 import navSearch from "./assets/xp/icons/299(32x32).png";
 import navDrop from "./assets/xp/icons/dropdown.png";
+/* the real IE6 toolbar set, same winXP repo */
+import navStop from "./assets/xp/icons/stop.png";
+import navRefresh from "./assets/xp/icons/refresh.png";
+import navHome from "./assets/xp/icons/home.png";
+import navFav from "./assets/xp/icons/ie-book.png";
+import navHistory from "./assets/xp/icons/history.png";
+import navMail from "./assets/xp/icons/mail.png";
+import navLinks from "./assets/xp/icons/links.png";
+import navMedia from "./assets/xp/icons/846(16x16).png";
+import earth16 from "./assets/xp/icons/earth.png";
+import connect16 from "./assets/xp/icons/309(16x16).png";
 import sysfile32 from "./assets/xp/icons/546(32x32).png";
 
 import paintTools from "./assets/xp/paint/tools.png";
@@ -91,6 +102,8 @@ export const IMG = {
   paint16, paint32,
   hdd32, cd32, progfolder32, openfolder32, winfolder32, shareddocs32, sysfile32,
   navBack, navFwd, navUp, navFolders, navSearch, navDrop,
+  navStop, navRefresh, navHome, navFav, navHistory, navMail, navLinks, navMedia,
+  earth16, connect16,
 };
 
 /* Paint tool sprites — jspaint (Isaiah Odhner), MIT */

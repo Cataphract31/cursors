@@ -399,17 +399,118 @@ body.mobile .conv-right{display:none}
 /* webamp's windows also carry class "window" — undo our shell window rules for them */
 #webamp .window{display:block;min-width:0;max-width:none;flex-direction:row;z-index:auto}
 
-/* ---------- geocities ---------- */
-.geo{background:#000 radial-gradient(#fff 1px,transparent 1.2px);background-size:70px 70px;color:#0f0;font-family:"Comic Sans MS","Trebuchet MS",cursive;padding:12px;text-align:center;line-height:1.6;display:block}
-.geo-marq{overflow:hidden;background:#001;border:1px solid #0f0;margin-bottom:8px}
-.geo-marq span{display:inline-block;white-space:nowrap;padding-left:100%;animation:ampmarq 13s linear infinite;color:#ff0;font-size:12px;line-height:20px}
-.geo h1{font-size:17px;color:#f0f;text-shadow:2px 2px #005;margin:4px 0}
-.geo .rainbow{height:5px;margin:8px 0;background:linear-gradient(90deg,#f00,#ff0,#0f0,#0ff,#00f,#f0f,#f00);background-size:200% 100%;animation:rain 3s linear infinite}
+/* ---------- Internet Explorer 6: the chrome ---------- */
+.ie-bar{position:relative;padding-right:36px}
+.ie-throb{position:absolute;right:0;top:0;bottom:0;width:34px;display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg,#F1F0E8,#E5E2D5);border-left:1px solid #D4D0C8}
+.ie-throb img{width:22px;height:22px;opacity:.9}
+.ie-throb.spin img{animation:iespin 1.1s linear infinite}
+@keyframes iespin{to{transform:rotate(360deg)}}
+.ie-links{flex:none;display:flex;align-items:center;gap:9px;padding:2px 6px;background:#ECE9D8;border-bottom:1px solid #D4D0C8;font-size:11px;white-space:nowrap;overflow:hidden}
+.ie-links img{width:16px;height:16px;flex:none}
+.ie-links b{color:#3B3B3B;margin-right:2px}
+.ie-links a{cursor:default;color:#000;padding:1px 4px;border:1px solid transparent;border-radius:3px}
+.ie-links a:hover{border-color:#B6BDD2;background:#EAF0FB;color:#00309C;text-decoration:underline}
+.ie-status .ie-progcell{width:132px;flex:none;padding:1px 3px}
+.ie-status .ie-zone{width:96px;flex:none;display:flex;align-items:center;gap:4px}
+.ie-status .ie-zone img{width:14px;height:14px}
+.ie-prog{display:block;height:11px;background:#fff;border:1px solid #9A9A9A;overflow:hidden}
+.ie-prog i{display:block;height:100%;width:0;background:repeating-linear-gradient(90deg,#3B6EA5 0 7px,#D6E2F0 7px 9px);transition:width .12s linear}
+/* dial-up */
+.dl-grid{display:grid;grid-template-columns:82px 1fr;gap:6px 8px;align-items:center}
+.dl-grid input,.dl-grid select{min-width:0;width:100%}
+.dl-chk{display:flex;align-items:center;gap:5px;line-height:1.3}
+.dl-chk input{width:13px;height:13px;flex:none}
+.dg-bar{height:13px;margin-top:6px;background:#fff;border:1px solid #7F9DB9;overflow:hidden}
+.dg-bar i{display:block;height:100%;width:0;background:repeating-linear-gradient(90deg,#3B6EA5 0 8px,#ECE9D8 8px 10px);transition:width .5s linear}
+
+/* ---------- the handmade web (everything below renders inside .ie-doc) ---------- */
+.ie-doc{flex:1;min-height:0;overflow:auto;background:#fff;color:#000;padding:11px;font:13px "Times New Roman",Times,serif;line-height:1.5}
+.ie-doc h1{font-size:21px;margin:6px 0}
+.ie-doc p{margin:9px 0}
+.ie-doc ul,.ie-doc ol{margin:8px 0;padding-left:26px;text-align:left}
+.ie-doc li{margin:3px 0}
+.ie-doc a{color:#0000EE;text-decoration:underline;cursor:pointer}
+.ie-doc a:hover{color:#EE0000}
+.ie-doc hr{border:0;border-top:1px solid #999;margin:10px 0}
+.ie-doc marquee.marq{display:block;margin-bottom:8px;line-height:20px}
+.ie-doc .rainbow{height:5px;margin:8px auto;background:linear-gradient(90deg,#f00,#ff0,#0f0,#0ff,#00f,#f0f,#f00);background-size:200% 100%;animation:rain 3s linear infinite}
 @keyframes rain{to{background-position:200% 0}}
-.geo .constr{height:14px;margin:8px 0;background:repeating-linear-gradient(45deg,#000 0 10px,#FB0 10px 20px);border:1px solid #FB0}
-.geo .cnt{display:inline-block;background:#111;border:1px solid #3f3;color:#3f3;font-family:"Lucida Console",Consolas,monospace;font-size:13px;letter-spacing:3px;padding:2px 8px}
-.geo a{color:#59f;cursor:pointer;text-decoration:underline}
-.geo .small{color:#aaa;font-size:9px}
+.ie-doc .constr{height:14px;margin:9px auto;background:repeating-linear-gradient(45deg,#000 0 10px,#FB0 10px 20px);border:1px solid #FB0;max-width:280px}
+.ie-doc .cnt{display:inline-block;background:#111;border:1px solid #3F3;color:#3F3;font-family:"Lucida Console",Consolas,monospace;font-size:13px;letter-spacing:3px;padding:2px 8px}
+.ie-doc .badge{display:inline-block;margin:2px 0;padding:2px 6px;border:1px outset #BBB;background:#DDD;color:#000;font:9px Tahoma,sans-serif;letter-spacing:.3px}
+.ie-doc .blink{animation:ieblink 1.1s step-end infinite}
+@keyframes ieblink{50%{opacity:0}}
+.ie-doc .ascii{font:11px "Lucida Console",Consolas,monospace;line-height:1.25;text-align:left;overflow-x:auto}
+.ie-doc .ascii.big{font-size:12px;color:#0F0}
+.ie-doc .gbin{font:12px Tahoma,sans-serif;border:1px solid #7F9DB9;padding:2px 3px;width:100%;box-sizing:border-box}
+.ie-doc .hit{margin:0 0 13px;text-align:left}
+.ie-doc .hit a{color:#0000CC;font-size:14px}
+
+/* cursor$land, and everything else hosted on a free tripod account */
+.ie-doc.geo{background:#000 radial-gradient(#fff 1px,transparent 1.2px);background-size:70px 70px;color:#0F0;font-family:"Comic Sans MS","Trebuchet MS",cursive;font-size:12px;text-align:center}
+.ie-doc.geo h1{color:#F0F;text-shadow:2px 2px #005;font-size:19px}
+.ie-doc.geo a{color:#5CF}
+.ie-doc.geo a:hover{color:#FF0}
+.ie-doc.geo marquee.marq{background:#001;border:1px solid #0F0;color:#FF0;font-size:12px}
+.ie-doc.geo .sidebox,.ie-doc.geo .ringbox{background:#001;border-color:#0A0;color:#0F0}
+.ie-doc.geo .oddstable{background:#010;border-color:#0A0;margin:8px auto;font-size:11px}
+.ie-doc.geo .oddstable th{background:#030;color:#FF0}
+.ie-doc.geo .oddstable td{border-color:#060}
+.ie-doc.geo .gbentry{background:#010;border-color:#0A0;text-align:left;margin:0 auto}
+.ie-doc.geo b{color:#FF0}
+.ie-doc.geo i,.ie-doc.geo u{color:#9F9}
+
+/* the ring hub: grey, tabular, 1998 */
+.ie-doc.ring{background:#CCCCCC;font-family:Arial,Helvetica,sans-serif;font-size:12px}
+.ie-doc.ring table{background:#FFFFFF}
+.ie-doc.ring th{background:#C0C0C0}
+
+/* mumu's shrine to mumu */
+.ie-doc.mumu{background:#FFFFCC;color:#000080;font-family:"Comic Sans MS","Trebuchet MS",cursive;font-size:12px}
+.ie-doc.mumu h1{color:#FF0000;font-size:22px;text-shadow:1px 1px #FF0}
+.ie-doc.mumu marquee.marq{background:#FFFF00;border:2px solid #F00;color:#F00}
+.ie-doc.mumu a{color:#0000FF}
+.ie-doc.mumu .ascii{background:#000;color:#0F0;padding:6px;display:inline-block;text-align:left}
+
+/* deg404, who has cracked it */
+.ie-doc.hax{background:#000;color:#00CC00;font-family:"Lucida Console",Consolas,monospace;font-size:12px;text-align:left}
+.ie-doc.hax a{color:#00FF00}
+.ie-doc.hax b{color:#FFFFFF}
+.ie-doc.hax i{color:#00AA00}
+.ie-doc.hax .hax-hr{border-top:1px dashed #0A0}
+.ie-doc.hax .haxbox{background:#001100;border-color:#0F0;color:#0F0;margin:12px auto}
+.ie-doc.hax .haxbox a{font-size:14px}
+
+/* bobo has been building this page for twenty-three years */
+.ie-doc.bobo{background:#008080;color:#FFFFFF;font-family:"Times New Roman",Times,serif}
+.ie-doc.bobo h1{color:#FFFF00}
+.ie-doc.bobo a{color:#FFFF88}
+
+/* MSN Search */
+.ie-doc.srch{background:#fff;font-family:Verdana,Arial,sans-serif;font-size:12px}
+
+/* the popup, which is 2003's fault and not ours.
+   named iepop, not pop: .pop is already the death-burst FX, and a collision
+   there dressed this window up as a 34px circle that faded itself out. */
+.ie-doc.iepop{background:#FFFFCC;font-family:"Comic Sans MS","Trebuchet MS",cursive;font-size:12px;padding:8px;overflow:hidden}
+.ie-doc.iepop h1{color:#F00;font-size:18px;margin:4px 0}
+.ie-doc.iepop marquee.marq{background:#F00;color:#FF0;font-size:11px}
+.ie-doc.iepop a{color:#00A}
+
+/* "The page cannot be displayed", carbon copy */
+.ie-doc.err{font-family:"Times New Roman",Times,serif}
+.ie-doc .err404{max-width:640px}
+.ie-doc .err404 h1{font-size:20px;font-weight:normal;margin:2px 0 10px}
+.ie-doc .err404 ul{padding-left:22px}
+.ie-doc .err404 li{margin:6px 0}
+
+body.mobile .ie-links{display:none}
+body.mobile .ie-throb{display:none}
+body.mobile .ie-bar{padding-right:4px;overflow-x:auto}
+body.mobile .ie-status .ie-progcell{width:76px}
+body.mobile .ie-status .ie-zone{display:none}
+body.mobile .ie-doc{padding:7px;font-size:12px}
+body.mobile .ie-doc table{max-width:100%}
 
 /* ---------- balloon (XP notification) ---------- */
 #balloon{position:fixed;right:14px;bottom:calc(var(--tb) + var(--hud) + var(--sab) + 18px);width:236px;background:#FFFFE1;border:1px solid #000;border-radius:7px;padding:9px 22px 9px 11px;display:none;z-index:9600;box-shadow:2px 3px 8px rgba(0,0,0,.35);line-height:1.45}
