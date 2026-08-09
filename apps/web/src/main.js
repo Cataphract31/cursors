@@ -149,7 +149,42 @@ store.load();
 let PLAYER=store.data.userName||null;
 
 /* ================= real XP assets into the static shell ================= */
+/* The Recycle Bin icon is a gauge. The vendored winXP set only has the empty
+   bin and no MIT source for the full one turned up, so rather than fake XP's
+   crumpled paper the corpses poke out of it themselves — the same cursor
+   symbol the arena draws, because that is literally what is in there. Every
+   surface that asks icoNode for a bin gets the current level, and the level
+   comes off diskPct() like the bar, the tray chip and Explorer's pie. */
+let binLevel=0;
+const PAPER=`fill="#FCFBF4" stroke="#8A8A78" stroke-width=".65" stroke-linejoin="round"`;
+const FOLD=`stroke="#CBCBBA" stroke-width=".5" fill="none" stroke-linecap="round"`;
+/* one discarded sheet: a rectangle on a tilt with a single crease, which is
+   all XP's own full bin is once you look at it at 32px */
+const sheet=(x,y,a,w,h)=>`<g transform="translate(${x},${y}) rotate(${a})">`+
+  `<rect x="${-w/2}" y="${-h/2}" width="${w}" height="${h}" rx=".5" ${PAPER}/>`+
+  `<path d="M${-w/2+.4} ${-h/6} H${w/2-.4}" ${FOLD}/></g>`;
+const BINSPILL=[
+  sheet(13,7.2,-12,6.4,8.4),
+  sheet(8.4,7.4,-30,5.6,7.6),
+  sheet(18.6,6.2,17,6,8)+sheet(5,11,-72,5.2,7.2),
+];
+const binSpill=()=>BINSPILL.slice(0,binLevel).join("");
+function binFillLevel(f){ return f<=0?0:f<.35?1:f<.8?2:3; }
+function syncBinIcon(f){
+  /* the disk drives the level, but an emptied bin must LOOK emptied — the
+     drive keeps its corpses in multiplayer, the icon does not lie about yours */
+  const lv=binEmpty()?0:binFillLevel(f);
+  if(lv===binLevel) return;
+  binLevel=lv;
+  for(const svg of document.querySelectorAll(".binico svg")) svg.innerHTML=binSpill();
+}
 function icoNode(key){
+  if(key==="bin32"||key==="bin16"){
+    const box=document.createElement("span");
+    box.className="binico";
+    box.innerHTML=`<img src="${IMG.bin32}" alt="" draggable="false"><svg viewBox="0 0 32 32">${binSpill()}</svg>`;
+    return box;
+  }
   if(key&&key[0]==="@"){
     const box=document.createElement("span");
     box.className="svgbox";
@@ -662,7 +697,7 @@ function emptyBin(){
   showConfirm("Confirm Multiple File Delete",
     `Are you sure you want to delete these ${n} items?`+
     (binDead.length?`\n\n${binDead.length} of them are cursors worth ${fmtS(worth)} SOL when they died. Deleting the file does not give it back.`:""),
-    ()=>{ binDead=[]; binFiles=[]; renderBin(); sCrunch(); });
+    ()=>{ binDead=[]; binFiles=[]; renderBin(); syncBinIcon(diskPct().f); sCrunch(); });
 }
 
 /* ================= context menus ================= */
@@ -1901,6 +1936,7 @@ function renderDisk(){
   const key=pct*10000+dead;
   if(key===lastDisk) return;
   lastDisk=key;
+  syncBinIcon(f);
   const bar=$("#diskbar"), mbar=$("#mh-disk");
   $("#diskfill").style.width=pct+"%";
   $("#mh-diskfill").style.width=pct+"%";
@@ -3442,6 +3478,17 @@ if(location.hash.indexOf("#desktop-cx")===0) setTimeout(()=>{ /* dev: capture a 
     deathCert(binDead[0]);
   }
 },900);
+if(location.hash.indexOf("#desktop-disk")===0) setTimeout(()=>{ /* dev: the disk at a chosen fill — bar, tray chip, bin icon */
+  const pc=parseInt(location.hash.replace("#desktop-disk","").replace("-",""),10);
+  localDeaths=Math.round(LOCAL_CORPSES*(isFinite(pc)?pc:50)/100);
+  /* a few real certificates so the bin is not "empty" while the drive is full */
+  for(let i=0;i<Math.min(6,localDeaths);i++) binDead.push({id:++deathN,name:"bobo",mine:false,
+    killer:"mumu",killerMine:false,lost:ENTRY,mult:1,peak:ENTRY,odds:50,kills:0,lived:20,
+    round:roundNo,at:"09:41:0"+i});
+  renderBin();
+  renderPhase();
+  $("#balloon").style.display="none";   /* the bin icon is what this shot is for */
+},2600);
 if(location.hash==="#desktop-binlive") setTimeout(()=>{ /* dev: does the open folder fill up as cursors actually die? */
   openWin("win-explorer"); explorer.go("Recycle Bin"); explorer.setView("details");
 },600);

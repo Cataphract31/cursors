@@ -9,6 +9,11 @@ input{user-select:text}
 .xico img,.xico svg{width:100%;height:100%;display:block}
 .xico{display:inline-block;flex:none}
 .svgbox{display:block;width:100%;height:100%}
+/* the Recycle Bin fills up: the empty-bin PNG with dead cursors drawn poking
+   out of it. One shadow on the wrapper, not one per layer. */
+.binico{display:block;position:relative;width:100%;height:100%}
+.binico img,.binico svg{position:absolute;inset:0;width:100% !important;height:100% !important;overflow:visible}
+.icon .binico img,.icon .binico svg{filter:none}
 
 /* ---------- desktop ---------- */
 /* --tb taskbar · --hud the mobile thumb bar (0 on desktop) · --sab phone home-indicator inset */

@@ -379,8 +379,16 @@ explicitly **parked** ("stuff only 2% of users would search for"). Run… jokes 
    92% gets a piece of paper saying it was 92% and lost anyway, and that nothing went wrong.
    That is the honest-casino thesis rendered as a Properties dialog. Hall of Pain sorts the
    whole bin by damage, reds the bad beats (odds ≥ 50), and each row opens its certificate.
-   Not done: no full-bin desktop icon (the winXP icon set has only the empty one, and no
-   MIT source for the full variant turned up — the desktop icon never changes).
+   **The bin icon is a gauge, 2026-08-09 (late).** The vendored winXP set only has the empty
+   bin and no MIT source for the full variant turned up, so the paper is drawn on top: each
+   discarded sheet is a tilted rounded rect with one crease, which is all XP's own full bin
+   amounts to at 32px. `icoNode("bin32"/"bin16")` returns `<span class="binico"><img><svg>`
+   and `syncBinIcon()` (called from `renderDisk`, so it rides the same single source of truth
+   as the bar, the tray chip and Explorer's pie) swaps the level: one sheet under 35%, two
+   under 80%, three plus one spilling over the rim above that. An emptied bin reads empty
+   even while the drive stays full, because in multiplayer the drive is not yours to empty.
+   Every surface that asks `icoNode` for a bin gets it — desktop, My Computer, the task pane.
+   Dev hash: `#desktop-disk-<pct>`.
 5. ~~CURSORS.EXE production pass~~ **SHIPPED 2026-08-09.** Menu bar (Game/View/Help) and
    five panes: **Play** (the dashboard), **Stats** (session P/L, deploys/banks, lost-to-deaths,
    with the honest footnote: expected P/L is −1% of stake, everything else is variance),
@@ -421,8 +429,7 @@ or economics until the design is fully done"* — finish the product first, prov
 second):
 1. **Design/UX still owed** — a real-device pass on a phone (the keyboard path above is
    unverified on hardware), Paint's Fonts toolbar and Stretch/Skew, IE Favorites editing and
-   an IE-specific right-click menu, a real Search Companion, the full Recycle Bin desktop
-   icon (no MIT source found yet).
+   an IE-specific right-click menu, a real Search Companion.
 2. **Prove the invariants offline** — the server asserts pot conservation every crash, but
    nothing yet proves EV per deploy = stake × 0.97 for *every* strategy (hunter, camper,
    instant banker, chain rider, autoplay). This is how THIN ICE caught its wipe leak, and

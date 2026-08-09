@@ -10,8 +10,8 @@ import { writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-const [url, out, w = "1280", h = "800", settle = "3000"] = process.argv.slice(2);
-if (!url || !out) { console.error("usage: shot.mjs <url> <out.png> [w] [h] [settleMs]"); process.exit(1); }
+const [url, out, w = "1280", h = "800", settle = "3000", dsf = "1"] = process.argv.slice(2);
+if (!url || !out) { console.error("usage: shot.mjs <url> <out.png> [w] [h] [settleMs] [deviceScaleFactor]"); process.exit(1); }
 
 const EDGE = "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe";
 const port = 9500 + Math.floor(Math.random() * 500);
@@ -63,7 +63,7 @@ try {
   // matters because it picks it from (pointer:coarse).
   const phone = Math.min(+w, +h) < 800;
   await send("Emulation.setDeviceMetricsOverride", {
-    width: +w, height: +h, deviceScaleFactor: 1, mobile: phone,
+    width: +w, height: +h, deviceScaleFactor: +dsf, mobile: phone,
     screenWidth: +w, screenHeight: +h,
   });
   if (phone) await send("Emulation.setTouchEmulationEnabled", { enabled: true, maxTouchPoints: 5 });
