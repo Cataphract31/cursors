@@ -30,7 +30,7 @@ Second game alongside **THIN ICE** (`c:\ZINC`), the owner's other Solana casino 
 | App | `apps/web` — npm workspace, Vite |
 | Dev | `npm run dev` in `C:\CURSORS` → http://localhost:5173 |
 | Build | `npm run build` → smoke test → Vite → `dist/artifact.html` (single self-contained file) |
-| Artifact | https://claude.ai/code/artifact/a63b4916-15d2-49c8-8ae2-6dc8476f6cdf (republish the same `dist/artifact.html` path to keep the URL) |
+| Deploy | `upload/cursors/index.html` — committed build output, served by the owner's Vercel project (Root Directory = `upload/cursors`, no build step; see the README in that folder). **Claude artifacts are deprecated** (owner, 2026-08-09) — do not publish them |
 | Sibling repo | `c:\ZINC` = THIN ICE. **Copy from it, never edit it.** |
 
 Source layout (`apps/web/src/`):
@@ -192,7 +192,8 @@ rush, ~18.5s the crash dialog, ~27s the recovered arena).
 - **Mobile check**: `--window-size=390,844`. Mobile is expected to be the majority playerbase.
 - Commits: one-line summary in plain language saying what changed and why, then detail.
   End with `Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>`.
-- Owner plays every build — republish the artifact and say what to look at.
+- Owner plays every build — `npm run build` refreshes `upload/cursors/`; commit and push,
+  Vercel redeploys automatically. Say what to look at. Do **not** publish Claude artifacts.
 
 ---
 
@@ -279,6 +280,21 @@ explicitly **parked** ("stuff only 2% of users would search for"). Run… jokes 
    box), no cookies gag, no IE-specific right-click menu, and images are CSS rather than
    period GIFs (no MIT-clean animated set turned up).
 7. **Start menu completeness** — All Programs roster, recent apps, Help & Support.
+
+**Owner direction (2026-08-09 evening), superseding the order above where it conflicts:**
+- **Next big push: live multiplayer beta on the Vercel domain.** Play money — every
+  visitor gets a 5 SOL fake balance — with bots kept on as the liquidity floor, so there
+  are always cursors to fight while we collect feedback during development. This pulls the
+  engine track forward: server-authoritative sim, browser becomes a display.
+- **Under consideration, not yet requested:** epochs ending when the C: drive fills with
+  dead cursors instead of on a random timer (the disk pie chart becomes the doom meter,
+  BSOD on disk-full); shared/async app state once the server exists (global guestbook,
+  Paint gallery); a watch-together YouTube embed in IE with a fair DJ queue
+  (turntable.fm-style — official embed API, not arbitrary browsing, which frame-blocking
+  makes impractical).
+- **Content note:** owner explicitly does not want more AI-authored joke copy filling
+  surfaces (called the IE fake-web text "AI slop"). Keep authored gag text minimal;
+  prefer real systems and real player content over pastiche.
 
 **Parallel engine track (blocks real money, not UI):** port THIN ICE's sim skeleton and
 **prove the invariants** — pot conservation, and EV per deploy = stake × 0.97 for *every*
