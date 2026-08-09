@@ -2394,7 +2394,7 @@ function mpMakeCur(id,owner,x,y,bounty,graceSecs){
   el.className="cur"+(graceSecs>0?" grace":"")+(owner===MP.name?" me":"");
   el.innerHTML=CURSVG+`<div class="tag"><span class="nm">${esc(owner)}</span><span class="bt"></span><span class="mx"></span></div>`;
   curlayer.appendChild(el);
-  const c={id,owner,isMine:owner===MP.name,el,x,y,tx:x,ty:y,bounty,
+  const c={id,owner,isMine:owner===MP.name,el,x,y,tx:x,ty:y,bounty,buf:[{t:performance.now(),x,y}],
     mode:"roam",prevMode:"roam",recallT:0,grace:graceSecs,riskAt:99,dead:false,
     s:1,r:10,h:0,spd:0,ax:x,ay:y,kills:0,peak:bounty,born:performance.now(),round:roundNo};
   el.style.transform=`translate(${x-8}px,${y-4}px)`;
@@ -2406,10 +2406,41 @@ function mpRemove(c){ if(!c) return; mpCurs.delete(c.id); removeCur(c); }
 function mpPurge(){ for(const c of [...curs]) removeCur(c); mpCurs.clear(); }
 const MPMODE={r:"roam",c:"recall",d:"duel"};
 
-function mpFrame(dt){
+/* Snapshot interpolation. Positions arrive at 15Hz; we render the arena
+   RENDER_DELAY behind the newest one and slide between the two samples that
+   bracket that instant, which reproduces the server's motion exactly, just
+   late. The previous version chased the latest position with an exponential
+   filter — velocity proportional to error, so every cursor lurched as a packet
+   landed and coasted as it caught up, a visible 10Hz pulse plus cut corners.
+   The delay is free here: nobody steers a cursor, so nobody can feel it. */
+const RENDER_DELAY=110, BUF_MAX=12;
+function mpSample(c,x,y,at){
+  c.buf.push({t:at,x,y});
+  while(c.buf.length>BUF_MAX) c.buf.shift();
+}
+function mpFrame(dt,now){
+  /* the frame's own timestamp, not performance.now(): the gap between the two
+     is however much JS ran earlier this frame, and feeding that into the
+     interpolator turns our own workload into visible jitter */
+  const rt=now-RENDER_DELAY;
   for(const c of mpCurs.values()){
-    c.x+=(c.tx-c.x)*Math.min(1,dt*10);
-    c.y+=(c.ty-c.y)*Math.min(1,dt*10);
+    const b=c.buf;
+    if(b.length){
+      if(rt<=b[0].t){ c.x=b[0].x; c.y=b[0].y; }
+      else if(rt>=b[b.length-1].t){
+        /* starved (packet loss, or the tab was in the background): hold the
+           newest known position rather than inventing one */
+        c.x=b[b.length-1].x; c.y=b[b.length-1].y;
+        while(b.length>2) b.shift();
+      }else{
+        let i=b.length-2;
+        while(i>0&&b[i].t>rt) i--;
+        const a0=b[i], a1=b[i+1];
+        const f=(rt-a0.t)/Math.max(1,a1.t-a0.t);
+        c.x=a0.x+(a1.x-a0.x)*f; c.y=a0.y+(a1.y-a0.y)*f;
+        while(b.length>2&&b[1].t<rt) b.shift();
+      }
+    }
     c.el.style.transform=`translate(${c.x-8}px,${c.y-4}px)`;
     if(c.grace>0){ c.grace-=dt; if(c.grace<=0) c.el.classList.remove("grace"); }
     /* client-side auto-bank: the "bank at ×N" knob rides along in autoplay */
@@ -2422,6 +2453,7 @@ function mpFrame(dt){
 
 /* ---- event handlers: each one re-uses the solo game's FX verbatim ---- */
 function mpWelcome(m){
+  if(mpGraceT){ clearTimeout(mpGraceT); mpGraceT=null; log("reconnected"); }
   MP.on=true; MP.name=m.name;
   store.data.mpToken=m.token; store.save();
   if(PLAYER!==m.name){ PLAYER=m.name; store.data.userName=m.name; store.save(); syncIdentity(); try{ msn.renderMe(); }catch(e){} }
@@ -2452,14 +2484,32 @@ function mpWelcome(m){
     `Live multiplayer, play money. You are ${MP.name}. ${m.online.length} player${m.online.length===1?"":"s"} online — everyone starts with 5 SOL.`);
   updatePanel(); renderPhase();
 }
+/* Server clock -> local clock. Timestamping samples with their arrival time
+   turned every millisecond of network jitter into fake acceleration; the
+   snapshots are actually emitted on a perfect 66ms cadence, so we recover that
+   cadence instead. offset = min(arrival - serverTs) over a rolling window: the
+   minimum is the sample that queued the least, which is the closest thing to
+   the true one-way delay, and it ignores the jitter above it. */
+let mpOff=null, mpOffWin=[];
+function mpClock(serverTs,arrival){
+  const o=arrival-serverTs;
+  mpOffWin.push(o);
+  if(mpOffWin.length>80) mpOffWin.shift();
+  const lo=Math.min(...mpOffWin);
+  /* adopt a better (lower) offset at once, drift toward a worse one slowly, so
+     a single delayed packet cannot shove the whole timeline */
+  if(mpOff===null||lo<mpOff) mpOff=lo; else mpOff+=(lo-mpOff)*0.02;
+  return serverTs+mpOff;
+}
 function mpSnap(m){
   upT=m.up; R.pot=m.pot; MP.fill=m.fill;
+  const at=m.ts?mpClock(m.ts,performance.now()):performance.now();
   const seen=new Set();
   for(const row of m.p){
     seen.add(row[0]);
     const c=mpCurs.get(row[0]);
     if(!c) continue;                       /* spawn event is in flight */
-    c.tx=row[1]; c.ty=row[2];
+    mpSample(c,row[1],row[2],at);
     if(c.bounty!==row[3]){ c.bounty=row[3]; updateTag(c); }
     const mode=MPMODE[row[4]]||"roam";
     if(mode!==c.mode){
@@ -2571,13 +2621,25 @@ function mpEpoch(m){
   log(`CURSORS.EXE restarted (epoch ${m.no}) — deploys are open`);
   updatePanel(); renderPhase(); renderCx();
 }
+/* A blip is not a divorce. net.js retries at 2s, so hold the arena still and
+   say so; only fall back to the local sandbox if the server is really gone.
+   Yanking the player between two different games on every hiccup was worse
+   than a few frozen seconds. */
+let mpGraceT=null;
 function mpDown(){
-  if(!MP.on) return;
-  MP.on=false; MP.name=null; MP.chatSeeded=false;
-  mpPurge();
-  showBalloon("Connection lost","The beta server went away. You are in the offline sandbox until it comes back — the bots here are local and the money is even less real.");
-  log("connection lost — offline sandbox running");
-  startEpoch();   /* the local sim takes back over */
+  if(!MP.on||mpGraceT) return;
+  log("connection lost — reconnecting…");
+  $("#phaseline").textContent="⚠ RECONNECTING…";
+  msn.lobbySys("connection lost — trying to get back in");
+  mpGraceT=setTimeout(()=>{
+    mpGraceT=null;
+    if(net.up()) return;              /* came back; mpWelcome already rebuilt the world */
+    MP.on=false; MP.name=null; MP.chatSeeded=false;
+    mpPurge();
+    showBalloon("Offline sandbox","The beta server did not come back. You are playing the local sandbox now — the bots are fake and so is the money. It reconnects on its own.");
+    log("server unreachable — offline sandbox running");
+    startEpoch();
+  },7000);
 }
 function mpMsg(m){
   switch(m.t){
@@ -2694,7 +2756,7 @@ function mpTvRenderQueue(){
 let last=performance.now();
 function frame(t){
   const dt=Math.min(.05,(t-last)/1000); last=t;
-  if(MP.on){ mpFrame(dt); }
+  if(MP.on){ mpFrame(dt,t); }
   else{
   phaseTick(dt);
   if(phase==="battle"){
@@ -2899,6 +2961,50 @@ if(location.hash.indexOf("#desktop-mp")===0) setTimeout(()=>{ /* dev: drive the 
   const p=location.hash.replace("#desktop-mp","");
   const when=fn=>{ const w=()=>{ MP.on?fn():setTimeout(w,300); }; w(); };
   if(p==="-play") when(()=>{ deploy(false); setTimeout(()=>deploy(false),500); });
+  if(p==="-smooth") when(()=>{   /* TEMP: objective smoothness probe */
+    const samples=new Map();
+    let frames=0, probeT=0, dts=[];
+    const tick=()=>{
+      for(const c of mpCurs.values()){
+        if(c.mode!=="roam") continue;
+        let a=samples.get(c.id); if(!a){ a=[]; samples.set(c.id,a); }
+        a.push([probeT,c.x,c.y]);
+      }
+      if(++frames<220) requestAnimationFrame(tt=>{ probeT=tt; tick(); }); else report();
+    };
+    const report=()=>{
+      const cvs=[],speeds=[];
+      for(const a of samples.values()){
+        if(a.length<120) continue;
+        const sp=[];
+        for(let i=1;i<a.length;i++){
+          const dt=(a[i][0]-a[i-1][0])/1000;
+          if(dt<=0) continue;
+          sp.push(Math.hypot(a[i][1]-a[i-1][1],a[i][2]-a[i-1][2])/dt);
+        }
+        if(sp.length<60) continue;
+        const mean=sp.reduce((s,x)=>s+x,0)/sp.length;
+        if(mean<5) continue;   /* parked/duelling cursors say nothing about smoothness */
+        const sd=Math.sqrt(sp.reduce((s,x)=>s+(x-mean)**2,0)/sp.length);
+        cvs.push(sd/mean); speeds.push(mean);
+      }
+      cvs.sort((x,y)=>x-y);
+      const med=a=>a.length?a[Math.floor(a.length/2)]:NaN;
+      const D=document.createElement("pre");
+      D.style.cssText="position:fixed;left:8px;top:8px;z-index:999999;background:#fff;color:#000;font:12px monospace;padding:10px";
+      const one=[...samples.values()][0]||[];
+      for(let i=1;i<one.length;i++) dts.push(one[i][0]-one[i-1][0]);
+      const mdt=dts.reduce((s,x)=>s+x,0)/Math.max(1,dts.length);
+      const dcv=Math.sqrt(dts.reduce((s,x)=>s+(x-mdt)**2,0)/Math.max(1,dts.length))/mdt;
+      D.textContent=["SMOOTHNESS PROBE ("+frames+" frames, "+cvs.length+" moving cursors)",
+        "frame interval CV   "+(dcv*100).toFixed(1)+"%   (the browser's own jitter — a floor)",
+        "median speed        "+med(speeds).toFixed(1)+" px/s   (server range 78-124)",
+        "median speed CV     "+(med(cvs)*100).toFixed(1)+"%   (lower = smoother)",
+        "worst speed CV      "+((cvs[cvs.length-1]||0)*100).toFixed(1)+"%"].join(String.fromCharCode(10));
+      document.body.appendChild(D);
+    };
+    requestAnimationFrame(tt=>{ probeT=tt; tick(); });
+  });
   if(p==="-chat") when(()=>{
     msn.openConv("lobby");
     const c=document.getElementById(msn.convIdFor("lobby"));

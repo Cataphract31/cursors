@@ -71,15 +71,28 @@ const sim = createSim({
   },
 });
 
-/* one tick per pass, never a catch-up burst (the THIN ICE lesson) */
-let lastTick = Date.now();
+/* Fixed timestep, and snapshots emitted FROM the loop rather than beside it.
+   Both halves of that matter. A variable dt makes each step's displacement
+   depend on timer jitter; and a snapshot interval that is not a whole multiple
+   of the step lands alternately after one step or two, so a cursor appears to
+   move a step, then two steps, then a step — measured at 33% speed variance,
+   which reads as stutter no amount of client smoothing can hide.
+   30Hz sim, snapshot every 2nd step = a true 15Hz, evenly spaced in sim time.
+   Catch-up is capped at 3 steps: after a pause the world resyncs, it never
+   fast-forwards through a burst (the THIN ICE lesson). */
+const STEP = 1 / 30, STEP_MS = STEP * 1000;
+let acc = 0, lastTick = Date.now(), steps = 0;
 setInterval(() => {
   const t = Date.now();
-  const dt = Math.min(.1, (t - lastTick) / 1000);
+  acc += t - lastTick;
   lastTick = t;
-  try { sim.tick(dt); } catch (e) { console.error("sim tick failed:", e); }
-}, 50);
-setInterval(() => { if (conns.size) broadcast(sim.snapshot()); }, 100);
+  if (acc > STEP_MS * 3) acc = STEP_MS * 3;
+  while (acc >= STEP_MS) {
+    acc -= STEP_MS;
+    try { sim.tick(STEP); } catch (e) { console.error("sim tick failed:", e); }
+    if (++steps % 2 === 0 && conns.size) broadcast(sim.snapshot());
+  }
+}, 10);
 
 /* ---------- TV: the lobby watches one video together ---------- */
 const tv = { now: null, queue: [] };

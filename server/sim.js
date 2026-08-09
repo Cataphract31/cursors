@@ -47,6 +47,9 @@ export function createSim(opts) {
   let phase = "battle", epochNo = 0, seedHex = null, commit = null;
   let rng = rngFromSeedHex(newSeedHex());       /* pre-first-epoch placeholder */
   let upT = 0, epochStart = 0, epochDeaths = 0;
+  /* sim time, not wall time: it advances by exactly one fixed step per tick, so
+     the timeline the client rebuilds from it is perfectly even */
+  let simClock = 0;
   let rushAt = null, crashUntil = 0, deploysOpen = false;
   let R = null;
   let botQueue = [], botTimer = 0;
@@ -314,7 +317,7 @@ export function createSim(opts) {
 
   /* ---------- the loop ---------- */
   function tick(dt) {
-    upT += dt;
+    upT += dt; simClock += dt * 1000;
     if (phase === "crash") {
       if (now() >= crashUntil) startEpoch();
       return;
@@ -358,7 +361,7 @@ export function createSim(opts) {
   const diskUsed = () => BASE_USED + epochDeaths * CORPSE_BYTES;
   function snapshot() {
     return {
-      t: "snap",
+      t: "snap", ts: Math.round(simClock),   /* sim clock: exactly even, unlike wall time */
       p: curs.map(c => [c.id, Math.round(c.x), Math.round(c.y), c.bounty,
         c.mode === "recall" ? "c" : c.mode === "duel" ? "d" : "r"]),
       up: Math.round(upT), pot: R ? R.pot : 0,
