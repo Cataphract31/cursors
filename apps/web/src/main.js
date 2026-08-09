@@ -152,6 +152,11 @@ function volOpen(on){
   volf.style.top=Math.round(tb.top-volf.offsetHeight-2)+"px";
 }
 $("#sndico").addEventListener("click",e=>{ e.stopPropagation(); volOpen(!volf.classList.contains("on")); });
+/* XP hides the icons you never touch behind the chevron; the chevron brings them back */
+$("#tray-chev").addEventListener("click",()=>{
+  const showing=document.body.classList.toggle("tray-open");
+  $("#tray-chev").textContent=showing?"›":"‹";
+});
 $("#vf-slider").addEventListener("input",e=>{
   masterVol=(+e.target.value)/100;
   if(masterVol>0&&muted) muted=false;
@@ -380,11 +385,17 @@ function restoreWin(id){
   if(a.kind==="webamp"){ if(a.min) tabClick(id); return; }
   a.min=false;
   a.el.style.display="flex";
-  a.el.style.opacity="0"; a.el.style.transform="scale(.92)";
+  /* the reverse of minimize: the window zooms back OUT of its taskbar tab */
+  const r=a.el.getBoundingClientRect();
+  let tx=40;
+  if(a.tabEl){ const tr=a.tabEl.getBoundingClientRect(); tx=tr.left+tr.width/2; }
+  a.el.style.transformOrigin="0 100%";
+  a.el.style.opacity="0";
+  a.el.style.transform=`translate(${tx-r.left}px,${H-r.top}px) scale(.06)`;
   requestAnimationFrame(()=>{
-    a.el.style.transition="transform .12s ease-out,opacity .12s ease-out";
+    a.el.style.transition="transform .17s ease-out,opacity .17s ease-out";
     a.el.style.opacity=""; a.el.style.transform="";
-    setTimeout(()=>{ a.el.style.transition=""; },140);
+    setTimeout(()=>{ a.el.style.transition=""; a.el.style.transformOrigin=""; },190);
   });
   sysSnd("restore",.5);
   focusWin(id);
@@ -1659,6 +1670,80 @@ addEventListener("pointerdown",e=>{ if(!e.target.closest("#startmenu,#startbtn")
 addEventListener("keydown",e=>{
   if(e.key==="Escape"){ closeStart(); hideMenu(); }
   if(e.ctrlKey&&e.shiftKey&&e.key==="Escape"){ openWin("win-taskmgr"); }
+});
+/* ---------- the Alt+Tab box ---------- */
+/* the OS eats real Alt+Tab in a browser, so Ctrl+Tab drives the same box —
+   grey panel, icon strip, caption underneath, exactly the XP shape */
+let atBox=null, atList=[], atSel=0;
+function altTabShow(){
+  atList=[...openApps.entries()].filter(([id,a])=>!NOTAB.has(id)).map(([id,a])=>({id,a}));
+  if(!atList.length) return false;
+  if(!atBox){
+    atBox=document.createElement("div");
+    atBox.id="alttab";
+    atBox.innerHTML=`<div class="at-icons"></div><div class="at-cap"></div>`;
+    document.body.appendChild(atBox);
+  }
+  const host=atBox.querySelector(".at-icons"); host.innerHTML="";
+  atList.forEach((w,i)=>{
+    const c=document.createElement("span");
+    c.className="at-cell"+(i===atSel?" on":"");
+    c.innerHTML=w.a.icon||"";
+    host.appendChild(c);
+  });
+  atBox.querySelector(".at-cap").textContent=(atList[atSel]&&winTitle(atList[atSel].id))||"";
+  atBox.style.display="block";
+  return true;
+}
+function winTitle(id){ const t=$("#"+id+" .title-bar-text"); return t?t.textContent:id; }
+function altTabEnd(commit){
+  if(!atBox||atBox.style.display!=="block") return;
+  atBox.style.display="none";
+  if(commit&&atList[atSel]){ const {id,a}=atList[atSel]; if(a.min) restoreWin(id); else focusWin(id); }
+  atSel=0;
+}
+addEventListener("keydown",e=>{
+  if(e.key==="Tab"&&(e.ctrlKey||e.altKey)&&!e.shiftKey){
+    e.preventDefault();
+    if(!atBox||atBox.style.display!=="block"){ atSel=0; if(!altTabShow()) return; }
+    else { atSel=(atSel+1)%atList.length; altTabShow(); }
+  }
+  if(e.key==="Tab"&&(e.ctrlKey||e.altKey)&&e.shiftKey&&atBox&&atBox.style.display==="block"){
+    e.preventDefault(); atSel=(atSel-1+atList.length)%atList.length; altTabShow();
+  }
+},true);
+addEventListener("keyup",e=>{ if(e.key==="Control"||e.key==="Alt") altTabEnd(true); },true);
+/* ---------- desktop keyboard verbs: F2 rename, Delete, Shift+Delete, F5 ---------- */
+addEventListener("keydown",e=>{
+  if(e.target.closest("input,textarea,select")) return;
+  const selEl=$(".icon.sel");
+  if(e.key==="F2"&&selEl){
+    e.preventDefault();
+    const ic=iconById(selEl.dataset.iid);
+    if(ic&&!ic.sys) startRename(ic);
+    return;
+  }
+  if(e.key==="Delete"&&selEl){
+    e.preventDefault();
+    const ic=iconById(selEl.dataset.iid);
+    if(!ic) return;
+    if(ic.sys){
+      showError("Error Deleting File or Folder",
+        `Cannot delete ${ic.label}: Access is denied.\n\nMake sure the disk is not full or write-protected and that the file is not currently in use.`);
+      return;
+    }
+    if(e.shiftKey){
+      showConfirm("Confirm File Delete",`Are you sure you want to permanently delete '${ic.label}'?`,()=>{
+        store.data.userIcons=store.data.userIcons.filter(u=>u.id!==ic.id);
+        delete store.data.icons[ic.id];
+        store.save(); renderIcons(); sCrunch();
+      });
+    }else deleteIcon(ic);
+    return;
+  }
+  if(e.key==="F5"&&desktopActive()&&!e.target.closest(".window")){
+    e.preventDefault(); refreshDesktop();
+  }
 });
 function allProgramsMenu(){
   const go=id=>()=>{ closeStart(); sysSnd("nav",.5); openWin(id); };

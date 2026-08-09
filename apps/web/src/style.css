@@ -1161,3 +1161,18 @@ body.typing,body.typing *{cursor:none!important}
 .pt-fontbtn.i{font-style:italic}
 .pt-fontbtn.u{text-decoration:underline}
 .pt-fontbtn.on{background:#fff;box-shadow:inset 1px 1px 2px rgba(0,0,0,.25);border:1px solid #ACA899}
+
+/* ---------- tray chevron + Alt+Tab ---------- */
+#tray-chev{width:14px;height:16px;display:grid;place-items:center;font-size:13px;font-weight:bold;color:#fff;
+  cursor:pointer;border-radius:2px;background:rgba(255,255,255,.12)}
+#tray-chev:hover{background:rgba(255,255,255,.28)}
+.tray-idle{display:none}
+body.tray-open .tray-idle{display:inline-block}
+#alttab{position:fixed;left:50%;top:38%;transform:translate(-50%,-50%);display:none;z-index:99950;
+  background:#ECE9D8;border:2px solid;border-color:#fff #716F64 #716F64 #fff;box-shadow:3px 3px 8px rgba(0,0,0,.4);
+  padding:10px 12px 8px;min-width:220px;text-align:center}
+.at-icons{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;max-width:340px}
+.at-cell{width:38px;height:38px;display:grid;place-items:center;border:2px solid transparent}
+.at-cell.on{border-color:#0A246A;background:#B6BDD2}
+.at-cell img,.at-cell .xico,.at-cell svg{width:24px;height:24px}
+.at-cap{margin-top:8px;padding-top:5px;border-top:1px solid #ACA899;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:320px}
