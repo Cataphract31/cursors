@@ -11,7 +11,9 @@ Standing rules for every phase:
 
 ---
 
-## Phase 0 — Shell foundation (everything sits on this)
+## Phase 0 — Shell foundation (everything sits on this) — ✅ SHIPPED 2026-08-09
+
+Landed: boot screen → login (Administrator/Guest tiles, startup chime, Turn Off) with same-session skip; window resize from all edges + maximize/restore (button and double-click) + minimize-to-tab animation; window rects persisted; right-click menus everywhere (desktop with Arrange/Refresh/New ▸/Properties, icons with sys-file guard jokes, titlebars, taskbar tabs, tray) with the browser menu fully suppressed; draggable grid-snapped persistent icons + working marquee selection + New Folder / New Text Document (with rename-in-place, real editable notepad, delete → Recycle Bin); quick launch (Show Desktop toggle, cursamp, Messenger); XP tooltips; clock hover = full date, double-click = Date & Time Properties with live analog clock + month calendar + the "house controls the clock" Apply error; Display Properties with 5 hand-built wallpapers (live preview + Apply) and 3 working screensavers (Starfield / Ribbons / Bouncing CURSORS) with idle timeout + preview monitor; Task Manager (Applications with End Task, joke Processes, live CPU graph that spikes on duels); Cascade Windows; full original sound scheme (open/close/min/max/error/menu/balloon/bin-crunch/logon chime); error/confirm dialog system. Deferred to later phases: mobile long-press context menus, boot-screen art pass.
 
 The window system and desktop chrome, finished. This unblocks every later app, so it goes first.
 

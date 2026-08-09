@@ -10,7 +10,8 @@ input{user-select:text}
 /* ---------- desktop ---------- */
 #desktop{position:absolute;inset:0 0 30px 0;overflow:hidden}
 #bliss{position:absolute;inset:0;width:100%;height:100%;display:block}
-#arenaedge{position:absolute;display:none;border:2px dashed rgba(49,106,197,.85);box-shadow:0 0 0 9999px rgba(0,16,48,.22);pointer-events:none;z-index:4900;transition:all .9s ease}
+#bliss .wp{display:none}
+#bliss .wp.on{display:inline}
 
 /* ---------- desktop icons ---------- */
 .icon{position:absolute;left:12px;width:78px;text-align:center;padding:5px 2px;border:1px solid transparent}
@@ -183,6 +184,95 @@ input{user-select:text}
 .blink{animation:blink 1s steps(1) infinite}
 @keyframes blink{50%{opacity:0}}
 
+/* ---------- boot / login ---------- */
+#boot{position:fixed;inset:0;background:#000;z-index:100006;display:none;place-items:center}
+.boot-logo{display:flex;align-items:center;gap:14px}
+.boot-logo svg{width:52px;height:52px}
+.boot-name{font:bold italic 34px "Franklin Gothic Medium","Segoe UI",Tahoma;color:#fff}
+.boot-name span{color:#F7941D;font-size:22px;vertical-align:top;margin-left:2px}
+.boot-bar{width:190px;height:16px;border:2px solid #7A7A7A;border-radius:9px;margin:34px auto 0;overflow:hidden;position:relative}
+.boot-bar span{position:absolute;top:3px;width:9px;height:8px;background:linear-gradient(180deg,#6FA0FF,#2A5FD8);border-radius:2px;animation:bootmove 1.5s linear infinite}
+.boot-bar span:nth-child(2){animation-delay:.13s}
+.boot-bar span:nth-child(3){animation-delay:.26s}
+@keyframes bootmove{from{left:-14px}to{left:196px}}
+#login{position:fixed;inset:0;z-index:100005;display:none;flex-direction:column;transition:opacity .5s}
+.lg-top,.lg-bot{height:62px;background:linear-gradient(180deg,#16327E,#0B1E55);flex:none}
+.lg-top{border-bottom:2px solid #E0A02B}
+.lg-bot{border-top:2px solid #E0A02B;display:flex;align-items:center;justify-content:space-between;padding:0 26px}
+.lg-mid{flex:1;display:flex;align-items:center;background:radial-gradient(ellipse at 50% 40%,#7FA2E8 0%,#4A74D4 55%,#2F55B4 100%)}
+.lg-left{flex:1;display:flex;flex-direction:column;align-items:flex-end;gap:16px;padding-right:38px}
+.lg-brand{display:flex;align-items:center;gap:10px}
+.lg-brand svg{width:44px;height:44px;filter:drop-shadow(2px 2px 3px rgba(0,0,0,.4))}
+.lg-brand div{font:bold italic 30px "Franklin Gothic Medium","Segoe UI",Tahoma;color:#fff;text-shadow:2px 2px 3px rgba(0,0,0,.35)}
+.lg-brand span{color:#F7941D;font-size:19px;vertical-align:top}
+.lg-hint{color:#DCE6FA;font-size:13px}
+.lg-div{width:2px;align-self:stretch;margin:40px 0;background:linear-gradient(180deg,transparent,rgba(255,255,255,.55),transparent)}
+.lg-right{flex:1;padding-left:38px;display:flex;flex-direction:column;gap:14px}
+.lg-tile{display:flex;align-items:center;gap:12px;padding:8px 12px;border-radius:6px;cursor:pointer;color:#fff;max-width:280px}
+.lg-tile:hover{background:rgba(255,255,255,.16);box-shadow:0 0 12px rgba(255,255,255,.15)}
+.lg-tile b{font-size:15px}
+.lg-sub{font-size:11px;color:#CFDCF6}
+.lg-ava{width:50px;height:50px;flex:none;border:2px solid #fff;border-radius:6px;background:linear-gradient(160deg,#8EC440,#3D7D1E);display:grid;place-items:center;box-shadow:1px 2px 5px rgba(0,0,0,.35)}
+.lg-ava svg{width:30px;height:30px}
+.lg-ava.guest{background:linear-gradient(160deg,#9AA6BC,#5A6478);font:bold 24px Tahoma;color:#fff}
+.lg-tile.shake{animation:nudge .4s}
+#lg-off{background:none;border:1px solid rgba(255,255,255,.4);border-radius:4px;color:#fff;padding:5px 12px;cursor:pointer;font-size:12px}
+#lg-off:hover{background:rgba(255,255,255,.14)}
+.lg-note{color:#B9C8EC;font-size:11px}
+
+/* ---------- context menus / tooltip ---------- */
+#ctx{position:fixed;display:none;z-index:99990;background:#fff;border:1px solid #8A867A;box-shadow:3px 3px 7px rgba(0,0,0,.32);padding:3px;min-width:186px;font-size:11px}
+.cit{position:relative;padding:5px 26px 5px 30px;cursor:default;white-space:nowrap}
+.cit:hover{background:#316AC5;color:#fff}
+.cit.dis{color:#A6A49A}
+.cit.dis:hover{background:none;color:#A6A49A}
+.cit.bold{font-weight:bold}
+.cit.has-sub:after{content:"▸";position:absolute;right:8px}
+.csub{display:none;position:absolute;left:100%;top:-4px;background:#fff;border:1px solid #8A867A;box-shadow:3px 3px 7px rgba(0,0,0,.32);padding:3px;min-width:160px;color:#000}
+.cit.has-sub:hover>.csub{display:block}
+.csep{border-top:1px solid #E0DDD3;margin:3px 2px}
+#xptip{position:fixed;display:none;z-index:100010;background:#FFFFE1;border:1px solid #000;padding:3px 7px;font-size:11px;box-shadow:1px 2px 4px rgba(0,0,0,.3);pointer-events:none;white-space:nowrap}
+
+/* ---------- xp tabs / dialogs / task manager ---------- */
+.xtabs{display:flex;gap:2px;padding:6px 8px 0;border-bottom:1px solid #919B9C;background:#ECE9D8;flex:none}
+.xtab{padding:4px 12px;border:1px solid #919B9C;border-bottom:0;border-radius:3px 3px 0 0;background:#F0EEE1;cursor:pointer}
+.xtab.on{background:#FCFBF6;position:relative;top:1px;padding-bottom:5px}
+.xpane{display:none;padding:11px}
+.xpane.on{display:block}
+.dlg-foot{display:flex;justify-content:flex-end;gap:7px;padding:9px 11px;border-top:1px solid #D4D0C8;flex:none}
+.monframe{width:170px;margin:0 auto 10px;text-align:center}
+.monframe .scr{border:9px solid #D6D3CE;border-radius:6px;background:#000;box-shadow:inset 0 0 3px #000,1px 2px 5px rgba(0,0,0,.3);display:block;width:170px;height:110px}
+.monframe .foot{width:56px;height:9px;background:#B8B5AE;margin:0 auto;border-radius:0 0 3px 3px}
+.wplist{border:1px solid #7F9DB9;background:#fff;height:96px;overflow-y:auto;font-size:11px}
+.wplist div{padding:3px 8px;cursor:default}
+.wplist div.on{background:#316AC5;color:#fff}
+.cal{border-collapse:collapse;font-size:11px}
+.cal th{width:24px;padding:2px;color:#666;font-weight:normal}
+.cal td{width:24px;text-align:center;padding:3px 0;cursor:default}
+.cal td.today{background:#316AC5;color:#fff;border-radius:2px}
+.cal td.dim3{color:#AAA}
+.calnav{display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;font-weight:bold}
+.calnav button{width:20px}
+#anaclock{display:block;margin:0 auto}
+.tm-list{font:11px "Lucida Console",Consolas,monospace;background:#fff;border:1px solid #7F9DB9;height:150px;overflow-y:auto}
+.tm-list .row{display:flex;justify-content:space-between;padding:3px 8px;cursor:default}
+.tm-list .row.on{background:#316AC5;color:#fff}
+.tm-stat{display:flex;gap:18px;padding:5px 9px;border-top:1px solid #D4D0C8;color:#555;font-size:10px;flex:none}
+#saver{position:fixed;inset:0;z-index:100008;display:none;background:#000;cursor:none}
+.renamer{width:76px;font:11px Tahoma;border:1px solid #316AC5;text-align:center}
+#ql{display:flex;align-items:center;padding:0 3px;flex:none}
+.ql-grip{width:5px;align-self:stretch;margin:4px 2px;border-left:1px dotted rgba(255,255,255,.45)}
+.qlb{width:25px;height:24px;background:none;border:0;border-radius:3px;padding:2px;cursor:pointer;display:grid;place-items:center}
+.qlb:hover{background:rgba(255,255,255,.22)}
+.qlb svg{width:17px;height:17px}
+.usertxtarea{flex:1;border:0;resize:none;font:12px "Lucida Console",Consolas,monospace;padding:7px;outline:none;background:#fff;color:#111;min-height:120px}
+.window{flex-direction:column}
+.window.maxed{border-radius:0}
+.win-body{flex:1;min-height:0}
+.win-body.pad{display:flex;flex-direction:column;min-height:0;overflow:hidden}
+.paper{flex:1}
+.msn-msgs{flex:1;min-height:60px}
+
 @media (prefers-reduced-motion:reduce){*{animation-duration:.01s !important;transition:none !important}}
 </style>
 
@@ -253,6 +343,41 @@ input{user-select:text}
       <rect x="14.6" y="11" width="2.8" height="9" rx="1.2" fill="#000"/>
       <circle cx="16" cy="24" r="1.7" fill="#000"/>
     </symbol>
+    <symbol id="ic-error" viewBox="0 0 32 32">
+      <circle cx="16" cy="16" r="13" fill="#E1442C" stroke="#8E1F0E"/>
+      <circle cx="16" cy="16" r="11" fill="none" stroke="#F58C7A" stroke-width="1"/>
+      <path d="M11 11 L21 21 M21 11 L11 21" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+    </symbol>
+    <symbol id="ic-folder" viewBox="0 0 32 32">
+      <path d="M3 8 L3 26 L29 26 L29 11 L15 11 L12 8 Z" fill="#F7D06B" stroke="#B98A00"/>
+      <path d="M3 13 L29 13 L29 26 L3 26 Z" fill="#FCE49A" stroke="#B98A00"/>
+    </symbol>
+    <symbol id="ic-time" viewBox="0 0 32 32">
+      <circle cx="16" cy="16" r="12" fill="#fff" stroke="#4A6FA5" stroke-width="2"/>
+      <path d="M16 9 L16 16 L21 19" stroke="#1A3A6E" stroke-width="2" fill="none" stroke-linecap="round"/>
+      <circle cx="16" cy="16" r="1.4" fill="#C33"/>
+    </symbol>
+    <symbol id="ic-desk" viewBox="0 0 32 32">
+      <rect x="4" y="6" width="24" height="17" rx="2" fill="#DCE9FB" stroke="#4A6FA5"/>
+      <path d="M8 10 h10 M8 14 h8" stroke="#7FA3CE" stroke-width="1.6"/>
+      <path d="M20 24 L26 15 L29 18 L23 27 Z" fill="#F1B802" stroke="#8A6A00"/>
+    </symbol>
+    <symbol id="ic-tm" viewBox="0 0 32 32">
+      <rect x="3" y="5" width="26" height="22" rx="2" fill="#0A2A0A" stroke="#4A6FA5"/>
+      <path d="M5 22 L10 15 L14 19 L20 9 L27 17" stroke="#2FD858" stroke-width="2" fill="none"/>
+    </symbol>
+    <linearGradient id="g-au-sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#8A4A2E"/><stop offset=".45" stop-color="#D8874A"/><stop offset=".68" stop-color="#F2C88A"/>
+    </linearGradient>
+    <linearGradient id="g-au-hill" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#C89A3E"/><stop offset=".4" stop-color="#8A6420"/><stop offset="1" stop-color="#5A3E14"/>
+    </linearGradient>
+    <linearGradient id="g-az-sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0B3B8C"/><stop offset="1" stop-color="#2E6FD8"/>
+    </linearGradient>
+    <linearGradient id="g-ni-sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#050810"/><stop offset="1" stop-color="#121F42"/>
+    </linearGradient>
     <symbol id="ic-flag" viewBox="0 0 20 20">
       <g transform="rotate(-6 10 10)">
         <rect x="2" y="3" width="7.4" height="6.4" rx="1.6" fill="#E1442C"/>
@@ -266,27 +391,51 @@ input{user-select:text}
 
 <div id="desktop">
   <svg id="bliss" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
-    <rect width="1600" height="640" fill="url(#g-sky)"/>
-    <g fill="#fff" opacity=".85">
-      <ellipse cx="330" cy="140" rx="130" ry="30"/><ellipse cx="420" cy="120" rx="90" ry="24"/>
-      <ellipse cx="1130" cy="200" rx="160" ry="32"/><ellipse cx="1240" cy="180" rx="100" ry="24"/>
-      <ellipse cx="780" cy="80" rx="110" ry="22" opacity=".7"/>
+    <g id="wp-bliss" class="wp on">
+      <rect width="1600" height="640" fill="url(#g-sky)"/>
+      <g fill="#fff" opacity=".85">
+        <ellipse cx="330" cy="140" rx="130" ry="30"/><ellipse cx="420" cy="120" rx="90" ry="24"/>
+        <ellipse cx="1130" cy="200" rx="160" ry="32"/><ellipse cx="1240" cy="180" rx="100" ry="24"/>
+        <ellipse cx="780" cy="80" rx="110" ry="22" opacity=".7"/>
+      </g>
+      <path d="M0,560 C 320,440 640,470 900,505 C 1150,538 1400,520 1600,462 L1600,900 L0,900 Z" fill="url(#g-hill)"/>
+      <path d="M0,620 C 300,560 600,580 900,600 C 1200,620 1450,600 1600,560 L1600,900 L0,900 Z" fill="#4E8A1E" opacity=".45"/>
     </g>
-    <path d="M0,560 C 320,440 640,470 900,505 C 1150,538 1400,520 1600,462 L1600,900 L0,900 Z" fill="url(#g-hill)"/>
-    <path d="M0,620 C 300,560 600,580 900,600 C 1200,620 1450,600 1600,560 L1600,900 L0,900 Z" fill="#4E8A1E" opacity=".45"/>
+    <g id="wp-autumn" class="wp">
+      <rect width="1600" height="640" fill="url(#g-au-sky)"/>
+      <circle cx="1180" cy="200" r="58" fill="#F7E3A8" opacity=".9"/>
+      <g fill="#F2D8B4" opacity=".55">
+        <ellipse cx="380" cy="170" rx="150" ry="26"/><ellipse cx="900" cy="110" rx="120" ry="20"/>
+      </g>
+      <path d="M0,580 C 350,470 700,500 950,525 C 1200,550 1420,535 1600,485 L1600,900 L0,900 Z" fill="url(#g-au-hill)"/>
+      <path d="M0,640 C 320,580 640,600 960,620 C 1240,637 1460,620 1600,585 L1600,900 L0,900 Z" fill="#4A3210" opacity=".5"/>
+    </g>
+    <g id="wp-azure" class="wp">
+      <rect width="1600" height="900" fill="url(#g-az-sky)"/>
+      <path d="M0,520 C 260,460 520,560 800,520 C 1080,480 1340,570 1600,520 L1600,900 L0,900 Z" fill="#1E5BC8" opacity=".85"/>
+      <path d="M0,620 C 300,560 600,660 900,620 C 1200,580 1400,660 1600,620 L1600,900 L0,900 Z" fill="#3E7EE4" opacity=".8"/>
+      <path d="M0,720 C 280,670 560,760 880,720 C 1200,680 1420,760 1600,720 L1600,900 L0,900 Z" fill="#6FA6F2" opacity=".7"/>
+      <g fill="#fff" opacity=".5">
+        <circle cx="300" cy="200" r="2"/><circle cx="720" cy="130" r="2"/><circle cx="1220" cy="240" r="2"/><circle cx="1480" cy="120" r="2"/>
+      </g>
+    </g>
+    <g id="wp-night" class="wp">
+      <rect width="1600" height="900" fill="url(#g-ni-sky)"/>
+      <g fill="#fff">
+        <circle cx="140" cy="120" r="1.6"/><circle cx="360" cy="240" r="1.2"/><circle cx="520" cy="90" r="1.8"/><circle cx="760" cy="180" r="1.2"/>
+        <circle cx="940" cy="70" r="1.5"/><circle cx="1120" cy="220" r="1.2"/><circle cx="1330" cy="110" r="1.8"/><circle cx="1490" cy="260" r="1.2"/>
+        <circle cx="240" cy="380" r="1.2"/><circle cx="680" cy="330" r="1.4"/><circle cx="1240" cy="380" r="1.4"/><circle cx="880" cy="430" r="1.1"/>
+      </g>
+      <path d="M1210,170 a52,52 0 1 0 44,80 a42,42 0 1 1 -44,-80 Z" fill="#E8E2C8" opacity=".9"/>
+      <path d="M0,720 C 400,650 900,700 1600,660 L1600,900 L0,900 Z" fill="#0A1424"/>
+    </g>
+    <g id="wp-teal" class="wp">
+      <rect width="1600" height="900" fill="#3A6EA5"/>
+    </g>
   </svg>
 
-  <div id="icons">
-    <div class="icon" style="top:12px"  data-app="win-computer"><svg><use href="#ic-computer"/></svg><div class="lbl">My Computer</div></div>
-    <div class="icon" style="top:96px"  data-app="win-recycle"><svg><use href="#ic-bin"/></svg><div class="lbl">Recycle Bin</div></div>
-    <div class="icon" style="top:180px" data-app="win-cursors"><svg><use href="#ic-app"/></svg><div class="lbl">CURSORS.EXE</div></div>
-    <div class="icon" style="top:264px" data-app="win-chat"><svg><use href="#ic-fly"/></svg><div class="lbl">Messenger</div></div>
-    <div class="icon" style="top:348px" data-app="win-amp"><svg><use href="#ic-amp"/></svg><div class="lbl">cursamp</div></div>
-    <div class="icon" style="top:432px" data-app="win-log"><svg><use href="#ic-note"/></svg><div class="lbl">fights.log</div></div>
-    <div class="icon" style="top:516px" data-app="win-readme"><svg><use href="#ic-txt"/></svg><div class="lbl">README.txt</div></div>
-  </div>
+  <div id="icons"></div>
   <div id="marquee"></div>
-  <div id="arenaedge"></div>
 
   <!-- CURSORS.EXE control panel -->
   <div class="window" id="win-cursors" style="left:calc(100% - 348px);top:44px;width:318px">
@@ -328,7 +477,7 @@ input{user-select:text}
   </div>
 
   <!-- cursamp -->
-  <div class="window" id="win-amp" style="left:calc(50% - 140px);top:64px;width:280px">
+  <div class="window fixed" id="win-amp" style="left:calc(50% - 140px);top:64px;width:280px">
     <div class="titlebar"><svg><use href="#ic-amp"/></svg><span class="tt">cursamp</span><button class="tbtn min" aria-label="Minimize">–</button><button class="tbtn close" aria-label="Close">✕</button></div>
     <div class="win-body pad amp">
       <div class="amp-top"><span class="amp-time" id="amptime">00:00</span><canvas id="ampviz" width="150" height="36"></canvas></div>
@@ -425,17 +574,156 @@ play money prototype. chain later.</div>
     </div>
   </div>
 
-  <!-- Display properties (resolution shrink notice) -->
-  <div class="window" id="win-display" style="left:calc(50% - 150px);top:140px;width:300px">
-    <div class="titlebar"><svg><use href="#ic-computer"/></svg><span class="tt">Display Properties</span></div>
-    <div class="win-body" style="display:flex;gap:12px;align-items:center">
-      <svg style="width:34px;height:34px;flex:none"><use href="#ic-warn"/></svg>
-      <div>Screen resolution changed:<br><b class="mono" id="restext" style="font-size:14px">800×600</b><br><span class="dim small">less desktop. more fighting.</span></div>
+  <!-- Display Properties -->
+  <div class="window fixed" id="win-dispprops" style="left:calc(50% - 190px);top:60px;width:380px">
+    <div class="titlebar"><svg><use href="#ic-computer"/></svg><span class="tt">Display Properties</span><button class="tbtn close" aria-label="Close">✕</button></div>
+    <div class="win-body pad" style="background:#ECE9D8">
+      <div class="xtabs">
+        <span class="xtab on" data-pane="dp-desk">Desktop</span>
+        <span class="xtab" data-pane="dp-saver">Screen Saver</span>
+        <span class="xtab" data-pane="dp-app">Appearance</span>
+      </div>
+      <div class="xpane on" id="dp-desk">
+        <div class="monframe"><svg class="scr" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice"><use id="dp-prevuse" href="#wp-bliss"/></svg><div class="foot"></div></div>
+        <div class="small dim" style="margin:2px 0 3px">Background:</div>
+        <div class="wplist" id="wplist"></div>
+      </div>
+      <div class="xpane" id="dp-saver">
+        <div class="monframe"><canvas class="scr" id="sv-prev" width="170" height="110"></canvas><div class="foot"></div></div>
+        <div class="aprow"><span class="lb">Screen saver</span>
+          <select id="sv-sel" style="flex:1">
+            <option value="stars">Starfield</option>
+            <option value="ribbons">Ribbons</option>
+            <option value="bounce">Bouncing CURSORS</option>
+            <option value="none">(None)</option>
+          </select>
+        </div>
+        <div class="aprow"><span class="lb">Wait</span><input type="number" id="sv-wait" min="1" max="60" value="3" style="width:52px;font:11px Tahoma;border:1px solid #7F9DB9;padding:2px 4px"> <span class="small dim">minutes, then the desktop dreams</span></div>
+        <div style="text-align:right;margin-top:6px"><button class="xbtn" id="sv-test">Preview</button></div>
+      </div>
+      <div class="xpane" id="dp-app">
+        <div class="aprow"><span class="lb">Scheme</span>
+          <select style="flex:1"><option>Luna (Blue)</option><option disabled>Olive Green — ships in a later update</option><option disabled>Silver — ships in a later update</option></select>
+        </div>
+        <div class="small dim" style="margin-top:8px;line-height:1.7">Windows and buttons: Luna.<br>Font size: Normal.<br>Nostalgia: Maximum.</div>
+      </div>
+      <div class="dlg-foot"><button class="xbtn" id="dp-ok">OK</button><button class="xbtn" id="dp-cancel">Cancel</button><button class="xbtn" id="dp-apply">Apply</button></div>
+    </div>
+  </div>
+
+  <!-- Date and Time Properties -->
+  <div class="window fixed" id="win-datetime" style="left:calc(50% - 200px);top:90px;width:400px">
+    <div class="titlebar"><svg><use href="#ic-time"/></svg><span class="tt">Date and Time Properties</span><button class="tbtn close" aria-label="Close">✕</button></div>
+    <div class="win-body pad" style="background:#ECE9D8">
+      <div class="xtabs">
+        <span class="xtab on" data-pane="dt-main">Date &amp; Time</span>
+        <span class="xtab" data-pane="dt-tz">Time Zone</span>
+      </div>
+      <div class="xpane on" id="dt-main">
+        <div style="display:flex;gap:16px;align-items:flex-start">
+          <div>
+            <div class="calnav"><button class="xbtn" id="cal-prev">◂</button><b id="cal-title">—</b><button class="xbtn" id="cal-next">▸</button></div>
+            <table class="cal" id="caltable"></table>
+          </div>
+          <div style="flex:1;text-align:center">
+            <canvas id="anaclock" width="110" height="110"></canvas>
+            <div class="mono" id="digiclock" style="font-size:14px;margin-top:6px">--:--:--</div>
+          </div>
+        </div>
+      </div>
+      <div class="xpane" id="dt-tz">
+        <select style="width:100%">
+          <option>(GMT-05:00) Desktop Standard Time</option>
+          <option>(GMT+00:00) Greenwich Mean Vibes</option>
+          <option>(GMT+∞) Solana Slot Time</option>
+        </select>
+        <div style="height:92px;background:#9FB4CE;border:1px solid #7F9DB9;display:grid;place-items:center;color:#4A5E78;margin-top:9px">map data went home</div>
+      </div>
+      <div class="dlg-foot"><button class="xbtn" id="dt-ok">OK</button><button class="xbtn" id="dt-cancel">Cancel</button><button class="xbtn" id="dt-apply">Apply</button></div>
+    </div>
+  </div>
+
+  <!-- Task Manager -->
+  <div class="window" id="win-taskmgr" data-minw="310" data-minh="300" style="left:120px;top:80px;width:344px">
+    <div class="titlebar"><svg><use href="#ic-tm"/></svg><span class="tt">Task Manager</span><button class="tbtn min" aria-label="Minimize">–</button><button class="tbtn close" aria-label="Close">✕</button></div>
+    <div class="win-body pad" style="background:#ECE9D8">
+      <div class="menubar"><span>File</span><span>Options</span><span>View</span><span>Shut Down</span><span>Help</span></div>
+      <div class="xtabs">
+        <span class="xtab on" data-pane="tm-apps">Applications</span>
+        <span class="xtab" data-pane="tm-procs">Processes</span>
+        <span class="xtab" data-pane="tm-perf">Performance</span>
+      </div>
+      <div class="xpane on" id="tm-apps">
+        <div class="tm-list" id="tmapps"></div>
+        <div style="display:flex;justify-content:flex-end;gap:6px;padding-top:8px"><button class="xbtn" id="tm-switch">Switch To</button><button class="xbtn" id="tm-end">End Task</button></div>
+      </div>
+      <div class="xpane" id="tm-procs">
+        <div class="tm-list" id="tmprocs" style="height:190px"></div>
+      </div>
+      <div class="xpane" id="tm-perf">
+        <canvas id="tmgraph" width="300" height="90" style="width:100%;border:1px solid #7F9DB9;background:#000"></canvas>
+        <div class="mono small" id="tmstats" style="margin-top:7px;line-height:1.9"></div>
+      </div>
+      <div class="tm-stat"><span id="tmfoot">Processes: 14 · CPU Usage: 2%</span></div>
+    </div>
+  </div>
+
+  <!-- Error dialog -->
+  <div class="window fixed" id="win-error" style="left:calc(50% - 172px);top:calc(50% - 84px);width:344px">
+    <div class="titlebar"><svg><use href="#ic-error"/></svg><span class="tt">Error</span><button class="tbtn close" aria-label="Close">✕</button></div>
+    <div class="win-body">
+      <div style="display:flex;gap:13px;align-items:center;padding:8px 4px 12px">
+        <svg style="width:34px;height:34px;flex:none"><use href="#ic-error"/></svg>
+        <div id="errtext" style="line-height:1.55">Something happened.</div>
+      </div>
+      <div style="text-align:center"><button class="xbtn" id="err-ok" style="min-width:82px">OK</button></div>
+    </div>
+  </div>
+
+  <!-- Confirm dialog -->
+  <div class="window fixed" id="win-confirm" style="left:calc(50% - 165px);top:calc(50% - 80px);width:330px">
+    <div class="titlebar"><svg><use href="#ic-warn"/></svg><span class="tt">Confirm</span><button class="tbtn close" aria-label="Close">✕</button></div>
+    <div class="win-body">
+      <div style="display:flex;gap:13px;align-items:center;padding:8px 4px 12px">
+        <svg style="width:34px;height:34px;flex:none"><use href="#ic-warn"/></svg>
+        <div id="conftext" style="line-height:1.55">Are you sure?</div>
+      </div>
+      <div style="text-align:center;display:flex;gap:8px;justify-content:center"><button class="xbtn" id="conf-yes" style="min-width:76px">Yes</button><button class="xbtn" id="conf-no" style="min-width:76px">No</button></div>
+    </div>
+  </div>
+
+  <!-- Icon properties -->
+  <div class="window fixed" id="win-props" style="left:calc(50% - 152px);top:calc(50% - 118px);width:304px">
+    <div class="titlebar"><svg><use href="#ic-txt"/></svg><span class="tt">Properties</span><button class="tbtn close" aria-label="Close">✕</button></div>
+    <div class="win-body">
+      <div style="display:flex;gap:11px;align-items:center;border-bottom:1px solid #D4D0C8;padding-bottom:9px;margin-bottom:9px">
+        <svg style="width:32px;height:32px"><use id="prop-ico" href="#ic-app"/></svg><b id="prop-name">—</b>
+      </div>
+      <div class="small" id="prop-rows" style="line-height:2.1"></div>
+      <div style="text-align:right;margin-top:10px"><button class="xbtn" id="prop-ok" style="min-width:76px">OK</button></div>
+    </div>
+  </div>
+
+  <!-- Folder viewer -->
+  <div class="window" id="win-folder" data-minw="260" data-minh="170" style="left:240px;top:120px;width:330px">
+    <div class="titlebar"><svg><use href="#ic-folder"/></svg><span class="tt">New Folder</span><button class="tbtn min" aria-label="Minimize">–</button><button class="tbtn close" aria-label="Close">✕</button></div>
+    <div class="win-body pad">
+      <div class="menubar"><span>File</span><span>Edit</span><span>View</span><span>Help</span></div>
+      <div class="paper" id="folderbody" style="background:#fff"></div>
+    </div>
+  </div>
+
+  <!-- User notepad -->
+  <div class="window" id="win-usertxt" data-minw="280" data-minh="200" style="left:280px;top:100px;width:360px">
+    <div class="titlebar"><svg><use href="#ic-txt"/></svg><span class="tt">Untitled - Notepad</span><button class="tbtn min" aria-label="Minimize">–</button><button class="tbtn close" aria-label="Close">✕</button></div>
+    <div class="win-body pad">
+      <div class="menubar"><span>File</span><span>Edit</span><span>Format</span><span>View</span><span>Help</span></div>
+      <textarea class="usertxtarea" id="usertxtarea" spellcheck="false"></textarea>
     </div>
   </div>
 
   <!-- Shutdown warning -->
-  <div class="window" id="win-shutdown" style="left:calc(50% - 160px);top:calc(50% - 90px);width:320px">
+  <div class="window fixed" id="win-shutdown" style="left:calc(50% - 160px);top:calc(50% - 90px);width:320px">
     <div class="titlebar"><svg><use href="#ic-warn"/></svg><span class="tt">System Shutdown</span></div>
     <div class="win-body" style="display:flex;gap:12px;align-items:center">
       <svg style="width:36px;height:36px;flex:none"><use href="#ic-warn"/></svg>
@@ -447,13 +735,13 @@ play money prototype. chain later.</div>
   </div>
 
   <!-- Round results -->
-  <div class="window" id="win-results" style="left:calc(50% - 170px);top:100px;width:340px">
+  <div class="window fixed" id="win-results" style="left:calc(50% - 170px);top:100px;width:340px">
     <div class="titlebar"><svg><use href="#ic-app"/></svg><span class="tt">Round results</span><button class="tbtn close" aria-label="Close">✕</button></div>
     <div class="win-body mono" id="resultsbody" style="line-height:1.9"></div>
   </div>
 
   <!-- Log Off dialog -->
-  <div class="window" id="win-logoff" style="left:calc(50% - 140px);top:calc(50% - 70px);width:280px">
+  <div class="window fixed" id="win-logoff" style="left:calc(50% - 140px);top:calc(50% - 70px);width:280px">
     <div class="titlebar"><svg><use href="#ic-flag"/></svg><span class="tt">Log Off Windows</span><button class="tbtn close" aria-label="Close">✕</button></div>
     <div class="win-body" style="text-align:center;padding:16px 12px">
       <p>Log off and reset the session?<br>Wallet returns to 5.000 SOL.</p>
@@ -470,9 +758,10 @@ play money prototype. chain later.</div>
 
 <!-- taskbar -->
 <div id="taskbar">
-  <button id="startbtn"><svg><use href="#ic-flag"/></svg>start</button>
+  <button id="startbtn" data-tip="Click here to begin. Or don't."><svg><use href="#ic-flag"/></svg>start</button>
+  <div id="ql"><span class="ql-grip"></span><button class="qlb" id="ql-desk" data-tip="Show Desktop"><svg><use href="#ic-desk"/></svg></button><button class="qlb" data-app="win-amp" data-tip="cursamp"><svg><use href="#ic-amp"/></svg></button><button class="qlb" data-app="win-chat" data-tip="Messenger"><svg><use href="#ic-fly"/></svg></button><span class="ql-grip"></span></div>
   <div id="tabs"></div>
-  <div id="tray"><span id="phasechip">R0 · BOOT</span><span id="sndico" title="Sounds">🔊</span><span id="clock">--:--</span></div>
+  <div id="tray"><span id="phasechip" data-tip="Round status">R0 · BOOT</span><span id="sndico" data-tip="Sounds: click to mute">🔊</span><span id="clock" data-tip="@clock">--:--</span></div>
 </div>
 
 <!-- start menu -->
@@ -505,6 +794,33 @@ play money prototype. chain later.</div>
 <div id="bsod"></div>
 <div id="shutdown"><div>It is now safe to lose your money.<br><span style="font-size:13px;color:#888">click anywhere to log back in</span></div></div>
 
+<canvas id="saver"></canvas>
+<div id="ctx"></div>
+<div id="xptip"></div>
+
+<div id="boot">
+  <div style="text-align:center">
+    <div class="boot-logo"><svg><use href="#ic-flag"/></svg><div class="boot-name">cursors<span>xp</span></div></div>
+    <div class="boot-bar"><span></span><span></span><span></span></div>
+  </div>
+</div>
+
+<div id="login">
+  <div class="lg-top"></div>
+  <div class="lg-mid">
+    <div class="lg-left">
+      <div class="lg-brand"><svg><use href="#ic-flag"/></svg><div>cursors<span>xp</span></div></div>
+      <div class="lg-hint">To begin, click your user name</div>
+    </div>
+    <div class="lg-div"></div>
+    <div class="lg-right">
+      <div class="lg-tile" id="tile-admin"><span class="lg-ava"><svg><use href="#ic-cursor"/></svg></span><div><b>Administrator</b><div class="lg-sub">5.000 SOL and dreams</div></div></div>
+      <div class="lg-tile" id="tile-guest"><span class="lg-ava guest">?</span><div><b>Guest</b><div class="lg-sub" id="guest-sub">account disabled</div></div></div>
+    </div>
+  </div>
+  <div class="lg-bot"><button id="lg-off">⏻ Turn off computer</button><div class="lg-note">After you log on, you can add or lose funds.</div></div>
+</div>
+
 <script>
 "use strict";
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
@@ -513,7 +829,7 @@ const rand=(a,b)=>a+Math.random()*(b-a);
 const pick=a=>a[Math.floor(Math.random()*a.length)];
 const desktop=$("#desktop"), curlayer=$("#curlayer"), fxlayer=$("#fxlayer");
 let W=desktop.clientWidth, H=desktop.clientHeight;
-addEventListener("resize",()=>{W=desktop.clientWidth;H=desktop.clientHeight;setArenaStage(arenaStage,true);});
+addEventListener("resize",()=>{W=desktop.clientWidth;H=desktop.clientHeight;syncArena();});
 const SMALL=innerWidth<700;
 
 /* ---- money: integer units, 1 unit = 0.001 SOL ---- */
@@ -551,49 +867,160 @@ const sShut  =()=>{tone(220,.3,"sawtooth",.07,0,-60);tone(220,.3,"sawtooth",.07,
 const sRes   =()=>{tone(700,.08,"square",.05);tone(500,.1,"square",.05,.1);};
 const sChat  =()=>tone(1000,.05,"square",.03);
 const sNudge =()=>tone(90,.3,"sawtooth",.09,0,-30);
+const sOpen  =()=>{tone(620,.07,"triangle",.05);tone(830,.09,"triangle",.04,.05);};
+const sClose =()=>{tone(830,.07,"triangle",.05);tone(540,.09,"triangle",.04,.05);};
+const sMini  =()=>tone(680,.13,"triangle",.05,0,-330);
+const sMaxi  =()=>tone(420,.13,"triangle",.05,0,330);
+const sMenu  =()=>tone(1500,.03,"square",.016);
+const sError =()=>{tone(415,.22,"sine",.09);tone(311,.3,"sine",.08,.02);};
+const sBalloon=()=>{tone(1046,.08,"triangle",.05);tone(1568,.1,"triangle",.04,.09);};
+function noiseBurst(dur,vol,delay){
+  if(muted) return;
+  try{
+    const c=ac(), t=c.currentTime+(delay||0);
+    const b=c.createBuffer(1,Math.max(1,Math.floor(c.sampleRate*dur)),c.sampleRate);
+    const d=b.getChannelData(0);
+    for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*(1-i/d.length);
+    const n=c.createBufferSource(); n.buffer=b;
+    const g=c.createGain(); g.gain.value=vol;
+    n.connect(g).connect(c.destination); n.start(t);
+  }catch(e){}
+}
+const sCrunch=()=>{noiseBurst(.2,.14);tone(170,.13,"sawtooth",.05,.03,-70);};
+function chime(){
+  if(muted) return;
+  try{
+    const c=ac(), t0=c.currentTime;
+    [[392,0,.9],[523.25,.12,.9],[659.25,.24,1],[783.99,.36,1.5]].forEach(([f,d,dur])=>{
+      const o=c.createOscillator(),g=c.createGain();
+      o.type="triangle"; o.frequency.value=f;
+      g.gain.setValueAtTime(0,t0+d);
+      g.gain.linearRampToValueAtTime(.12,t0+d+.06);
+      g.gain.exponentialRampToValueAtTime(.001,t0+d+dur);
+      o.connect(g).connect(c.destination); o.start(t0+d); o.stop(t0+d+dur+.05);
+    });
+    const o=c.createOscillator(),g=c.createGain();
+    o.type="sine"; o.frequency.value=130.81;
+    g.gain.setValueAtTime(0,t0);
+    g.gain.linearRampToValueAtTime(.055,t0+.3);
+    g.gain.exponentialRampToValueAtTime(.001,t0+1.9);
+    o.connect(g).connect(c.destination); o.start(t0); o.stop(t0+2);
+  }catch(e){}
+}
 addEventListener("pointerdown",()=>{ if(AC&&AC.state==="suspended") AC.resume(); },{capture:true});
 $("#sndico").addEventListener("click",()=>{ muted=!muted; $("#sndico").textContent=muted?"🔇":"🔊"; });
+
+/* ================= shell persistence ================= */
+const store={
+  data:{},
+  load(){
+    try{ this.data=JSON.parse(localStorage.getItem("cursorsxp")||"{}"); }catch(e){ this.data={}; }
+    this.data.icons=this.data.icons||{};
+    this.data.wins=this.data.wins||{};
+    this.data.userIcons=this.data.userIcons||[];
+    this.data.texts=this.data.texts||{};
+    this.data.wallpaper=this.data.wallpaper||"bliss";
+    this.data.saver=this.data.saver||{t:"stars",wait:3};
+  },
+  save(){ clearTimeout(this._t); this._t=setTimeout(()=>{ try{ localStorage.setItem("cursorsxp",JSON.stringify(this.data)); }catch(e){} },250); }
+};
+store.load();
 
 /* ================= window manager ================= */
 let zTop=100;
 const openApps=new Map();
-const NOTAB=new Set(["win-logoff","win-shutdown","win-results","win-display"]);
+const NOTAB=new Set(["win-logoff","win-shutdown","win-results","win-error","win-confirm","win-props"]);
 function tabIconHref(id){ const u=$("#"+id+" .titlebar use"); return u?u.getAttribute("href"):"#ic-app"; }
 function tabTitle(id){ return $("#"+id+" .titlebar .tt").textContent; }
-function openWin(id){
+function saveWinRect(el){
+  store.data.wins[el.id]={l:el.style.left,t:el.style.top,w:el.style.width||"",h:el.style.height||"",max:el.classList.contains("maxed")?1:0};
+  store.save();
+}
+function applyWinRect(el){
+  const s=store.data.wins[el.id]; if(!s) return;
+  if(s.max){ el._prevRect={l:s.l,t:s.t,w:s.w,h:s.h}; el.classList.add("maxed"); el.style.left="0px"; el.style.top="0px"; el.style.width=W+"px"; el.style.height=H+"px"; return; }
+  if(s.l) el.style.left=Math.min(parseFloat(s.l)||0,W-60)+"px";
+  if(s.t) el.style.top=clamp(parseFloat(s.t)||0,0,H-40)+"px";
+  if(s.w) el.style.width=s.w;
+  if(s.h) el.style.height=s.h;
+}
+function openWin(id,opts){
+  opts=opts||{};
   const el=document.getElementById(id);
-  el.style.display="block";
-  if(!openApps.has(id)){
+  const was=openApps.has(id);
+  if(!was&&!el._rectApplied){ applyWinRect(el); el._rectApplied=true; }
+  el.style.display="flex";
+  if(!was){
     let tab=null;
     if(!NOTAB.has(id)){
       tab=document.createElement("button");
-      tab.className="task-tab";
+      tab.className="task-tab"; tab.dataset.win=id;
       tab.innerHTML=`<svg><use href="${tabIconHref(id)}"/></svg><span>${tabTitle(id)}</span>`;
       tab.addEventListener("click",()=>{
         const a=openApps.get(id);
-        if(a.min){ a.min=false; el.style.display="block"; focusWin(id); }
+        if(a.min) restoreWin(id);
         else if(el.classList.contains("focused")) minWin(id);
         else focusWin(id);
       });
       $("#tabs").appendChild(tab);
     }
     openApps.set(id,{el,tab,min:false});
+    if(!opts.silent) sOpen();
   }else{
-    const a=openApps.get(id); a.min=false;
+    const a=openApps.get(id);
+    if(a.min) restoreWin(id);
   }
   focusWin(id);
 }
-function closeWin(id){
+function restoreWin(id){
+  const a=openApps.get(id); if(!a) return;
+  a.min=false;
+  a.el.style.display="flex";
+  a.el.style.opacity="0"; a.el.style.transform="scale(.92)";
+  requestAnimationFrame(()=>{
+    a.el.style.transition="transform .12s ease-out,opacity .12s ease-out";
+    a.el.style.opacity=""; a.el.style.transform="";
+    setTimeout(()=>{ a.el.style.transition=""; },140);
+  });
+  focusWin(id);
+}
+function closeWin(id,opts){
   const a=openApps.get(id); if(!a) return;
   a.el.style.display="none"; a.el.classList.remove("focused");
   if(a.tab) a.tab.remove();
   openApps.delete(id);
+  if(!(opts&&opts.silent)) sClose();
 }
 function minWin(id){
-  const a=openApps.get(id); if(!a) return;
-  a.min=true; a.el.style.display="none"; a.el.classList.remove("focused");
-  a.el.classList.add("inactive");
+  const a=openApps.get(id); if(!a||a.min) return;
+  a.min=true;
+  const el=a.el, r=el.getBoundingClientRect();
+  let tx=40;
+  if(a.tab){ const tr=a.tab.getBoundingClientRect(); tx=tr.left+tr.width/2; }
+  el.style.transition="transform .17s ease-in,opacity .17s ease-in";
+  el.style.transformOrigin="0 100%";
+  el.style.transform=`translate(${tx-r.left}px,${H-r.top}px) scale(.06)`;
+  el.style.opacity="0";
+  sMini();
+  setTimeout(()=>{ el.style.display="none"; el.style.transition=""; el.style.transform=""; el.style.opacity=""; el.style.transformOrigin=""; },180);
+  el.classList.remove("focused"); el.classList.add("inactive");
   if(a.tab) a.tab.classList.remove("on");
+}
+function maxWin(id){
+  const el=document.getElementById(id);
+  if(el.classList.contains("fixed")) return;
+  if(el.classList.contains("maxed")){
+    el.classList.remove("maxed");
+    const p=el._prevRect;
+    if(p){ el.style.left=p.l; el.style.top=p.t; el.style.width=p.w; el.style.height=p.h; }
+    sOpen();
+  }else{
+    el._prevRect={l:el.style.left,t:el.style.top,w:el.style.width,h:el.style.height};
+    el.classList.add("maxed");
+    el.style.left="0px"; el.style.top="0px"; el.style.width=W+"px"; el.style.height=H+"px";
+    sMaxi();
+  }
+  saveWinRect(el);
 }
 function focusWin(id){
   zTop++;
@@ -605,63 +1032,669 @@ function focusWin(id){
   }
   document.getElementById(id).style.zIndex=zTop;
 }
+const CURMAP={n:"n-resize",s:"s-resize",e:"e-resize",w:"w-resize",ne:"ne-resize",nw:"nw-resize",se:"se-resize",sw:"sw-resize"};
+function edgeDir(w,e){
+  const r=w.getBoundingClientRect();
+  const x=e.clientX-r.left, y=e.clientY-r.top;
+  let d="";
+  if(y<6) d+="n"; else if(y>r.height-8) d+="s";
+  if(x<8) d+="w"; else if(x>r.width-8) d+="e";
+  return d;
+}
+let reszActive=null;
 $$(".window").forEach(w=>{
   w.addEventListener("pointerdown",()=>{ if(openApps.has(w.id)) focusWin(w.id); });
   const tb=w.querySelector(".titlebar");
   const btnMin=w.querySelector(".tbtn.min"), btnClose=w.querySelector(".tbtn.close");
-  if(btnMin) btnMin.addEventListener("click",e=>{e.stopPropagation();sClick();minWin(w.id);});
-  if(btnClose) btnClose.addEventListener("click",e=>{e.stopPropagation();sClick();closeWin(w.id);});
+  if(btnMin) btnMin.addEventListener("click",e=>{e.stopPropagation();minWin(w.id);});
+  if(btnClose) btnClose.addEventListener("click",e=>{e.stopPropagation();closeWin(w.id);});
+  if(!w.classList.contains("fixed")&&btnClose){
+    const btnMax=document.createElement("button");
+    btnMax.className="tbtn max"; btnMax.setAttribute("aria-label","Maximize"); btnMax.textContent="❐";
+    btnClose.before(btnMax);
+    btnMax.addEventListener("click",e=>{e.stopPropagation();maxWin(w.id);});
+    tb.addEventListener("dblclick",e=>{ if(!e.target.closest(".tbtn")) maxWin(w.id); });
+    w.addEventListener("pointermove",e=>{
+      if(reszActive) return;
+      const d=w.classList.contains("maxed")?"":edgeDir(w,e);
+      w.style.cursor=d?CURMAP[d]:"";
+    });
+    w.addEventListener("pointerdown",e=>{
+      if(w.classList.contains("maxed")) return;
+      if(e.target.closest(".tbtn")) return;
+      const d=edgeDir(w,e); if(!d) return;
+      e.stopPropagation(); e.preventDefault();
+      if(openApps.has(w.id)) focusWin(w.id);
+      const r=w.getBoundingClientRect();
+      const minw=+(w.dataset.minw||232), minh=+(w.dataset.minh||130);
+      const sx=e.clientX, sy=e.clientY;
+      reszActive=true;
+      const mv=ev=>{
+        let left=r.left, top=r.top, width=r.width, height=r.height;
+        const dx=ev.clientX-sx, dy=ev.clientY-sy;
+        if(d.includes("e")) width=Math.max(minw,r.width+dx);
+        if(d.includes("s")) height=Math.max(minh,r.height+dy);
+        if(d.includes("w")){ width=Math.max(minw,r.width-dx); left=r.left+(r.width-width); }
+        if(d.includes("n")){ height=Math.max(minh,r.height-dy); top=r.top+(r.height-height); }
+        w.style.left=left+"px"; w.style.top=top+"px"; w.style.width=width+"px"; w.style.height=height+"px";
+      };
+      const up=()=>{ reszActive=null; removeEventListener("pointermove",mv); removeEventListener("pointerup",up); saveWinRect(w); };
+      addEventListener("pointermove",mv); addEventListener("pointerup",up);
+    },true);
+  }
   tb.addEventListener("pointerdown",e=>{
     if(e.target.closest(".tbtn")) return;
+    if(w.classList.contains("maxed")) return;
     const r=w.getBoundingClientRect(), dx=e.clientX-r.left, dy=e.clientY-r.top;
     const move=ev=>{
       w.style.left=clamp(ev.clientX-dx,-r.width+80,W-40)+"px";
       w.style.top=clamp(ev.clientY-dy,0,H-30)+"px";
     };
-    const up=()=>{removeEventListener("pointermove",move);removeEventListener("pointerup",up);};
+    const up=()=>{removeEventListener("pointermove",move);removeEventListener("pointerup",up);saveWinRect(w);};
     addEventListener("pointermove",move); addEventListener("pointerup",up);
   });
 });
 
-/* ================= icons / marquee ================= */
-$$(".icon").forEach(ic=>{
-  ic.addEventListener("click",e=>{ e.stopPropagation(); $$(".icon").forEach(i=>i.classList.remove("sel")); ic.classList.add("sel"); });
-  ic.addEventListener("dblclick",()=>{ sClick(); openWin(ic.dataset.app); });
+/* ================= desktop icons ================= */
+const SYSICONS=[
+  {id:"computer",label:"My Computer",href:"#ic-computer",app:"win-computer",sys:1},
+  {id:"recycle",label:"Recycle Bin",href:"#ic-bin",app:"win-recycle",sys:1},
+  {id:"cursors",label:"CURSORS.EXE",href:"#ic-app",app:"win-cursors",sys:1},
+  {id:"chat",label:"Messenger",href:"#ic-fly",app:"win-chat",sys:1},
+  {id:"amp",label:"cursamp",href:"#ic-amp",app:"win-amp",sys:1},
+  {id:"log",label:"fights.log",href:"#ic-note",app:"win-log",sys:1},
+  {id:"readme",label:"README.txt",href:"#ic-txt",app:"win-readme",sys:1},
+];
+const CELLW=84, CELLH=86, GX=12, GY=8;
+let curTxtIcon=null, binFiles=[];
+function allIcons(){ return SYSICONS.concat(store.data.userIcons); }
+function iconById(id){ return allIcons().find(i=>i.id===id); }
+function posOf(ic){ return store.data.icons[ic.id]||{c:ic._dc||0,r:ic._dr||0}; }
+function cellFree(c,r,exceptId){
+  return !allIcons().some(ic=>{ const p=posOf(ic); return ic.id!==exceptId&&p.c===c&&p.r===r; });
+}
+function firstFreeCell(){
+  const maxR=Math.max(1,Math.floor((H-GY-80)/CELLH));
+  for(let c=0;c<12;c++) for(let r=0;r<=maxR;r++) if(cellFree(c,r,null)) return {c,r};
+  return {c:0,r:0};
+}
+function layoutDefaults(){
+  const rows=Math.max(1,Math.floor((H-GY-70)/CELLH)+1);
+  SYSICONS.forEach((ic,i)=>{ ic._dc=Math.floor(i/rows); ic._dr=i%rows; });
+}
+function renderIcons(){
+  layoutDefaults();
+  const host=$("#icons"); host.innerHTML="";
+  for(const ic of allIcons()){
+    const p=posOf(ic);
+    const el=document.createElement("div");
+    el.className="icon"; el.dataset.iid=ic.id;
+    el.style.left=(GX+p.c*CELLW)+"px"; el.style.top=(GY+p.r*CELLH)+"px";
+    el.innerHTML=`<svg><use href="${ic.href}"/></svg><div class="lbl"></div>`;
+    el.querySelector(".lbl").textContent=ic.label;
+    hookIcon(el,ic);
+    host.appendChild(el);
+  }
+}
+function selectOnly(el){ $$(".icon").forEach(i=>i.classList.remove("sel")); if(el) el.classList.add("sel"); }
+function hookIcon(el,ic){
+  el.addEventListener("pointerdown",e=>{
+    if(e.button===2){ selectOnly(el); return; }
+    e.stopPropagation();
+    selectOnly(el);
+    const sx=e.clientX, sy=e.clientY;
+    const ox=parseFloat(el.style.left), oy=parseFloat(el.style.top);
+    let moved=false;
+    const mv=ev=>{
+      const dx=ev.clientX-sx, dy=ev.clientY-sy;
+      if(!moved&&dx*dx+dy*dy<25) return;
+      moved=true; el.style.opacity=".6"; el.style.zIndex="90";
+      el.style.left=(ox+dx)+"px"; el.style.top=(oy+dy)+"px";
+    };
+    const up=()=>{
+      removeEventListener("pointermove",mv); removeEventListener("pointerup",up);
+      el.style.opacity=""; el.style.zIndex="";
+      if(!moved) return;
+      const maxC=Math.max(0,Math.floor((W-GX-72)/CELLW));
+      const maxR=Math.max(0,Math.floor((H-GY-84)/CELLH));
+      let c=clamp(Math.round((parseFloat(el.style.left)-GX)/CELLW),0,maxC);
+      let r=clamp(Math.round((parseFloat(el.style.top)-GY)/CELLH),0,maxR);
+      let guard=0;
+      while(!cellFree(c,r,ic.id)&&guard++<300){ r++; if(r>maxR){ r=0; c=c+1>maxC?0:c+1; } }
+      store.data.icons[ic.id]={c,r}; store.save();
+      renderIcons();
+    };
+    addEventListener("pointermove",mv); addEventListener("pointerup",up);
+  });
+  el.addEventListener("dblclick",()=>{ sClick(); openIcon(ic); });
+}
+function openIcon(ic){
+  if(ic.app==="folder"){
+    $("#win-folder .tt").textContent=ic.label;
+    $("#folderbody").innerHTML=`This folder is empty.<br><span style="color:#8A8A7A">0 objects · 0 bytes of conviction</span>`;
+    openWin("win-folder");
+  }else if(ic.app==="usertxt"){
+    curTxtIcon=ic;
+    $("#win-usertxt .tt").textContent=ic.label+" - Notepad";
+    $("#usertxtarea").value=store.data.texts[ic.id]||"";
+    openWin("win-usertxt");
+  }else openWin(ic.app);
+}
+$("#usertxtarea").addEventListener("input",()=>{
+  if(curTxtIcon){ store.data.texts[curTxtIcon.id]=$("#usertxtarea").value; store.save(); }
 });
+let userN=(store.data.userIcons.reduce((m,i)=>Math.max(m,+(i.id.split("_")[1])||0),0))+1;
+function newFolder(){
+  const p=firstFreeCell();
+  const ic={id:"user_"+userN++,label:"New Folder",href:"#ic-folder",app:"folder",kind:"folder"};
+  store.data.userIcons.push(ic); store.data.icons[ic.id]=p; store.save();
+  renderIcons(); startRename(ic);
+}
+function newTextDoc(){
+  const p=firstFreeCell();
+  const ic={id:"user_"+userN++,label:"New Text Document.txt",href:"#ic-txt",app:"usertxt",kind:"txt"};
+  store.data.userIcons.push(ic); store.data.icons[ic.id]=p; store.save();
+  renderIcons(); startRename(ic);
+}
+function startRename(ic){
+  const el=[...$("#icons").children].find(x=>x.dataset.iid===ic.id);
+  if(!el) return;
+  const lbl=el.querySelector(".lbl");
+  const inp=document.createElement("input");
+  inp.value=ic.label; inp.className="renamer";
+  lbl.replaceWith(inp); inp.focus(); inp.select();
+  let done=false;
+  const commit=()=>{ if(done) return; done=true; ic.label=inp.value.trim()||ic.label; store.save(); renderIcons(); };
+  inp.addEventListener("keydown",e=>{
+    e.stopPropagation();
+    if(e.key==="Enter") commit();
+    if(e.key==="Escape"){ done=true; renderIcons(); }
+  });
+  inp.addEventListener("blur",commit);
+  inp.addEventListener("pointerdown",e=>e.stopPropagation());
+}
+function deleteIcon(ic){
+  binFiles.unshift(ic.label);
+  store.data.userIcons=store.data.userIcons.filter(u=>u.id!==ic.id);
+  delete store.data.icons[ic.id]; delete store.data.texts[ic.id];
+  store.save(); renderBin(); renderIcons(); sCrunch();
+}
+function arrangeIcons(shuffle){
+  const list=allIcons().slice();
+  if(shuffle) list.sort(()=>Math.random()-.5);
+  else list.sort((a,b)=>a.label.toLowerCase().localeCompare(b.label.toLowerCase()));
+  const rows=Math.max(1,Math.floor((H-GY-70)/CELLH)+1);
+  store.data.icons={};
+  list.forEach((ic,i)=>{ store.data.icons[ic.id]={c:Math.floor(i/rows),r:i%rows}; });
+  store.save(); renderIcons(); sClick();
+}
+function refreshDesktop(){
+  $("#icons").style.visibility="hidden"; sClick();
+  setTimeout(()=>{ $("#icons").style.visibility=""; },90);
+}
+
+/* ================= marquee select ================= */
 const marquee=$("#marquee");
 desktop.addEventListener("pointerdown",e=>{
-  if(e.target.closest(".icon,.window,#taskbar,#startmenu,#balloon")) return;
-  $$(".icon").forEach(i=>i.classList.remove("sel"));
+  if(e.target.closest(".icon,.window,#taskbar,#startmenu,#balloon,#ctx")) return;
+  selectOnly(null);
   closeStart();
   if(e.pointerType==="touch") return;
+  if(e.button===2) return;
   const sx=e.clientX, sy=e.clientY;
   const move=ev=>{
     marquee.style.display="block";
-    marquee.style.left=Math.min(sx,ev.clientX)+"px";
-    marquee.style.top=Math.min(sy,ev.clientY)+"px";
-    marquee.style.width=Math.abs(ev.clientX-sx)+"px";
-    marquee.style.height=Math.abs(ev.clientY-sy)+"px";
+    const l=Math.min(sx,ev.clientX), t=Math.min(sy,ev.clientY);
+    const w=Math.abs(ev.clientX-sx), h=Math.abs(ev.clientY-sy);
+    marquee.style.left=l+"px"; marquee.style.top=t+"px";
+    marquee.style.width=w+"px"; marquee.style.height=h+"px";
+    for(const el of $("#icons").children){
+      const r=el.getBoundingClientRect();
+      const hit=r.left<l+w&&r.right>l&&r.top<t+h&&r.bottom>t;
+      el.classList.toggle("sel",hit);
+    }
   };
   const up=()=>{marquee.style.display="none";removeEventListener("pointermove",move);removeEventListener("pointerup",up);};
   addEventListener("pointermove",move); addEventListener("pointerup",up);
 });
+
+/* ================= shared dialogs ================= */
+let confirmCb=null;
+function showError(title,text){
+  $("#win-error .tt").textContent=title;
+  $("#errtext").textContent=text;
+  openWin("win-error",{silent:true}); sError();
+}
+function showConfirm(title,text,cb){
+  $("#win-confirm .tt").textContent=title;
+  $("#conftext").textContent=text;
+  confirmCb=cb; openWin("win-confirm");
+}
+function showProps(ic){
+  $("#prop-ico").setAttribute("href",ic.href);
+  $("#prop-name").textContent=ic.label;
+  const type=ic.sys?"System file":(ic.kind==="folder"?"File Folder":"Text Document");
+  $("#prop-rows").innerHTML=`Type: <b>${type}</b><br>Location: <b>C:\\Desktop</b><br>Size: <b>4.00 KB (4,096 bytes of nostalgia)</b><br>Created: <b>Tuesday, August 24, 2001</b>`;
+  openWin("win-props");
+}
+$("#err-ok").addEventListener("click",()=>closeWin("win-error"));
+$("#prop-ok").addEventListener("click",()=>closeWin("win-props"));
+$("#conf-yes").addEventListener("click",()=>{ const cb=confirmCb; confirmCb=null; closeWin("win-confirm"); if(cb) cb(); });
+$("#conf-no").addEventListener("click",()=>{ confirmCb=null; closeWin("win-confirm"); });
+function emptyBin(){
+  showConfirm("Empty Recycle Bin","Permanently delete all dead cursors and files? They are already dead.",()=>{
+    binDead=[]; binFiles=[]; renderBin(); sCrunch();
+  });
+}
+
+/* ================= context menus ================= */
+const ctx=$("#ctx");
+function buildMenu(host,items){
+  for(const it of items){
+    if(it.sep){ const s=document.createElement("div"); s.className="csep"; host.appendChild(s); continue; }
+    const d=document.createElement("div");
+    d.className="cit"+(it.disabled?" dis":"")+(it.bold?" bold":"");
+    d.textContent=it.label;
+    if(it.sub){
+      d.classList.add("has-sub");
+      const sub=document.createElement("div"); sub.className="csub";
+      buildMenu(sub,it.sub); d.appendChild(sub);
+    }
+    if(!it.disabled&&it.action) d.addEventListener("pointerup",e=>{ e.stopPropagation(); hideMenu(); sClick(); it.action(); });
+    host.appendChild(d);
+  }
+}
+function showMenu(items,x,y){
+  ctx.innerHTML=""; buildMenu(ctx,items);
+  ctx.style.display="block"; ctx.style.left="0px"; ctx.style.top="0px";
+  const r=ctx.getBoundingClientRect();
+  ctx.style.left=Math.min(x,innerWidth-r.width-4)+"px";
+  ctx.style.top=Math.min(y,innerHeight-r.height-4)+"px";
+  sMenu();
+}
+function hideMenu(){ ctx.style.display="none"; }
+addEventListener("pointerdown",e=>{ if(!e.target.closest("#ctx")) hideMenu(); },true);
+function desktopMenu(){
+  return [
+    {label:"Arrange Icons By",sub:[
+      {label:"Name",action:()=>arrangeIcons(false)},
+      {label:"Vibes",action:()=>arrangeIcons(true)},
+      {sep:1},
+      {label:"Auto Arrange",action:()=>arrangeIcons(false)}]},
+    {label:"Refresh",action:refreshDesktop},
+    {sep:1},
+    {label:"Paste",disabled:1},
+    {label:"Paste Shortcut",disabled:1},
+    {sep:1},
+    {label:"New",sub:[
+      {label:"Folder",action:newFolder},
+      {label:"Text Document",action:newTextDoc},
+      {label:"Cursor (0.1 SOL)",action:()=>{ openWin("win-cursors"); deploy(false); }}]},
+    {sep:1},
+    {label:"Properties",action:()=>openWin("win-dispprops")}
+  ];
+}
+function iconMenu(ic){
+  const items=[{label:"Open",bold:1,action:()=>openIcon(ic)}];
+  if(ic.id==="recycle") items.push({label:"Empty Recycle Bin",action:emptyBin});
+  items.push({sep:1});
+  if(ic.sys){
+    items.push({label:"Delete",action:()=>showError("Cannot Delete "+ic.label,"This is a system file. The desktop needs it more than you do.")});
+    items.push({label:"Rename",action:()=>showError("Cannot Rename "+ic.label,"System files keep their names. It builds character.")});
+  }else{
+    items.push({label:"Delete",action:()=>deleteIcon(ic)});
+    items.push({label:"Rename",action:()=>startRename(ic)});
+  }
+  items.push({sep:1},{label:"Properties",action:()=>showProps(ic)});
+  return items;
+}
+function winMenu(id){
+  const el=document.getElementById(id);
+  const fixed=el.classList.contains("fixed");
+  return [
+    {label:"Restore",disabled:!el.classList.contains("maxed"),action:()=>maxWin(id)},
+    {label:"Move",disabled:1},
+    {label:"Size",disabled:fixed},
+    {label:"Minimize",disabled:NOTAB.has(id),action:()=>minWin(id)},
+    {label:"Maximize",disabled:fixed,action:()=>maxWin(id)},
+    {sep:1},
+    {label:"Close",bold:1,action:()=>closeWin(id)}
+  ];
+}
+function taskbarMenu(){
+  return [
+    {label:"Toolbars",disabled:1},
+    {sep:1},
+    {label:"Cascade Windows",action:cascadeWins},
+    {label:"Show the Desktop",action:showDesktopToggle},
+    {sep:1},
+    {label:"Task Manager",action:()=>openWin("win-taskmgr")},
+    {sep:1},
+    {label:"Lock the Taskbar",disabled:1},
+    {label:"Properties",disabled:1}
+  ];
+}
+function trayMenu(){
+  return [
+    {label:"Adjust Date/Time",action:()=>openWin("win-datetime")},
+    {sep:1},
+    {label:"Customize Notifications",disabled:1}
+  ];
+}
+document.addEventListener("contextmenu",e=>{
+  e.preventDefault();
+  hideMenu();
+  const icon=e.target.closest(".icon");
+  const tb=e.target.closest(".titlebar");
+  const tab=e.target.closest(".task-tab");
+  const tray=e.target.closest("#tray");
+  const bar=e.target.closest("#taskbar");
+  const win=e.target.closest(".window");
+  if(icon){ const ic=iconById(icon.dataset.iid); if(ic){ selectOnly(icon); showMenu(iconMenu(ic),e.clientX,e.clientY); } }
+  else if(tb){ const w=tb.closest(".window"); showMenu(winMenu(w.id),e.clientX,e.clientY); }
+  else if(tab){ showMenu(winMenu(tab.dataset.win),e.clientX,e.clientY); }
+  else if(tray){ showMenu(trayMenu(),e.clientX,e.clientY); }
+  else if(bar){ showMenu(taskbarMenu(),e.clientX,e.clientY); }
+  else if(win){ /* app body: ours, but nothing to offer */ }
+  else if(e.target.closest("#desktop")){ showMenu(desktopMenu(),e.clientX,e.clientY); }
+});
+
+/* ================= quick launch / cascade ================= */
+let deskStash=null;
+$("#ql-desk").addEventListener("click",()=>{
+  sClick();
+  if(deskStash){ const s=deskStash; deskStash=null; s.forEach(id=>{ if(openApps.has(id)) restoreWin(id); }); }
+  else{
+    deskStash=[...openApps.entries()].filter(([id,a])=>!a.min&&!NOTAB.has(id)).map(([id])=>id);
+    if(deskStash.length) deskStash.forEach(minWin); else deskStash=null;
+  }
+});
+$$("#ql .qlb[data-app]").forEach(b=>b.addEventListener("click",()=>{ sClick(); openWin(b.dataset.app); }));
+function showDesktopToggle(){ $("#ql-desk").click(); }
+function cascadeWins(){
+  let i=0;
+  for(const [id,a] of openApps){
+    if(NOTAB.has(id)) continue;
+    if(a.min){ a.min=false; a.el.style.display="flex"; }
+    a.el.classList.remove("maxed");
+    a.el.style.left=(36+i*26)+"px"; a.el.style.top=(24+i*26)+"px";
+    focusWin(id); i++;
+  }
+}
+
+/* ================= tooltips ================= */
+const tip=$("#xptip"); let tipTimer=null;
+addEventListener("pointerover",e=>{
+  const t=e.target.closest("[data-tip]");
+  clearTimeout(tipTimer); tip.style.display="none";
+  if(!t) return;
+  tipTimer=setTimeout(()=>{
+    tip.textContent=t.dataset.tip==="@clock"
+      ? new Date().toLocaleDateString([],{weekday:"long",year:"numeric",month:"long",day:"numeric"})
+      : t.dataset.tip;
+    tip.style.display="block";
+    const r=t.getBoundingClientRect(), tr=tip.getBoundingClientRect();
+    tip.style.left=clamp(r.left,4,innerWidth-tr.width-4)+"px";
+    tip.style.top=(r.top-tr.height-6<4? r.bottom+6 : r.top-tr.height-6)+"px";
+  },500);
+});
+addEventListener("pointerdown",()=>{ clearTimeout(tipTimer); tip.style.display="none"; },true);
 
 /* ================= start menu / tray ================= */
 const startmenu=$("#startmenu");
 function closeStart(){ startmenu.classList.remove("open"); }
 $("#startbtn").addEventListener("click",e=>{ e.stopPropagation(); sClick(); startmenu.classList.toggle("open"); });
 addEventListener("pointerdown",e=>{ if(!e.target.closest("#startmenu,#startbtn")) closeStart(); });
-addEventListener("keydown",e=>{ if(e.key==="Escape") closeStart(); });
+addEventListener("keydown",e=>{ if(e.key==="Escape"){ closeStart(); hideMenu(); } });
 $$(".sm-item").forEach(it=>it.addEventListener("click",()=>{ sClick(); closeStart(); openWin(it.dataset.app); }));
 $("#sm-logoff").addEventListener("click",()=>{ closeStart(); openWin("win-logoff"); });
 $("#sm-off").addEventListener("click",()=>{ closeStart(); $("#shutdown").style.display="grid"; });
-$("#shutdown").addEventListener("click",()=>{ $("#shutdown").style.display="none"; });
+$("#shutdown").addEventListener("click",()=>{ $("#shutdown").style.display="none"; $("#login").style.display="flex"; $("#login").style.opacity=""; });
 $("#btn-logoff-no").addEventListener("click",()=>{ sClick(); closeWin("win-logoff"); });
 function tickClock(){ $("#clock").textContent=new Date().toLocaleTimeString([],{hour:"numeric",minute:"2-digit"}); }
 tickClock(); setInterval(tickClock,10000);
-setTimeout(()=>{ $("#balloon").style.display="block"; },1200);
-setTimeout(()=>{ $("#balloon").style.display="none"; },9500);
+function showBalloon(){
+  $("#balloon").style.display="block"; sBalloon();
+  setTimeout(()=>{ $("#balloon").style.display="none"; },8500);
+}
 $("#balloon").addEventListener("click",()=>$("#balloon").style.display="none");
+
+/* ================= xp tabs ================= */
+$$(".xtabs").forEach(tabs=>{
+  tabs.querySelectorAll(".xtab").forEach(t=>t.addEventListener("click",()=>{
+    sClick();
+    tabs.querySelectorAll(".xtab").forEach(x=>x.classList.toggle("on",x===t));
+    const body=tabs.parentElement;
+    body.querySelectorAll(".xpane").forEach(p=>p.classList.toggle("on",p.id===t.dataset.pane));
+  }));
+});
+
+/* ================= display properties ================= */
+const WALLPAPERS=[["bliss","Bliss"],["autumn","Autumn Vale"],["azure","Azure"],["night","Midnight"],["teal","Classic Teal"]];
+let wpSel=store.data.wallpaper;
+function setWallpaper(id){
+  $$("#bliss .wp").forEach(g=>g.classList.toggle("on",g.id==="wp-"+id));
+  store.data.wallpaper=id; store.save();
+}
+function renderWplist(){
+  const host=$("#wplist"); host.innerHTML="";
+  for(const [id,name] of WALLPAPERS){
+    const d=document.createElement("div"); d.textContent=name;
+    d.classList.toggle("on",id===wpSel);
+    d.addEventListener("click",()=>{ wpSel=id; renderWplist(); $("#dp-prevuse").setAttribute("href","#wp-"+id); sClick(); });
+    host.appendChild(d);
+  }
+}
+function applySaverUI(){
+  store.data.saver.t=$("#sv-sel").value;
+  store.data.saver.wait=clamp(+$("#sv-wait").value||3,1,60);
+  store.save();
+}
+$("#dp-apply").addEventListener("click",()=>{ setWallpaper(wpSel); applySaverUI(); sClick(); });
+$("#dp-ok").addEventListener("click",()=>{ setWallpaper(wpSel); applySaverUI(); closeWin("win-dispprops"); });
+$("#dp-cancel").addEventListener("click",()=>{ wpSel=store.data.wallpaper; renderWplist(); closeWin("win-dispprops"); });
+$("#sv-test").addEventListener("click",()=>{ applySaverUI(); if($("#sv-sel").value!=="none") startSaver($("#sv-sel").value); });
+
+/* ================= screensavers ================= */
+const saverCv=$("#saver");
+let saverOn=false, saverRaf=0, saverState=null, saverStartAt=0, lastAct=performance.now();
+["pointermove","pointerdown","keydown","wheel"].forEach(ev=>addEventListener(ev,()=>{
+  lastAct=performance.now();
+  if(saverOn&&performance.now()-saverStartAt>450) stopSaver();
+},{passive:true}));
+function saverInit(type,w,h){
+  const st={type,w,h};
+  if(type==="stars") st.stars=Array.from({length:160},()=>({x:Math.random()*2-1,y:Math.random()*2-1,z:Math.random()*.9+.1}));
+  if(type==="ribbons") st.rib=Array.from({length:3},(_,i)=>({pts:[],x:Math.random()*w,y:Math.random()*h,a:Math.random()*6.28,hue:i*120}));
+  if(type==="bounce") st.b={x:w/2,y:h/2,dx:2.2,dy:1.7,hue:180};
+  return st;
+}
+function saverFrame(cv,g,st,dt){
+  const w=cv.width,h=cv.height;
+  if(st.type==="stars"){
+    g.fillStyle="rgba(0,0,0,.5)"; g.fillRect(0,0,w,h);
+    g.fillStyle="#fff";
+    for(const s of st.stars){
+      s.z-=dt*.28;
+      if(s.z<=.05){ s.x=Math.random()*2-1; s.y=Math.random()*2-1; s.z=1; }
+      const px=w/2+s.x/s.z*w*.5, py=h/2+s.y/s.z*h*.5;
+      const r=Math.max(.4,(1-s.z)*2.4*(w/800+.4));
+      if(px>=0&&px<w&&py>=0&&py<h){ g.beginPath(); g.arc(px,py,r,0,6.28); g.fill(); }
+    }
+  }else if(st.type==="ribbons"){
+    g.fillStyle="rgba(0,0,0,.06)"; g.fillRect(0,0,w,h);
+    for(const rb of st.rib){
+      rb.a+=(Math.random()-.5)*.55;
+      rb.x+=Math.cos(rb.a)*95*dt*(w/500+.3); rb.y+=Math.sin(rb.a)*95*dt*(w/500+.3);
+      if(rb.x<0||rb.x>w) rb.a=Math.PI-rb.a;
+      if(rb.y<0||rb.y>h) rb.a=-rb.a;
+      rb.x=clamp(rb.x,0,w); rb.y=clamp(rb.y,0,h);
+      rb.hue=(rb.hue+45*dt)%360;
+      rb.pts.push({x:rb.x,y:rb.y}); if(rb.pts.length>26) rb.pts.shift();
+      g.strokeStyle=`hsl(${rb.hue} 90% 60%)`; g.lineWidth=Math.max(1.5,w/320);
+      g.beginPath();
+      rb.pts.forEach((p,i)=>i?g.lineTo(p.x,p.y):g.moveTo(p.x,p.y));
+      g.stroke();
+    }
+  }else if(st.type==="bounce"){
+    g.fillStyle="#000"; g.fillRect(0,0,w,h);
+    const b=st.b, fs=Math.max(11,w/16);
+    g.font=`bold ${fs}px "Lucida Console",Consolas,monospace`;
+    const tw=g.measureText("CURSORS.EXE").width;
+    b.x+=b.dx*(w/600+.4); b.y+=b.dy*(w/600+.4);
+    if(b.x<4||b.x+tw>w-4){ b.dx*=-1; b.hue=(b.hue+67)%360; }
+    if(b.y<fs+4||b.y>h-8){ b.dy*=-1; b.hue=(b.hue+67)%360; }
+    b.x=clamp(b.x,4,Math.max(5,w-4-tw)); b.y=clamp(b.y,fs+4,h-8);
+    g.fillStyle=`hsl(${b.hue} 90% 60%)`;
+    g.fillText("CURSORS.EXE",b.x,b.y);
+  }
+}
+function startSaver(type){
+  if(saverOn) return;
+  saverOn=true; saverStartAt=performance.now();
+  saverCv.width=innerWidth; saverCv.height=innerHeight;
+  saverCv.style.display="block";
+  const g=saverCv.getContext("2d");
+  g.fillStyle="#000"; g.fillRect(0,0,saverCv.width,saverCv.height);
+  saverState=saverInit(type,saverCv.width,saverCv.height);
+  let last=performance.now();
+  const loop=t=>{
+    if(!saverOn) return;
+    const dt=Math.min(.05,(t-last)/1000); last=t;
+    saverFrame(saverCv,g,saverState,dt);
+    saverRaf=requestAnimationFrame(loop);
+  };
+  saverRaf=requestAnimationFrame(loop);
+}
+function stopSaver(){ saverOn=false; cancelAnimationFrame(saverRaf); saverCv.style.display="none"; }
+setInterval(()=>{
+  if(saverOn||!desktopActive()) return;
+  if(store.data.saver.t==="none") return;
+  if((performance.now()-lastAct)/60000>=store.data.saver.wait) startSaver(store.data.saver.t);
+},5000);
+const svPrev=$("#sv-prev");
+let miniState=null, miniType=null, lastMini=0;
+(function miniLoop(t){
+  requestAnimationFrame(miniLoop);
+  if($("#win-dispprops").style.display!=="flex"||!$("#dp-saver").classList.contains("on")){ miniState=null; lastMini=0; return; }
+  const type=$("#sv-sel").value;
+  const g=svPrev.getContext("2d");
+  if(type==="none"){ g.fillStyle="#000"; g.fillRect(0,0,svPrev.width,svPrev.height); miniState=null; return; }
+  if(!miniState||miniType!==type){
+    miniType=type; miniState=saverInit(type,svPrev.width,svPrev.height);
+    g.fillStyle="#000"; g.fillRect(0,0,svPrev.width,svPrev.height);
+  }
+  const now=performance.now();
+  const dt=lastMini?Math.min(.05,(now-lastMini)/1000):.016;
+  lastMini=now;
+  saverFrame(svPrev,g,miniState,dt);
+})();
+
+/* ================= date & time ================= */
+let calM=null, calY=null;
+function renderCal(){
+  const now=new Date();
+  if(calM===null){ calM=now.getMonth(); calY=now.getFullYear(); }
+  $("#cal-title").textContent=new Date(calY,calM,1).toLocaleDateString([],{month:"long",year:"numeric"});
+  const first=new Date(calY,calM,1).getDay();
+  const days=new Date(calY,calM+1,0).getDate();
+  let html="<tr>"+["S","M","T","W","T","F","S"].map(d=>`<th>${d}</th>`).join("")+"</tr><tr>";
+  let cell=0;
+  for(let i=0;i<first;i++){ html+="<td></td>"; cell++; }
+  for(let d=1;d<=days;d++){
+    const today=d===now.getDate()&&calM===now.getMonth()&&calY===now.getFullYear();
+    html+=`<td${today?' class="today"':""}>${d}</td>`;
+    if(++cell%7===0) html+="</tr><tr>";
+  }
+  $("#caltable").innerHTML=html+"</tr>";
+}
+$("#cal-prev").addEventListener("click",()=>{ sClick(); calM--; if(calM<0){calM=11;calY--;} renderCal(); });
+$("#cal-next").addEventListener("click",()=>{ sClick(); calM++; if(calM>11){calM=0;calY++;} renderCal(); });
+function drawClock(){
+  const cv=$("#anaclock"), g=cv.getContext("2d");
+  const r=50, cx=55, cy=55;
+  g.clearRect(0,0,110,110);
+  g.fillStyle="#FCFBF6"; g.strokeStyle="#4A6FA5"; g.lineWidth=2;
+  g.beginPath(); g.arc(cx,cy,r,0,6.283); g.fill(); g.stroke();
+  g.strokeStyle="#8A96A8"; g.lineWidth=1;
+  for(let i=0;i<12;i++){
+    const a=i/12*6.283;
+    g.beginPath();
+    g.moveTo(cx+Math.sin(a)*(r-6),cy-Math.cos(a)*(r-6));
+    g.lineTo(cx+Math.sin(a)*(r-2),cy-Math.cos(a)*(r-2));
+    g.stroke();
+  }
+  const n=new Date();
+  const hr=(n.getHours()%12+n.getMinutes()/60)/12*6.283;
+  const mn=(n.getMinutes()+n.getSeconds()/60)/60*6.283;
+  const sc=n.getSeconds()/60*6.283;
+  g.lineWidth=3.4; g.strokeStyle="#1A3A6E";
+  g.beginPath(); g.moveTo(cx,cy); g.lineTo(cx+Math.sin(hr)*(r-24),cy-Math.cos(hr)*(r-24)); g.stroke();
+  g.lineWidth=2.2;
+  g.beginPath(); g.moveTo(cx,cy); g.lineTo(cx+Math.sin(mn)*(r-13),cy-Math.cos(mn)*(r-13)); g.stroke();
+  g.lineWidth=1; g.strokeStyle="#C33";
+  g.beginPath(); g.moveTo(cx,cy); g.lineTo(cx+Math.sin(sc)*(r-9),cy-Math.cos(sc)*(r-9)); g.stroke();
+  $("#digiclock").textContent=n.toLocaleTimeString([],{hour12:false});
+}
+setInterval(()=>{ if($("#win-datetime").style.display==="flex") drawClock(); },1000);
+$("#clock").addEventListener("dblclick",()=>{ calM=null; renderCal(); drawClock(); openWin("win-datetime"); });
+$("#dt-ok").addEventListener("click",()=>closeWin("win-datetime"));
+$("#dt-cancel").addEventListener("click",()=>closeWin("win-datetime"));
+$("#dt-apply").addEventListener("click",()=>showError("Date and Time","You do not have permission to change the time. The house controls the clock."));
+
+/* ================= task manager ================= */
+let duelPulse=0, tmSel=null, tmHist=[];
+const TMPROCS=["cursors.exe","explorer.exe","msnmsgr.exe","cursamp.exe","wallet.dll","hopium.sys","rundll32.exe","svchost.exe","svchost.exe","mumu.exe","copium.drv","System Idle Process"];
+function tmCpu(){ return Math.min(99,Math.round(3+duelPulse*24+curs.length*.6+Math.random()*4)); }
+setInterval(()=>{
+  duelPulse=Math.max(0,duelPulse-.34);
+  if($("#win-taskmgr").style.display!=="flex") return;
+  const cpu=tmCpu();
+  if($("#tm-apps").classList.contains("on")){
+    const host=$("#tmapps"); host.innerHTML="";
+    for(const [id] of openApps){
+      if(NOTAB.has(id)||id==="win-taskmgr") continue;
+      const row=document.createElement("div");
+      row.className="row"+(tmSel===id?" on":"");
+      row.innerHTML=`<span>${tabTitle(id)}</span><span>Running</span>`;
+      row.addEventListener("click",()=>{
+        tmSel=id;
+        [...host.children].forEach(r=>r.classList.remove("on"));
+        row.classList.add("on");
+      });
+      host.appendChild(row);
+    }
+  }
+  if($("#tm-procs").classList.contains("on")){
+    const host=$("#tmprocs"); host.innerHTML="";
+    for(const name of TMPROCS){
+      const c=name==="System Idle Process"?100-cpu
+        :name==="cursors.exe"?Math.max(1,cpu-6)
+        :Math.round(Math.random()*2);
+      const row=document.createElement("div"); row.className="row";
+      row.innerHTML=`<span>${name}</span><span>${String(c).padStart(2,"0")}</span>`;
+      host.appendChild(row);
+    }
+  }
+  if($("#tm-perf").classList.contains("on")){
+    tmHist.push(cpu); if(tmHist.length>60) tmHist.shift();
+    const cv=$("#tmgraph"), g=cv.getContext("2d");
+    g.fillStyle="#000"; g.fillRect(0,0,cv.width,cv.height);
+    g.strokeStyle="#123A12"; g.lineWidth=1;
+    for(let x=0;x<cv.width;x+=15){ g.beginPath(); g.moveTo(x+.5,0); g.lineTo(x+.5,cv.height); g.stroke(); }
+    for(let y=0;y<cv.height;y+=15){ g.beginPath(); g.moveTo(0,y+.5); g.lineTo(cv.width,y+.5); g.stroke(); }
+    g.strokeStyle="#2FD858"; g.lineWidth=1.5; g.beginPath();
+    tmHist.forEach((v,i)=>{
+      const x=cv.width-(tmHist.length-i)*5, y=cv.height-v/100*cv.height;
+      i?g.lineTo(x,y):g.moveTo(x,y);
+    });
+    g.stroke();
+    $("#tmstats").innerHTML=`CPU Usage: <b>${cpu}%</b> · Commit Charge: <b>${fmtS(wallet)} SOL</b><br>Cursors on field: <b>${curs.length}</b> · Uptime: it's 2003, nobody reboots`;
+  }
+  $("#tmfoot").textContent=`Processes: ${TMPROCS.length} · CPU Usage: ${cpu}%`;
+},700);
+$("#tm-end").addEventListener("click",()=>{ if(tmSel&&openApps.has(tmSel)){ closeWin(tmSel); tmSel=null; } });
+$("#tm-switch").addEventListener("click",()=>{ if(tmSel&&openApps.has(tmSel)) focusWin(tmSel); });
 
 /* ================= chat (messenger) ================= */
 const chatmsgs=$("#chatmsgs");
@@ -821,28 +1854,9 @@ let myTickets=0, globalTickets=1437200, rakeAccrued=0;
 let stance="attack";
 const auto={on:false,count:3,bankAt:2};
 
-/* arena (resolution shrink) */
-let arena={x0:0,y0:0,x1:0,y1:0}, arenaStage=0;
-const STAGES=[1,.78,.58], RESNAMES=["1024×768","800×600","640×480"];
-function setArenaStage(st,silent){
-  arenaStage=st;
-  const f=STAGES[st], aw=W*f, ah=H*f;
-  arena={x0:(W-aw)/2, y0:Math.max(0,(H-ah)/2), x1:(W+aw)/2, y1:Math.min(H,(H+ah)/2)};
-  const e=$("#arenaedge");
-  if(st===0){ e.style.display="none"; }
-  else{
-    e.style.display="block";
-    e.style.left=arena.x0+"px"; e.style.top=arena.y0+"px";
-    e.style.width=(arena.x1-arena.x0)+"px"; e.style.height=(arena.y1-arena.y0)+"px";
-  }
-  if(!silent&&st>0){
-    $("#restext").textContent=RESNAMES[st];
-    openWin("win-display"); sRes();
-    log(`resolution: ${RESNAMES[st]}`);
-    botChat("shrink");
-    setTimeout(()=>closeWin("win-display"),2600);
-  }
-}
+/* arena = the whole desktop */
+let arena={x0:0,y0:0,x1:W,y1:H};
+function syncArena(){ arena={x0:0,y0:0,x1:W,y1:H}; }
 
 let phase="boot", phaseT=0, roundNo=0, roundId=0;
 let R=null;
@@ -891,8 +1905,7 @@ function setPhase(p,t){ phase=p; phaseT=t; renderPhase(); }
 function startJoin(){
   roundNo++; roundId++;
   R=newRoundRecord();
-  closeWin("win-results");
-  setArenaStage(0,true);
+  closeWin("win-results",{silent:true});
   setPhase("join",T_JOIN);
   sRound();
   log(`— round ${roundNo}: deploys open —`);
@@ -919,7 +1932,7 @@ function startBattle(){
 let shutFired=false;
 function startShutdownRush(){
   shutFired=true;
-  openWin("win-shutdown");
+  openWin("win-shutdown",{silent:true});
   sShut();
   chatSys("system is shutting down — all cursors recalling");
   botChat("shutdown");
@@ -931,7 +1944,7 @@ function forceRecall(c){
 }
 function endBattle(){
   for(const c of [...curs]) if(!c.dead) bank(c,true);
-  closeWin("win-shutdown");
+  closeWin("win-shutdown",{silent:true});
   startResults();
 }
 function cancelRound(){
@@ -945,7 +1958,6 @@ function cancelRound(){
 }
 function startResults(){
   setPhase("results",T_RESULTS);
-  setArenaStage(0,true);
   const net=R.myOut-R.myIn;
   const lines=[
     `round ${roundNo}`,
@@ -1127,6 +2139,7 @@ function move(c,dt){
   c.el.style.transform=`translate(${c.x-8}px,${c.y-4}px)`;
 }
 function startDuel(a,b){
+  duelPulse=Math.min(4,duelPulse+1);
   a.prevMode=a.mode; b.prevMode=b.mode;
   a.mode=b.mode="duel";
   a.el.classList.add("dueling"); b.el.classList.add("dueling");
@@ -1239,9 +2252,10 @@ function log(line){
 }
 function renderBin(){
   binDead=binDead.slice(0,30);
-  $("#binpaper").textContent=binDead.length
-    ? binDead.map(d=>`${d.name.padEnd(10)} lost ${fmtS(d.bounty)}`).join("\n")
-    : "(empty)";
+  binFiles=binFiles.slice(0,15);
+  const lines=binFiles.map(f=>`${f.slice(0,22).padEnd(24)}(file)`)
+    .concat(binDead.map(d=>`${d.name.padEnd(10)} lost ${fmtS(d.bounty)}`));
+  $("#binpaper").textContent=lines.length?lines.join("\n"):"(empty)";
 }
 function updatePanel(){
   const mine=myCurs();
@@ -1271,7 +2285,6 @@ function updateSys(){
     `round pot&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: <b>${fmtS(R?R.pot:0)} SOL</b><br>`+
     `on the field&nbsp;&nbsp;&nbsp;: <b>${fmtS(total)} SOL</b><br>`+
     `biggest bounty&nbsp;: <b>${top?top.owner+" "+fmtS(top.bounty):"—"}</b><br>`+
-    `resolution&nbsp;&nbsp;&nbsp;&nbsp;: <b>${RESNAMES[arenaStage]}</b><br>`+
     `dead this boot&nbsp;: <b>${binDead.length}</b><br>`+
     `global tickets&nbsp;: <b>${(globalTickets+myTickets).toLocaleString()}</b>`;
 }
@@ -1285,10 +2298,11 @@ $("#btn-logoff-yes").addEventListener("click",()=>{
   wallet=5000; walletShown=5000;
   stats={kills:0,deaths:0,best:0};
   myTickets=0; rakeAccrued=0;
-  binDead=[]; renderBin();
+  binDead=[]; binFiles=[]; renderBin();
   logpaper.textContent="";
   log("session reset. welcome back.");
-  closeWin("win-logoff");
+  closeWin("win-logoff",{silent:true});
+  $("#login").style.display="flex"; $("#login").style.opacity="";
   updatePanel();
 });
 
@@ -1329,16 +2343,60 @@ if(SMALL){
   $("#win-chat").style.left="4px"; $("#win-chat").style.top="calc(100% - 296px)";
   $("#win-log").style.left="unset";
 }
-setArenaStage(0,true);
+syncArena();
+renderIcons();
+setWallpaper(store.data.wallpaper);
+wpSel=store.data.wallpaper; renderWplist();
+$("#dp-prevuse").setAttribute("href","#wp-"+wpSel);
+$("#sv-sel").value=store.data.saver.t;
+$("#sv-wait").value=store.data.saver.wait;
 R=newRoundRecord();
 log("CURSORS.EXE started");
-openWin("win-cursors");
-if(!SMALL) openWin("win-chat");
-openWin("win-log");
+openWin("win-cursors",{silent:true});
+if(!SMALL) openWin("win-chat",{silent:true});
+openWin("win-log",{silent:true});
 if(SMALL) minWin("win-log");
 focusWin("win-cursors");
 chatSys("welcome to the desktop. say gm.");
 renderBin(); updatePanel(); updateSys();
 startJoin();
 requestAnimationFrame(frame);
+
+/* ================= login / power flow ================= */
+let desktopEntered=false;
+function desktopActive(){
+  return desktopEntered
+    &&$("#login").style.display!=="flex"
+    &&$("#boot").style.display!=="grid"
+    &&$("#shutdown").style.display!=="grid";
+}
+function enterDesktop(){
+  desktopEntered=true;
+  $("#login").style.opacity="0";
+  setTimeout(()=>{
+    $("#login").style.display="none"; $("#login").style.opacity="";
+    showBalloon();
+  },520);
+}
+$("#tile-admin").addEventListener("click",()=>{
+  sessionStorage.setItem("cxp.booted","1");
+  chime();
+  enterDesktop();
+});
+$("#tile-guest").addEventListener("click",()=>{
+  const t=$("#tile-guest");
+  t.classList.remove("shake"); void t.offsetWidth; t.classList.add("shake");
+  $("#guest-sub").textContent="gambling requires conviction";
+  sError();
+});
+$("#lg-off").addEventListener("click",()=>{ $("#shutdown").style.display="grid"; });
+if(sessionStorage.getItem("cxp.booted")){
+  desktopEntered=true;
+  setTimeout(showBalloon,900);
+}else{
+  $("#boot").style.display="grid";
+  const toLogin=()=>{ $("#boot").style.display="none"; $("#login").style.display="flex"; };
+  const bt=setTimeout(toLogin,2500);
+  $("#boot").addEventListener("pointerdown",()=>{ clearTimeout(bt); toLogin(); },{once:true});
+}
 </script>
