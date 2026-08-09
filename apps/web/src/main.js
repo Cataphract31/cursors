@@ -147,7 +147,7 @@ function hideWamp(){ const w=wampWrap(); if(w) w.style.display="none"; }
 function wampHidden(){ const w=wampWrap(); return !w||w.style.display==="none"; }
 let zTop=100, focusedId=null;
 const openApps=new Map();
-const NOTAB=new Set(["win-logoff","win-shutdown","win-results","win-error","win-confirm","win-props","win-run"]);
+const NOTAB=new Set(["win-logoff","win-shutdown","win-results","win-error","win-confirm","win-props","win-run","win-cert"]);
 function tabTitle(id){ const a=openApps.get(id); if(a&&a.title) return a.title; const t=$("#"+id+" .title-bar-text"); return t?t.textContent:id; }
 function tabIconHTML(id){
   const el=$("#"+id+" .title-bar .tb-ico");
@@ -393,7 +393,7 @@ $$(".window").forEach(wireWindow);
 /* ================= desktop icons ================= */
 const SYSICONS=[
   {id:"computer",label:"My Computer",ico:"computer32",app:"win-explorer",sys:1},
-  {id:"recycle",label:"Recycle Bin",ico:"bin32",app:"win-recycle",sys:1},
+  {id:"recycle",label:"Recycle Bin",ico:"bin32",app:"bin",sys:1},
   {id:"cursors",label:"CURSORS.EXE",ico:"@ic-app",app:"win-cursors",sys:1},
   {id:"mine",label:"Minesweeper",ico:"mine32",app:"win-mine",sys:1},
   {id:"paint",label:"Paint",ico:"paint32",app:"win-paint",sys:1},
@@ -482,7 +482,9 @@ function openFolderWin(name){
 }
 function openIcon(ic){
   sysSnd("nav",.5);
-  if(ic.app==="folder"){
+  if(ic.app==="bin"){
+    openWin("win-explorer"); explorer.go("Recycle Bin");
+  }else if(ic.app==="folder"){
     openFolderWin(ic.label);
   }else if(ic.app==="usertxt"){
     curTxtIcon=ic;
@@ -525,9 +527,11 @@ function startRename(ic){
   inp.addEventListener("pointerdown",e=>e.stopPropagation());
 }
 function deleteIcon(ic){
-  binFiles.unshift(ic.label);
+  /* the whole icon goes in the bin, not just its name — otherwise Restore
+     has nothing to put back, and a Recycle Bin that cannot restore is a joke */
+  binFiles.unshift(Object.assign({},ic));
   store.data.userIcons=store.data.userIcons.filter(u=>u.id!==ic.id);
-  delete store.data.icons[ic.id]; delete store.data.texts[ic.id];
+  delete store.data.icons[ic.id];
   store.save(); renderBin(); renderIcons(); sCrunch();
 }
 function arrangeIcons(shuffle){
@@ -594,9 +598,13 @@ $("#prop-ok").addEventListener("click",()=>closeWin("win-props"));
 $("#conf-yes").addEventListener("click",()=>{ const cb=confirmCb; confirmCb=null; closeWin("win-confirm"); if(cb) cb(); });
 $("#conf-no").addEventListener("click",()=>{ confirmCb=null; closeWin("win-confirm"); });
 function emptyBin(){
-  showConfirm("Empty Recycle Bin","Permanently delete all dead cursors and files? They are already dead.",()=>{
-    binDead=[]; binFiles=[]; renderBin(); sCrunch();
-  });
+  if(binEmpty()){ showError("Recycle Bin","The Recycle Bin is already empty."); return; }
+  const n=binDead.length+binFiles.length;
+  const worth=binDead.reduce((s,d)=>s+d.lost,0);
+  showConfirm("Confirm Multiple File Delete",
+    `Are you sure you want to delete these ${n} items?`+
+    (binDead.length?`\n\n${binDead.length} of them are cursors worth ${fmtS(worth)} SOL when they died. Deleting the file does not give it back.`:""),
+    ()=>{ binDead=[]; binFiles=[]; renderBin(); sCrunch(); });
 }
 
 /* ================= context menus ================= */
@@ -653,7 +661,10 @@ function desktopMenu(){
 }
 function iconMenu(ic){
   const items=[{label:"Open",bold:1,action:()=>openIcon(ic)}];
-  if(ic.id==="recycle") items.push({label:"Empty Recycle Bin",action:emptyBin});
+  if(ic.id==="recycle"){
+    items.push({label:"Empty Recycle Bin",action:emptyBin});
+    items.push({label:"Hall of Pain",action:()=>hallOfPain()});
+  }
   if(ic.id==="computer") items.push({label:"Explore",action:()=>{ openWin("win-explorer"); explorer.go("C:\\"); }});
   items.push({sep:1});
   if(ic.sys){
@@ -827,6 +838,14 @@ const explorer=initExplorer({
     openIcon:ic=>openIcon(ic),
     desktopFiles:()=>allIcons(),
     deadCount:()=>binDead.length,
+    binContents:()=>({
+      files:binFiles,
+      deaths:binDead.map(d=>Object.assign({lostStr:fmtS(d.lost)},d)),
+    }),
+    emptyBin:()=>emptyBin(),
+    restore:one=>one?restoreOne(one):restoreAll(),
+    deathCert:d=>deathCert(d),
+    hallOfPain:()=>hallOfPain(),
     logSize:()=>logpaper.textContent.length||1024,
     tracks:()=>TRACKS,
     openText:openTextWindow,
@@ -845,6 +864,8 @@ const explorer=initExplorer({
     },
   },
 });
+$("#cert-ok").addEventListener("click",()=>closeWin("win-cert"));
+$("#cert-hall").addEventListener("click",()=>{ closeWin("win-cert",{silent:true}); hallOfPain(); });
 $("#dv-ok").addEventListener("click",()=>closeWin("win-driveprops"));
 $("#sp-ok").addEventListener("click",()=>closeWin("win-sysprops"));
 $("#dv-clean").addEventListener("click",()=>showConfirm("Disk Cleanup",
@@ -1495,12 +1516,15 @@ function makeCur(owner,isMine){
   }
   const c={owner,isMine,el,x,y,ax,ay,bounty:ENTRY,
     h:rand(0,Math.PI*2),spd:rand(78,124),mode:"hold",prevMode:"roam",recallT:0,
-    grace:1.4,riskAt:1.5+Math.random()*5,dead:false,s:1,r:10};
+    grace:1.4,riskAt:1.5+Math.random()*5,dead:false,s:1,r:10,
+    /* the death certificate is written from these — a cursor carries its own obituary */
+    kills:0,peak:ENTRY,born:performance.now(),round:roundNo};
   updateTag(c);
   return c;
 }
 function updateTag(c){
   const m=c.bounty/ENTRY;
+  if(c.bounty>(c.peak||0)) c.peak=c.bounty;
   c.el.querySelector(".bt").textContent=fmtS(c.bounty);
   c.el.querySelector(".mx").textContent=m>=1.05?"×"+(m>=10?m.toFixed(0):m.toFixed(1)):"";
   c.s=Math.min(2.6,1+.35*Math.log2(Math.max(1,m)));
@@ -1789,12 +1813,12 @@ function resolveDuel(a,b){
   const pA=a.bounty/(a.bounty+b.bounty);
   const w=Math.random()<pA?a:b, l=w===a?b:a;
   const pot=l.bounty;
-  w.bounty+=pot; w.mode=w.prevMode;
+  w.bounty+=pot; w.kills++; w.mode=w.prevMode;
   if(w.mode==="recall"&&w.recallT<=0) w.recallT=.3;
   updateTag(w);
   explode(l);
   R.deaths++;
-  binDead.unshift({name:l.owner,bounty:pot}); renderBin();
+  binDead.unshift(certify(l,w,w===a?1-pA:pA)); renderBin();
   removeCur(l);
   log(`${w.owner} > ${l.owner}  +${fmtS(pot)}`);
   if(pot>=ENTRY*2) chatSys(`${w.owner} killed ${l.owner} for ${fmtS(pot)}`);
@@ -1878,12 +1902,108 @@ function log(line){
     logpaper.textContent=logpaper.textContent.slice(logpaper.textContent.indexOf("\n")+1);
   logpaper.scrollTop=logpaper.scrollHeight;
 }
+/* Every death writes a certificate. The interesting number is `odds`: the
+   chance the loser had of winning that exact collision. A cursor that dies at
+   8% was robbed by nothing — it was a fair draw and it came up the other way,
+   and this is the piece of paper that says so. */
+const esc=s=>String(s).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+let deathN=0;
+function certify(l,w,pLose){
+  return {
+    id:++deathN,
+    name:l.owner, mine:!!l.isMine,
+    killer:w.owner, killerMine:!!w.isMine,
+    lost:l.bounty,                       /* what it was carrying when it popped */
+    mult:l.bounty/ENTRY,
+    peak:l.peak||l.bounty,
+    odds:Math.round(100*pLose),          /* its own win chance, in percent */
+    kills:l.kills,
+    lived:Math.max(1,Math.round((performance.now()-l.born)/1000)),
+    round:l.round||roundNo,
+    at:new Date().toLocaleTimeString([],{hour12:false}),
+  };
+}
+const binEmpty=()=>!binDead.length&&!binFiles.length;
 function renderBin(){
-  binDead=binDead.slice(0,30);
-  binFiles=binFiles.slice(0,15);
-  const lines=binFiles.map(f=>`${f.slice(0,22).padEnd(24)}(file)`)
-    .concat(binDead.map(d=>`${d.name.padEnd(10)} lost ${fmtS(d.bounty)}`));
-  $("#binpaper").textContent=lines.length?lines.join("\n"):"(empty)";
+  binDead=binDead.slice(0,150);
+  binFiles=binFiles.slice(0,40);
+  /* the bin is a folder now, so "rendering" it means telling Explorer if it is looking */
+  if(explorer.path()==="Recycle Bin") explorer.render();
+}
+function restoreOne(ic){
+  binFiles=binFiles.filter(f=>f.id!==ic.id);
+  store.data.userIcons.push(ic);
+  store.data.icons[ic.id]=firstFreeCell();
+  store.save(); renderIcons(); renderBin(); sysSnd("hwin",.5);
+}
+function restoreAll(){
+  if(!binFiles.length){
+    showError("Restore Items",binDead.length
+      ? "Cursors cannot be restored.\n\nEach one was resolved by a fair draw and the draw is final. That is the same rule that pays you when it goes the other way."
+      : "The Recycle Bin is empty.");
+    return;
+  }
+  const n=binFiles.length;
+  for(const ic of binFiles.splice(0)){
+    store.data.userIcons.push(ic);
+    store.data.icons[ic.id]=firstFreeCell();
+  }
+  store.save(); renderIcons(); renderBin(); sysSnd("hwin",.5);
+  showError("Restore Items",`${n} item${n===1?"":"s"} put back on the Desktop.`+
+    (binDead.length?"\n\nThe cursors stay. They are not files, they are outcomes.":""),true);
+}
+/* the Hall of Pain is the bin sorted by how much it hurt */
+function hallOfPain(){
+  const rows=binDead.slice().sort((a,b)=>b.lost-a.lost);
+  const total=binDead.reduce((s,d)=>s+d.lost,0);
+  const mine=binDead.filter(d=>d.mine);
+  const myTotal=mine.reduce((s,d)=>s+d.lost,0);
+  const tally={};
+  for(const d of binDead) tally[d.killer]=(tally[d.killer]||0)+d.lost;
+  const top=Object.entries(tally).sort((a,b)=>b[1]-a[1])[0];
+  const worstOdds=binDead.filter(d=>d.odds>=50).sort((a,b)=>b.odds-a.odds)[0];
+  $("#hall-sum").innerHTML=binDead.length
+    ? `<div><b>${binDead.length}</b> cursors terminated · <b>${fmtS(total)} SOL</b> stopped existing</div>`+
+      `<div>yours: <b>${mine.length}</b> · <b>${fmtS(myTotal)} SOL</b></div>`+
+      (top?`<div>biggest earner: <b>${esc(top[0])}</b> (${fmtS(top[1])} SOL taken)</div>`:"")+
+      (worstOdds?`<div class="hall-bad">worst beat: <b>${esc(worstOdds.name)}</b> was ${worstOdds.odds}% to win and lost anyway</div>`:"")
+    : "<div>Nothing has died yet. Give it a round.</div>";
+  const body=$("#hall-rows");
+  body.innerHTML="";
+  rows.slice(0,40).forEach((d,i)=>{
+    const tr=document.createElement("tr");
+    if(d.mine) tr.className="me";
+    tr.innerHTML=`<td>${i+1}</td><td>${esc(d.name)}_${String(d.id).padStart(4,"0")}.cur</td>`+
+      `<td class="n">${fmtS(d.lost)}</td><td class="n">×${d.mult.toFixed(1)}</td>`+
+      /* red is not decoration here: these are the ones that were favourite and lost */
+      `<td class="n${d.odds>=50?" bad":""}">${d.odds}%</td><td>${esc(d.killer)}</td><td class="n">${d.round}</td>`;
+    tr.addEventListener("click",()=>deathCert(d));
+    body.appendChild(tr);
+  });
+  if(!rows.length) body.innerHTML=`<tr><td colspan="7" class="dim">(empty)</td></tr>`;
+  openWin("win-hall");
+}
+/* the certificate itself: the receipt for one collision */
+function deathCert(d){
+  $("#win-cert .title-bar-text").textContent=`${d.name}_${String(d.id).padStart(4,"0")}.cur Properties`;
+  $("#cert-file").textContent=`${d.name}_${String(d.id).padStart(4,"0")}.cur`;
+  $("#cert-sub").textContent=`Cursor Termination Certificate · issued by arena.dll · round ${d.round}`;
+  const row=(k,v,cls)=>`<div class="cert-r${cls?" "+cls:""}"><span>${k}</span><b>${v}</b></div>`;
+  $("#cert-rows").innerHTML=
+    row("owner",esc(d.name)+(d.mine?" (you)":""))+
+    row("terminated by",esc(d.killer)+(d.killerMine?" (you)":""))+
+    row("carrying",`${fmtS(d.lost)} SOL &nbsp;<span class="dim">×${d.mult.toFixed(1)}</span>`,"big")+
+    row("peak value",`${fmtS(d.peak)} SOL`)+
+    row("its odds",`${d.odds} : ${100-d.odds}`,d.odds>=50?"bad":"")+
+    row("kills made",String(d.kills))+
+    row("survived",`${d.lived} second${d.lived===1?"":"s"}`)+
+    row("time of death",`${d.at} · round ${d.round}`);
+  $("#cert-note").textContent=d.odds>=50
+    ? `It was favourite at ${d.odds}% and lost anyway. Nothing went wrong. ${d.odds}% is not a promise, it is a rate, and this is the ${100-d.odds}% you were told about.`
+    : d.odds<=15
+      ? `It was ${d.odds}% to win, so it was ${100-d.odds}% to end exactly like this. The draw was fair and it went the likely way.`
+      : `Odds ${d.odds}:${100-d.odds}, drawn once, weighted by bounty. No fee was taken from this collision — the house edge is the 1% entry fee and nothing else.`;
+  openWin("win-cert");
 }
 function updatePanel(){
   const mine=myCurs();
@@ -2107,6 +2227,31 @@ if(location.hash.indexOf("#desktop-exp")===0) setTimeout(()=>{ /* dev: capture E
   if(p==="-game") explorer.go("C:\\Program Files\\CURSORS.EXE");
   if(p==="-props"){ explorer.go("C:\\"); setTimeout(()=>explorer.driveProperties(),400); }
   if(p==="-sysprops") setTimeout(()=>{ $("#sp-user").textContent=playerNameFull(); openWin("win-sysprops"); },300);
+},600);
+if(location.hash==="#desktop-binlive") setTimeout(()=>{ /* dev: does the open folder fill up as cursors actually die? */
+  openWin("win-explorer"); explorer.go("Recycle Bin"); explorer.setView("details");
+},600);
+if(location.hash.indexOf("#desktop-bin")===0&&location.hash!=="#desktop-binlive") setTimeout(()=>{ /* dev: capture the Recycle Bin with a body count */
+  const names=["mumu","bobo","clippy","bonk","solja","xp_chad","deg404",playerName()];
+  for(let i=0;i<9;i++){
+    const mult=[1,1,1.9,2.4,3.7,1,6.2,2.1,11.4][i];
+    const mine=i===2||i===6;
+    binDead.push({id:++deathN,name:mine?playerName():names[i%names.length],mine,
+      killer:names[(i+3)%7],killerMine:i===4,lost:Math.round(ENTRY*mult),mult,
+      peak:Math.round(ENTRY*mult*1.1),odds:[8,34,71,45,12,58,92,27,19][i],
+      kills:[0,1,2,0,3,1,5,0,7][i],lived:[6,19,44,11,71,23,108,15,133][i],
+      round:9+i,at:"09:4"+i+":1"+i});
+  }
+  binFiles.push({id:"user_dev1",label:"screenshot.png",ico:"pics32",app:"usertxt",kind:"txt"});
+  openWin("win-explorer"); explorer.go("Recycle Bin");
+  const p=location.hash.replace("#desktop-bin","");
+  if(p==="-cert") setTimeout(()=>deathCert(binDead[6]),400);
+  if(p==="-hall") setTimeout(()=>hallOfPain(),400);
+  if(p==="-det") explorer.setView("details");
+  /* dev: the two verbs, driven through the task pane exactly as a finger would */
+  const task=t=>[...$$("#ex-tasks .ex-task")].find(a=>a.textContent.indexOf(t)>=0);
+  if(p==="-empty") setTimeout(()=>task("Empty").click(),400);
+  if(p==="-restore") setTimeout(()=>task("Restore").click(),400);
 },600);
 if(location.hash.indexOf("#desktop-paint")===0) setTimeout(()=>{ /* dev: capture Paint with art on the canvas */
   openWin("win-paint");

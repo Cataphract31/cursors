@@ -156,15 +156,50 @@ icons/sounds: winXP (MIT)</div>
     </div>
   </div>
 
-  <!-- Recycle Bin -->
-  <div class="window" id="win-recycle" style="left:390px;top:150px;width:290px">
+  <!-- Death certificate: the receipt for one collision -->
+  <div class="window fixed" id="win-cert" style="left:calc(50% - 176px);top:56px;width:352px">
     <div class="title-bar">
-      <div class="tb-l"><i class="xico tb-ico" data-ico="bin32"></i><div class="title-bar-text">Recycle Bin</div></div>
+      <div class="tb-l"><i class="xico tb-ico" data-ico="@ic-cursor"></i><div class="title-bar-text">Properties</div></div>
+      <div class="title-bar-controls"><button aria-label="Close"></button></div>
+    </div>
+    <div class="win-body pad" style="background:#ECE9D8">
+      <div class="cert-head">
+        <i class="xico cert-ico" data-ico="@ic-cursor"></i>
+        <div style="min-width:0">
+          <div class="cert-file" id="cert-file"></div>
+          <div class="small dim" id="cert-sub"></div>
+        </div>
+      </div>
+      <div class="hr"></div>
+      <div id="cert-rows"></div>
+      <div class="hr"></div>
+      <div class="cert-note" id="cert-note"></div>
+      <div class="dlg-foot">
+        <button class="xbtn" id="cert-hall" style="min-width:92px">Hall of Pain</button>
+        <button class="xbtn" id="cert-ok" style="min-width:74px">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Hall of Pain -->
+  <div class="window" id="win-hall" data-minw="420" data-minh="240" style="left:230px;top:80px;width:494px;height:344px">
+    <div class="title-bar">
+      <div class="tb-l"><i class="xico tb-ico" data-ico="err32"></i><div class="title-bar-text">Hall of Pain</div></div>
       <div class="title-bar-controls"><button aria-label="Minimize"></button><button aria-label="Close"></button></div>
     </div>
-    <div class="win-body pad">
-      <div class="menubar"><span>File</span><span>Edit</span><span>View</span><span>Help</span></div>
-      <div class="paper" id="binpaper">(empty)</div>
+    <div class="win-body pad hall-body">
+      <div class="menubar"><span>File</span><span>View</span><span>Help</span></div>
+      <div class="hall-sum" id="hall-sum"></div>
+      <div class="hall-wrap">
+        <table class="hall">
+          <thead><tr>
+            <th style="width:22px">#</th><th>file</th><th class="n">lost</th>
+            <th class="n">mult</th><th class="n">its odds</th><th>killed by</th><th class="n">rd</th>
+          </tr></thead>
+          <tbody id="hall-rows"></tbody>
+        </table>
+      </div>
+      <div class="hall-foot small dim">click a row for the certificate · every one of these was a fair draw</div>
     </div>
   </div>
 

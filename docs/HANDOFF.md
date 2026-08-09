@@ -111,7 +111,8 @@ the **real 80-emoticon MSN retro set** with ~110 text shortcuts and a picker. Bo
 per-contact reply pools and answer you; presence drifts; sign-ins raise stacking toasts.
 
 **The game** — deploy/recall/stances, duels with odds display, gold bursts, kill streaks,
-BSOD on losing your last cursor, shutdown rush, results, rakeback tracking, autoplay.
+BSOD on losing your last cursor, shutdown rush, results, rakeback tracking, autoplay. Every
+death writes a certificate (`certify()` in main.js) that the Recycle Bin renders.
 
 ---
 
@@ -130,7 +131,10 @@ BSOD on losing your last cursor, shutdown rush, results, rakeback tracking, auto
   `#desktop-mine-play`, `#desktop-msn`, `#desktop-msn-emo`, `#desktop-msn-toast`,
   `#desktop-amptest`, `#desktop-logfill`, `#desktop-paint` (draws with 6 tools),
   `#desktop-paint-wall` (paints, then sets it as tiled wallpaper), `#desktop-paint-props`,
-  `#desktop-exp` + `-c` / `-sys` / `-game` / `-det` / `-props` / `-sysprops`.
+  `#desktop-exp` + `-c` / `-sys` / `-game` / `-det` / `-props` / `-sysprops`,
+  `#desktop-bin` (bin with 9 fixture deaths) + `-cert` / `-hall` / `-det` / `-empty` /
+  `-restore`, and `#desktop-binlive` (no fixture — opens the bin and watches it fill from
+  real kills; use a 36000ms settle, shot.mjs gives up at 40s).
 - **Smoke test** runs before every build: executes `main.js` in node under a stub DOM,
   catching strict-mode and load-time crashes. Sibling modules run for real, so keep them
   import-free.
@@ -175,10 +179,24 @@ explicitly **parked** ("stuff only 2% of users would search for"). Run… jokes 
    cursors** (12 MB each) — Disk Cleanup empties the Recycle Bin and gives the space back.
    Right-click My Computer → the System Properties joke box. Folders are functions, so the
    disk answers with live state.
-4. **Recycle Bin with a purpose** (NEXT) — dead cursors as `.cur` files with death
-   certificates (killer, bounty lost, the 92:8 that did it), Hall of Pain leaderboard.
-   Explorer already treats dead cursors as disk usage, so this is the other half of that.
-5. **CURSORS.EXE production pass** — the game window is still the most-used and least-polished
+4. ~~Recycle Bin with a purpose~~ **SHIPPED 2026-08-09.** The Bin is not a window any more,
+   it is a **path inside Explorer** (`"Recycle Bin"`, parent = the Desktop) — which is what
+   XP does, and it meant reusing all the listing/menu/task-pane machinery instead of writing
+   a second file browser. Its task pane swaps to **Recycle Bin Tasks** (Empty / Restore /
+   **Hall of Pain**), and those three verbs are also in the File menu because the phone hides
+   the task pane. Dead cursors are `name_0007.cur` at 12 MB each; deleted desktop files sit
+   alongside them and **really do restore** (`deleteIcon` now bins the whole icon object, not
+   just its label, so Restore has something to put back). Details view earns bin-specific
+   columns: size / killed by / its odds.
+   **The certificate is the point.** Every death is recorded by `certify()` at the moment of
+   the kill — killer, bounty carried, peak value, kills made, seconds survived, round, and
+   `odds` = *the loser's own win chance in that exact collision*. So a cursor that dies at
+   92% gets a piece of paper saying it was 92% and lost anyway, and that nothing went wrong.
+   That is the honest-casino thesis rendered as a Properties dialog. Hall of Pain sorts the
+   whole bin by damage, reds the bad beats (odds ≥ 50), and each row opens its certificate.
+   Not done: no full-bin desktop icon (the winXP icon set has only the empty one, and no
+   MIT source for the full variant turned up — the desktop icon never changes).
+5. **CURSORS.EXE production pass** (NEXT) — the game window is still the most-used and least-polished
    surface: menu bar, Play/Stats/Rakeback/History/Verify panes, canvas render upgrade
    (trails, chunkier explosions, duel lock-on), ×10 celebration, first-run wizard.
 6. **IE + handmade web** — cursor$land at unicorn.meme density, webring, dial-up sequence.

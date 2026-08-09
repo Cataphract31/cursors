@@ -218,6 +218,31 @@ body.mobile .ex-tb span{display:none}
 .dp-bar{height:14px;border:1px solid #808080;background:#D64B4B;margin:8px 0 4px;overflow:hidden}
 .dp-bar i{display:block;height:100%;background:#1B5FAE}
 
+/* ---------- death certificate + Hall of Pain ---------- */
+.cert-head{display:flex;align-items:center;gap:10px}
+.cert-ico{width:32px;height:32px;flex:none;display:block;filter:grayscale(1) brightness(.75)}
+.cert-file{font-weight:bold;font-size:12px;word-break:break-all}
+.cert-r{display:flex;align-items:baseline;gap:8px;padding:2px 0;font-size:11px}
+.cert-r span{width:96px;flex:none;color:#5A5648}
+.cert-r b{flex:1;min-width:0}
+.cert-r.big b{font-size:13px}
+.cert-r.bad b{color:#A32020}
+.cert-note{font-size:10px;line-height:1.65;color:#4A4636;background:#FFF7DE;border:1px solid #E0C05A;padding:6px 8px}
+.hall-body{display:flex;flex-direction:column;padding:0;overflow:hidden}
+.hall-body .menubar{flex:none}
+.hall-sum{flex:none;font-size:11px;line-height:1.7;padding:7px 10px;background:#ECE9D8;border-bottom:1px solid #C9C4B4}
+.hall-bad{color:#A32020}
+.hall-wrap{flex:1;min-height:0;overflow:auto;background:#fff;border-top:1px solid #fff}
+table.hall{border-collapse:collapse;width:100%;font-size:11px}
+table.hall th{position:sticky;top:0;background:#ECE9D8;border-right:1px solid #fff;border-bottom:1px solid #ACA899;
+  box-shadow:inset -1px -1px 0 #ACA899;text-align:left;font-weight:normal;padding:3px 6px;white-space:nowrap}
+table.hall td{padding:2px 6px;border-bottom:1px solid #F0F0F0;white-space:nowrap;cursor:default}
+table.hall td.n,table.hall th.n{text-align:right}
+table.hall tbody tr:hover{background:#EAF2FD}
+table.hall tbody tr.me td{font-weight:bold;color:#0A246A}
+table.hall td.bad{color:#A32020}
+.hall-foot{flex:none;padding:4px 10px;background:#ECE9D8;border-top:1px solid #fff}
+
 /* ---------- Paint (real MS Paint metrics: 25x24 tools, 16px swatches) ---------- */
 .win-body.pt-body{background:#ECE9D8;display:flex;flex-direction:column;padding:0;overflow:hidden}
 .pt-main{flex:1;min-height:0;display:flex}

@@ -24,12 +24,26 @@ export function initExplorer(deps) {
   function usedBytes() { return 2.71 * GB + deadBytes(); }
   function freeBytes() { return Math.max(64 * MB, DISK - usedBytes()); }
 
+  const BIN = "Recycle Bin";
   const HOME = "C:\\Documents and Settings\\Administrator";
   const DOCS = HOME + "\\My Documents";
   const PICS = DOCS + "\\My Pictures";
 
   /* folders are functions so the disk can answer with live state */
   const TREE = {
+    /* The bin holds two kinds of thing: files you deleted, which can come back,
+       and cursors that died, which cannot. Both take up space on the disk. */
+    [BIN]: () => {
+      const b = hooks.binContents();
+      return b.files.map(fi => f(fi.label + (/\./.test(fi.label) ? "" : ".lnk"), {
+        ico: fi.ico, size: 1024, file: fi, tile: "Deleted from Desktop",
+        act: () => showError(fi.label, "This file is in the Recycle Bin.\nRestore it to the Desktop to open it."),
+      })).concat(b.deaths.map(d => f(`${d.name}_${String(d.id).padStart(4, "0")}.cur`, {
+        ico: "@ic-cursor", size: 12 * MB, dead: d,
+        tile: `lost ${d.lostStr} · ${d.odds}:${100 - d.odds}`,
+        act: () => hooks.deathCert(d),
+      })));
+    },
     "My Computer": () => [
       dir("Shared Documents", { ico: "shareddocs32", go: "C:\\Documents and Settings\\All Users\\Documents",
         group: "Files Stored on This Computer" }),
@@ -74,7 +88,9 @@ export function initExplorer(deps) {
       f("cursor$land.url", { size: 128, ico: "ie32", act: () => hooks.openWin("win-ie") }),
     ],
     [HOME + "\\Desktop"]: () => hooks.desktopFiles().map(ic => (
-      ic.kind === "folder"
+      ic.app === "bin"
+        ? dir(BIN, { ico: "bin32", go: BIN, tile: "System Folder" })
+        : ic.kind === "folder"
         ? dir(ic.label, { ico: ic.ico, act: () => go(HOME + "\\Desktop\\" + ic.label) })
         : f(ic.label + (ic.app === "usertxt" || /\./.test(ic.label) ? "" : ".lnk"),
             { ico: ic.ico, size: 1024, act: () => hooks.openIcon(ic) })
@@ -148,6 +164,7 @@ export function initExplorer(deps) {
   }
   function parentOf(p) {
     if (p === "My Computer") return null;
+    if (p === BIN) return HOME + "\\Desktop";   /* the bin lives on the Desktop, as it should */
     if (p === "C:\\") return "My Computer";
     if (/^[A-Z]:\\[^\\]+$/.test(p)) return "C:\\";
     const i = p.lastIndexOf("\\");
@@ -155,11 +172,13 @@ export function initExplorer(deps) {
   }
   function leaf(p) {
     if (p === "My Computer") return "My Computer";
+    if (p === BIN) return BIN;
     if (p === "C:\\") return "Local Disk (C:)";
     return p.slice(p.lastIndexOf("\\") + 1);
   }
   function icoOf(p) {
     if (p === "My Computer") return "computer32";
+    if (p === BIN) return "bin32";
     if (p === "C:\\") return "hdd32";
     if (p === PICS) return "pics32";
     if (p === DOCS) return "docs32";
@@ -183,6 +202,9 @@ export function initExplorer(deps) {
   /* ---------- rendering ---------- */
   function render() {
     const items = childrenOf(path) || [];
+    /* items are rebuilt every render, so re-point the selection by name (and
+       drop it if what was selected has just been restored or emptied) */
+    if (sel) sel = items.find(i => i.name === sel.name) || null;
     els.addr.value = path;
     els.addrico.src = IMG[icoOf(path)] || IMG.folder32;
     if (deps.setTitle) deps.setTitle(leaf(path));
@@ -197,7 +219,7 @@ export function initExplorer(deps) {
     els.st1.textContent = sel ? "1 object selected" : `${items.length} object${items.length === 1 ? "" : "s"}`;
     const bytes = sel ? sel.size : items.reduce((s, i) => s + (i.size || 0), 0);
     els.st2.textContent = bytes ? fmtSize(bytes) : "";
-    els.st3.textContent = path === "My Computer" ? "My Computer" : "Local Disk (C:)";
+    els.st3.textContent = path === "My Computer" ? "My Computer" : path === BIN ? "Recycle Bin" : "Local Disk (C:)";
   }
   function renderList(items) {
     const host = els.list;
@@ -214,7 +236,7 @@ export function initExplorer(deps) {
         host.appendChild(g);
       }
       const row = document.createElement("div");
-      row.className = "ex-item" + (it.hidden ? " ghost" : "");
+      row.className = "ex-item" + (it.hidden ? " ghost" : "") + (sel === it ? " on" : "");
       const img = icoNode(it.ico);
       img.classList.add("ex-ico");   /* icoNode returns <img> OR <span><svg>; one class sizes both */
       const nm = document.createElement("div");
@@ -230,8 +252,14 @@ export function initExplorer(deps) {
       if (view === "details") {
         const add = (t, cls) => { const d = document.createElement("div"); d.className = "ex-col " + (cls || ""); d.textContent = t; row.appendChild(d); };
         add(it.kind === "file" ? fmtSize(it.size) : "", "sz");
-        add(it.kind === "drive" ? "Local Disk" : it.kind === "folder" ? "File Folder" : typeOf(it.name), "ty");
-        add("24/08/2001 09:00", "dt");
+        if (it.dead) {
+          /* the bin earns its own columns: in here, who did it and at what price */
+          add("killed by " + it.dead.killer, "ty");
+          add(`${it.dead.odds} : ${100 - it.dead.odds}`, "dt");
+        } else {
+          add(it.kind === "drive" ? "Local Disk" : it.kind === "folder" ? "File Folder" : typeOf(it.name), "ty");
+          add(it.file ? "deleted from Desktop" : "24/08/2001 09:00", "dt");
+        }
       }
       row.addEventListener("click", () => { sel = it; markSel(host, row); status(items); renderTasks(items); });
       row.addEventListener("dblclick", () => openItem(it));
@@ -252,7 +280,7 @@ export function initExplorer(deps) {
     const ext = m ? m[1].toLowerCase() : "";
     return ({ exe: "Application", dll: "Application Extension", sys: "System file", drv: "System file",
       ini: "Configuration Settings", txt: "Text Document", log: "Text Document", bat: "MS-DOS Batch File",
-      bmp: "Bitmap Image", png: "Bitmap Image", mp3: "MP3 Audio", url: "Internet Shortcut",
+      bmp: "Bitmap Image", png: "Bitmap Image", mp3: "MP3 Audio", url: "Internet Shortcut", cur: "Cursor",
       lnk: "Shortcut", dat: "DAT File" })[ext] || "File";
   }
   function openItem(it) {
@@ -290,7 +318,15 @@ export function initExplorer(deps) {
   function renderTasks(items) {
     const host = els.tasks;
     host.innerHTML = "";
-    if (path === "My Computer") {
+    if (path === BIN) {
+      /* XP's Recycle Bin swaps the file-tasks panel for its own two verbs.
+         The third one is ours, and it is the reason this folder exists. */
+      host.appendChild(panel("Recycle Bin Tasks", [
+        { label: "Empty the Recycle Bin", ico: "bin32", act: () => hooks.emptyBin() },
+        { label: sel ? "Restore this item" : "Restore all items", ico: "openfolder32", act: () => hooks.restore(sel && sel.file) },
+        { label: "Hall of Pain", ico: "err32", act: () => hooks.hallOfPain() },
+      ], "sys"));
+    } else if (path === "My Computer") {
       host.appendChild(panel("System Tasks", [
         { label: "View system information", ico: "computer32", act: () => hooks.systemProperties() },
         { label: "Add or remove programs", ico: "cpanel32", act: () => showError("Add or Remove Programs", "Nothing here can be removed. You installed it by playing.") },
@@ -312,8 +348,13 @@ export function initExplorer(deps) {
     host.appendChild(panel("Other Places", others, "other"));
 
     const d = sel;
-    const rows = d
+    const rows = d && d.dead
+      ? [{ text: `<b>${esc(d.name)}</b><br>Cursor Image<br>Owner: ${esc(d.dead.name)}<br>Killed by: ${esc(d.dead.killer)}<br>` +
+          `Carried: ${d.dead.lostStr} SOL<br>Its odds: ${d.dead.odds} : ${100 - d.dead.odds}<br>Size: ${fmtSize(d.size)}` }]
+      : d
       ? [{ text: `<b>${esc(d.name)}</b><br>${d.kind === "file" ? typeOf(d.name) : "File Folder"}${d.size ? "<br>Size: " + fmtSize(d.size) : ""}` }]
+      : path === BIN
+        ? [{ text: `<b>Recycle Bin</b><br>System Folder<br>${hooks.deadCount()} cursors, ${fmtSize(hooks.deadCount() * 12 * MB)}<br>Deleted files can be restored.<br>Cursors cannot.` }]
       : path === "C:\\"
         ? [{ text: `<b>Local Disk (C:)</b><br>Local Disk<br>File System: NTFS<br>Free Space: ${fmtSize(freeBytes())}<br>Total Size: 4.00 GB` }]
         : [{ text: `<b>${esc(leaf(path))}</b><br>${path === "My Computer" ? "System Folder" : "File Folder"}` }];
@@ -347,6 +388,15 @@ export function initExplorer(deps) {
 
   /* ---------- menus ---------- */
   function itemMenu(it) {
+    if (it.dead || it.file) return [
+      { label: it.dead ? "Certificate" : "Restore", bold: 1, action: () => it.dead ? hooks.deathCert(it.dead) : hooks.restore(it.file) },
+      { sep: 1 },
+      { label: "Restore", disabled: !!it.dead, action: () => hooks.restore(it.file) },
+      { label: "Delete", action: () => hooks.emptyBin() },
+      { sep: 1 },
+      { label: "Properties", action: () => it.dead ? hooks.deathCert(it.dead)
+          : showError("Properties: " + it.name, `Type: ${typeOf(it.name)}\nLocation: Recycle Bin\nSize: ${fmtSize(it.size)}\nOriginal location: C:\\Desktop`) },
+    ];
     return [
       { label: "Open", bold: 1, action: () => openItem(it) },
       { sep: 1 },
@@ -367,6 +417,13 @@ export function initExplorer(deps) {
   const MENUS = {
     File: (x, y) => showMenu([
       { label: "Open", disabled: !sel, action: () => sel && openItem(sel) },
+      ...(path === BIN ? [
+        { sep: 1 },
+        { label: "Empty Recycle Bin", action: () => hooks.emptyBin() },
+        { label: "Restore all items", action: () => hooks.restore(null) },
+        /* the phone hides the task pane, so the bin's three verbs all live here too */
+        { label: "Hall of Pain", action: () => hooks.hallOfPain() },
+      ] : []),
       { sep: 1 },
       { label: "Properties", action: () => path === "C:\\" || (sel && sel.go === "C:\\") ? driveProperties() : showError("Properties", "Nothing selected.") },
       { label: "Close", action: () => hooks.close() },
@@ -443,6 +500,6 @@ export function initExplorer(deps) {
     menu: (label, x, y) => (MENUS[label] || MENUS.Help)(x, y),
     path: () => path,
     driveProperties,
-    HOME, DOCS, PICS,
+    HOME, DOCS, PICS, BIN,
   };
 }
