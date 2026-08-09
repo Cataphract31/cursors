@@ -5,6 +5,7 @@ import { IMG, SNDF, TRACKS, MINE, EMO, PAINT } from "./assets.js";
 import { initMinesweeper } from "./minesweeper.js";
 import { initMessenger } from "./messenger.js";
 import { initPaint } from "./paint.js";
+import { initExplorer } from "./explorer.js";
 const Webamp = (WebampImport && WebampImport.default) ? WebampImport.default : WebampImport;
 
 "use strict";
@@ -391,7 +392,7 @@ $$(".window").forEach(wireWindow);
 
 /* ================= desktop icons ================= */
 const SYSICONS=[
-  {id:"computer",label:"My Computer",ico:"computer32",app:"win-computer",sys:1},
+  {id:"computer",label:"My Computer",ico:"computer32",app:"win-explorer",sys:1},
   {id:"recycle",label:"Recycle Bin",ico:"bin32",app:"win-recycle",sys:1},
   {id:"cursors",label:"CURSORS.EXE",ico:"@ic-app",app:"win-cursors",sys:1},
   {id:"mine",label:"Minesweeper",ico:"mine32",app:"win-mine",sys:1},
@@ -471,10 +472,13 @@ function hookIcon(el,ic){
   });
   el.addEventListener("dblclick",()=>{ sClick(); openIcon(ic); });
 }
+/* every folder in the shell now opens the real Explorer at a real path */
 function openFolderWin(name){
-  $("#win-folder .title-bar-text").textContent=name;
-  $("#folderbody").innerHTML=`This folder is empty.<br><span style="color:#8A8A7A">0 objects · 0 bytes of conviction</span>`;
-  openWin("win-folder");
+  const p=name==="My Documents"?explorer.DOCS
+    :name==="My Pictures"?explorer.PICS
+    :explorer.HOME+"\\Desktop\\"+name;
+  openWin("win-explorer");
+  explorer.go(p);
 }
 function openIcon(ic){
   sysSnd("nav",.5);
@@ -650,6 +654,7 @@ function desktopMenu(){
 function iconMenu(ic){
   const items=[{label:"Open",bold:1,action:()=>openIcon(ic)}];
   if(ic.id==="recycle") items.push({label:"Empty Recycle Bin",action:emptyBin});
+  if(ic.id==="computer") items.push({label:"Explore",action:()=>{ openWin("win-explorer"); explorer.go("C:\\"); }});
   items.push({sep:1});
   if(ic.sys){
     items.push({label:"Delete",action:()=>showError("Cannot Delete "+ic.label,"This is a system file. The desktop needs it more than you do.")});
@@ -732,6 +737,7 @@ $$(".menubar span").forEach(m=>m.addEventListener("click",e=>{
     return;
   }
   if(win.id==="win-paint"){ paint.menu(m.textContent,r.left,r.bottom+2); return; }
+  if(win.id==="win-explorer"){ explorer.menu(m.textContent,r.left,r.bottom+2); return; }
   showMenu(menubarMenu(m.textContent,win.id),r.left,r.bottom+2);
 }));
 
@@ -762,6 +768,16 @@ const paint=initPaint({
   setTitle:name=>{ $("#win-paint .title-bar-text").textContent=name+" - Paint"; renderTaskbar(); },
   isFocused:()=>focusedId==="win-paint",
   openAttributes:(w,h)=>{ $("#pa-w").value=w; $("#pa-h").value=h; openWin("win-paintattr"); },
+  /* the fake disk gets a real file; keep few, they live in localStorage */
+  savePicture:url=>{
+    store.data.pictures=store.data.pictures||[];
+    const n="untitled"+(store.data.pictures.length+1)+".png";
+    store.data.pictures.unshift({name:n,data:url});
+    store.data.pictures=store.data.pictures.slice(0,6);
+    store.save();
+    if(openApps.has("win-explorer")) explorer.render();
+    return n;
+  },
 });
 $("#pa-ok").addEventListener("click",()=>{
   paint.setSize(+$("#pa-w").value||1,+$("#pa-h").value||1);
@@ -786,6 +802,59 @@ $$("#pt-box .pt-h").forEach(h=>h.addEventListener("pointerdown",e=>{
   const up=()=>{ removeEventListener("pointermove",mv); removeEventListener("pointerup",up); };
   addEventListener("pointermove",mv); addEventListener("pointerup",up);
 }));
+
+/* ================= Windows Explorer ================= */
+function openTextWindow(name,body){
+  curTxtIcon=null;
+  $("#win-usertxt .title-bar-text").textContent=name+" - Notepad";
+  $("#usertxtarea").value=body;
+  openWin("win-usertxt");
+}
+const explorer=initExplorer({
+  IMG,
+  els:{
+    list:$("#ex-list"), tasks:$("#ex-tasks"), addr:$("#ex-addr"), addrico:$("#ex-addrico"),
+    addrGo:$("#ex-go"), back:$("#ex-back"), fwd:$("#ex-fwd"), up:$("#ex-up"),
+    viewsBtn:$("#ex-views"), foldersBtn:$("#ex-folders"), searchBtn:$("#ex-search"),
+    st1:$("#ex-st1"), st2:$("#ex-st2"), st3:$("#ex-st3"),
+  },
+  store, sysSnd, showMenu, showError, icoNode,
+  setTitle:name=>{ $("#win-explorer .title-bar-text").textContent=name; renderTaskbar(); },
+  hooks:{
+    openWin, close:()=>closeWin("win-explorer"),
+    playerName:()=>playerNameFull(),
+    openStart:()=>startmenu.classList.add("open"),
+    openIcon:ic=>openIcon(ic),
+    desktopFiles:()=>allIcons(),
+    deadCount:()=>binDead.length,
+    logSize:()=>logpaper.textContent.length||1024,
+    tracks:()=>TRACKS,
+    openText:openTextWindow,
+    openPicture:p=>{ openWin("win-paint"); paint.loadDataURL(p.data,true); },
+    systemProperties:()=>{ $("#sp-user").textContent=playerNameFull(); openWin("win-sysprops"); },
+    openDriveProps:info=>{
+      $("#dv-used").textContent=info.usedStr;
+      $("#dv-free").textContent=info.freeStr;
+      $("#dv-cap").textContent=info.totalStr;
+      $("#dv-barfill").style.width=(100*info.used/info.total).toFixed(1)+"%";
+      $("#dv-note").textContent=info.dead
+        ? `${info.dead} dead cursors are stored on this volume. They are why it is filling up.`
+        : "This disk is mostly empty. Nothing has died yet.";
+      openWin("win-driveprops");
+      requestAnimationFrame(()=>info.draw($("#dv-pie")));
+    },
+  },
+});
+$("#dv-ok").addEventListener("click",()=>closeWin("win-driveprops"));
+$("#sp-ok").addEventListener("click",()=>closeWin("win-sysprops"));
+$("#dv-clean").addEventListener("click",()=>showConfirm("Disk Cleanup",
+  "Empty the Recycle Bin to reclaim space? The dead cursors go with it.",()=>{
+    binDead=[]; binFiles=[]; renderBin(); sCrunch();
+    closeWin("win-driveprops"); explorer.driveProperties();
+  }));
+/* toolbar art comes from the real IE/Explorer button set */
+$("#ex-backi").src=IMG.navBack; $("#ex-fwdi").src=IMG.navFwd; $("#ex-upi").src=IMG.navUp;
+$("#ex-searchi").src=IMG.navSearch; $("#ex-foldersi").src=IMG.navFolders; $("#ex-viewsi").src=IMG.navDrop;
 
 document.addEventListener("contextmenu",e=>{
   e.preventDefault();
@@ -970,6 +1039,7 @@ const RUNMAP={
   "winmine":"win-mine","winmine.exe":"win-mine",
   "mspaint":"win-paint","mspaint.exe":"win-paint","paint":"win-paint","pbrush":"win-paint",
   "control":"win-dispprops","desk.cpl":"win-dispprops",
+  "explorer":"win-explorer","explorer.exe":"win-explorer","c:":"win-explorer","sysdm.cpl":"win-sysprops",
   "timedate.cpl":"win-datetime",
 };
 function runCommand(){
@@ -1845,18 +1915,6 @@ function updatePanel(){
   $("#mh-defend").classList.toggle("on",stance==="defend");
   $("#mh-live").textContent=`${mine.length}/5 · ${fmtS(liveVal)}`;
 }
-function updateSys(){
-  const total=curs.reduce((s,c)=>s+c.bounty,0);
-  let top=null; for(const c of curs) if(!top||c.bounty>top.bounty) top=c;
-  $("#syspaper").innerHTML=
-    `cursors online&nbsp;: <b>${curs.length}</b><br>`+
-    `round pot&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: <b>${fmtS(R?R.pot:0)} SOL</b><br>`+
-    `on the field&nbsp;&nbsp;&nbsp;: <b>${fmtS(total)} SOL</b><br>`+
-    `biggest bounty&nbsp;: <b>${top?top.owner+" "+fmtS(top.bounty):"—"}</b><br>`+
-    `dead this boot&nbsp;: <b>${binDead.length}</b><br>`+
-    `global tickets&nbsp;: <b>${(globalTickets+myTickets).toLocaleString()}</b>`;
-}
-setInterval(updateSys,1000);
 setInterval(()=>{ if(Math.random()<.25) botChat("idle"); },9000);
 
 /* logoff reset */
@@ -1916,6 +1974,7 @@ $("#sv-sel").value=store.data.saver.t;
 $("#sv-wait").value=store.data.saver.wait;
 R=newRoundRecord();
 log("CURSORS.EXE started");
+explorer.render();
 if(MOBILE){
   /* the phone boots to a clean desktop: icons, the arena, and the thumb bar.
      Every app is one tap away; none of them start covering the field. */
@@ -1929,7 +1988,7 @@ if(MOBILE){
   focusWin("win-cursors");
 }
 chatSys("welcome to the desktop. say gm.");
-renderBin(); updatePanel(); updateSys();
+renderBin(); updatePanel();
 startJoin();
 requestAnimationFrame(frame);
 
@@ -2038,6 +2097,16 @@ if(location.hash.indexOf("#desktop-msn")===0) setTimeout(()=>{ /* dev: capture m
     setTimeout(()=>c.querySelector(".conv-emo").click(),2600);
   if(location.hash==="#desktop-msn-toast")
     setTimeout(()=>msn.incoming("mumu","you still alive? (bunny)"),2400);
+},600);
+if(location.hash.indexOf("#desktop-exp")===0) setTimeout(()=>{ /* dev: capture Explorer */
+  openWin("win-explorer");
+  const p=location.hash.replace("#desktop-exp","");
+  if(p==="-c") explorer.go("C:\\");
+  if(p==="-sys") explorer.go("C:\\WINDOWS\\system32");
+  if(p==="-det"){ explorer.setView("details"); explorer.go("C:\\WINDOWS\\system32"); }
+  if(p==="-game") explorer.go("C:\\Program Files\\CURSORS.EXE");
+  if(p==="-props"){ explorer.go("C:\\"); setTimeout(()=>explorer.driveProperties(),400); }
+  if(p==="-sysprops") setTimeout(()=>{ $("#sp-user").textContent=playerNameFull(); openWin("win-sysprops"); },300);
 },600);
 if(location.hash.indexOf("#desktop-paint")===0) setTimeout(()=>{ /* dev: capture Paint with art on the canvas */
   openWin("win-paint");

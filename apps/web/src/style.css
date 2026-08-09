@@ -147,6 +147,77 @@ body.mobile #tray{padding:0 8px;margin-left:0;gap:8px}
 .ms-c{width:16px;height:16px;flex:none;box-sizing:border-box;background-color:#BDBDBD;background-repeat:no-repeat;background-position:center;background-origin:border-box;background-clip:border-box;border-top:2px solid #FFF;border-left:2px solid #FFF;border-right:2px solid #7B7B7B;border-bottom:2px solid #7B7B7B}
 .ms-c.open{border:0;border-top:1px solid #7B7B7B;border-left:1px solid #7B7B7B}
 
+/* ---------- Windows Explorer ---------- */
+.win-body.ex-body{background:#ECE9D8;display:flex;flex-direction:column;padding:0;overflow:hidden}
+.ex-bar{flex:none;display:flex;align-items:center;gap:2px;padding:2px 4px;background:linear-gradient(180deg,#F1F0E8,#E5E2D5);border-bottom:1px solid #D4D0C8}
+.ex-tb{display:flex;align-items:center;gap:4px;min-width:0;min-height:0;padding:2px 6px 2px 4px;background:none;border:1px solid transparent;border-radius:3px;box-shadow:none;cursor:default;font-size:11px;color:#000}
+.ex-tb:hover:not(:disabled){border-color:#B6BDD2;background:#EAF0FB}
+.ex-tb:disabled{opacity:.4}
+.ex-tb img{width:22px;height:22px}
+.ex-tb.sm img{width:16px;height:16px}
+.ex-sep{width:1px;align-self:stretch;margin:2px 3px;background:#D0CCC0}
+.ex-addrbar{flex:none;display:flex;align-items:center;gap:5px;padding:2px 5px;background:#ECE9D8;border-bottom:1px solid #D4D0C8;font-size:11px}
+.ex-addrbox{flex:1;min-width:0;display:flex;align-items:center;gap:4px;background:#fff;border:1px solid #7F9DB9;padding:1px 2px}
+.ex-addrbox img{width:16px;height:16px;flex:none}
+.ex-addrbox input{flex:1;min-width:0;border:0;outline:none;font:11px Tahoma;background:none;color:#000}
+.ex-main{flex:1;min-height:0;display:flex;background:#fff}
+/* the blue task pane is the single most XP thing in Explorer */
+.ex-tasks{flex:none;width:176px;overflow-y:auto;padding:8px 6px;display:flex;flex-direction:column;gap:9px;background:linear-gradient(180deg,#7CA2E3,#5F8AD9 40%,#4E7BD2)}
+.ex-tasks.off{display:none}
+.ex-panel{border-radius:4px;overflow:hidden;background:#D6E5F5;box-shadow:0 1px 2px rgba(0,0,0,.18)}
+.ex-ph{display:flex;align-items:center;justify-content:space-between;padding:3px 7px;font-weight:bold;color:#215DC6;cursor:default;background:linear-gradient(180deg,#F8FBFF,#DCE9FB 60%,#C9DCF6)}
+.ex-panel.sys .ex-ph{color:#fff;background:linear-gradient(180deg,#5F92DE,#3F73CE 60%,#3468C4)}
+.ex-chev{font-style:normal;font-size:8px;color:#5A80C0}
+.ex-panel.shut .ex-pb{display:none}
+.ex-panel.shut .ex-chev{transform:rotate(180deg)}
+.ex-pb{padding:5px 7px;background:linear-gradient(180deg,#EFF4FD,#DCE7F9);color:#00368A}
+.ex-task{display:flex;align-items:center;gap:5px;padding:2px 0;cursor:default;line-height:1.35}
+.ex-tico{width:16px;height:16px;flex:none}
+.ex-task:hover span{color:#2A6BD4;text-decoration:underline}
+.ex-note{line-height:1.45;color:#00368A;word-break:break-word}
+.ex-list{flex:1;min-width:0;overflow:auto;padding:6px;align-content:flex-start}
+.ex-item{display:flex;cursor:default;border:1px solid transparent;padding:2px}
+.ex-item.ghost{opacity:.5}
+.ex-item.on{background:#316AC5;border-color:#2A5FB0;color:#fff}
+.ex-group{width:100%;color:#0C327D;font-weight:bold;border-bottom:1px solid #A8C0E8;margin:7px 4px 4px;padding-bottom:1px}
+.ex-group:first-child{margin-top:1px}
+.ex-nm{min-width:0;overflow:hidden}
+.ex-sub{color:#666;font-size:10px}
+.ex-item.on .ex-sub{color:#CFE0FF}
+/* four real view modes */
+.ex-ico{flex:none;display:block}
+.ex-list.v-tiles{display:flex;flex-wrap:wrap;gap:2px}
+.ex-list.v-tiles .ex-item{width:186px;align-items:center;gap:6px}
+.ex-list.v-tiles .ex-ico{width:32px;height:32px}
+.ex-list.v-icons{display:flex;flex-wrap:wrap;gap:4px}
+.ex-list.v-icons .ex-item{width:80px;flex-direction:column;align-items:center;text-align:center;gap:3px}
+.ex-list.v-icons .ex-ico{width:32px;height:32px}
+.ex-list.v-icons .ex-nm{white-space:normal;word-break:break-word;line-height:1.2}
+.ex-list.v-list{display:flex;flex-direction:column;flex-wrap:wrap;max-height:100%;gap:0}
+.ex-list.v-list .ex-item{width:172px;align-items:center;gap:5px}
+.ex-list.v-list .ex-ico{width:16px;height:16px}
+.ex-list.v-details{display:block}
+.ex-list.v-details .ex-item{align-items:center;gap:5px;width:100%}
+.ex-list.v-details .ex-ico{width:16px;height:16px}
+.ex-list.v-details .ex-nm{flex:1;white-space:nowrap;text-overflow:ellipsis}
+.ex-col{flex:none;white-space:nowrap;overflow:hidden}
+.ex-col.sz{width:74px;text-align:right}
+.ex-col.ty{width:132px;padding-left:10px}
+.ex-col.dt{width:118px}
+.ex-status{flex:none;display:flex;gap:2px;padding:2px;border-top:1px solid #D4D0C8;font-size:11px;background:#ECE9D8}
+.ex-status span{border-top:1px solid #808080;border-left:1px solid #808080;border-right:1px solid #FFF;border-bottom:1px solid #FFF;padding:1px 6px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.ex-status span:first-child{flex:1;min-width:0}
+.ex-status span+span{width:96px;flex:none}
+body.mobile .ex-tasks{display:none}
+body.mobile .ex-col.ty,body.mobile .ex-col.dt{display:none}
+body.mobile .ex-tb span{display:none}
+/* drive properties */
+.dp-pie{display:flex;align-items:center;gap:14px;padding:6px 2px}
+.dp-key{display:flex;align-items:center;gap:6px;margin:3px 0}
+.dp-key i{width:12px;height:12px;display:inline-block;border:1px solid #666}
+.dp-bar{height:14px;border:1px solid #808080;background:#D64B4B;margin:8px 0 4px;overflow:hidden}
+.dp-bar i{display:block;height:100%;background:#1B5FAE}
+
 /* ---------- Paint (real MS Paint metrics: 25x24 tools, 16px swatches) ---------- */
 .win-body.pt-body{background:#ECE9D8;display:flex;flex-direction:column;padding:0;overflow:hidden}
 .pt-main{flex:1;min-height:0;display:flex}

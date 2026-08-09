@@ -16,6 +16,10 @@
       <rect x="4" y="4" width="24" height="24" rx="4" fill="none" stroke="#7FB2EC" stroke-width="1"/>
       <path d="M11 7 L11 22 L15 18.6 L17.4 24.4 L19.8 23.3 L17.5 17.7 L21.5 17.7 Z" fill="#fff" stroke="#0A2A5C" stroke-width="1" stroke-linejoin="round"/>
     </symbol>
+    <symbol id="ic-file" viewBox="0 0 32 32">
+      <path d="M7 3 h13 l6 6 v20 a1 1 0 0 1 -1 1 h-18 a1 1 0 0 1 -1 -1 v-25 a1 1 0 0 1 1 -1 z" fill="#FDFDFD" stroke="#9AA5B1"/>
+      <path d="M20 3 v6 h6" fill="#E4E9EF" stroke="#9AA5B1" stroke-linejoin="round"/>
+    </symbol>
     <symbol id="ic-warn" viewBox="0 0 32 32">
       <path d="M16 3 L30 28 L2 28 Z" fill="#F7D440" stroke="#B98A00" stroke-linejoin="round"/>
       <rect x="14.6" y="11" width="2.8" height="9" rx="1.2" fill="#000"/>
@@ -164,13 +168,104 @@ icons/sounds: winXP (MIT)</div>
     </div>
   </div>
 
-  <!-- My Computer -->
-  <div class="window" id="win-computer" style="left:300px;top:56px;width:300px">
+  <!-- Windows Explorer / My Computer -->
+  <div class="window" id="win-explorer" data-minw="420" data-minh="300" style="left:120px;top:50px;width:660px;height:452px">
     <div class="title-bar">
       <div class="tb-l"><i class="xico tb-ico" data-ico="computer16"></i><div class="title-bar-text">My Computer</div></div>
       <div class="title-bar-controls"><button aria-label="Minimize"></button><button aria-label="Close"></button></div>
     </div>
-    <div class="win-body mono" id="syspaper" style="line-height:1.9">loading…</div>
+    <div class="win-body pad ex-body">
+      <div class="menubar"><span>File</span><span>Edit</span><span>View</span><span>Favorites</span><span>Tools</span><span>Help</span></div>
+      <div class="ex-bar">
+        <button class="ex-tb" id="ex-back"><img id="ex-backi" alt=""><span>Back</span></button>
+        <button class="ex-tb" id="ex-fwd"><img id="ex-fwdi" alt=""></button>
+        <button class="ex-tb" id="ex-up"><img id="ex-upi" alt=""></button>
+        <span class="ex-sep"></span>
+        <button class="ex-tb sm" id="ex-search"><img id="ex-searchi" alt=""><span>Search</span></button>
+        <button class="ex-tb sm" id="ex-folders"><img id="ex-foldersi" alt=""><span>Folders</span></button>
+        <span class="ex-sep"></span>
+        <button class="ex-tb sm" id="ex-views"><img id="ex-viewsi" alt=""><span>Views</span></button>
+      </div>
+      <div class="ex-addrbar">
+        <span>Address</span>
+        <span class="ex-addrbox"><img id="ex-addrico" alt=""><input id="ex-addr" spellcheck="false" autocomplete="off"></span>
+        <button class="xbtn" id="ex-go" style="min-width:44px">Go</button>
+      </div>
+      <div class="ex-main">
+        <div class="ex-tasks" id="ex-tasks"></div>
+        <div class="ex-list v-tiles" id="ex-list"></div>
+      </div>
+      <div class="ex-status"><span id="ex-st1"></span><span id="ex-st2"></span><span id="ex-st3"></span></div>
+    </div>
+  </div>
+
+  <!-- Local Disk properties -->
+  <div class="window fixed" id="win-driveprops" style="left:calc(50% - 160px);top:70px;width:320px">
+    <div class="title-bar">
+      <div class="tb-l"><i class="xico tb-ico" data-ico="hdd32"></i><div class="title-bar-text">Local Disk (C:) Properties</div></div>
+      <div class="title-bar-controls"><button aria-label="Close"></button></div>
+    </div>
+    <div class="win-body pad" style="background:#ECE9D8">
+      <div class="xtabs"><span class="xtab on" data-pane="dv-gen">General</span></div>
+      <div class="xpane on" id="dv-gen">
+        <div style="display:flex;align-items:center;gap:10px;border-bottom:1px solid #D4D0C8;padding-bottom:8px">
+          <i class="xico" data-ico="hdd32" style="width:32px;height:32px;flex:none"></i>
+          <input id="dv-label" value="Local Disk" style="flex:1" spellcheck="false">
+        </div>
+        <div class="small" style="margin:8px 0 2px">Type: <b>Local Disk</b><br>File system: <b>NTFS</b></div>
+        <div class="dp-pie">
+          <canvas id="dv-pie" width="96" height="96"></canvas>
+          <div class="small" style="flex:1">
+            <div class="dp-key"><i style="background:#1B5FAE"></i>Used space:<b id="dv-used" style="margin-left:auto"></b></div>
+            <div class="dp-key"><i style="background:#D64B4B"></i>Free space:<b id="dv-free" style="margin-left:auto"></b></div>
+            <div class="dp-key" style="border-top:1px solid #C9C4B4;padding-top:4px">Capacity:<b id="dv-cap" style="margin-left:auto"></b></div>
+          </div>
+        </div>
+        <div class="dp-bar"><i id="dv-barfill"></i></div>
+        <div class="small dim" id="dv-note" style="line-height:1.6"></div>
+        <div style="text-align:right;margin-top:8px"><button class="xbtn" id="dv-clean" style="min-width:96px">Disk Cleanup</button></div>
+      </div>
+      <div class="dlg-foot"><button class="xbtn" id="dv-ok" style="min-width:74px">OK</button></div>
+    </div>
+  </div>
+
+  <!-- System Properties -->
+  <div class="window fixed" id="win-sysprops" style="left:calc(50% - 175px);top:60px;width:350px">
+    <div class="title-bar">
+      <div class="tb-l"><i class="xico tb-ico" data-ico="computer16"></i><div class="title-bar-text">System Properties</div></div>
+      <div class="title-bar-controls"><button aria-label="Close"></button></div>
+    </div>
+    <div class="win-body pad" style="background:#ECE9D8">
+      <div class="xtabs">
+        <span class="xtab on" data-pane="sp-gen">General</span>
+        <span class="xtab" data-pane="sp-name">Computer Name</span>
+      </div>
+      <div class="xpane on" id="sp-gen">
+        <div style="display:flex;gap:12px">
+          <i class="xico" data-ico="flag16" style="width:48px;height:48px;flex:none"></i>
+          <div class="small" style="line-height:1.75">
+            <b>System:</b><br>Microsoft Windows XP<br>Professional<br>Version 5.1 (Build 2600.casino)<br><br>
+            <b>Registered to:</b><br><span id="sp-user">Administrator</span><br><span class="dim">55274-OEM-0000420-69696</span>
+          </div>
+        </div>
+        <div class="hr"></div>
+        <div class="small" style="line-height:1.75">
+          <b>Computer:</b><br>
+          Pentium(R) 4 CPU "HOPIUM" 2.40GHz<br>
+          512 MB of RAM<br>
+          <span id="sp-uptime">Physical Address Extension</span>
+        </div>
+      </div>
+      <div class="xpane" id="sp-name">
+        <div class="small" style="line-height:1.9">
+          Full computer name: <b>DESKTOP-CURSORS</b><br>
+          Workgroup: <b>WORKGROUP</b><br>
+          Description: <b id="sp-desc">the machine you lose on</b>
+        </div>
+        <div class="small dim" style="margin-top:10px;line-height:1.6">To rename this computer, buy a different computer.</div>
+      </div>
+      <div class="dlg-foot"><button class="xbtn" id="sp-ok" style="min-width:74px">OK</button></div>
+    </div>
   </div>
 
   <!-- Internet Explorer: cursor$land -->
@@ -542,7 +637,7 @@ icons/sounds: winXP (MIT)</div>
       <div class="sm-item" data-act="mydocs"><i class="xico" data-ico="docs32"></i><div class="sm-texts"><div class="sm-text b">My Documents</div></div></div>
       <div class="sm-item" data-act="mypics"><i class="xico" data-ico="pics32"></i><div class="sm-texts"><div class="sm-text b">My Pictures</div></div></div>
       <div class="sm-item" data-app="win-amp"><i class="xico" data-ico="music32"></i><div class="sm-texts"><div class="sm-text b">My Music</div></div></div>
-      <div class="sm-item" data-app="win-computer"><i class="xico" data-ico="computer32"></i><div class="sm-texts"><div class="sm-text b">My Computer</div></div></div>
+      <div class="sm-item" data-app="win-explorer"><i class="xico" data-ico="computer32"></i><div class="sm-texts"><div class="sm-text b">My Computer</div></div></div>
       <div class="sm-sep"></div>
       <div class="sm-item" data-app="win-dispprops"><i class="xico" data-ico="cpanel32"></i><div class="sm-texts"><div class="sm-text">Control Panel</div></div></div>
       <div class="sm-item" data-act="connect"><i class="xico" data-ico="connect32"></i><div class="sm-texts"><div class="sm-text">Connect To</div></div></div>

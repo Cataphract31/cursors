@@ -35,7 +35,8 @@ Second game alongside **THIN ICE** (`c:\ZINC`), the owner's other Solana casino 
 
 Source layout (`apps/web/src/`):
 - `main.js` (~1800 lines) — shell, window manager, desktop, game sim, boot/login
-- `minesweeper.js`, `messenger.js`, `paint.js` — self-contained app modules, **import-free on purpose**
+- `minesweeper.js`, `messenger.js`, `paint.js`, `explorer.js` — self-contained app modules,
+  **import-free on purpose**
   (the build's smoke runner executes them in node; main.js injects assets + shell hooks)
 - `assets.js` — every real asset, imported/globbed so Vite inlines it
 - `style.css` — everything on top of `xp.css`
@@ -128,7 +129,8 @@ BSOD on losing your last cursor, shutdown rush, results, rakeback tracking, auto
 - **Dev hashes** (skip boot/login and drive states headlessly): `#desktop`, `#desktop-start`,
   `#desktop-mine-play`, `#desktop-msn`, `#desktop-msn-emo`, `#desktop-msn-toast`,
   `#desktop-amptest`, `#desktop-logfill`, `#desktop-paint` (draws with 6 tools),
-  `#desktop-paint-wall` (paints, then sets it as tiled wallpaper), `#desktop-paint-props`.
+  `#desktop-paint-wall` (paints, then sets it as tiled wallpaper), `#desktop-paint-props`,
+  `#desktop-exp` + `-c` / `-sys` / `-game` / `-det` / `-props` / `-sysprops`.
 - **Smoke test** runs before every build: executes `main.js` in node under a stub DOM,
   catching strict-mode and load-time crashes. Sibling modules run for real, so keep them
   import-free.
@@ -162,10 +164,20 @@ explicitly **parked** ("stuff only 2% of users would search for"). Run… jokes 
    jspaint is MIT but not on npm and assumes it owns the page, so we vendored its tool
    sprites (`src/assets/xp/paint/`) and wrote the app. Not done: Stretch/Skew (joke error),
    a Fonts toolbar for the text tool, saving into a fake My Pictures.
-3. **My Computer / Explorer + fake C:\ drive** (NEXT) — address bar, task pane, Properties
-   dialogs, System Properties joke, disk-usage pie fed by real game stats.
-4. **Recycle Bin with a purpose** — dead cursors as `.cur` files with death certificates
-   (killer, bounty lost, the 92:8 that did it), Hall of Pain leaderboard.
+3. ~~My Computer / Explorer + fake C:\ drive~~ **SHIPPED 2026-08-09.** `explorer.js`.
+   Real toolbar, address bar (typed paths work), the blue task pane (System Tasks / Other
+   Places / Details), XP's group headings on My Computer, and four view modes
+   (Tiles/Icons/List/Details) that persist. The C:\ tree is real: Program Files\CURSORS.EXE
+   (rng.dll, house_edge.ini, arena.dll all explain the economics when opened), WINDOWS\
+   system32 (hopium.sys, copium.drv, luck.dll — corrupt, of course), Documents and Settings
+   with a Desktop folder that mirrors your actual desktop icons, and My Pictures that fills
+   with Paint saves. **C: Properties has the pie chart, and the disk fills up with dead
+   cursors** (12 MB each) — Disk Cleanup empties the Recycle Bin and gives the space back.
+   Right-click My Computer → the System Properties joke box. Folders are functions, so the
+   disk answers with live state.
+4. **Recycle Bin with a purpose** (NEXT) — dead cursors as `.cur` files with death
+   certificates (killer, bounty lost, the 92:8 that did it), Hall of Pain leaderboard.
+   Explorer already treats dead cursors as disk usage, so this is the other half of that.
 5. **CURSORS.EXE production pass** — the game window is still the most-used and least-polished
    surface: menu bar, Play/Stats/Rakeback/History/Verify panes, canvas render upgrade
    (trails, chunkier explosions, duel lock-on), ×10 celebration, first-run wizard.

@@ -42,6 +42,20 @@ import trayRisk from "./assets/xp/icons/229(16x16).png";
 import offBig from "./assets/xp/icons/windows-off.png";
 import flag16 from "./assets/xp/icons/windows.png";
 
+import hdd32 from "./assets/xp/icons/334(32x32).png";
+import cd32 from "./assets/xp/icons/111(32x32).png";
+import progfolder32 from "./assets/xp/icons/358(32x32).png";
+import openfolder32 from "./assets/xp/icons/57(32x32).png";
+import winfolder32 from "./assets/xp/icons/337(32x32).png";
+import shareddocs32 from "./assets/xp/icons/367(32x32).png";
+import navBack from "./assets/xp/icons/back.png";
+import navFwd from "./assets/xp/icons/forward.png";
+import navUp from "./assets/xp/icons/up.png";
+import navFolders from "./assets/xp/icons/folder.png";
+import navSearch from "./assets/xp/icons/299(32x32).png";
+import navDrop from "./assets/xp/icons/dropdown.png";
+import sysfile32 from "./assets/xp/icons/546(32x32).png";
+
 import paintTools from "./assets/xp/paint/tools.png";
 import paintTrans from "./assets/xp/paint/options-transparency.png";
 import paintAir from "./assets/xp/paint/options-airbrush-size.png";
@@ -75,6 +89,8 @@ export const IMG = {
   help32, search32, run32, lock32, off32, outlook32, wmp32, allProg,
   trayVol, trayUsb, trayRisk, offBig, flag16,
   paint16, paint32,
+  hdd32, cd32, progfolder32, openfolder32, winfolder32, shareddocs32, sysfile32,
+  navBack, navFwd, navUp, navFolders, navSearch, navDrop,
 };
 
 /* Paint tool sprites — jspaint (Isaiah Odhner), MIT */

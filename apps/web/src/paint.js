@@ -799,16 +799,23 @@ export function initPaint(deps) {
     });
     inp.click();
   }
+  /* Save As writes into My Pictures on the fake disk — where Explorer can find
+     it — and then offers you the real file, because a meme you cannot post is
+     not a meme */
   function saveAs() {
     cancelPending();
-    try {
-      const a = document.createElement("a");
-      a.href = cv.toDataURL("image/png");
-      a.download = "untitled.png";
-      document.body.appendChild(a); a.click(); a.remove();
-    } catch (e) {
-      showError("Save As", "Cannot write to disk. This computer's drive is 4 GB of nostalgia and no free space.");
-    }
+    let url;
+    try { url = cv.toDataURL("image/png"); }
+    catch (e) { return showError("Save As", "Cannot write to disk. The drive is 4 GB of nostalgia."); }
+    const name = deps.savePicture(url);
+    if (setTitle) setTitle(name);
+    showConfirm("Save As", `Saved as ${name} in My Pictures.\n\nAlso save a copy to your real computer?`, () => {
+      try {
+        const a = document.createElement("a");
+        a.href = url; a.download = name;
+        document.body.appendChild(a); a.click(); a.remove();
+      } catch (e) {}
+    });
   }
   function setAsWallpaper(mode) {
     cancelPending();
