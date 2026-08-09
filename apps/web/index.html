@@ -63,19 +63,25 @@
     </div>
   </div>
 
-  <!-- Messenger -->
-  <div class="window" id="win-chat" style="left:96px;top:calc(100% - 302px);width:308px">
+  <!-- Windows Messenger: the contact list -->
+  <div class="window" id="win-chat" data-minw="196" data-minh="260" style="left:10px;top:calc(100% - 448px);width:226px;height:416px">
     <div class="title-bar">
-      <div class="tb-l"><i class="xico tb-ico" data-ico="msn16"></i><div class="title-bar-text">everyone — Conversation</div></div>
+      <div class="tb-l"><i class="xico tb-ico" data-ico="msn16"></i><div class="title-bar-text">Windows Messenger</div></div>
       <div class="title-bar-controls"><button aria-label="Minimize"></button><button aria-label="Close"></button></div>
     </div>
-    <div class="win-body pad">
-      <div class="msn-head"><i class="xico msn-fly" data-ico="msn32"></i><div class="to">To: <b>everyone on this desktop</b><br><span class="dim">.NET Messenger Service</span></div></div>
-      <div class="msn-msgs" id="chatmsgs"></div>
-      <div class="msn-input">
-        <input id="chatin" maxlength="120" placeholder="type a message">
-        <button class="xbtn" id="chatsend">Send</button>
-        <button class="xbtn" id="chatnudge" title="Send a nudge">⚡</button>
+    <div class="win-body pad msn-win">
+      <div class="menubar"><span>File</span><span>Contacts</span><span>Actions</span><span>Tools</span><span>Help</span></div>
+      <div class="msn-hdr" id="msn-me">
+        <img class="msn-mydp" id="msn-mydp" alt="">
+        <div class="msn-meta">
+          <div class="msn-myname" id="msn-myname">Administrator (Online)</div>
+          <div class="msn-mypsm" id="msn-mypsm">&lt;Type a personal message&gt;</div>
+        </div>
+      </div>
+      <div class="msn-list" id="msn-list"></div>
+      <div class="msn-foot">
+        <div class="msn-footh">I want to...</div>
+        <a id="msn-lobby">Send an Instant Message to everyone</a>
       </div>
     </div>
   </div>

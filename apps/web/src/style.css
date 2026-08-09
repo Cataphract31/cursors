@@ -136,20 +136,78 @@ input{user-select:text}
 .ms-c{width:16px;height:16px;flex:none;box-sizing:border-box;background-color:#BDBDBD;background-repeat:no-repeat;background-position:center;background-origin:border-box;background-clip:border-box;border-top:2px solid #FFF;border-left:2px solid #FFF;border-right:2px solid #7B7B7B;border-bottom:2px solid #7B7B7B}
 .ms-c.open{border:0;border-top:1px solid #7B7B7B;border-left:1px solid #7B7B7B}
 
-/* ---------- messenger ---------- */
-.msn-head{display:flex;align-items:center;gap:8px;padding:6px 9px;background:linear-gradient(180deg,#F6F9FE,#DDE9F9 60%,#CBDCF3);border-bottom:1px solid #A8C0DE;flex:none}
-.msn-fly{width:24px;height:24px}
-.msn-head .to{font-size:11px;color:#3A5A80;line-height:1.35}
-.msn-head .to b{color:#16569E}
-.msn-msgs{background:#fff;flex:1;min-height:60px;height:158px;overflow-y:auto;padding:6px 9px;line-height:1.5}
-.msn-msgs .who{color:#54708C;margin-top:5px}
-.msn-msgs .who b{color:#16569E;font-weight:normal}
-.msn-msgs .txt{color:#000;padding-left:14px;word-wrap:break-word}
-.msn-msgs .sys{color:#94A4B4;font-style:italic;margin-top:4px}
-.msn-input{display:flex;gap:5px;padding:6px;background:#EAF2FB;border-top:1px solid #A8C0DE;flex:none}
-.msn-input input{flex:1;min-width:40px}
-#win-chat.nudged{animation:nudge .5s}
+/* ---------- Windows Messenger ---------- */
+.win-body.msn-win{background:#fff;display:flex;flex-direction:column}
+.msn-hdr{display:flex;align-items:center;gap:7px;padding:6px 8px;flex:none;cursor:default;background:linear-gradient(180deg,#F4F9FF,#DCEAFB 55%,#C8DEF6);border-bottom:1px solid #A6C3E4}
+.msn-hdr:hover{background:linear-gradient(180deg,#FFFFFF,#E6F1FE 55%,#D2E6FA)}
+.msn-mydp{width:36px;height:36px;flex:none;border:1px solid #7FA5CE;background:#fff;image-rendering:pixelated}
+.msn-meta{min-width:0;flex:1}
+.msn-myname{font-weight:bold;color:#15427B;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.msn-mypsm{color:#6A87A8;font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.msn-list{flex:1;min-height:0;overflow-y:auto;background:#fff;padding:3px 0}
+.msn-group.closed .msn-row{display:none}
+.msn-ghead{display:flex;align-items:center;gap:3px;padding:3px 6px;color:#15427B;font-weight:bold;cursor:default}
+.msn-ghead:hover{background:#EAF2FD}
+.msn-ghead .tw{font-style:normal;font-size:9px;width:10px}
+.msn-group.closed .tw{transform:rotate(-90deg)}
+.msn-row{display:flex;align-items:center;gap:5px;padding:2px 6px 2px 18px;cursor:default;white-space:nowrap;overflow:hidden}
+.msn-row:hover{background:#DCEAFB}
+.msn-st{width:14px;height:14px;flex:none}
+.msn-nm{color:#000;flex:none}
+.msn-psm{color:#8A9AAC;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.msn-row.st-away .msn-st,.msn-row.st-brb .msn-st,.msn-row.st-lunch .msn-st{filter:grayscale(1) sepia(1) saturate(5) hue-rotate(-15deg)}
+.msn-row.st-busy .msn-st,.msn-row.st-phone .msn-st{filter:grayscale(1) sepia(1) saturate(8) hue-rotate(-40deg)}
+.msn-row.st-away .msn-nm,.msn-row.st-brb .msn-nm,.msn-row.st-busy .msn-nm,.msn-row.st-phone .msn-nm,.msn-row.st-lunch .msn-nm{color:#6A6A6A}
+.msn-row.st-offline{opacity:.55}
+.msn-row.st-offline .msn-st{filter:grayscale(1)}
+.msn-foot{flex:none;border-top:1px solid #A6C3E4;background:#EFF5FD;padding:5px 8px}
+.msn-footh{color:#15427B;font-weight:bold;margin-bottom:2px}
+.msn-foot a{color:#1B5FAE;text-decoration:underline;cursor:default;display:block}
+.msn-foot a:hover{color:#D77800}
+
+/* conversation windows */
+.conv-body{background:#fff;display:flex;flex-direction:column}
+.conv-to{display:flex;align-items:center;gap:7px;padding:5px 8px;flex:none;background:linear-gradient(180deg,#F4F9FF,#DCEAFB 60%,#C8DEF6);border-bottom:1px solid #A6C3E4}
+.conv-toico{width:20px;height:20px}
+.conv-totext{color:#3A5A80;line-height:1.35}
+.conv-totext b{color:#15427B}
+.conv-mid{flex:1;min-height:0;display:flex}
+.conv-left{flex:1;min-width:0;display:flex;flex-direction:column}
+.conv-msgs{flex:1;min-height:40px;overflow-y:auto;padding:5px 8px;line-height:1.5;background:#fff}
+.cv-who{color:#4A6B8C;margin-top:4px}
+.cv-who.me{color:#1B5FAE}
+.cv-txt{color:#000;padding-left:13px;word-wrap:break-word}
+.cv-sys{color:#96A6B6;font-style:italic;margin-top:3px}
+.emo{width:19px;height:19px;vertical-align:-5px}
+.conv-status{flex:none;height:15px;padding:0 8px;color:#7A8A9A;font-size:10px;font-style:italic;overflow:hidden;white-space:nowrap}
+.conv-tools{flex:none;display:flex;gap:4px;padding:3px 6px;border-top:1px solid #C8DEF6;background:#F2F7FE}
+.conv-tools .xbtn{padding:2px 8px;min-height:0}
+.conv-emo{font-size:13px;line-height:1}
+.conv-input{flex:none;display:flex;gap:5px;padding:5px 6px 6px;background:#F2F7FE}
+.conv-input textarea{flex:1;min-width:0;resize:none;font:11px Tahoma;padding:3px 5px;border:1px solid #7F9DB9;background:#fff;color:#000}
+.conv-right{width:104px;flex:none;display:flex;flex-direction:column;gap:6px;align-items:center;padding:6px;background:#EDF4FD;border-left:1px solid #C8DEF6}
+.conv-dpbox{width:88px;height:88px;border:1px solid #7FA5CE;background:#fff;display:grid;place-items:center;overflow:hidden}
+.conv-dp{width:80px;height:80px;object-fit:contain;image-rendering:pixelated}
+.window.nudged{animation:nudge .5s}
 @keyframes nudge{0%,100%{transform:translate(0,0)}20%{transform:translate(-6px,4px)}40%{transform:translate(5px,-5px)}60%{transform:translate(-5px,-4px)}80%{transform:translate(6px,5px)}}
+@media (max-width:700px){.conv-right{display:none}}
+
+/* emoticon picker */
+.emo-picker{position:fixed;z-index:99995;background:#fff;border:1px solid #7F9DB9;box-shadow:3px 3px 7px rgba(0,0,0,.3);padding:3px;width:230px;display:flex;flex-wrap:wrap;gap:1px}
+.emo-picker button{width:21px;height:21px;min-width:0;min-height:0;padding:0;border:1px solid transparent;background:none;box-shadow:none;border-radius:0;display:grid;place-items:center;cursor:default}
+.emo-picker button:hover{border-color:#2A66C9;background:#DCEAFB}
+.emo-picker img{width:19px;height:19px;display:block}
+
+/* sign-in / message toast */
+.msn-toast{position:fixed;right:12px;bottom:40px;width:222px;transition:opacity .25s,transform .25s,bottom .2s;background:#F2F7FE;border:1px solid #6E93BE;box-shadow:2px 3px 9px rgba(0,0,0,.35);z-index:99700;opacity:0;transform:translateY(14px);transition:opacity .25s,transform .25s;cursor:default}
+.msn-toast.in{opacity:1;transform:translateY(0)}
+.mt-head{display:flex;align-items:center;gap:5px;padding:3px 5px;background:linear-gradient(180deg,#3E90E8,#1B5FAE);color:#fff;font-weight:bold}
+.mt-head img{width:14px;height:14px}
+.mt-head span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mt-x{font-style:normal;cursor:default;padding:0 2px}
+.mt-body{display:flex;gap:7px;padding:7px}
+.mt-dp{width:40px;height:40px;flex:none;border:1px solid #7FA5CE;background:#fff;image-rendering:pixelated}
+.mt-text{color:#123;line-height:1.4;overflow:hidden;max-height:56px}
 
 /* ---------- winamp (real Webamp) ---------- */
 @keyframes ampmarq{to{transform:translateX(-100%)}}

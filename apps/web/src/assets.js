@@ -91,6 +91,12 @@ export const MINE = Object.fromEntries(
 IMG.mine16 = MINE["mine-icon"];
 IMG.mine32 = MINE["mine-icon"];
 
+/* MSN Messenger emoticons, the retro (2003) set — bernzrdo/msn-emoticons, 19x19 */
+const emoGlob = import.meta.glob("./assets/xp/emo/*.png", { eager: true, query: "?url", import: "default" });
+export const EMO = Object.fromEntries(
+  Object.entries(emoGlob).map(([p, url]) => [p.split("/").pop().replace(/\.png$/, ""), url])
+);
+
 export const SNDF = {
   startup: sndStartup, logon: sndLogon, logoff: sndLogoff, shutdown: sndShutdown,
   balloon: sndBalloon, critical: sndCritical, exclaim: sndExclaim, ding: sndDing,

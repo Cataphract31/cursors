@@ -1,8 +1,9 @@
 import "xp.css";
 import "./style.css";
 import WebampImport from "webamp";
-import { IMG, SNDF, TRACKS, MINE } from "./assets.js";
+import { IMG, SNDF, TRACKS, MINE, EMO } from "./assets.js";
 import { initMinesweeper } from "./minesweeper.js";
+import { initMessenger } from "./messenger.js";
 const Webamp = (WebampImport && WebampImport.default) ? WebampImport.default : WebampImport;
 
 "use strict";
@@ -67,12 +68,6 @@ const sMaxi  =()=>sysSnd("restore");
 const sError =()=>sysSnd("critical",.6);
 const sBalloon=()=>sysSnd("balloon",.6);
 const sNudge =()=>sysSnd("msnNudge",.65);
-let lastAlert=0;
-function msnAlert(){
-  const now=performance.now();
-  if(now-lastAlert<3500) return;
-  lastAlert=now; sysSnd("msnAlert",.45);
-}
 function noiseBurst(dur,vol,delay){
   if(muted) return;
   try{
@@ -105,6 +100,8 @@ const store={
   save(){ clearTimeout(this._t); this._t=setTimeout(()=>{ try{ localStorage.setItem("cursorsxp",JSON.stringify(this.data)); }catch(e){} },250); }
 };
 store.load();
+/* identity lives up here: the Messenger reads it while it boots */
+let PLAYER=store.data.userName||null;
 
 /* ================= real XP assets into the static shell ================= */
 function icoNode(key){
@@ -287,7 +284,8 @@ function edgeDir(w,e){
   return d;
 }
 let reszActive=null;
-$$(".window").forEach(w=>{
+/* every window — markup or runtime-created (conversations) — gets wired here */
+function wireWindow(w){
   w.addEventListener("pointerdown",()=>{ if(openApps.has(w.id)) focusWin(w.id); });
   const tb=w.querySelector(".title-bar");
   const btnMin=w.querySelector('.title-bar-controls button[aria-label="Minimize"]');
@@ -339,7 +337,8 @@ $$(".window").forEach(w=>{
     const up=()=>{removeEventListener("pointermove",move);removeEventListener("pointerup",up);saveWinRect(w);};
     addEventListener("pointermove",move); addEventListener("pointerup",up);
   });
-});
+}
+$$(".window").forEach(wireWindow);
 
 /* ================= desktop icons ================= */
 const SYSICONS=[
@@ -1101,60 +1100,15 @@ $("#tm-switch").addEventListener("click",()=>{
   else focusWin(tmSel);
 });
 
-/* ================= chat (messenger) ================= */
-const chatmsgs=$("#chatmsgs");
-const EMO=[[":)","🙂"],[":(","☹️"],[":D","😄"],[";)","😉"],[":P","😛"],["(y)","👍"],["<3","❤️"],[":o","😮"]];
-function emojify(t){ for(const [k,v] of EMO) t=t.split(k).join(v); return t; }
-let lastChatAt=0;
-function chatMsg(name,text){
-  const w=document.createElement("div"); w.className="who";
-  const b=document.createElement("b"); b.textContent=name; w.appendChild(b);
-  w.appendChild(document.createTextNode(" says:"));
-  const x=document.createElement("div"); x.className="txt"; x.textContent=emojify(text);
-  chatmsgs.appendChild(w); chatmsgs.appendChild(x);
-  trimChat(); chatmsgs.scrollTop=chatmsgs.scrollHeight;
-}
-function chatSys(text){
-  const d=document.createElement("div"); d.className="sys"; d.textContent=text;
-  chatmsgs.appendChild(d); trimChat(); chatmsgs.scrollTop=chatmsgs.scrollHeight;
-}
-function trimChat(){ while(chatmsgs.children.length>120) chatmsgs.firstChild.remove(); }
-function botChat(kind,vars){
-  const now=performance.now();
-  if(now-lastChatAt<2600||Math.random()<.45) return;
-  lastChatAt=now;
-  const L={
-    join:["gm","pot looks juicy","deploying this round, who else","0.1 printer warming up","ez round incoming","who wants to die today"],
-    kill:["LOL {l}","{w} eating good","rip {l}, seen worse rolls","gg {l}","{w} is a problem","bro really touched {w}"],
-    bigkill:["{w} IS FAT NOW","someone kill {w} already","{w} carrying the whole pot","free lottery ticket walking around"],
-    bank:["{n} banked. coward","smart exit tbh","{n} took the money and ran","paper hands {n}"],
-    shutdown:["RUN","exit rush GO","camping the door hehe","everybody OUT","see you at start"],
-    shrink:["walls closing LOL","640x480 no escape","resolution diff","small screen big problems"],
-    idle:["anyone else lagging or is that the vibes","this desktop needs a screensaver","dial up holding strong","nudge me again and see what happens","imagine losing a 90:10"]
-  }[kind];
-  if(!L) return;
-  let t=pick(L);
-  if(vars) for(const k in vars) t=t.split("{"+k+"}").join(vars[k]);
-  setTimeout(()=>{ chatMsg(pick(BOTS).name,t); msnAlert(); },rand(300,1400));
-}
-function sendChat(){
-  const inp=$("#chatin"), t=inp.value.trim();
-  if(!t) return;
-  inp.value=""; sChat();
-  chatMsg(playerName(),t);
-  if(Math.random()<.5) botChat("idle");
-}
-$("#chatsend").addEventListener("click",sendChat);
-$("#chatin").addEventListener("keydown",e=>{ if(e.key==="Enter") sendChat(); });
-let lastNudge=0;
-$("#chatnudge").addEventListener("click",()=>{
-  const now=performance.now();
-  if(now-lastNudge<4000) return;
-  lastNudge=now; sNudge();
-  chatSys("you have just sent a nudge.");
-  const w=$("#win-chat");
-  w.classList.remove("nudged"); void w.offsetWidth; w.classList.add("nudged");
+/* ================= Windows Messenger ================= */
+const msn=initMessenger({
+  EMO, IMG, $, store, sysSnd, playerName:()=>playerName(),
+  wireWindow, openWin, closeWin,
+  isOpen:id=>openApps.has(id)&&!openApps.get(id).min,
+  showMenu, showError, desk:desktop,
 });
+const chatSys=t=>msn.lobbySys(t);
+const botChat=(kind,vars)=>msn.botChat(kind,vars);
 
 /* ================= Winamp — the real thing (Webamp, MIT, (c) Jordan Eldredge) ================= */
 const winampApp=(()=>{
@@ -1240,7 +1194,7 @@ return {open:openWinamp,close:closeWinamp};
 /* ================= geocities ================= */
 let geoN=133721;
 setInterval(()=>{ if($("#win-ie").style.display==="block"){ geoN+=Math.random()<.4?1:0; $("#geocnt").textContent=String(geoN).padStart(7,"0"); } },1500);
-$("#geo-guest").addEventListener("click",()=>openWin("win-chat"));
+$("#geo-guest").addEventListener("click",()=>msn.openConv("lobby"));
 $("#geo-deploy").addEventListener("click",()=>openWin("win-cursors"));
 
 /* ================= game state ================= */
@@ -1739,7 +1693,7 @@ function frame(t){
 /* ================= boot ================= */
 if(SMALL){
   $("#win-cursors").style.left="4px"; $("#win-cursors").style.top="4px"; $("#win-cursors").style.width="min(316px,96vw)";
-  $("#win-chat").style.left="4px"; $("#win-chat").style.top="calc(100% - 296px)";
+  $("#win-chat").style.left="4px"; $("#win-chat").style.top="calc(100% - 330px)"; $("#win-chat").style.height="300px";
   $("#win-log").style.left="unset";
 }
 syncArena();
@@ -1754,6 +1708,7 @@ openWin("win-cursors",{silent:true});
 if(!SMALL) openWin("win-chat",{silent:true});
 openWin("win-log",{silent:true});
 if(SMALL) minWin("win-log");
+if(!SMALL){ msn.place("lobby",258,Math.max(40,H-336)); msn.openConv("lobby"); }
 focusWin("win-cursors");
 chatSys("welcome to the desktop. say gm.");
 renderBin(); updatePanel(); updateSys();
@@ -1804,7 +1759,6 @@ function showBootThenLogin(){
   $("#boot").addEventListener("pointerdown",()=>{ clearTimeout(bt); toLogin(); },{once:true});
 }
 /* ---- user identity: picked at the login screen, Phantom wallet later ---- */
-let PLAYER=store.data.userName||null;
 function playerName(){ return PLAYER||"admin"; }
 function playerNameFull(){ return PLAYER||"Administrator"; }
 function syncIdentity(){
@@ -1849,6 +1803,20 @@ $("#tile-guest").addEventListener("click",()=>{
 $("#lg-off").addEventListener("click",()=>{ sysSnd("shutdown",.55); $("#login").style.display="none"; $("#shutdown").style.display="grid"; });
 if(location.hash.indexOf("#desktop")===0) sessionStorage.setItem("cxp.booted","1"); /* dev: skip boot/login */
 if(location.hash==="#desktop-start") setTimeout(()=>$("#startmenu").classList.add("open"),400); /* dev: capture start menu */
+if(location.hash.indexOf("#desktop-msn")===0) setTimeout(()=>{ /* dev: capture messenger in use */
+  const conv=id=>document.getElementById(msn.convIdFor(id));
+  msn.openConv("bobo");
+  const c=conv("bobo");
+  c.style.left="270px"; c.style.top="70px";
+  const ta=c.querySelector("textarea"), send=c.querySelector(".conv-send");
+  const type=t=>{ ta.value=t; send.click(); };
+  type("gm bobo (H) how bad is it today");
+  setTimeout(()=>type("i banked at x2 :P (Y)"),1200);
+  if(location.hash==="#desktop-msn-emo")
+    setTimeout(()=>c.querySelector(".conv-emo").click(),2600);
+  if(location.hash==="#desktop-msn-toast")
+    setTimeout(()=>msn.incoming("mumu","you still alive? (bunny)"),2400);
+},600);
 if(location.hash.indexOf("#desktop-mine")===0) setTimeout(()=>{ /* dev: capture minesweeper mid-game */
   const w=$("#win-mine"); w.style.left="8px"; w.style.top="8px";
   openWin("win-mine");
