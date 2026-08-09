@@ -29,8 +29,8 @@ Second game alongside **THIN ICE** (`c:\ZINC`), the owner's other Solana casino 
 | Repo | `C:\CURSORS` (own git repo, branch `master`) |
 | App | `apps/web` — npm workspace, Vite |
 | Dev | `npm run dev` in `C:\CURSORS` → http://localhost:5173 |
-| Build | `npm run build` → smoke test → Vite → `dist/artifact.html` (single self-contained file) |
-| Deploy | `upload/cursors/index.html` — committed build output, served by the owner's Vercel project (Root Directory = `upload/cursors`, no build step; see the README in that folder). **Claude artifacts are deprecated** (owner, 2026-08-09) — do not publish them |
+| Build | `npm run build` → smoke test → Vite → `apps/web/dist/` → mirrored into `upload/cursors/` |
+| Deploy | `upload/cursors/` — committed build output, served by the owner's Vercel project (Root Directory = `upload/cursors`, **no build step**; see the README in that folder). **Claude artifacts are deprecated** (owner, 2026-08-09) — do not publish them |
 | Server | `server/` — the beta multiplayer server (Node 22, `ws`, node:sqlite). Live at `wss://cursors.34-70-75-204.sslip.io` on the THIN ICE GCP box (separate service/port/host — see `server/DEPLOY.md`). Local dev: `cd server && FAST=1 node server.js`, client hash `#desktop-mp` |
 | Sibling repo | `c:\ZINC` = THIN ICE. **Copy from it, never edit it.** |
 
@@ -223,6 +223,17 @@ rush, ~18.5s the crash dialog, ~27s the recovered arena).
   End with `Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>`.
 - Owner plays every build — `npm run build` refreshes `upload/cursors/`; commit and push,
   Vercel redeploys automatically. Say what to look at. Do **not** publish Claude artifacts.
+- **The build is multi-file, and that is deliberate** (changed 2026-08-09 once artifacts
+  were dropped). It used to be one inlined HTML file because the artifact host demanded it,
+  which meant 8.7 MB gzipped on every first visit — 82% of it audio that base64 inflated and
+  gzip could not compress. Now: small assets still inline into the JS/CSS (~130 icons, 80
+  emoticons), the MP3s and WAVs are real files fetched only when something plays them, and
+  content-hashed filenames + `vercel.json` cache headers make redeploys re-download almost
+  nothing. First paint ≈ **0.5 MB gzipped**. Do not reintroduce `vite-plugin-singlefile`.
+- Testing the shipped folder needs a **web server**, not `file://` — ES modules are blocked
+  by CORS on file URLs. `cd upload/cursors && python -m http.server 8099`, then point
+  shot.mjs at `http://localhost:8099/index.html`. Add `?server=off` for the offline sandbox
+  or `?server=wss://…` to aim at a server.
 
 ---
 
