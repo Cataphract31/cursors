@@ -35,7 +35,11 @@ Owner, after the Winamp zombie-tab bug and the "satire joke" boot screen: *"it m
 
 Held line, unchanged: no shipping copyrighted **music** files. OS icons/sounds/wallpaper are the same category as Webamp's embedded skin — this is crypto slop cosplay, owner accepts it explicitly.
 
-### Phase A — The engine + the shell, carbon copy (THIS SESSION)
+### Phase A — The engine + the shell, carbon copy — ✅ SHIPPED 2026-08-09
+
+Landed exactly as specified below, verified frame-by-frame with headless-Edge screenshots (boot screen, Welcome screen, desktop, start menu — the screenshots are how the "satire" gap gets caught without waiting for the owner). Notes: xp.css needed three patches on our side (no inactive titlebar state — added real Luna pale-blue; its global button gradient had to be beaten off the task tabs; `body{margin:8px}`). The commons flag SVG shipped with an embedded wordmark — stripped to the bare flag, genuine palette (#f8682c/#91c300/#00b4f1/#ffc300). Dev hashes: `#desktop` skips boot/login, `#desktop-start` also opens the start menu (for screenshots). Deferred from A: XP `.cur` pointer files (rw-designer set, needs a scrape), Olive/Silver themes, tile-dim on Welcome hover.
+
+Original spec:
 
 1. **OS engine rewrite** — the actual bug-fix: one process table as the single source of truth; the taskbar is a pure render of that state (rebuilt on every open/close/minimize/focus mutation, never patched imperatively). Webamp becomes a normal process entry (its onClose/onMinimize route through the same state transitions). Zombie tabs become impossible by construction.
 2. **Boot screen** — black, real XP logo, the blue three-block marquee crawling its rounded track, "Copyright © Microsoft Corporation" bottom-left. Timed like the real thing, into…
