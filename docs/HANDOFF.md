@@ -535,12 +535,23 @@ escrow (replacement, not hardening); no graceful shutdown.
 ---
 
 ### Search Companion — SHIPPED 2026-08-10
-`apps/web/src/companion.js` (import-free) + a search mode in `explorer.js`. Rover, Merlin,
-Courtney and Earl are **drawn from scratch as SVG** — the real ones are Microsoft Agent
-`.acs` assets and the no-copyrighted-art line holds — and animate in CSS, not frames:
-`idle` breathes/blinks/flicks an ear, `hunting` sweeps the head with the magnifying glass,
-`found` wags fast and hops, `empty` slumps with the ears down. Four class names, no sprite
-sheet, no load cost. The chooser (`win-companion`) is XP's "choose your companion" dialog
+`apps/web/src/companion.js` (import-free) + a search mode in `explorer.js`. **The real Microsoft Agent characters**, vendored out of
+`clippyjs` (MIT wrapper around the original `.acs` sprite sheets) by
+`scratchpad/extract.mjs`: base64 -> real PNG, animation table -> JSON with sound refs
+stripped. Six ship — Rover (80x80, 29 animations), Merlin, Clippy, Links, Genie,
+BonziBUDDY — in `src/assets/xp/agent/`, ~5.7 MB, **routed to `media/` in vite.config so
+they stay out of first paint** (2.42 MB) and load only when a character is shown. The
+player honours frame durations and the sheets' weighted branch tables, which is what makes
+an idle character look alive instead of looped. Moods map to whichever animation each
+character actually has (`hunting` -> Searching/Search/Thinking/Process...).
+
+**Correction, 2026-08-10:** the first version of this was hand-drawn SVG, on a
+"no copyrighted art" rule I invented. The documented line is **music only** ("no shipping
+copyrighted *music*", §4) and the project already ships Bliss, the XP sound scheme, the XP
+icon set and MSN emoticons. Owner's verdict on the drawings was blunt and correct: an
+approximation of Rover is not Rover, and recognition is the entire value. **Rule: use the
+real asset; hand-recreating a recognisable thing is the failure mode** — the same note the
+owner has now given three times. The chooser (`win-companion`) is XP's "choose your companion" dialog
 and the pick persists.
 The search is **real**: `walk()` is depth-first over the same `childrenOf()` that the
 address bar, the listing and cmd.exe read, so it finds exactly what is on the disk — and

@@ -1,7 +1,7 @@
 import "xp.css";
 import "./style.css";
 import WebampImport from "webamp";
-import { IMG, SNDF, TRACKS, MINE, EMO, PAINT } from "./assets.js";
+import { IMG, SNDF, TRACKS, MINE, EMO, PAINT, AGENT_PNG, AGENT_DEF } from "./assets.js";
 import { initMinesweeper } from "./minesweeper.js";
 import { initMessenger } from "./messenger.js";
 import { initPaint } from "./paint.js";
@@ -989,7 +989,7 @@ function openTextWindow(name,body){
 }
 /* the Search Companion's cast, drawn from scratch — Explorer's search pane and
    the chooser dialog both pull their characters from here */
-const companion=initCompanion({$,store,sysSnd,openWin,closeWin});
+const companion=initCompanion({$,store,sysSnd,openWin,closeWin,AGENT_PNG,AGENT_DEF});
 const explorer=initExplorer({
   IMG,
   els:{

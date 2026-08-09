@@ -107,6 +107,13 @@ export const IMG = {
   earth16, connect16,
 };
 
+/* Microsoft Agent characters, vendored out of clippyjs (MIT wrapper around the
+   original .acs sprite sheets). The PNG urls are eager because they are only
+   strings — the images themselves are not fetched until a character is shown —
+   and the animation tables are lazy so none of this touches first paint. */
+export const AGENT_PNG = import.meta.glob("./assets/xp/agent/*.png", { eager: true, query: "?url", import: "default" });
+export const AGENT_DEF = import.meta.glob("./assets/xp/agent/*.json");
+
 /* Paint tool sprites — jspaint (Isaiah Odhner), MIT */
 export const PAINT = { tools: paintTools, transparency: paintTrans, airbrush: paintAir };
 

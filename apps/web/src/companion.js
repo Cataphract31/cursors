@@ -1,137 +1,133 @@
-/* The Search Companion — Rover, and the three you could switch him for.
+/* The Search Companion — the real Microsoft Agent characters.
 
-   The real characters are Microsoft Agent .acs assets and we do not ship
-   copyrighted art, so these are drawn from scratch: a yellow dog sitting with
-   a red collar, a wizard in a star robe, a girl with round glasses in a red
-   pod, and a surfing thing with enormous eyes. Recognisable, not lifted.
+   These are the actual sprite sheets, vendored out of clippyjs (an MIT wrapper
+   around the original .acs assets): Rover at 80x80 with 29 animations, Merlin,
+   Clippy, Links, Genie and Bonzi. An approximation of Rover is not Rover, and
+   the whole value of this feature is recognition.
 
-   They animate in CSS rather than frames, so idle/searching/found/empty are
-   four class names and the whole cast costs nothing to load. */
+   Sheets are lazy: the PNG urls are just strings until a character is shown,
+   and the animation tables load on demand, so none of it touches first paint. */
 export function initCompanion(deps) {
-  const { $, store, sysSnd, openWin, closeWin } = deps;
+  const { $, store, sysSnd, openWin, closeWin, AGENT_PNG, AGENT_DEF } = deps;
 
   const CAST = [
-    { id: "rover", name: "Rover", blurb: "A yellow dog with a magnifying glass. The default, and the reason anyone remembers this feature." },
+    { id: "rover", name: "Rover", blurb: "The yellow dog from Windows XP's Search Companion. The default, and the reason anyone remembers this feature." },
     { id: "merlin", name: "Merlin", blurb: "A wizard. Was the default in Windows 98 and never got over the demotion." },
-    { id: "courtney", name: "Courtney", blurb: "Arrives in a red pod. Wears the glasses." },
-    { id: "earl", name: "Earl", blurb: "Surfs. Nobody has ever explained Earl." },
+    { id: "clippy", name: "Clippy", blurb: "It looks like you are trying to lose money. Would you like help?" },
+    { id: "links", name: "Links", blurb: "A cat. Sits on the thing you are trying to read." },
+    { id: "genie", name: "Genie", blurb: "Grants wishes at a rate of one in N for a wish worth N. Same as everything else here." },
+    { id: "bonzi", name: "BonziBUDDY", blurb: "A purple gorilla that asked for your details in 1999. Ships here as a museum piece — he does nothing but talk." },
   ];
 
-  /* --- the art. one <svg> each, groups named so the CSS can move them --- */
-  const ART = {
-    rover: `
-      <g class="cmp-body">
-        <ellipse class="cmp-tail" cx="74" cy="80" rx="4" ry="12" fill="#F0B429" stroke="#B07D0A" stroke-width="1.5"/>
-        <path d="M28 92 q-4 4 2 5 h12 q5 -1 1 -5 z" fill="#F5C445" stroke="#B07D0A" stroke-width="1.5"/>
-        <path d="M52 92 q-4 4 2 5 h12 q5 -1 1 -5 z" fill="#F5C445" stroke="#B07D0A" stroke-width="1.5"/>
-        <path d="M30 92 q-6 -30 8 -40 q14 -9 26 2 q10 9 6 38 z" fill="#F5C445" stroke="#B07D0A" stroke-width="1.8"/>
-        <ellipse cx="48" cy="72" rx="14" ry="10" fill="#FBE0A0"/>
-        <path d="M30 62 h36" stroke="#C1392B" stroke-width="5" stroke-linecap="round"/>
-        <circle cx="48" cy="66" r="3" fill="#E8B23A" stroke="#8A5C00" stroke-width="1"/>
-        <g class="cmp-head">
-          <ellipse cx="48" cy="40" rx="21" ry="18" fill="#F5C445" stroke="#B07D0A" stroke-width="1.8"/>
-          <path class="cmp-ear l" d="M30 30 q-12 2 -11 18 q1 14 11 12 q-6 -16 0 -30 z" fill="#E8A81E" stroke="#B07D0A" stroke-width="1.6"/>
-          <path class="cmp-ear r" d="M66 30 q12 2 11 18 q-1 14 -11 12 q6 -16 0 -30 z" fill="#E8A81E" stroke="#B07D0A" stroke-width="1.6"/>
-          <ellipse cx="48" cy="49" rx="11" ry="8" fill="#FBE0A0"/>
-          <ellipse class="cmp-eye" cx="41" cy="36" rx="4" ry="4.4" fill="#1A1A1A"/>
-          <ellipse class="cmp-eye" cx="55" cy="36" rx="4" ry="4.4" fill="#1A1A1A"/>
-          <circle cx="42.4" cy="34.6" r="1.3" fill="#fff"/>
-          <circle cx="56.4" cy="34.6" r="1.3" fill="#fff"/>
-          <ellipse cx="48" cy="46" rx="4.6" ry="3.4" fill="#1A1A1A"/>
-          <path d="M48 49 v3 M48 52 q-4 3 -7 0 M48 52 q4 3 7 0" fill="none" stroke="#8A5C00" stroke-width="1.4" stroke-linecap="round"/>
-        </g>
-      </g>
-      <g class="cmp-glass"><circle cx="80" cy="58" r="11" fill="rgba(190,225,255,.5)" stroke="#7A8798" stroke-width="2.5"/>
-        <path d="M88 66 l7 8" stroke="#7A8798" stroke-width="4" stroke-linecap="round"/></g>`,
-
-    merlin: `
-      <g class="cmp-body">
-        <path d="M28 98 q0 -40 20 -46 q20 6 20 46 z" fill="#3C4EA8" stroke="#22306E" stroke-width="1.8"/>
-        <g fill="#F2CE3C">
-          <path d="M36 70 l1.6 3.6 4 .4 -3 2.7 .9 3.9 -3.5 -2.1 -3.5 2.1 .9 -3.9 -3 -2.7 4 -.4 z"/>
-          <path d="M58 82 l1.6 3.6 4 .4 -3 2.7 .9 3.9 -3.5 -2.1 -3.5 2.1 .9 -3.9 -3 -2.7 4 -.4 z"/>
-          <path d="M44 90 a5 5 0 1 0 5 -5 a4 4 0 1 1 -5 5 z"/>
-        </g>
-        <path d="M40 56 q8 34 16 0 q-4 40 -8 40 q-4 0 -8 -40 z" fill="#E8E8E8" stroke="#B8B8B8" stroke-width="1.2"/>
-        <g class="cmp-head">
-          <ellipse cx="48" cy="44" rx="14" ry="13" fill="#F3C9A6" stroke="#C79A72" stroke-width="1.4"/>
-          <path d="M34 40 q14 -34 28 0 q-14 -10 -28 0 z" fill="#3C4EA8" stroke="#22306E" stroke-width="1.6"/>
-          <path d="M48 6 q3 20 14 34 q-14 -8 -28 0 q11 -14 14 -34 z" fill="#3C4EA8" stroke="#22306E" stroke-width="1.6"/>
-          <path d="M46 14 l1.4 3.2 3.6 .3 -2.7 2.4 .8 3.5 -3.1 -1.9 -3.1 1.9 .8 -3.5 -2.7 -2.4 3.6 -.3 z" fill="#F2CE3C"/>
-          <ellipse class="cmp-eye" cx="43" cy="44" rx="2.4" ry="2.8" fill="#1A1A1A"/>
-          <ellipse class="cmp-eye" cx="53" cy="44" rx="2.4" ry="2.8" fill="#1A1A1A"/>
-          <path d="M38 39 q5 -3 9 1 M58 39 q-5 -3 -9 1" fill="none" stroke="#C8C8C8" stroke-width="2.2" stroke-linecap="round"/>
-          <path d="M36 52 q12 30 24 0 q-12 8 -24 0 z" fill="#E8E8E8" stroke="#B8B8B8" stroke-width="1.2"/>
-        </g>
-      </g>`,
-
-    courtney: `
-      <g class="cmp-body">
-        <ellipse cx="50" cy="80" rx="34" ry="15" fill="#D3392B" stroke="#8E1F14" stroke-width="1.8"/>
-        <path d="M16 80 q34 -16 68 0" fill="none" stroke="#F07A6C" stroke-width="2"/>
-        <circle cx="30" cy="92" r="6" fill="#E8E8E8" stroke="#8E1F14" stroke-width="1.5"/>
-        <circle cx="70" cy="92" r="6" fill="#E8E8E8" stroke="#8E1F14" stroke-width="1.5"/>
-        <path d="M78 74 h14 q3 2 0 4 h-14 z" fill="#D3392B" stroke="#8E1F14" stroke-width="1.4"/>
-        <g class="cmp-head">
-          <path d="M34 68 q4 -14 16 -14 q12 0 16 14 z" fill="#3FB2C9" stroke="#256E7E" stroke-width="1.5"/>
-          <ellipse cx="50" cy="44" rx="15" ry="14" fill="#F7D2B0" stroke="#C79A72" stroke-width="1.4"/>
-          <path d="M34 42 q2 -22 16 -22 q14 0 16 22 q-6 -12 -16 -12 q-10 0 -16 12 z" fill="#F27DB4" stroke="#C2437E" stroke-width="1.5"/>
-          <path d="M36 26 q6 -10 14 -6 M64 26 q-6 -10 -14 -6" fill="none" stroke="#F9A8CE" stroke-width="2.6" stroke-linecap="round"/>
-          <circle cx="43" cy="45" r="7.5" fill="rgba(255,255,255,.85)" stroke="#2A2A2A" stroke-width="2.4"/>
-          <circle cx="59" cy="45" r="7.5" fill="rgba(255,255,255,.85)" stroke="#2A2A2A" stroke-width="2.4"/>
-          <path d="M50.5 45 h1" stroke="#2A2A2A" stroke-width="2.4"/>
-          <ellipse class="cmp-eye" cx="43" cy="45" rx="2.6" ry="3" fill="#1A1A1A"/>
-          <ellipse class="cmp-eye" cx="59" cy="45" rx="2.6" ry="3" fill="#1A1A1A"/>
-          <path d="M46 55 q4 4 8 0" fill="none" stroke="#B5615C" stroke-width="1.6" stroke-linecap="round"/>
-        </g>
-      </g>`,
-
-    earl: `
-      <g class="cmp-body">
-        <path d="M14 94 q36 -12 72 0 q-36 10 -72 0 z" fill="#B489E0" stroke="#7A55A8" stroke-width="1.6"/>
-        <path d="M24 92 q26 -8 52 0" fill="none" stroke="#E7D3FA" stroke-width="2"/>
-        <path d="M40 88 v-8 M60 88 v-8" stroke="#3A9AD9" stroke-width="3.4" stroke-linecap="round"/>
-        <path d="M34 62 h32 v20 h-32 z" fill="#F2CE3C"/>
-        <path d="M34 66 h32 M34 72 h32 M34 78 h32" stroke="#E2604A" stroke-width="3.4"/>
-        <path d="M34 62 h32 v20 h-32 z" fill="none" stroke="#9A7A12" stroke-width="1.5"/>
-        <path d="M34 64 q-16 4 -18 16 M66 64 q16 4 18 16" fill="none" stroke="#F2CE3C" stroke-width="4" stroke-linecap="round"/>
-        <g class="cmp-head">
-          <ellipse cx="50" cy="42" rx="26" ry="19" fill="#F5D960" stroke="#9A7A12" stroke-width="1.8"/>
-          <path d="M24 44 q26 22 52 0 q-26 10 -52 0 z" fill="#E9C63F" stroke="#9A7A12" stroke-width="1.4"/>
-          <circle cx="40" cy="34" r="9" fill="#fff" stroke="#9A7A12" stroke-width="1.6"/>
-          <circle cx="60" cy="34" r="9" fill="#fff" stroke="#9A7A12" stroke-width="1.6"/>
-          <ellipse class="cmp-eye" cx="41" cy="35" rx="3.6" ry="4" fill="#1A1A1A"/>
-          <ellipse class="cmp-eye" cx="59" cy="35" rx="3.6" ry="4" fill="#1A1A1A"/>
-          <path d="M28 24 q8 -8 14 -2 M72 24 q-8 -8 -14 -2" fill="none" stroke="#9A7A12" stroke-width="2" stroke-linecap="round"/>
-          <path d="M42 50 q8 6 16 0" fill="none" stroke="#9A7A12" stroke-width="1.8" stroke-linecap="round"/>
-        </g>
-      </g>`,
+  /* the mood the app asks for, and the first animation each character has that
+     can carry it — the casts do not share a vocabulary */
+  const MOODS = {
+    idle: ["RestPose", "Idle", "Blink", "Alert", "Greet"],
+    hunting: ["Searching", "Search", "Thinking", "Processing", "Process", "Read", "GetTechy", "Wave"],
+    found: ["Congratulate", "Pleased", "CharacterSucceeds", "GetAttention", "Cheer", "Wave", "Greet"],
+    empty: ["Embarrassed", "Sad", "GetAttentionMinor", "DontRecognize", "Confused", "RestPose"],
+    hello: ["Greet", "Show", "Wave", "Alert", "RestPose"],
   };
 
-  const pick = () => store.data.companion || "rover";
+  const url = id => AGENT_PNG["./assets/xp/agent/" + id + ".png"];
+  const defs = {};              /* id -> {framesize, animations} once loaded */
+  const loading = {};
+  function load(id) {
+    if (defs[id]) return Promise.resolve(defs[id]);
+    if (loading[id]) return loading[id];
+    const imp = AGENT_DEF["./assets/xp/agent/" + id + ".json"];
+    if (!imp) return Promise.resolve(null);
+    loading[id] = imp().then(m => (defs[id] = m.default || m));
+    return loading[id];
+  }
+
+  const pick = () => (CAST.some(c => c.id === store.data.companion) ? store.data.companion : "rover");
   const named = id => CAST.find(c => c.id === id) || CAST[0];
 
-  /* a companion node: <span class="cmp cmp-rover idle"><svg .../></span> */
+  /* ---- one running character ---- */
+  const live = new Set();
   function node(id, cls) {
     const who = id || pick();
     const box = document.createElement("span");
-    box.className = "cmp cmp-" + who + " idle" + (cls ? " " + cls : "");
+    box.className = "cmp" + (cls ? " " + cls : "");
     box.dataset.who = who;
-    box.innerHTML = `<svg viewBox="0 0 100 100">${ART[who] || ART.rover}</svg>`;
+    const sheet = document.createElement("i");
+    sheet.className = "cmp-sheet";
+    box.appendChild(sheet);
+    box._sheet = sheet;
+    box._mood = "idle";
+    live.add(box);
+    mount(box, who);
     return box;
   }
-  function setMood(box, mood) {
-    if (!box) return;
-    box.className = box.className.replace(/\b(idle|hunting|found|empty)\b/g, "").trim() + " " + mood;
-  }
-  function swap(box, id) {
-    if (!box) return;
-    box.className = "cmp cmp-" + id + " idle";
-    box.dataset.who = id;
-    box.innerHTML = `<svg viewBox="0 0 100 100">${ART[id] || ART.rover}</svg>`;
+  function mount(box, who) {
+    const sheet = box._sheet;
+    sheet.style.backgroundImage = `url(${url(who)})`;
+    load(who).then(def => {
+      if (!def || box.dataset.who !== who) return;
+      box._def = def;
+      const [fw, fh] = def.framesize;
+      sheet.style.width = fw + "px";
+      sheet.style.height = fh + "px";
+      /* the sheets differ wildly in frame size (80x80 to 200x160), so the
+         wrapper is a fixed box and the sprite scales into it */
+      const fit = () => {
+        const r = box.getBoundingClientRect();
+        const k = Math.min((r.width || 78) / fw, (r.height || 78) / fh);
+        sheet.style.transform = `translate(-50%,-50%) scale(${k})`;
+      };
+      fit();
+      play(box, box._mood);
+    });
   }
 
-  /* --- "choose your companion" — the dialog everyone remembers --- */
+  function anim(def, mood) {
+    for (const want of MOODS[mood] || MOODS.idle) if (def.animations[want]) return def.animations[want];
+    /* nothing matched: any animation is better than a frozen sprite */
+    const keys = Object.keys(def.animations);
+    return def.animations[keys[0]];
+  }
+  function play(box, mood) {
+    box._mood = mood;
+    const def = box._def;
+    if (!def) return;
+    clearTimeout(box._t);
+    const a = anim(def, mood);
+    if (!a || !a.frames.length) return;
+    let i = 0;
+    const step = () => {
+      if (!box.isConnected) { live.delete(box); return; }
+      const f = a.frames[i];
+      if (f && f.i) box._sheet.style.backgroundPosition = `-${f.i[0]}px -${f.i[1]}px`;
+      let next = i + 1;
+      /* the sheets carry weighted branches; honouring them is what makes an
+         idle character look alive rather than looped */
+      if (f && f.b) {
+        let roll = Math.random() * 100;
+        for (const [to, w] of f.b) { if (roll < w) { next = to; break; } roll -= w; }
+      }
+      i = next;
+      if (i >= a.frames.length) {
+        if (box._mood === "idle") { i = 0; box._t = setTimeout(step, 1200 + Math.random() * 2600); return; }
+        i = a.frames.length - 1;            /* hold the last frame */
+        box._t = setTimeout(() => play(box, "idle"), 900);
+        return;
+      }
+      box._t = setTimeout(step, Math.max(40, (f && f.d) || 100));
+    };
+    step();
+  }
+
+  function setMood(box, mood) { if (box) play(box, mood); }
+  function swap(box, id) {
+    if (!box) return;
+    clearTimeout(box._t);
+    box.dataset.who = id;
+    box._def = null;
+    mount(box, id);
+  }
+
+  /* ---- "choose your companion" ---- */
   let onPicked = null;
   function chooser(after) {
     onPicked = after || null;
@@ -141,19 +137,20 @@ export function initCompanion(deps) {
     for (const c of CAST) {
       const cell = document.createElement("div");
       cell.className = "cmp-cell" + (c.id === chosen ? " on" : "");
-      cell.appendChild(node(c.id, "big"));
+      const n = node(c.id, "big");
+      cell.appendChild(n);
       const nm = document.createElement("div");
       nm.className = "cmp-nm";
       nm.textContent = c.name;
       cell.appendChild(nm);
-      cell.title = c.blurb;
       cell.addEventListener("click", () => {
         chosen = c.id;
         [...host.children].forEach(x => x.classList.toggle("on", x === cell));
         $("#cmp-blurb").textContent = c.blurb;
+        setMood(n, "hello");
         sysSnd("nav", .35);
       });
-      cell.addEventListener("dblclick", () => { commit(chosen); });
+      cell.addEventListener("dblclick", () => commit(chosen));
       host.appendChild(cell);
     }
     $("#cmp-blurb").textContent = named(chosen).blurb;
@@ -166,7 +163,7 @@ export function initCompanion(deps) {
     store.save();
     closeWin("win-companion");
     sysSnd("hwin", .4);
-    for (const box of document.querySelectorAll(".cmp")) if (!box.closest("#cmp-pick")) swap(box, id);
+    for (const box of live) if (box.isConnected && !box.closest("#cmp-pick")) swap(box, id);
     if (onPicked) onPicked(id);
   }
 

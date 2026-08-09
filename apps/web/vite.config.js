@@ -26,6 +26,9 @@ export default defineConfig({
         assetFileNames: info => {
           const n = info.names && info.names[0] || info.name || "";
           if (/\.(mp3|wav)$/i.test(n)) return "media/[name]-[hash][extname]";
+          /* Agent sprite sheets are big and load only when a companion is
+             shown, so they belong with the audio in the on-demand bucket */
+          if (/^(rover|merlin|clippy|links|genie|bonzi)\.png$/i.test(n)) return "media/[name]-[hash][extname]";
           return "assets/[name]-[hash][extname]";
         },
       },
