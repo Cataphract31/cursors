@@ -14,6 +14,9 @@ import { WebSocketServer } from "ws";
 import { createSim, BOT_NAMES, STAKE } from "./sim.js";
 /* deploys per gallery frame — the anti-sybil wall, priced in real stake */
 const GALLERY_DEPLOYS = 10;
+/* the XP pointer schemes a cursor may wear on the field — ids, not files */
+const SKIN_IDS = new Set(["", "std-l", "std-xl", "black", "black-l", "black-xl", "inv", "inv-l", "inv-xl",
+  "magnified", "animated", "bronze", "white", "dinosaur", "hands", "conductor", "oldfashioned", "variations"]);
 import { openDb } from "./db.js";
 
 const PORT = +(process.env.PORT || 8788);
@@ -176,6 +179,7 @@ function handle(c, m) {
         rake: persisted.rake, totIn: persisted.totIn, totOut: persisted.totOut, created: persisted.created,
       } : null);
       p.name = name;
+      if (SKIN_IDS.has(String(m.skin || ""))) p.skin = String(m.skin || "");
       const old = byKey.get(token);
       if (old && old !== c) { send(old, { t: "err", msg: "signed in elsewhere" }); old.ws.close(); }
       byKey.set(token, c);
@@ -197,6 +201,15 @@ function handle(c, m) {
     /* "max live" and "deploys closed" are states the client's own button
        already shows; balloon-ing them turns a fast double-tap into a stream of
        notifications about something the player can see for themselves. */
+    case "skin": {
+      /* cosmetic identity: which XP pointer scheme this player's cursors wear.
+         whitelisted ids only; affects future spawns, never economics. */
+      if (c.key && SKIN_IDS.has(String(m.skin || ""))) {
+        const p = sim.players.get(c.key);
+        if (p) p.skin = String(m.skin || "");
+      }
+      break;
+    }
     case "deploy": { const err = sim.requestDeploy(c.key); if (err && err !== "deploys closed" && err !== "max live") send(c, { t: "err", msg: err }); break; }
     case "recall": sim.requestRecall(c.key); break;
     case "recallOne": if (Number.isInteger(m.id)) sim.recallOne(c.key, m.id); break;

@@ -1,7 +1,7 @@
 import "xp.css";
 import "./style.css";
 import WebampImport from "webamp";
-import { IMG, SNDF, TRACKS, MINE, EMO, PAINT, AGENT_PNG, AGENT_DEF } from "./assets.js";
+import { IMG, SNDF, TRACKS, MINE, EMO, PAINT, AGENT_PNG, AGENT_DEF, CURFILES } from "./assets.js";
 import { initMinesweeper } from "./minesweeper.js";
 import { initMessenger } from "./messenger.js";
 import { initPaint } from "./paint.js";
@@ -10,6 +10,7 @@ import { initIE } from "./ie.js";
 import { initSysApps } from "./sysapps.js";
 import { initCompanion } from "./companion.js";
 import { initNet } from "./net.js";
+import { initMouse } from "./mouse.js";
 const Webamp = (WebampImport && WebampImport.default) ? WebampImport.default : WebampImport;
 
 "use strict";
@@ -460,7 +461,10 @@ function focusWin(id){
   if(el) el.style.zIndex=zTop;
   renderTaskbar();
 }
-const CURMAP={n:"n-resize",s:"s-resize",e:"e-resize",w:"w-resize",ne:"ne-resize",nw:"nw-resize",se:"se-resize",sw:"sw-resize"};
+/* resize cursors route through the scheme vars, so a skinned pointer skins
+   the window edges too; unset vars fall back to the native keyword */
+const CURMAP={n:"var(--cur-ns,n-resize)",s:"var(--cur-ns,s-resize)",e:"var(--cur-we,e-resize)",w:"var(--cur-we,w-resize)",
+  ne:"var(--cur-nesw,ne-resize)",nw:"var(--cur-nwse,nw-resize)",se:"var(--cur-nwse,se-resize)",sw:"var(--cur-nesw,sw-resize)"};
 function edgeDir(w,e){
   const r=w.getBoundingClientRect();
   const x=e.clientX-r.left, y=e.clientY-r.top;
@@ -1359,6 +1363,12 @@ function openTextWindow(name,body){
 /* the Search Companion's cast, drawn from scratch — Explorer's search pane and
    the chooser dialog both pull their characters from here */
 const companion=initCompanion({$,store,sysSnd,openWin,closeWin,AGENT_PNG,AGENT_DEF});
+/* the pointer schemes: main.cpl, the trails, and the arena identity */
+const mouse=initMouse({$,store,sysSnd,CURFILES,openWin,closeWin,icoNode,
+  openDevice:()=>openWin("win-devmgr"),
+  /* fires once during boot before the net layer exists — hence the try */
+  onScheme:id=>{ try{ if(MP.on) mpSend({t:"skin",skin:id}); }catch(e){} },
+});
 const explorer=initExplorer({
   IMG,
   els:{
@@ -2195,6 +2205,7 @@ sys=initSysApps({
   $,$$,store,sysSnd,showMenu,showError,openWin,closeWin,
   icoNode,isMobile:MOBILE,
   hooks:{
+    openMouse:()=>mouse.open(),
     /* --- filesystem: cmd walks the same tree Explorer does --- */
     fsList:pth=>explorer.list(pth),
     fsRead:it=>{
@@ -2486,10 +2497,24 @@ function newRoundRecord(){ return {pot:0,deploys:0,myIn:0,myOut:0,myKills:0,bigB
 
 let localCurId=0;   /* the offline sandbox numbers its cursors too — Device Manager lists them by id */
 const CURSVG=`<svg viewBox="0 0 14 22"><use href="#ic-cursor"/></svg>`;
+/* the arena wears your scheme: if the owner picked one, their cursor IS that
+   arrow, for everyone. offline the bots have taste too. */
+const BOTSKINS={mumu:"bronze",deg404:"inv",xp_chad:"black",clippy:"std-l",bonk:"variations"};
+function skinCurEl(el,skin){
+  if(!skin||!mouse) return;
+  mouse.arenaArrow(skin,u=>{
+    if(!u) return;
+    const svg=el.querySelector("svg"); if(!svg) return;
+    const img=document.createElement("img");
+    img.className="curskin"; img.src=u; img.draggable=false;
+    svg.replaceWith(img);
+  });
+}
 function makeCur(owner,isMine){
   const el=document.createElement("div");
   el.className="cur grace"+(isMine?" me":"");
   el.innerHTML=CURSVG+`<div class="tag"><span class="nm">${owner}</span><span class="bt"></span><span class="mx"></span></div>`;
+  skinCurEl(el,isMine?(store.data.curScheme||""):BOTSKINS[owner]||"");
   curlayer.appendChild(el);
   /* pick the emptiest of eight candidate landing spots — deploying into an
      existing scrum is the arena choosing your fight for you (see server sim) */
@@ -3314,15 +3339,16 @@ const MPURL=mpUrl();
 function mpSend(o){ if(MP.on) net.send(o); }
 function mpHello(){
   if(!net||!net.up()||MP.on) return;
-  net.send({t:"hello",token:store.data.mpToken||undefined,name:PLAYER||undefined});
+  net.send({t:"hello",token:store.data.mpToken||undefined,name:PLAYER||undefined,skin:store.data.curScheme||""});
 }
 
 /* ---- server cursors: same DOM, same tag scaling, positions interpolated ---- */
 const mpCurs=new Map();   /* id -> cursor record (also pushed into curs[]) */
-function mpMakeCur(id,owner,x,y,bounty,graceSecs){
+function mpMakeCur(id,owner,x,y,bounty,graceSecs,skin){
   const el=document.createElement("div");
   el.className="cur"+(graceSecs>0?" grace":"")+(owner===MP.name?" me":"");
   el.innerHTML=CURSVG+`<div class="tag"><span class="nm">${esc(owner)}</span><span class="bt"></span><span class="mx"></span></div>`;
+  skinCurEl(el,skin||"");
   curlayer.appendChild(el);
   const c={id,owner,isMine:owner===MP.name,el,x,y,tx:x,ty:y,bounty,buf:[{t:performance.now(),x,y}],
     mode:"roam",prevMode:"roam",recallT:0,grace:graceSecs,riskAt:99,dead:false,
@@ -3395,7 +3421,7 @@ function mpWelcome(m){
   commitHex=m.epoch.commit; seedHex=null;
   MP.fill=m.epoch.fill; MP.disk=m.epoch.disk; MP.corpses=m.epoch.corpses||64;
   for(const sc of m.epoch.curs){
-    const c=mpMakeCur(sc.id,sc.owner,sc.x,sc.y,sc.bounty,sc.grace);
+    const c=mpMakeCur(sc.id,sc.owner,sc.x,sc.y,sc.bounty,sc.grace,sc.skin);
     c.mode=MPMODE[sc.mode]||"roam";
     if(c.mode==="duel") c.el.classList.add("dueling");
   }
@@ -3442,7 +3468,7 @@ function mpResync(e){
   upT=e.up; phase=e.phase; shutFired=e.rush!=null; phaseT=shutFired?e.rush:999;
   MP.fill=e.fill; MP.disk=e.disk; MP.corpses=e.corpses||MP.corpses;
   for(const sc of e.curs){
-    const c=mpMakeCur(sc.id,sc.owner,sc.x,sc.y,sc.bounty,sc.grace);
+    const c=mpMakeCur(sc.id,sc.owner,sc.x,sc.y,sc.bounty,sc.grace,sc.skin);
     c.mode=MPMODE[sc.mode]||"roam";
     if(c.mode==="duel") c.el.classList.add("dueling");
   }
@@ -3471,7 +3497,7 @@ function mpSnap(m){
 }
 function mpSpawn(m){
   if(mpCurs.has(m.id)) return;
-  const c=mpMakeCur(m.id,m.owner,m.x,m.y,m.bounty,m.grace);
+  const c=mpMakeCur(m.id,m.owner,m.x,m.y,m.bounty,m.grace,m.skin);
   if(c.isMine){
     R.myIn+=STAKE; stats.deploys++; stats.tIn+=STAKE;
     log(`you deployed 0.100 (${myCurs().length}/${MAXCUR})`);
@@ -4234,6 +4260,11 @@ if(location.hash.indexOf("#desktop-sys")===0) setTimeout(()=>{ /* dev: the XP ap
   if(p==="-gp") openWin("win-gpedit");
   if(p==="-gpprops"){ openWin("win-gpedit"); setTimeout(()=>$$("#pol-list .mmc-row")[1].dispatchEvent(new MouseEvent("dblclick",{bubbles:true})),300); }
 },900);
+if(location.hash==="#desktop-mouse") setTimeout(()=>mouse.open(),300); /* dev: Mouse Properties */
+if(location.hash==="#desktop-mouse-bronze") setTimeout(()=>{ /* dev: the gold cursor, applied and visible on the field */
+  mouse.applyScheme("bronze");
+  setTimeout(()=>{ mouse.open(); $$("#win-mouse .xtab").find(t=>t.dataset.pane==="mo-ptr").click(); },250);
+},300);
 if(location.hash==="#desktop-vol") setTimeout(()=>{ /* dev: the tray volume flyout */
   $("#balloon").style.display="none"; $("#sndico").click();
 },900);

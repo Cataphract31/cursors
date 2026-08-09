@@ -918,7 +918,7 @@ export function initSysApps(deps) {
     { n: "Add or Remove Programs", ico: "@ic-cpl", d: "Install or remove programs and Windows components.", open: () => hooks.addRemove(), cat: "performance" },
     { n: "Network Connections", ico: "connect32", d: "Connect to other computers, networks, and the Internet.", open: () => hooks.openNetwork(), cat: "network" },
     { n: "Internet Options", ico: "ie32", d: "Configure your Internet display and connection settings.", open: () => hooks.openIE(), cat: "network" },
-    { n: "Mouse", ico: "@ic-dev", d: "Customize your mouse settings, such as the button configuration, double-click speed, mouse pointers, and motion speed.", open: () => openWin("win-devmgr"), cat: "printers" },
+    { n: "Mouse", ico: "@ic-dev", d: "Customize your mouse settings, such as the button configuration, double-click speed, mouse pointers, and motion speed.", open: () => hooks.openMouse ? hooks.openMouse() : openWin("win-devmgr"), cat: "printers" },
     { n: "Printers and Faxes", ico: "printer32", d: "Show installed printers and fax printers and help you add new ones.", open: () => hooks.printers(), cat: "printers" },
     { n: "User Accounts", ico: "user48", d: "Change user account settings and passwords for people who share this computer.", open: () => hooks.userAccounts(), cat: "users" },
     { n: "Accessibility Options", ico: "help32", d: "Adjust your computer settings for vision, hearing, and mobility.", open: () => hooks.accessibility(), cat: "accessibility" },

@@ -81,7 +81,7 @@ export function createSim(opts) {
     if (p) { p.name = name; return p; }
     p = Object.assign({
       key, name, bot: !!bot, balance: bot ? BOT_REFILL : 5000,
-      tickets: 0, ticketsAt: now(), rake: 0, stance: "attack",
+      tickets: 0, ticketsAt: now(), rake: 0, stance: "attack", skin: "",
       epochIn: 0, epochOut: 0, totIn: 0, totOut: 0,
     }, persisted || {});
     p.key = key; p.name = name; p.bot = !!bot;
@@ -130,7 +130,7 @@ export function createSim(opts) {
   function spawnCur(p) {
     const { x, y } = spawnPoint(p.bot);
     const c = {
-      id: nextCurId++, key: p.key, owner: p.name, bot: p.bot,
+      id: nextCurId++, key: p.key, owner: p.name, bot: p.bot, skin: p.skin || "",
       x, y, h: rand(0, Math.PI * 2), spd: rand(78, 124),
       bounty: ENTRY, mode: "roam", prevMode: "roam", recallT: 0,
       graceUntil: now() + GRACE_MS, riskAt: 1.5 + rng.next() * 5,
@@ -162,7 +162,7 @@ export function createSim(opts) {
     p.epochIn += STAKE; p.totIn += STAKE;
     R.pot += ENTRY; R.deploys++; platformFees += FEE_PLAT;
     const c = spawnCur(p);
-    emit({ t: "spawn", id: c.id, owner: c.owner, x: Math.round(c.x), y: Math.round(c.y), bounty: c.bounty, grace: GRACE_MS / 1000 });
+    emit({ t: "spawn", id: c.id, owner: c.owner, skin: c.skin, x: Math.round(c.x), y: Math.round(c.y), bounty: c.bounty, grace: GRACE_MS / 1000 });
     money(p);
     return null;
   }
@@ -451,7 +451,7 @@ export function createSim(opts) {
       rush: rushAt ? Math.max(0, RUSH_MS - (now() - rushAt)) / 1000 : null,
       disk: { used: diskUsed(), total: DISK_TOTAL, corpse: CORPSE_BYTES, deaths: epochDeaths },
       curs: curs.map(c => ({
-        id: c.id, owner: c.owner, x: Math.round(c.x), y: Math.round(c.y),
+        id: c.id, owner: c.owner, skin: c.skin, x: Math.round(c.x), y: Math.round(c.y),
         bounty: c.bounty, grace: Math.max(0, c.graceUntil - now()) / 1000,
         mode: c.mode === "recall" ? "c" : c.mode === "duel" ? "d" : "r",
       })),
@@ -460,6 +460,10 @@ export function createSim(opts) {
 
   /* boot the bots as economic participants, then open the arena */
   for (const name of BOT_NAMES) registerPlayer("bot:" + name, name, true);
+  /* the bots picked pointer schemes, because they are players and players do */
+  for (const [bn, sk] of [["mumu", "bronze"], ["deg404", "inv"], ["xp_chad", "black"], ["clippy", "std-l"], ["bonk", "variations"]]) {
+    const bp = players.get("bot:" + bn); if (bp) bp.skin = sk;
+  }
   startEpoch();
 
   return {

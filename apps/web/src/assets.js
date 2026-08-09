@@ -120,6 +120,9 @@ export const IMG = {
    and the animation tables are lazy so none of this touches first paint. */
 export const AGENT_PNG = import.meta.glob("./assets/xp/agent/*.png", { eager: true, query: "?url", import: "default" });
 export const AGENT_DEF = import.meta.glob("./assets/xp/agent/*.json");
+/* the real XP cursor files (bartekl1/windows-ui-assets) — .cur for CSS and
+   <img>, .ani parsed at runtime for previews. URLs only; nothing preloads. */
+export const CURFILES = import.meta.glob("./assets/xp/cursors/*", { eager: true, query: "?url", import: "default" });
 
 /* Paint tool sprites — jspaint (Isaiah Odhner), MIT */
 export const PAINT = { tools: paintTools, transparency: paintTrans, airbrush: paintAir };

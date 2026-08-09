@@ -20,12 +20,16 @@ export default defineConfig({
     chunkSizeWarningLimit: 4096,
     /* xp.css ships a selector lightningcss rejects (`:before:not(...)`) */
     cssMinify: "esbuild",
+    /* the 184 real XP cursor files are individually tiny, and the 4 KB default
+       would inline most of them as data URIs — 800 KB straight into first
+       paint. They load on demand or not at all, so: always real files. */
+    assetsInlineLimit: (filePath) => /xp[\\/]cursors[\\/]/.test(filePath) ? false : undefined,
     rollupOptions: {
       output: {
         /* audio in its own folder so it is obvious what the weight is */
         assetFileNames: info => {
           const n = info.names && info.names[0] || info.name || "";
-          if (/\.(mp3|wav)$/i.test(n)) return "media/[name]-[hash][extname]";
+          if (/\.(mp3|wav|cur|ani)$/i.test(n)) return "media/[name]-[hash][extname]";
           /* Agent sprite sheets are big and load only when a companion is
              shown, so they belong with the audio in the on-demand bucket */
           if (/^(rover|merlin|clippy|links|genie|bonzi)\.png$/i.test(n)) return "media/[name]-[hash][extname]";

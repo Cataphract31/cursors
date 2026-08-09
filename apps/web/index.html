@@ -733,6 +733,108 @@ icons/sounds: winXP (MIT)</div>
     </div>
   </div>
 
+  <!-- Mouse Properties: main.cpl, all five tabs -->
+  <div class="window fixed" id="win-mouse" style="left:calc(50% - 190px);top:52px;width:380px">
+    <div class="title-bar">
+      <div class="tb-l"><i class="xico tb-ico" data-ico="cpanel16"></i><div class="title-bar-text">Mouse Properties</div></div>
+      <div class="title-bar-controls"><button aria-label="Close"></button></div>
+    </div>
+    <div class="win-body pad" style="background:#ECE9D8">
+      <div class="xtabs">
+        <span class="xtab on" data-pane="mo-btn">Buttons</span>
+        <span class="xtab" data-pane="mo-ptr">Pointers</span>
+        <span class="xtab" data-pane="mo-opt">Pointer Options</span>
+        <span class="xtab" data-pane="mo-whl">Wheel</span>
+        <span class="xtab" data-pane="mo-hw">Hardware</span>
+      </div>
+      <div class="xpane on" id="mo-btn">
+        <fieldset class="mo-fs"><legend>Button configuration</legend>
+          <label style="display:flex;gap:6px;align-items:flex-start"><input type="checkbox" id="mo-swap"> <span>Switch primary and secondary buttons</span></label>
+          <div class="small dim" style="margin:4px 0 2px 20px">Select this check box to make the button on the right the one you use for primary functions such as selecting and dragging.</div>
+        </fieldset>
+        <fieldset class="mo-fs"><legend>Double-click speed</legend>
+          <div style="display:flex;gap:10px;align-items:center">
+            <div style="flex:1">
+              <div class="small">Double-click the folder to test your setting. If the folder does not open or close, try using a slower setting.</div>
+              <div class="aprow" style="margin-top:6px"><span class="small">Speed:&nbsp;Slow</span><input type="range" id="mo-dspeed" min="1" max="11" value="6" style="flex:1"><span class="small">Fast</span></div>
+            </div>
+            <div id="mo-dctest" style="width:44px;height:44px;flex:none;display:grid;place-items:center;border:1px solid #ACA899;background:#fff"></div>
+          </div>
+        </fieldset>
+        <fieldset class="mo-fs"><legend>ClickLock</legend>
+          <div style="display:flex;gap:8px;align-items:center">
+            <label style="display:flex;gap:6px;flex:1"><input type="checkbox" id="mo-clklock"> <span>Turn on ClickLock</span></label>
+            <button class="xbtn" disabled style="min-width:74px">Settings...</button>
+          </div>
+          <div class="small dim" style="margin:4px 0 0 20px">Enables you to highlight or drag without holding down the mouse button.</div>
+        </fieldset>
+      </div>
+      <div class="xpane" id="mo-ptr">
+        <div style="display:flex;gap:8px;align-items:flex-start">
+          <div style="flex:1">
+            <div class="small dim">Scheme</div>
+            <select id="mo-scheme" style="width:100%"></select>
+            <div style="display:flex;gap:5px;justify-content:flex-end;margin-top:4px">
+              <button class="xbtn" disabled style="min-width:66px">Save As...</button>
+              <button class="xbtn" disabled style="min-width:60px">Delete</button>
+            </div>
+          </div>
+          <div id="mo-prevbox" style="width:56px;height:60px;flex:none;border:1px solid #ACA899;background:#fff;display:grid;place-items:center"></div>
+        </div>
+        <div class="small dim" style="margin:7px 0 2px">Customize:</div>
+        <div id="mo-roles" style="border:1px solid #7F9DB9;background:#fff;height:148px;overflow:auto"></div>
+        <label style="display:flex;gap:6px;align-items:center;margin-top:6px"><input type="checkbox" id="mo-shadow" checked> <span>Enable pointer shadow</span></label>
+        <div style="display:flex;gap:5px;justify-content:flex-end;margin-top:4px">
+          <button class="xbtn" disabled style="min-width:80px">Use Default</button>
+          <button class="xbtn" disabled style="min-width:66px">Browse...</button>
+        </div>
+      </div>
+      <div class="xpane" id="mo-opt">
+        <fieldset class="mo-fs"><legend>Motion</legend>
+          <div class="aprow"><span class="small">Slow</span><input type="range" id="mo-speed" min="1" max="11" value="6" style="flex:1"><span class="small">Fast</span></div>
+          <label style="display:flex;gap:6px;margin:2px 0 0 4px"><input type="checkbox" id="mo-precision" checked> <span>Enhance pointer precision</span></label>
+        </fieldset>
+        <fieldset class="mo-fs"><legend>Snap To</legend>
+          <label style="display:flex;gap:6px"><input type="checkbox" id="mo-snap"> <span>Automatically move pointer to the default button in a dialog box</span></label>
+        </fieldset>
+        <fieldset class="mo-fs"><legend>Visibility</legend>
+          <label style="display:flex;gap:6px"><input type="checkbox" id="mo-trails"> <span>Display pointer trails</span></label>
+          <div class="aprow" style="margin:2px 0 4px 20px"><span class="small">Short</span><input type="range" id="mo-traillen" min="2" max="7" value="4" style="flex:1" disabled><span class="small">Long</span></div>
+          <label style="display:flex;gap:6px"><input type="checkbox" id="mo-hidetype" checked> <span>Hide pointer while typing</span></label>
+          <label style="display:flex;gap:6px;margin-top:2px"><input type="checkbox" id="mo-ctrl"> <span>Show location of pointer when I press the CTRL key</span></label>
+        </fieldset>
+      </div>
+      <div class="xpane" id="mo-whl">
+        <fieldset class="mo-fs"><legend>Scrolling</legend>
+          <div class="small" style="margin-bottom:6px">Roll the wheel one notch to scroll:</div>
+          <label style="display:flex;gap:6px"><input type="radio" name="mo-wheel" checked> <span>The following number of lines at a time:</span></label>
+          <div style="margin:3px 0 6px 22px"><input type="number" id="mo-lines" min="1" max="100" value="3" style="width:56px"></div>
+          <label style="display:flex;gap:6px"><input type="radio" name="mo-wheel"> <span>One screen at a time</span></label>
+        </fieldset>
+      </div>
+      <div class="xpane" id="mo-hw">
+        <div class="small dim" style="margin-bottom:4px">Devices:</div>
+        <div style="border:1px solid #7F9DB9;background:#fff;padding:4px 6px;display:flex;gap:7px;align-items:center">
+          <i class="xico" data-ico="@ic-dev" style="width:16px;height:16px"></i><span>HID-compliant mouse</span>
+        </div>
+        <div style="display:grid;grid-template-columns:auto 1fr;gap:2px 10px;margin:8px 2px;font-size:11px">
+          <span class="dim">Manufacturer:</span><span>(Standard mouse types)</span>
+          <span class="dim">Location:</span><span>on PS/2 mouse port</span>
+          <span class="dim">Device Status:</span><span>This device is working properly.</span>
+        </div>
+        <div style="display:flex;gap:5px;justify-content:flex-end">
+          <button class="xbtn" disabled style="min-width:80px">Troubleshoot...</button>
+          <button class="xbtn" id="mo-hwprops" style="min-width:80px">Properties</button>
+        </div>
+      </div>
+      <div style="display:flex;gap:7px;justify-content:flex-end;margin-top:8px">
+        <button class="xbtn" id="mo-ok" style="min-width:74px">OK</button>
+        <button class="xbtn" id="mo-cancel" style="min-width:74px">Cancel</button>
+        <button class="xbtn" id="mo-apply" style="min-width:74px">Apply</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Run As dialog: the real radio pair, and only one identity on this machine -->
   <div class="window fixed" id="win-runas" style="left:calc(50% - 178px);top:calc(50% - 120px);width:356px">
     <div class="title-bar">

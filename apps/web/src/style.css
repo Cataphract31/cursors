@@ -1093,3 +1093,40 @@ body.verbose-boot #boot:after{content:"Applying computer settings...  Loading ar
 body.mobile .cmp-grid{grid-template-columns:repeat(2,1fr)}
 
 @media (prefers-reduced-motion:reduce){*{animation-duration:.01s !important;transition:none !important}}
+
+/* ---------- pointer schemes: the whole shell wears the chosen cursors ---------- */
+/* body.skinned * outweighs any single-class cursor rule, which is the point:
+   on XP a scheme changed every surface at once */
+body.skinned,body.skinned *{cursor:var(--cur-arrow,default)}
+body.skinned a,body.skinned [data-go],body.skinned [data-act],body.skinned .sm-item,
+body.skinned .cpl-task,body.skinned .qlb,body.skinned #startbtn,body.skinned .trayico,
+body.skinned .xtab,body.skinned .badge{cursor:var(--cur-hand,pointer)}
+body.skinned input[type=text],body.skinned input[type=number],body.skinned input[type=password],
+body.skinned input:not([type]),body.skinned textarea,body.skinned .cx-seed{cursor:var(--cur-beam,text)}
+body.skinned #pt-canvas,body.skinned #pt-overlay{cursor:var(--cur-cross,crosshair)}
+body.skinned .pt-h.e{cursor:var(--cur-we,ew-resize)}
+body.skinned .pt-h.s{cursor:var(--cur-ns,ns-resize)}
+body.skinned .pt-h.se{cursor:var(--cur-nwse,nwse-resize)}
+body.typing,body.typing *{cursor:none!important}
+/* the trail: images of the current arrow chasing the real one */
+.cur-trail{position:fixed;left:-100px;top:-100px;width:32px;height:32px;pointer-events:none;z-index:99995;opacity:0}
+/* Ctrl locate: XP's shrinking circle */
+.ctrl-locate{position:fixed;width:120px;height:120px;margin:-60px 0 0 -60px;border:2px solid #000;
+  border-radius:50%;pointer-events:none;z-index:99996;animation:ctrlloc .65s ease-out forwards}
+@keyframes ctrlloc{from{transform:scale(1);opacity:.85}to{transform:scale(.06);opacity:.2}}
+/* Mouse Properties */
+.mo-fs{border:1px solid #D0CDC0;border-radius:3px;padding:7px 9px 9px;margin-bottom:8px}
+.mo-fs legend{padding:0 3px}
+.mo-role{display:flex;justify-content:space-between;align-items:center;padding:2px 6px;min-height:26px}
+.mo-role.on{background:#316AC5;color:#fff}
+.mo-pic{width:34px;height:26px;display:grid;place-items:center;flex:none}
+.mo-pic img{max-width:32px;max-height:26px}
+/* a default-role row shows the real system pointer via the cursor property on hover,
+   and a neutral glyph otherwise */
+.mo-def:after{content:"\2196";font-size:13px;color:#444}
+.mo-role.on .mo-def:after{color:#fff}
+/* the arena: a skinned player's cursor is their scheme's arrow */
+.cur img.curskin{width:24px;height:24px;filter:drop-shadow(1px 2px 2px rgba(0,0,0,.55))}
+#arena.rot .cur>img.curskin{transform:rotate(-90deg)}
+.cur.dueling img.curskin{animation:shake .13s infinite;filter:drop-shadow(0 0 3px #FF3B20) drop-shadow(0 0 7px rgba(255,40,20,.55))}
+#arena.rot .cur.dueling img.curskin{animation:shakeRot .13s infinite}
