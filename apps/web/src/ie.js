@@ -443,7 +443,7 @@ ${RING}
     mounted: p => hooks.tvMounted && hooks.tvMounted(p),
     body: () => hooks.mpOn && hooks.mpOn() ? `<center>
 <h1>~ cursorTV ~</h1>
-<font size="1">one screen &#183; everyone watches &#183; fair queue &#183; skip by vote</font>
+<font size="1">one screen &#183; everyone watches &#183; the decks rotate &#183; skip by vote</font>
 <div class="rainbow"></div>
 ${NAV}
 <div class="rainbow"></div>

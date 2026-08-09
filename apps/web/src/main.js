@@ -3284,8 +3284,11 @@ function mpTvRenderQueue(){
   if(nowEl) nowEl.innerHTML=MP.tv.now
     ? `now playing: <b>${esc(MP.tv.now.vid)}</b> <font size="1">(queued by ${esc(MP.tv.now.by)})</font>`
     : `<font size="1">dead air. queue something.</font>`;
+  /* the server hands back the order it will ACTUALLY play in — rotated by
+     person, not first-come — so the page shows the deck, not the inbox */
   if(qEl) qEl.innerHTML=MP.tv.queue.length
-    ? MP.tv.queue.map((q,i)=>`<div>${i+1}. ${esc(q.vid)} <font size="1" color="#888">— ${esc(q.by)}</font></div>`).join("")
+    ? `<div style="margin-bottom:3px"><font size="1"><b>on deck</b> &#183; the decks rotate, so queueing three does not buy you three in a row</font></div>`+
+      MP.tv.queue.map((q,i)=>`<div${q.by===MP.name?' style="font-weight:bold"':''}>${i+1}. ${esc(q.vid)} <font size="1" color="#888">&#8212; ${esc(q.by)}${q.by===MP.name?" (you)":""}</font></div>`).join("")
     : `<font size="1">queue is empty</font>`;
 }
 

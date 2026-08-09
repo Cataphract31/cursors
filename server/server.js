@@ -11,7 +11,9 @@
 import { createServer } from "node:http";
 import { randomBytes } from "node:crypto";
 import { WebSocketServer } from "ws";
-import { createSim, BOT_NAMES } from "./sim.js";
+import { createSim, BOT_NAMES, STAKE } from "./sim.js";
+/* deploys per gallery frame — the anti-sybil wall, priced in real stake */
+const GALLERY_DEPLOYS = 10;
 import { openDb } from "./db.js";
 
 const PORT = +(process.env.PORT || 8788);
@@ -106,12 +108,43 @@ setInterval(() => {
   }
 }, 10);
 
-/* ---------- TV: the lobby watches one video together ---------- */
+/* ---------- TV: the lobby watches one video together ----------
+   Plain FIFO let one person queue three and play three in a row while everyone
+   else waited, which is the thing turntable.fm and plug.dj exist to prevent.
+   The deck rotates by PERSON: whoever has gone longest without playing goes
+   next, and their oldest submission is what plays. Inside one person's own
+   submissions it is still first-in-first-out. Nobody buys the decks — the
+   owner offered "maybe they pay, maybe it's just a fair queue" and a fair
+   queue is the one that cannot be bought by whoever has the most SOL. */
 const tv = { now: null, queue: [] };
-function tvMsg() { return { t: "tv", now: tv.now, queue: tv.queue }; }
+const djLast = new Map();          /* name -> when they last had the deck */
+function tvOrder() {
+  /* the order the queue will ACTUALLY play in, so the page can show it */
+  const pending = tv.queue.slice();
+  const seen = new Map(), out = [];
+  for (const [k, v] of djLast) seen.set(k, v);
+  while (pending.length) {
+    let best = 0;
+    for (let i = 1; i < pending.length; i++) {
+      const a = seen.get(pending[i].by) || 0, b = seen.get(pending[best].by) || 0;
+      if (a < b) best = i;
+    }
+    const pick = pending.splice(best, 1)[0];
+    seen.set(pick.by, (seen.get(pick.by) || 0) + 1e9 + out.length);
+    out.push(pick);
+  }
+  return out;
+}
+function tvMsg() { return { t: "tv", now: tv.now, queue: tvOrder() }; }
 let skipVotes = new Set();
 function tvAdvance() {
-  tv.now = tv.queue.length ? { ...tv.queue.shift(), startedAt: Date.now() } : null;
+  const order = tvOrder();
+  const next = order[0];
+  if (next) {
+    tv.queue.splice(tv.queue.indexOf(next), 1);
+    djLast.set(next.by, Date.now());
+    tv.now = { ...next, startedAt: Date.now() };
+  } else tv.now = null;
   skipVotes = new Set();
   broadcast(tvMsg());
 }
@@ -155,7 +188,7 @@ function handle(c, m) {
         balance: b.balance, tickets: b.tickets, glob: b.glob, rake: b.rake,
         epoch: sim.welcomeState(), chat: chatLog.slice(-25),
         online: onlineNames(),
-        tv: { now: tv.now, queue: tv.queue },
+        tv: { now: tv.now, queue: tvOrder() },
       });
       broadcast({ t: "join", name, online: onlineNames() });
       sys(`${name} signed in — ${conns.size} player${conns.size === 1 ? "" : "s"} online`);
@@ -180,6 +213,10 @@ function handle(c, m) {
     }
     case "guest": send(c, { t: "guest", list: db.guestList() }); break;
     case "guestPost": {
+      /* the guestbook is cheaper than the gallery but still not free: one
+         deploy proves you are a player and not a fresh tab */
+      const wp = sim.players.get(c.key);
+      if (!wp || wp.totIn < STAKE) return send(c, { t: "err", msg: "deploy a cursor first — the guestbook is for players" });
       if (now - c.lastGuest < 30000) return send(c, { t: "err", msg: "one entry per 30s" });
       const txt = String(m.text || "").slice(0, 220).trim();
       if (!txt) return;
@@ -190,11 +227,24 @@ function handle(c, m) {
     }
     case "gallery": send(c, { t: "gallery", list: db.galleryList() }); break;
     case "galleryPost": {
-      if (now - c.lastGallery < 60000) return send(c, { t: "err", msg: "one painting per minute" });
+      /* A 60-second cooldown is not a spam gate, it is a rate limit — five
+         tabs beat it and every tab gets a free 5 SOL. The wall has to cost
+         something a sybil cannot mint, so it costs DEPLOYS: publishing spends
+         one credit, and a credit is earned every GALLERY_DEPLOYS deploys.
+         Playing the game is the captcha. */
+      const gp = sim.players.get(c.key);
+      const credits = Math.floor((gp ? gp.totIn : 0) / (STAKE * GALLERY_DEPLOYS)) - (gp ? gp.published || 0 : 0);
+      if (credits < 1) {
+        const done = ((gp ? gp.totIn : 0) / STAKE) % GALLERY_DEPLOYS;
+        return send(c, { t: "err",
+          msg: `the gallery is earned, not free — ${GALLERY_DEPLOYS - Math.floor(done)} more deploys for a frame` });
+      }
+      if (now - c.lastGallery < 20000) return send(c, { t: "err", msg: "one painting per 20s" });
       const png = String(m.png || "");
       if (!png.startsWith("data:image/png;base64,") || png.length > 400000)
         return send(c, { t: "err", msg: "png only, 400 KB max" });
       c.lastGallery = now;
+      gp.published = (gp.published || 0) + 1;
       const title = String(m.name || "").replace(/[^\w .$'-]/g, "").slice(0, 28) || "untitled";
       db.galleryPost(title, sim.players.get(c.key)?.name || "?", png);
       broadcast({ t: "gallery", list: db.galleryList() });

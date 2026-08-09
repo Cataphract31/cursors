@@ -19,6 +19,7 @@ export function openDb(path) {
       ticketsAt INTEGER NOT NULL DEFAULT 0,
       rake      REAL NOT NULL DEFAULT 0,
       totIn     REAL NOT NULL DEFAULT 0,
+      published INTEGER NOT NULL DEFAULT 0,
       totOut    REAL NOT NULL DEFAULT 0,
       created   INTEGER NOT NULL,
       lastSeen  INTEGER NOT NULL
@@ -49,15 +50,27 @@ export function openDb(path) {
     );
   `);
 
+  /* Migrations. CREATE TABLE IF NOT EXISTS only ever builds a FRESH database —
+     it silently does nothing to one that already exists, so adding a column to
+     the schema above and shipping it takes the live server down with "table
+     players has no column named X" (it did, once). Every future column goes in
+     this list instead, and the pragma makes it idempotent. */
+  const addColumn = (table, col, decl) => {
+    const cols = db.prepare(`PRAGMA table_info(${table})`).all().map(c => c.name);
+    if (!cols.includes(col)) db.exec(`ALTER TABLE ${table} ADD COLUMN ${col} ${decl}`);
+  };
+  addColumn("players", "published", "INTEGER NOT NULL DEFAULT 0");
+
   const q = {
     getPlayer: db.prepare("SELECT * FROM players WHERE token = ?"),
     upsertPlayer: db.prepare(`
-      INSERT INTO players (token,name,balance,tickets,ticketsAt,rake,totIn,totOut,created,lastSeen)
-      VALUES (?,?,?,?,?,?,?,?,?,?)
+      INSERT INTO players (token,name,balance,tickets,ticketsAt,rake,totIn,totOut,published,created,lastSeen)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?)
       ON CONFLICT(token) DO UPDATE SET
         name=excluded.name, balance=excluded.balance, tickets=excluded.tickets,
         ticketsAt=excluded.ticketsAt, rake=excluded.rake,
-        totIn=excluded.totIn, totOut=excluded.totOut, lastSeen=excluded.lastSeen`),
+        totIn=excluded.totIn, totOut=excluded.totOut, published=excluded.published,
+        lastSeen=excluded.lastSeen`),
     nameTaken: db.prepare("SELECT token FROM players WHERE lower(name) = lower(?) AND token <> ?"),
     guestList: db.prepare("SELECT who, at, txt FROM guestbook ORDER BY id DESC LIMIT 40"),
     guestPost: db.prepare("INSERT INTO guestbook (who, at, txt) VALUES (?,?,?)"),
@@ -86,7 +99,7 @@ export function openDb(path) {
     loadPlayer: token => q.getPlayer.get(token) || null,
     savePlayer: p => q.upsertPlayer.run(
       p.token, p.name, p.balance, p.tickets, p.ticketsAt, p.rake,
-      p.totIn, p.totOut, p.created || Date.now(), Date.now()),
+      p.totIn, p.totOut, p.published || 0, p.created || Date.now(), Date.now()),
     nameTaken: (name, token) => !!q.nameTaken.get(name, token),
     guestList: () => q.guestList.all(),
     guestPost: (who, txt) => q.guestPost.run(who, Date.now(), txt),
