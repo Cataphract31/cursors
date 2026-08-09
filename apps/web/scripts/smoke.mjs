@@ -15,8 +15,8 @@ src = src
   .replace(/^import\s+"[^"]*";\s*$/gm, "")
   .replace('import WebampImport from "webamp";', "")
   .replace(
-    'import { IMG, SNDF } from "./assets.js";',
-    "const IMG = globalThis.__AssetStub; const SNDF = globalThis.__AssetStub;"
+    'import { IMG, SNDF, TRACKS } from "./assets.js";',
+    "const IMG = globalThis.__AssetStub; const SNDF = globalThis.__AssetStub; const TRACKS = [];"
   )
   .replace(
     "const Webamp = (WebampImport && WebampImport.default) ? WebampImport.default : WebampImport;",

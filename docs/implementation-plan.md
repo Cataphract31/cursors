@@ -47,21 +47,26 @@ Original spec:
 4. **Luna chrome** — xp.css window chrome on every window (real titlebar gradient, real close/min/max buttons); carbon-copy taskbar (winXP's own taskbar-bg + start button art, tray inset, task tab states) and the two-column XP start menu (blue user header band, white pinned column, light-blue system column, Log Off / Turn Off footer).
 5. **Real assets wired** — every desktop/menu/titlebar icon from the archived XP set; full sound scheme replacing the synth beeps for OS events (game kill/bank sounds stay ours); Bliss as default wallpaper; MSN sounds into Messenger (newalert on message, nudge.wav on nudge, online.wav on sign-in).
 
-### Phase B — cmd.exe + Task Manager, for real (NEXT)
+### SCOPE SHIFT (owner, 2026-08-09 late): visible + fun first, system depths parked
 
-- **cmd.exe**: real console (black, Lucida Console, blinking block cursor), working commands: `dir` (fake FS), `cd`, `cls`, `ver`, `echo`, `ping` (fake latency to the house), `tasklist`/`taskkill` (wired to the REAL process table — killing explorer.exe restarts the shell), `format c:`, `tree`, `color`, easter eggs (`sol`, odds calculators, ASCII-art). Command history, tab completion.
-- **Task Manager rebuilt on the real process table**: Applications = actual open windows with End Task that actually ends them; Processes list with the game's real entities (each live cursor = a process, bounty = mem usage); Performance graph driven by real duel activity; Ctrl+Shift+Esc opens it.
+Owner: *"leave the too in-depth stuff that only like 2% of the userbase would go and search for like a gpedit.msc or cmd.exe… make on polishing the more visible and used stuff and get more fun stuff out of the way first."* So cmd.exe / gpedit / Device Manager / regedit are **parked** (the Run… dialog keeps its joke responses for them). New order:
 
-### Phase C — System depths, each an easter-egg vessel
+### Phase B — Winamp perfection + shell polish pass — ✅ SHIPPED 2026-08-09
 
-- **Device Manager**: tree of this "machine" — Mice (one per live cursor, live!), Display adapters ("LUNA-compatible 4800 zIndex"), Sound/video, Network (Dial-Up to Solana Mainnet - DISCONNECTED until chain phase), warning-triangle devices with joke problem codes.
-- **gpedit.msc**: Group Policy tree; every policy is a real game setting or a joke ("Prevent user from losing money" — Not Configured, greyed out).
-- **Run… dialog** (start menu): launches apps by name (`cmd`, `taskmgr`, `mspaint`, `devmgmt.msc`, `gpedit.msc`, `winamp`), cheat strings, `format c:`.
-- **Control Panel** folder view routing to Display Properties, Sounds, System Properties (General tab: CURSORS XP, 1 cursor @ 3.2 GHz).
-- **regedit** (stretch): HKEY_CURRENT_LOSER tree.
-- BSOD variants; msconfig joke; `defrag` that defragments the desktop icons.
+- Real MP3 playlist (the synth-baker silently hung → deleted; Kevin MacLeod CC-BY meme canon shipped at 96kbps: Monkeys Spinning Monkeys, Sneaky Snitch, Fluffing a Duck, Local Forecast - Elevator; credit in README.txt). Drag-drop of the owner's own MP3s remains native.
+- Full three-deck stack (main + EQ + playlist) now actually appears, centered. TWO root causes found via the headless harness: (1) webamp centers its windows on the mount node's rect — ours was a 0×0 div at the top-left AND hidden at render time, so the stack sat off-screen at the origin (this was the owner's "small one"/"empty" Winamp all along); slot now sits at desktop center and shows before render. (2) our shell's `.window{display:none}` rule also hit webamp's windows (same class name) — exempted under `#webamp`. Real Winamp hotkeys on (Ctrl+D = double size).
+- Zombie-proofing round 2: headless repro harness (`#desktop-amptest`) proved open→close→reopen works; the taskbar tab now trusts actual wrapper visibility, not a flag, so any desync self-heals on click.
+- Context menus at XP metrics (ACA899 borders, real submenu arrows, proper shadow); menu bars (File/Edit/View/Help…) actually drop menus — File→Exit, Help→About, Task Manager's Shut Down→Turn Off/Restart work.
 
-Then the existing app phases continue below (Messenger, Explorer, Recycle Bin, Notepad/Paint, CURSORS.EXE production pass, IE, Start menu completeness) — each now inherits the carbon-copy asset base instead of homemade art.
+### Phase C — The fun, visible stuff (NEXT, owner picks order)
+
+- **Minesweeper** — real clone, real art (winXP repo ships the full sprite set already downloaded ideas), wager hooks later.
+- **Messenger production pass** (Phase 2 below) — contact list, per-bot DMs, typing indicators, nudge cooldowns.
+- **Paint** via jspaint embed; Save As Wallpaper.
+- **Explorer/My Computer + Recycle Bin with purpose** (Phases 3-4 below).
+- **CURSORS.EXE production pass** (Phase 6 below) — the game window itself is the most-used surface of all.
+
+Parked: cmd.exe, gpedit.msc, Device Manager, regedit, msconfig (Run… answers for them with jokes). The existing app phases below inherit the carbon-copy asset base.
 
 ## Phase 0 — Shell foundation (everything sits on this) — ✅ SHIPPED 2026-08-09 (superseded visually by Phase 0.5)
 

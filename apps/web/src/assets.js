@@ -70,6 +70,19 @@ export const IMG = {
   trayVol, trayUsb, trayRisk, offBig, flag16,
 };
 
+import trkMonkeys from "./assets/music/monkeys-spinning-monkeys.mp3";
+import trkSnitch from "./assets/music/sneaky-snitch.mp3";
+import trkDuck from "./assets/music/fluffing-a-duck.mp3";
+import trkElevator from "./assets/music/local-forecast-elevator.mp3";
+
+/* Kevin MacLeod (incompetech.com), CC BY 4.0 — the legally shippable meme canon. */
+export const TRACKS = [
+  { url: trkMonkeys, artist: "Kevin MacLeod", title: "Monkeys Spinning Monkeys" },
+  { url: trkSnitch, artist: "Kevin MacLeod", title: "Sneaky Snitch" },
+  { url: trkDuck, artist: "Kevin MacLeod", title: "Fluffing a Duck" },
+  { url: trkElevator, artist: "Kevin MacLeod", title: "Local Forecast - Elevator" },
+];
+
 export const SNDF = {
   startup: sndStartup, logon: sndLogon, logoff: sndLogoff, shutdown: sndShutdown,
   balloon: sndBalloon, critical: sndCritical, exclaim: sndExclaim, ding: sndDing,

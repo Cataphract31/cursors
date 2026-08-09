@@ -136,7 +136,10 @@ input{user-select:text}
 
 /* ---------- winamp (real Webamp) ---------- */
 @keyframes ampmarq{to{transform:translateX(-100%)}}
-#webamp-slot{position:absolute;left:0;top:0;width:0;height:0}
+/* zero-size anchor at desktop center: webamp centers its window stack on this node's rect */
+#webamp-slot{position:absolute;left:50%;top:50%;width:0;height:0}
+/* webamp's windows also carry class "window" — undo our shell window rules for them */
+#webamp .window{display:block;min-width:0;max-width:none;flex-direction:row;z-index:auto}
 
 /* ---------- geocities ---------- */
 .geo{background:#000 radial-gradient(#fff 1px,transparent 1.2px);background-size:70px 70px;color:#0f0;font-family:"Comic Sans MS","Trebuchet MS",cursive;padding:12px;text-align:center;line-height:1.6;display:block}
@@ -243,16 +246,17 @@ input{user-select:text}
 .lg-note{color:#B9C8EC;font-size:11px;max-width:44%;text-align:right}
 
 /* ---------- context menus / tooltip ---------- */
-#ctx{position:fixed;display:none;z-index:99990;background:#fff;border:1px solid #8A867A;box-shadow:3px 3px 7px rgba(0,0,0,.32);padding:3px;min-width:186px;font-size:11px}
-.cit{position:relative;padding:5px 26px 5px 30px;cursor:default;white-space:nowrap}
+#ctx{position:fixed;display:none;z-index:99990;background:#fff;border:1px solid #ACA899;box-shadow:4px 4px 3px -1px rgba(0,0,0,.28);padding:2px;min-width:166px;font-size:11px}
+.cit{position:relative;padding:4px 26px 4px 18px;cursor:default;white-space:nowrap;line-height:14px}
 .cit:hover{background:#316AC5;color:#fff}
-.cit.dis{color:#A6A49A}
-.cit.dis:hover{background:none;color:#A6A49A}
+.cit.dis{color:#ACA899}
+.cit.dis:hover{background:none;color:#ACA899}
 .cit.bold{font-weight:bold}
-.cit.has-sub:after{content:"▸";position:absolute;right:8px}
-.csub{display:none;position:absolute;left:100%;top:-4px;background:#fff;border:1px solid #8A867A;box-shadow:3px 3px 7px rgba(0,0,0,.32);padding:3px;min-width:160px;color:#000}
+.cit.has-sub:after{content:"";position:absolute;right:8px;top:50%;margin-top:-3.5px;border:3.5px solid transparent;border-left-color:currentColor;border-right:0}
+.csub{display:none;position:absolute;left:100%;top:-3px;background:#fff;border:1px solid #ACA899;box-shadow:4px 4px 3px -1px rgba(0,0,0,.28);padding:2px;min-width:150px;color:#000}
 .cit.has-sub:hover>.csub{display:block}
-.csep{border-top:1px solid #E0DDD3;margin:3px 2px}
+.csep{border-top:1px solid #ACA899;margin:3px 2px}
+#errtext{white-space:pre-line}
 #xptip{position:fixed;display:none;z-index:100010;background:#FFFFE1;border:1px solid #000;padding:3px 7px;font-size:11px;box-shadow:1px 2px 4px rgba(0,0,0,.3);pointer-events:none;white-space:nowrap}
 
 /* ---------- xp tabs / dialogs / task manager ---------- */

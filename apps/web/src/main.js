@@ -1,7 +1,7 @@
 import "xp.css";
 import "./style.css";
 import WebampImport from "webamp";
-import { IMG, SNDF } from "./assets.js";
+import { IMG, SNDF, TRACKS } from "./assets.js";
 const Webamp = (WebampImport && WebampImport.default) ? WebampImport.default : WebampImport;
 
 "use strict";
@@ -136,6 +136,7 @@ let webamp=null;
 function wampWrap(){ return document.getElementById("webamp-wrap"); }
 function showWamp(){ const w=wampWrap(); if(w) w.style.display=""; }
 function hideWamp(){ const w=wampWrap(); if(w) w.style.display="none"; }
+function wampHidden(){ const w=wampWrap(); return !w||w.style.display==="none"; }
 let zTop=100, focusedId=null;
 const openApps=new Map();
 const NOTAB=new Set(["win-logoff","win-shutdown","win-results","win-error","win-confirm","win-props","win-run"]);
@@ -165,7 +166,8 @@ function renderTaskbar(){
 function tabClick(id){
   const a=openApps.get(id); if(!a) return;
   if(a.kind==="webamp"){
-    if(a.min){ a.min=false; focusedId=id; showWamp(); try{ webamp.reopen(); }catch(e){} }
+    /* truth = actual visibility, not just the flag — a desync can never zombie */
+    if(a.min||wampHidden()){ a.min=false; focusedId=id; showWamp(); try{ webamp.reopen(); }catch(e){} }
     else{ a.min=true; if(focusedId===id) focusedId=null; hideWamp(); }
     renderTaskbar(); return;
   }
@@ -508,10 +510,11 @@ desktop.addEventListener("pointerdown",e=>{
 
 /* ================= shared dialogs ================= */
 let confirmCb=null;
-function showError(title,text){
+function showError(title,text,quiet){
   $("#win-error .title-bar-text").textContent=title;
   $("#errtext").textContent=text;
-  openWin("win-error",{silent:true}); sError();
+  openWin("win-error",{silent:true});
+  if(!quiet) sError();
 }
 function showConfirm(title,text,cb){
   $("#win-confirm .title-bar-text").textContent=title;
@@ -630,6 +633,40 @@ function trayMenu(){
     {label:"Customize Notifications",disabled:1}
   ];
 }
+
+/* ---- menu bars actually drop menus ---- */
+function menubarMenu(label,id){
+  switch(label){
+    case "File": return [
+      {label:"New",disabled:1},{label:"Open...",disabled:1},{label:"Save",disabled:1},
+      {label:"Save As...",disabled:1},{sep:1},
+      {label:"Exit",action:()=>closeWin(id)}];
+    case "Edit": return [
+      {label:"Undo",disabled:1},{sep:1},
+      {label:"Cut",disabled:1},{label:"Copy",disabled:1},{label:"Paste",disabled:1},
+      {label:"Delete",disabled:1},{sep:1},{label:"Select All",disabled:1}];
+    case "Format": return [
+      {label:"Word Wrap",disabled:1},{label:"Font...",disabled:1}];
+    case "View": return [
+      {label:"Status Bar",disabled:1},{sep:1},{label:"Refresh",action:()=>{}}];
+    case "Options": return [
+      {label:"Always On Top",disabled:1},{label:"Minimize On Use",disabled:1}];
+    case "Shut Down": return [
+      {label:"Turn Off",action:()=>{ sysSnd("shutdown",.55); $("#shutdown").style.display="grid"; }},
+      {label:"Restart",action:()=>{ sessionStorage.removeItem("cxp.booted"); location.reload(); }}];
+    case "Help": return [
+      {label:"Help Topics",action:()=>openWin("win-readme")},{sep:1},
+      {label:"About",action:()=>showError("About "+tabTitle(id),
+        "CURSORS XP · version 5.1 (Build 2600.casino)\nThis product is licensed to: whoever is losing right now.",true)}];
+  }
+  return [{label:"(nothing here)",disabled:1}];
+}
+$$(".menubar span").forEach(m=>m.addEventListener("click",e=>{
+  e.stopPropagation();
+  const win=m.closest(".window"); if(!win) return;
+  const r=m.getBoundingClientRect();
+  showMenu(menubarMenu(m.textContent,win.id),r.left,r.bottom+2);
+}));
 document.addEventListener("contextmenu",e=>{
   e.preventDefault();
   hideMenu();
@@ -1120,271 +1157,9 @@ if(window.fetch){
   };
 }
 
-/* -- seven house tracks: authored below, rendered offline to WAV, played by the real player -- */
-const FOUR="x---x---x---x---", OFF8="--x---x---x---x-", HAT16="xxxxxxxxxxxxxxxx", CLAP24="----x-------x---";
-const WTRK=[
-{name:"cloudless",bpm:138,root:110,pump:1,leadInst:"saw",
- prog:[{r:0,c:[0,3,7]},{r:-4,c:[-4,0,5]},{r:3,c:[3,7,12]},{r:-2,c:[-2,2,5]}],
- leads:[{len:32,n:[[0,19,2],[2,17,1],[4,15,2],[6,19,2],[8,24,3],[12,22,1],[14,19,2],[16,17,2],[18,15,1],[20,12,2],[24,15,2],[26,17,1],[28,19,4]]}],
- arr:[
-  {b:8,k:FOUR,h:OFF8,bass:"sub",ch:"pad"},
-  {b:8,k:FOUR,c:CLAP24,h:OFF8,bass:"roll",ch:"pad",riser:1},
-  {b:16,k:FOUR,c:CLAP24,h:HAT16,o:OFF8,bass:"roll",ch:"offstab",ld:0,crash:1},
-  {b:8,bass:"sub",ch:"pad",ld:0,riser:1},
-  {b:16,k:FOUR,c:CLAP24,h:HAT16,o:OFF8,bass:"roll",ch:"offstab",ld:0,crash:1},
-  {b:4,k:FOUR,bass:"sub",ch:"pad"}]},
-{name:"gigadance",bpm:134,root:82.41,pump:1,leadInst:"saw",
- prog:[{r:0,c:[0,3,7]},{r:-4,c:[-4,0,3]},{r:3,c:[3,7,10]},{r:-2,c:[-2,2,5]}],
- leads:[{len:32,n:[[0,12,1],[2,12,1],[4,15,2],[6,19,1],[8,19,2],[10,17,1],[12,15,1],[14,14,2],[16,12,1],[18,12,1],[20,14,2],[22,15,2],[24,19,3],[28,14,4]]}],
- arr:[
-  {b:4,k:FOUR,bass:"off8"},
-  {b:8,k:FOUR,c:CLAP24,h:OFF8,bass:"off8",ch:"stab24"},
-  {b:4,k:FOUR,c:CLAP24,h:OFF8,bass:"off8",ch:"stab24",riser:1},
-  {b:16,k:FOUR,c:CLAP24,h:HAT16,bass:"off8",ch:"offstab",ld:0,crash:1},
-  {b:8,bass:"sub",ch:"pad",ld:0},
-  {b:16,k:FOUR,c:CLAP24,h:HAT16,bass:"off8",ch:"offstab",ld:0,crash:1},
-  {b:4,k:FOUR,bass:"off8",ch:"pad"}]},
-{name:"nightcoreur",bpm:168,root:92.5,pump:1,leadInst:"saw",
- prog:[{r:0,c:[0,3,7]},{r:-4,c:[-4,0,3]},{r:3,c:[3,7,10]},{r:-2,c:[-2,2,5]}],
- leads:[{len:64,n:[[0,12,1],[2,15,1],[4,17,1],[6,19,2],[8,19,1],[10,17,1],[12,15,1],[14,17,2],[16,19,1],[18,20,1],[20,22,2],[24,19,2],[28,17,1],[30,15,1],[32,14,1],[34,15,1],[36,17,2],[40,15,2],[44,14,1],[46,12,1],[48,15,1],[50,17,1],[52,19,2],[56,22,2],[60,24,4]]}],
- arr:[
-  {b:4,k:FOUR,h:OFF8,bass:"oct"},
-  {b:4,k:FOUR,c:CLAP24,h:OFF8,bass:"oct",ch:"stab24",riser:1},
-  {b:20,k:FOUR,c:CLAP24,h:HAT16,bass:"oct",ch:"offstab",ld:0,crash:1},
-  {b:4,bass:"sub",ch:"pad",riser:1},
-  {b:20,k:FOUR,c:CLAP24,h:HAT16,bass:"oct",ch:"offstab",ld:0,crash:1},
-  {b:4,k:FOUR,bass:"oct"}]},
-{name:"chip8",bpm:150,root:130.81,leadInst:"chip",
- prog:[{r:0,c:[0,4,7]},{r:-3,c:[-3,0,4]},{r:5,c:[5,9,12]},{r:-5,c:[-5,-1,2]}],
- leads:[{len:64,n:[[0,12,2],[4,16,2],[8,19,2],[12,16,1],[14,14,1],[16,12,2],[20,14,2],[24,16,4],[32,17,2],[36,16,1],[38,14,1],[40,12,2],[44,9,2],[48,7,2],[52,9,1],[54,11,1],[56,12,6]]}],
- arr:[
-  {b:4,h:HAT16,bass:"walk",ch:"arp32"},
-  {b:16,k:FOUR,s:CLAP24,h:HAT16,bass:"walk",ch:"arp32",ld:0,crash:1},
-  {b:8,k:FOUR,h:HAT16,bass:"walk",ch:"arpU"},
-  {b:16,k:FOUR,s:CLAP24,h:HAT16,bass:"walk",ch:"arp32",ld:0,crash:1},
-  {b:4,bass:"walk",ch:"arpU"}]},
-{name:"dialtone",bpm:128,root:130.81,swing:.24,leadInst:"dark",
- prog:[{r:0,c:[0,3,7]},{r:5,c:[5,8,12]},{r:-4,c:[-4,0,3]},{r:-2,c:[-2,2,5]}],
- leads:[{len:32,n:[[0,15,3],[6,14,1],[8,12,2],[14,10,1],[16,12,3],[22,15,2],[26,17,1],[28,15,3]]}],
- arr:[
-  {b:8,bass:"sub",ch:"pad"},
-  {b:16,k:"x-----x---x-----",s:"----x-------x--x",h:"x-x-x-x-x-x-x-xx",bass:"off8",ch:"pad",ld:0,crash:1},
-  {b:8,k:"x-----x---x-----",h:"x-x-x-x-x-x-x-x-",bass:"sub",ch:"stab24"},
-  {b:16,k:"x-----x---x-----",s:"----x-------x--x",h:"x-x-x-x-x-x-x-xx",bass:"off8",ch:"pad",ld:0},
-  {b:4,bass:"sub",ch:"pad"}]},
-{name:"vaporlounge",bpm:84,root:87.31,swing:.3,leadInst:"soft",
- prog:[{r:0,c:[0,4,7,11]},{r:-3,c:[-3,0,4,7]},{r:2,c:[2,5,9,12]},{r:-5,c:[-5,-1,2,5]}],
- leads:[{len:64,n:[[0,16,3],[6,14,2],[10,12,2],[16,11,4],[24,9,2],[32,14,3],[38,12,2],[42,11,1],[44,9,4],[52,7,3]]}],
- arr:[
-  {b:4,bass:"jazz",ch:"pad"},
-  {b:24,k:"x---------x-----",s:"--------x-------",h:"x-x-x-x-x-x-x-x-",o:"------x---------",bass:"jazz",ch:"pad",ld:0},
-  {b:4,bass:"jazz",ch:"pad"}]},
-{name:"shatterhand",bpm:174,root:82.41,leadInst:"dark",
- prog:[{r:0,c:[0,3,7]},{r:0,c:[0,3,7]},{r:-4,c:[-4,0,3]},{r:-2,c:[-2,2,5]}],
- leads:[{len:32,n:[[0,12,2],[4,15,1],[6,15,1],[8,14,2],[12,10,2],[16,12,2],[20,15,2],[24,19,3],[30,15,1]]}],
- arr:[
-  {b:8,h:HAT16,bass:"reese"},
-  {b:20,k:"x--------x------",s:"----x-------x---",h:HAT16,bass:"reese",ch:"stab24",ld:0,crash:1},
-  {b:8,bass:"sub",ch:"pad",ld:0},
-  {b:20,k:"x--------x------",s:"----x-------x---",h:HAT16,bass:"reese",ch:"stab24",ld:0,crash:1},
-  {b:4,h:HAT16,bass:"reese"}]}
-];
-WTRK.forEach(T=>{
-  T._secs=[]; let b0=0;
-  for(const s of T.arr){ s.bar0=b0; for(let i=0;i<s.b;i++) T._secs.push(s); b0+=s.b; }
-  T._bars=b0; T._steps=b0*16; T._dur=T._steps*(60/T.bpm/4);
-});
-
-/* -- instrument rack (E = one offline render environment) -- */
-function nz(E,t,dur,vol,freq,type,dest,q){
-  const s=E.c.createBufferSource(); s.buffer=E.nb; s.loop=true;
-  const f=E.c.createBiquadFilter(); f.type=type||"bandpass"; f.frequency.value=freq; f.Q.value=q||.8;
-  const g=E.c.createGain(); g.gain.setValueAtTime(vol,t); g.gain.exponentialRampToValueAtTime(.001,t+dur);
-  s.connect(f); f.connect(g); g.connect(dest||E.drums);
-  s.start(t,(t*7919)%.5); s.stop(t+dur+.03);
-}
-function kick(E,t,T){
-  const o=E.c.createOscillator(),g=E.c.createGain();
-  o.type="sine"; o.frequency.setValueAtTime(165,t); o.frequency.exponentialRampToValueAtTime(46,t+.09);
-  g.gain.setValueAtTime(.95,t); g.gain.exponentialRampToValueAtTime(.001,t+.27);
-  o.connect(g); g.connect(E.drums); o.start(t); o.stop(t+.3);
-  nz(E,t,.014,.3,3200,"highpass");
-  if(T.pump){ const gg=E.duck.gain,b=60/T.bpm; gg.setValueAtTime(.3,t); gg.linearRampToValueAtTime(1,t+b*.82); }
-}
-function snare(E,t){
-  nz(E,t,.16,.32,1900,"bandpass",E.drums,.7); nz(E,t,.08,.2,420,"lowpass");
-  const o=E.c.createOscillator(),g=E.c.createGain();
-  o.type="triangle"; o.frequency.value=196;
-  g.gain.setValueAtTime(.25,t); g.gain.exponentialRampToValueAtTime(.001,t+.09);
-  o.connect(g); g.connect(E.drums); o.start(t); o.stop(t+.12);
-}
-function clap(E,t){ [0,.013,.026].forEach(d=>nz(E,t+d,.045,.22,1200,"bandpass",E.drums,1.6)); nz(E,t+.028,.2,.16,1200,"bandpass",E.drums,1.2); }
-function hat(E,t,open){ nz(E,t,open?.24:.045,open?.13:.15,8800,"highpass"); }
-function crash(E,t){
-  nz(E,t,1.1,.17,6500,"highpass");
-  const o=E.c.createOscillator(),g=E.c.createGain();
-  o.type="sine"; o.frequency.setValueAtTime(70,t); o.frequency.exponentialRampToValueAtTime(38,t+.4);
-  g.gain.setValueAtTime(.5,t); g.gain.exponentialRampToValueAtTime(.001,t+.9);
-  o.connect(g); g.connect(E.drums); o.start(t); o.stop(t+1);
-}
-function riser(E,t,dur){
-  const s=E.c.createBufferSource(); s.buffer=E.nb; s.loop=true;
-  const f=E.c.createBiquadFilter(); f.type="bandpass"; f.Q.value=1.2;
-  f.frequency.setValueAtTime(300,t); f.frequency.exponentialRampToValueAtTime(6400,t+dur);
-  const g=E.c.createGain(); g.gain.setValueAtTime(.0012,t); g.gain.exponentialRampToValueAtTime(.11,t+dur); g.gain.setValueAtTime(.0001,t+dur+.01);
-  s.connect(f); f.connect(g); g.connect(E.mel); s.start(t,.2); s.stop(t+dur+.05);
-}
-function fr(T,semi){ return T.root*Math.pow(2,semi/12); }
-function bassN(E,t,T,semi,dur,vel){
-  const f=fr(T,semi);
-  const lp=E.c.createBiquadFilter(); lp.type="lowpass"; lp.Q.value=5;
-  lp.frequency.setValueAtTime(1200,t); lp.frequency.exponentialRampToValueAtTime(300,t+Math.min(.16,dur));
-  const g=E.c.createGain(); g.gain.setValueAtTime(vel||.3,t); g.gain.exponentialRampToValueAtTime(.001,t+dur);
-  const o=E.c.createOscillator(); o.type="sawtooth"; o.frequency.value=f;
-  const o2=E.c.createOscillator(); o2.type="square"; o2.frequency.value=f/2;
-  const g2=E.c.createGain(); g2.gain.value=.5;
-  o.connect(lp); o2.connect(g2); g2.connect(lp); lp.connect(g); g.connect(E.mel);
-  o.start(t); o.stop(t+dur+.03); o2.start(t); o2.stop(t+dur+.03);
-}
-function subN(E,t,T,semi,dur){
-  const o=E.c.createOscillator(),g=E.c.createGain();
-  o.type="sine"; o.frequency.value=fr(T,semi);
-  g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(.3,t+.02); g.gain.setValueAtTime(.3,t+dur*.8); g.gain.exponentialRampToValueAtTime(.001,t+dur);
-  o.connect(g); g.connect(E.mel); o.start(t); o.stop(t+dur+.05);
-}
-function chipB(E,t,T,semi,dur){
-  const o=E.c.createOscillator(),g=E.c.createGain();
-  o.type="triangle"; o.frequency.value=fr(T,semi);
-  g.gain.setValueAtTime(.32,t); g.gain.exponentialRampToValueAtTime(.001,t+dur);
-  o.connect(g); g.connect(E.mel); o.start(t); o.stop(t+dur+.03);
-}
-function reese(E,t,T,semi,dur){
-  const lp=E.c.createBiquadFilter(); lp.type="lowpass"; lp.frequency.value=520; lp.Q.value=2;
-  const g=E.c.createGain(); g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(.2,t+.05); g.gain.setValueAtTime(.2,t+dur*.9); g.gain.linearRampToValueAtTime(0,t+dur);
-  lp.connect(g); g.connect(E.mel);
-  [-18,18].forEach(d=>{ const o=E.c.createOscillator(); o.type="sawtooth"; o.frequency.value=fr(T,semi); o.detune.value=d; o.connect(lp); o.start(t); o.stop(t+dur+.05); });
-}
-function stab(E,t,T,semis,dur,vel){
-  const lp=E.c.createBiquadFilter(); lp.type="lowpass"; lp.Q.value=1;
-  lp.frequency.setValueAtTime(3800,t); lp.frequency.exponentialRampToValueAtTime(950,t+dur);
-  const g=E.c.createGain(); g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(vel,t+.015); g.gain.exponentialRampToValueAtTime(.001,t+dur);
-  lp.connect(g); g.connect(E.mel);
-  for(const s of semis) for(const d of[-8,8]){
-    const o=E.c.createOscillator(); o.type="sawtooth"; o.frequency.value=fr(T,s+12); o.detune.value=d;
-    o.connect(lp); o.start(t); o.stop(t+dur+.03);
-  }
-}
-function pad(E,t,T,semis,dur){
-  const lp=E.c.createBiquadFilter(); lp.type="lowpass"; lp.frequency.value=1500; lp.Q.value=.5;
-  const g=E.c.createGain(); g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(.055,t+dur*.25); g.gain.setValueAtTime(.055,t+dur*.75); g.gain.linearRampToValueAtTime(0,t+dur);
-  lp.connect(g); g.connect(E.mel);
-  for(const s of semis) for(const d of[-6,6]){
-    const o=E.c.createOscillator(); o.type="sawtooth"; o.frequency.value=fr(T,s+12); o.detune.value=d;
-    o.connect(lp); o.start(t); o.stop(t+dur+.05);
-  }
-}
-function arpN(E,t,T,semi,dur,vel,type){
-  const o=E.c.createOscillator(),g=E.c.createGain();
-  o.type=type||"square"; o.frequency.value=fr(T,semi+12);
-  g.gain.setValueAtTime(vel,t); g.gain.exponentialRampToValueAtTime(.001,t+dur);
-  o.connect(g); g.connect(E.mel); o.start(t); o.stop(t+dur+.02);
-}
-function leadN(E,t,T,semi,dur,kind){
-  const base=kind==="soft"?.11:kind==="chip"?.1:.13;
-  const mk=(tt,v)=>{
-    const lp=E.c.createBiquadFilter(); lp.type="lowpass"; lp.Q.value=1;
-    lp.frequency.setValueAtTime(kind==="dark"?1400:3400,tt); lp.frequency.exponentialRampToValueAtTime(kind==="dark"?700:1300,tt+dur);
-    const g=E.c.createGain(); g.gain.setValueAtTime(0,tt); g.gain.linearRampToValueAtTime(v,tt+(kind==="soft"?.05:.01)); g.gain.exponentialRampToValueAtTime(.001,tt+dur);
-    lp.connect(g); g.connect(E.mel);
-    const types=kind==="chip"?["square"]:kind==="soft"?["triangle","triangle"]:["sawtooth","square"];
-    types.forEach((ty,i)=>{ const o=E.c.createOscillator(); o.type=ty; o.frequency.value=fr(T,semi+12); o.detune.value=i?7:-7; o.connect(lp); o.start(tt); o.stop(tt+dur+.03); });
-  };
-  mk(t,base);
-  if(kind==="saw"||kind==="dark"){ const e=(60/T.bpm)*.75; mk(t+e,base*.38); mk(t+e*2,base*.16); }
-}
-function schedStepE(E,T,step,t){
-  const bar=step>>4, s=step&15, sec=T._secs[bar], st=60/T.bpm/4;
-  const t0=t+(((s&1)&&T.swing)?st*T.swing:0);
-  const chd=T.prog[bar%T.prog.length];
-  if(sec.crash&&bar===sec.bar0&&s===0) crash(E,t0);
-  if(sec.riser&&bar===sec.bar0+sec.b-2&&s===0) riser(E,t0,st*32);
-  if(sec.k&&sec.k[s]==="x") kick(E,t0,T);
-  if(sec.s&&sec.s[s]==="x") snare(E,t0);
-  if(sec.c&&sec.c[s]==="x") clap(E,t0);
-  if(sec.o&&sec.o[s]==="x") hat(E,t0,1); else if(sec.h&&sec.h[s]==="x") hat(E,t0,0);
-  switch(sec.bass){
-    case "off8": if(s%4===2) bassN(E,t0,T,chd.r,st*1.6,.3); break;
-    case "roll": if(s%4!==0) bassN(E,t0,T,chd.r-12,st*.92,s%4===2?.32:.24); break;
-    case "oct": bassN(E,t0,T,(s%2)?chd.r:chd.r-12,st*.9,.27); break;
-    case "sub": if(s===0||s===8) subN(E,t0,T,chd.r-12,st*7.6); break;
-    case "walk": if(s%2===0){ const wp=[0,7,12,7]; chipB(E,t0,T,chd.r-12+wp[(s>>1)%4],st*1.7); } break;
-    case "jazz": if(s===0) subN(E,t0,T,chd.r-12,st*7); else if(s===8) subN(E,t0,T,chd.r-5,st*6); break;
-    case "reese": if(s===0) reese(E,t0,T,chd.r-12,st*16); break;
-  }
-  switch(sec.ch){
-    case "offstab": if(s%4===2) stab(E,t0,T,chd.c,st*1.6,.12); break;
-    case "stab24": if(s===4||s===12) stab(E,t0,T,chd.c,st*2.6,.13); break;
-    case "pad": if(s===0) pad(E,t0,T,chd.c,st*16); break;
-    case "arpU": arpN(E,t0,T,chd.c[[0,1,2,1][s%4]]+((s%8>=4)?12:0),st*.9,.06,"sawtooth"); break;
-    case "arp32": arpN(E,t0,T,chd.c[s%3],st*.48,.055); arpN(E,t0+st/2,T,chd.c[(s+1)%3]+12,st*.48,.05); break;
-  }
-  const li=(sec.ld==null)?-1:sec.ld;
-  if(li>=0){
-    const ph=T.leads[li], pos=((bar-sec.bar0)*16+s)%ph.len;
-    for(const n of ph.n) if(n[0]===pos) leadN(E,t0,T,n[1],st*n[2]*1.05,T.leadInst);
-  }
-}
-function mkRack(c){
-  const comp=c.createDynamicsCompressor();
-  comp.threshold.value=-12; comp.knee.value=20; comp.ratio.value=6; comp.attack.value=.004; comp.release.value=.2;
-  const master=c.createGain(); master.gain.value=.9;
-  comp.connect(master); master.connect(c.destination);
-  const mel=c.createGain(), duck=c.createGain(), drums=c.createGain();
-  mel.gain.value=.9;
-  mel.connect(duck); duck.connect(comp); drums.connect(comp);
-  const nb=c.createBuffer(1,c.sampleRate,c.sampleRate);
-  const d=nb.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=Math.random()*2-1;
-  return {c,mel,duck,drums,nb};
-}
-function wavBlob(buf){
-  const ch=buf.getChannelData(0), n=ch.length, sr=buf.sampleRate;
-  const b=new ArrayBuffer(44+n*2), v=new DataView(b);
-  const ws=(o,s)=>{ for(let i=0;i<s.length;i++) v.setUint8(o+i,s.charCodeAt(i)); };
-  ws(0,"RIFF"); v.setUint32(4,36+n*2,true); ws(8,"WAVE"); ws(12,"fmt ");
-  v.setUint32(16,16,true); v.setUint16(20,1,true); v.setUint16(22,1,true);
-  v.setUint32(24,sr,true); v.setUint32(28,sr*2,true); v.setUint16(32,2,true); v.setUint16(34,16,true);
-  ws(36,"data"); v.setUint32(40,n*2,true);
-  for(let i=0;i<n;i++){ const s=Math.max(-1,Math.min(1,ch[i])); v.setInt16(44+i*2,s<0?s*0x8000:s*0x7FFF,true); }
-  return new Blob([b],{type:"audio/wav"});
-}
-function renderTrack(T){
-  const sr=32000, st=60/T.bpm/4;
-  const oc=new OfflineAudioContext(1,Math.ceil((T._dur+1.2)*sr),sr);
-  const E=mkRack(oc);
-  for(let s2=0;s2<T._steps;s2++) schedStepE(E,T,s2,.06+s2*st);
-  return oc.startRendering().then(wavBlob);
-}
-
-/* -- render queue: tracks appear in the playlist as they finish baking -- */
-const wavURL=[]; let queued=false;
-function toTrack(i){ const T=WTRK[i]; return {url:wavURL[i],duration:T._dur,metaData:{artist:"the house",title:T.name}}; }
-function queueRenders(){
-  if(queued) return; queued=true;
-  let i=0;
-  (function step(){
-    if(i>=WTRK.length) return;
-    const idx=i++;
-    let p;
-    try{ p=renderTrack(WTRK[idx]); }catch(e){ p=Promise.reject(e); }
-    p.then(b=>{
-      wavURL[idx]=URL.createObjectURL(b);
-      if(webamp){ try{ webamp.appendTracks([toTrack(idx)]); }catch(e){ console.error("[winamp] appendTracks failed:",e); } }
-    })
-     .catch(e=>console.error("[winamp] render failed:",WTRK[idx].name,e))
-     .then(()=>setTimeout(step,400));
-  })();
-}
-setTimeout(queueRenders,300); /* eager: tracks are usually all baked before the player is first opened */
+/* -- the house playlist: real era MP3s, freely licensed --
+   Kevin MacLeod (incompetech.com), CC BY — attribution lives in README.txt. */
+const initialAmpTracks=()=>TRACKS.map(t=>({url:t.url,metaData:{artist:t.artist,title:t.title}}));
 
 /* -- lifecycle: Webamp is a normal process-table entry (kind:"webamp").
    #webamp-wrap is OURS (webamp replaces the inner slot only), so hide/show
@@ -1394,7 +1169,6 @@ function wampEntry(){
   return {el:null,min:false,kind:"webamp",notab:false,title:"Winamp",icon:`<img src="${IMG.amp16}" alt="">`};
 }
 function openWinamp(){
-  queueRenders();
   const ex=openApps.get("win-amp");
   if(ex){
     ex.min=false; focusedId="win-amp";
@@ -1405,8 +1179,9 @@ function openWinamp(){
   if(!webamp){
     try{
       webamp=new Webamp({
-        initialTracks:wavURL.map((u,i)=>u?toTrack(i):null).filter(Boolean),
-        zIndex:4800
+        initialTracks:initialAmpTracks(),
+        zIndex:4800,
+        enableHotkeys:true /* the real Winamp hotkeys, incl. Ctrl+D double-size */
       });
     }catch(e){
       console.error("[winamp] boot failed:",e); webamp=null;
@@ -1419,6 +1194,7 @@ function openWinamp(){
       if(a){ a.min=true; if(focusedId==="win-amp") focusedId=null; }
       hideWamp(); sMini(); renderTaskbar();
     });
+    showWamp(); /* wrapper must be visible BEFORE render: webamp centers its stack on the slot's rect */
     webamp.renderWhenReady(document.getElementById("webamp-slot")).then(()=>showWamp());
   }else{
     showWamp();
@@ -2050,6 +1826,24 @@ $("#tile-guest").addEventListener("click",()=>{
 $("#lg-off").addEventListener("click",()=>{ sysSnd("shutdown",.55); $("#login").style.display="none"; $("#shutdown").style.display="grid"; });
 if(location.hash.indexOf("#desktop")===0) sessionStorage.setItem("cxp.booted","1"); /* dev: skip boot/login */
 if(location.hash==="#desktop-start") setTimeout(()=>$("#startmenu").classList.add("open"),400); /* dev: capture start menu */
+if(location.hash==="#desktop-amptest"){ /* dev: reproduce the open/close/reopen cycle headlessly */
+  const dlog=[];
+  const D=document.createElement("pre");
+  D.style.cssText="position:fixed;left:8px;top:8px;z-index:999999;background:#fff;color:#000;font:11px monospace;padding:8px;max-width:660px;white-space:pre-wrap";
+  document.body.appendChild(D);
+  const errs=[];
+  const oe=console.error.bind(console);
+  console.error=(...a)=>{ errs.push(a.map(String).join(" ").slice(0,160)); oe(...a); };
+  const snap=tag=>{
+    dlog.push(`[${tag}] entry=${openApps.has("win-amp")} tabs=${$("#tabs").children.length} wrapDisp='${wampWrap()?wampWrap().style.display:"?"}' tracks=${TRACKS.length} errs=${errs.length}`);
+    if(errs.length) dlog.push("   last: "+errs[errs.length-1]);
+    D.textContent=dlog.join("\n");
+  };
+  setTimeout(()=>{ snap("pre"); openWin("win-amp"); snap("opened"); },1400);
+  setTimeout(()=>{ try{ webamp.close(); }catch(e){ dlog.push("close() threw: "+e); } snap("after-ui-close"); },3200);
+  setTimeout(()=>{ openWin("win-amp"); snap("reopened"); },4800);
+  setTimeout(()=>{ snap("final"); },6400);
+}
 if(sessionStorage.getItem("cxp.booted")){
   desktopEntered=true;
   setTimeout(showBalloon,900);
