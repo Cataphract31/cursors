@@ -7,6 +7,7 @@ import { initMessenger } from "./messenger.js";
 import { initPaint } from "./paint.js";
 import { initExplorer } from "./explorer.js";
 import { initIE } from "./ie.js";
+import { initSysApps } from "./sysapps.js";
 import { initNet } from "./net.js";
 const Webamp = (WebampImport && WebampImport.default) ? WebampImport.default : WebampImport;
 
@@ -311,6 +312,7 @@ function applyWinRect(el){
   if(s.h) el.style.height=s.h;
 }
 let ie=null;   /* the browser, wired further down; openWin needs the handle */
+let netUp=false;   /* cursor$net dial-up state, published by ie.setNet for ipconfig/ping */
 function openWin(id,opts){
   if(id==="win-amp"){ winampApp.open(); return; }
   opts=opts||{};
@@ -327,6 +329,11 @@ function openWin(id,opts){
   focusWin(id);
   if(id==="win-run") setTimeout(()=>{ const i=$("#run-in"); i.value=""; i.focus(); },0);
   if(id==="win-ie"&&ie) ie.boot();   /* an empty browser dials out on its own */
+  if(id==="win-cmd"){ if(sys.policyOn("nocmd")){ closeWin("win-cmd"); showError("Command Prompt","The command prompt has been disabled by your administrator.\n\nPress any key to continue . . ."); return; } sys.cmdOpen(); }
+  if(id==="win-control") sys.cplRender();
+  if(id==="win-services") sys.openConsole("services");
+  if(id==="win-devmgr") sys.openConsole("devmgr");
+  if(id==="win-gpedit") sys.openConsole("gpedit");
   if(!was) smTouch(id);
 }
 /* no window may hang off the screen — the small-screen safety net */
@@ -1170,6 +1177,11 @@ const SMAPPS={
   "win-help":{label:"Help and Support",ico:"help32"},
   "win-dispprops":{label:"Display Properties",ico:"cpanel32"},
   "win-datetime":{label:"Date and Time",ico:"cpanel32"},
+  "win-cmd":{label:"Command Prompt",ico:"@ic-cmd"},
+  "win-control":{label:"Control Panel",ico:"@ic-cpl"},
+  "win-services":{label:"Services",ico:"@ic-mmc"},
+  "win-devmgr":{label:"Device Manager",ico:"@ic-dev"},
+  "win-gpedit":{label:"Group Policy",ico:"@ic-pol"},
 };
 const SM_DEFAULT=["win-cursors","win-chat","win-amp","win-paint","win-mine","win-log"];
 function smRecent(){
@@ -1230,7 +1242,13 @@ function allProgramsMenu(){
       {label:"Notepad",action:go("win-readme")},
       {label:"Paint",action:go("win-paint")},
       {label:"Calculator",action:()=>{ closeStart(); showError("Calculator","Cannot compute expected value: it is zero. It is always zero. Read the README."); }},
-      {label:"Command Prompt",action:()=>{ closeStart(); showError("cmd.exe","The console subsystem ships in the next update. The house always ships."); }}]},
+      {label:"Command Prompt",action:go("win-cmd")}]},
+    {label:"Administrative Tools",sub:[
+      {label:"Services",action:go("win-services")},
+      {label:"Device Manager",action:go("win-devmgr")},
+      {label:"Group Policy",action:go("win-gpedit")},
+      {sep:1},
+      {label:"Control Panel",action:go("win-control")}]},
     {label:"Games",sub:[
       {label:"Minesweeper",action:go("win-mine")},
       {label:"Solitaire",action:()=>{ closeStart(); showError("Solitaire","You are already gambling."); }},
@@ -1282,19 +1300,29 @@ const RUNMAP={
   "notepad":"win-readme","notepad.exe":"win-readme",
   "winmine":"win-mine","winmine.exe":"win-mine",
   "mspaint":"win-paint","mspaint.exe":"win-paint","paint":"win-paint","pbrush":"win-paint",
-  "control":"win-dispprops","desk.cpl":"win-dispprops",
+  "desk.cpl":"win-dispprops",
   "explorer":"win-explorer","explorer.exe":"win-explorer","c:":"win-explorer","sysdm.cpl":"win-sysprops",
   "timedate.cpl":"win-datetime",
+  "cmd":"win-cmd","cmd.exe":"win-cmd","command":"win-cmd","command.com":"win-cmd",
+  "control.exe":"win-control","control panel":"win-control",
+  "services.msc":"win-services","services":"win-services",
+  "devmgmt.msc":"win-devmgr","devmgmt":"win-devmgr","hdwwiz.cpl":"win-devmgr","main.cpl":"win-devmgr",
+  "gpedit.msc":"win-gpedit","gpedit":"win-gpedit",
+  "mmc":"win-services","taskman":"win-taskmgr","appwiz.cpl":"win-control",
 };
+/* one resolver for the Run box, cmd's START and Control Panel's applets */
+function runNamed(k){
+  k=String(k||"").trim().toLowerCase().replace(/^"|"$/g,"");
+  if(k==="control"){ openWin("win-control"); return true; }
+  if(RUNMAP[k]){ sysSnd("nav",.5); openWin(RUNMAP[k]); return true; }
+  return false;
+}
 function runCommand(){
   const v=$("#run-in").value.trim();
   closeWin("win-run");
   if(!v) return;
   const k=v.toLowerCase();
-  if(RUNMAP[k]){ sysSnd("nav",.5); openWin(RUNMAP[k]); return; }
-  if(k==="cmd"||k==="cmd.exe"||k==="command"){ showError("cmd.exe","The console subsystem ships in the next update. The house always ships."); return; }
-  if(k==="gpedit.msc"){ showError("Group Policy","You do not have permission to edit Group Policy. The house edge is a policy."); return; }
-  if(k==="devmgmt.msc"){ showError("Device Manager","1 unknown device detected: your luck. Driver ships in the next update."); return; }
+  if(runNamed(k)) return;
   if(k==="regedit"||k==="regedit.exe"){ showError("Registry Editor","HKEY_CURRENT_LOSER is locked by another process."); return; }
   if(k==="format c:"||k==="format c"){ showError("Format Local Disk (C:)","The disk is in use by CURSORS.EXE. Your losses are load-bearing and cannot be erased."); return; }
   /* Run took URLs in 2003, and so does this one */
@@ -1703,6 +1731,130 @@ const msn=initMessenger({
 const chatSys=t=>msn.lobbySys(t);
 const botChat=(kind,vars)=>{ if(!MP.on) msn.botChat(kind,vars); };
 
+/* ================= the XP applications ================= */
+/* cmd.exe, Control Panel, Services, Device Manager, Group Policy. They read
+   live state through these hooks and they change it — a service you stop is
+   stopped, a policy you enable applies, and Device Manager's pointing devices
+   are the cursors currently on the field. */
+const PROC_BASE=[
+  {name:"System Idle Process",pid:0,mem:28,critical:1},
+  {name:"System",pid:4,mem:236,critical:1},
+  {name:"smss.exe",pid:412,mem:388,critical:1},
+  {name:"csrss.exe",pid:476,mem:3820,critical:1},
+  {name:"winlogon.exe",pid:500,mem:2704,critical:1},
+  {name:"services.exe",pid:544,mem:3388,critical:1},
+  {name:"lsass.exe",pid:556,mem:1216,critical:1},
+  {name:"svchost.exe",pid:728,mem:4980},
+  {name:"svchost.exe",pid:816,mem:3944},
+  {name:"spoolsv.exe",pid:1104,mem:4288},
+  {name:"explorer.exe",pid:1520,mem:14740,critical:1},
+];
+let killedProcs=new Set();
+function liveProcesses(){
+  const out=PROC_BASE.filter(p=>!killedProcs.has(p.pid)).map(p=>Object.assign({},p));
+  if(!killedProcs.has(9001)) out.push({name:"cursors.exe",pid:9001,mem:34200+curs.length*420,critical:0,game:1});
+  if(openApps.has("win-ie")) out.push({name:"iexplore.exe",pid:2244,mem:19860});
+  if(openApps.has("win-paint")) out.push({name:"mspaint.exe",pid:2360,mem:8104});
+  if(openApps.has("win-mine")) out.push({name:"winmine.exe",pid:2412,mem:2288});
+  if(openApps.has("win-chat")) out.push({name:"msmsgs.exe",pid:2488,mem:12560});
+  if(openApps.has("win-cmd")) out.push({name:"cmd.exe",pid:2596,mem:2464});
+  return out;
+}
+function fmtUpLong(t){
+  const d=Math.floor(t/86400), h=Math.floor(t%86400/3600), m=Math.floor(t%3600/60);
+  return `${d} Days, ${h} Hours, ${m} Minutes, ${Math.floor(t%60)} Seconds`;
+}
+const sys=initSysApps({
+  $,$$,store,sysSnd,showMenu,showError,openWin,closeWin,
+  icoNode,isMobile:MOBILE,
+  hooks:{
+    /* --- filesystem: cmd walks the same tree Explorer does --- */
+    fsList:pth=>explorer.list(pth),
+    fsRead:it=>{
+      if(it.dead) return `A cursor died here.\n\n  owner        ${it.dead.name}\n  killed by    ${it.dead.killer}\n  carrying     ${(it.dead.lost/1000).toFixed(3)} SOL\n  its odds     ${it.dead.odds}%\n  survived     ${it.dead.lived}s\n\nOpen it in the Recycle Bin for the certificate.`;
+      if(typeof it.text==="string") return it.text;
+      if(it.act) return null;
+      return null;
+    },
+    diskFree:()=>{ const d=diskPct(); return Math.max(0,d.total-Math.round(d.total*d.pct/100)); },
+    /* --- machine --- */
+    sysInfo:()=>({
+      host:"CURSORLAND", owner:playerNameFull(),
+      uptime:fmtUpLong(upT),
+      memTotal:"512 MB", memFree:(512-Math.min(420,Math.round(120+curs.length*4)))+" MB",
+    }),
+    netInfo:()=>({ up:MP.on||netUp, ip:MP.on?"10.64.0."+(1+(roundNo%250)):"192.168.0.14",
+      gw:"34.70.75.204", rtt:MP.on?46:38 }),
+    processes:liveProcesses,
+    killProcess:p=>{
+      killedProcs.add(p.pid);
+      if(p.game){ log("cursors.exe terminated"); crashSystem(); setTimeout(()=>killedProcs.delete(9001),1000); }
+    },
+    /* --- the arena, as data --- */
+    arenaState:()=>({
+      epoch:roundNo, phase:phase.toUpperCase(), uptime:fmtUp(upT), net:MP.on,
+      commit:(commitHex||"").slice(0,32),
+      corpses:diskPct().cap, deaths:diskPct().dead, diskPct:diskPct().pct,
+      inPlay:fmtS(curs.reduce((a,c)=>a+c.bounty,0)),
+      cursors:curs.map(c=>({ id:c.id||c.mpid||"-", owner:c.owner, mine:!!c.isMine,
+        bounty:fmtS(c.bounty), mult:(c.bounty/ENTRY).toFixed(1), mode:c.mode })),
+    }),
+    deploy:()=>{ const n=myCurs().length; deploy(false); return myCurs().length>n||MP.on; },
+    recall:()=>recallAll(),
+    stance:st=>{ stance=st; mpSend({t:"stance",s:st}); updatePanel(); },
+    recallOne:()=>recallAll(),
+    /* --- shell --- */
+    runCommand:t=>runNamed(t),
+    confirm:(title,body,ok)=>showConfirm(title,body,ok),
+    openClock:()=>openClockProps(),
+    openVolume:()=>{ $("#sndico").click(); },
+    openIE:()=>openWin("win-ie"),
+    openNetwork:()=>{ if(ie&&ie.dial) ie.dial(); else openWin("win-ie"); },
+    printers:()=>showError("Printers and Faxes","There are no printers installed on this computer."),
+    userAccounts:()=>openWin("win-logoff"),
+    accessibility:()=>openWin("win-dispprops"),
+    addRemove:()=>showError("Add or Remove Programs","CURSORS.EXE cannot be removed while it is running.\n\nStop the CURSORS.EXE Arena Service first (Control Panel > Administrative Tools)."),
+    windowsUpdate:()=>{ openWin("win-ie"); if(ie) ie.go("http://windowsupdate.microsoft.com/"); },
+    /* --- services and policies actually do things --- */
+    serviceChanged:(ctl,on)=>applyService(ctl,on),
+    policyChanged:(id,v)=>applyPolicy(id,v),
+  },
+});
+sys.init();
+
+/* a stopped service really is stopped */
+function applyService(ctl,on){
+  if(ctl==="audio"){ muted=!on||$("#vf-mute").checked; volSync(); }
+  if(ctl==="themes"){ document.body.classList.toggle("classic-theme",!on); }
+  if(ctl==="arena"){
+    arenaSvc=on;
+    if(!on){ recallAll(); log("CURSORS.EXE Arena Service stopped — deploys closed"); }
+    else log("CURSORS.EXE Arena Service started — deploys open");
+    updatePanel();
+  }
+  if(ctl==="rake"){ rakeSvc=on; log(on?"rakeback ledger started":"rakeback ledger stopped — the edge is 3% until you start it"); updatePanel(); }
+  if(ctl==="fair"){ fairSvc=on; renderCx(); }
+  if(ctl==="net"&&!on){ log("Remote Access Connection Manager stopped"); }
+}
+let arenaSvc=true, rakeSvc=true, fairSvc=true;
+
+/* a Group Policy setting really applies */
+function applyPolicy(id,v){
+  const on=v==="Enabled";
+  if(id==="nocrt"){ if(on) $("#crt-chk").checked=false; applyCrt(); }
+  if(id==="nosound"){ muted=on; volSync(); }
+  if(id==="nodesktop") $("#icons").style.display=on?"none":"";
+  if(id==="nobin") renderIcons();
+  if(id==="norun") $$("#startmenu [data-act=run]").forEach(e=>e.style.display=on?"none":"");
+  if(id==="noclock") $("#clock").style.display=on?"none":"";
+  if(id==="nobal") if(on) $("#balloon").style.display="none";
+  if(id==="noauto"){ if(on&&auto.on){ auto.on=false; updatePanel(); } $(".aprow").parentElement&&$$("#cx-play .aprow").forEach(e=>e.style.display=on?"none":""); }
+  if(id==="showodds") document.body.classList.toggle("showodds",on);
+  if(id==="nocmd"&&on) closeWin("win-cmd");
+  if(id==="verbose") document.body.classList.toggle("verbose-boot",on);
+}
+function policyOn(id){ return sys.policyOn(id); }
+
 /* ================= Winamp — the real thing (Webamp, MIT, (c) Jordan Eldredge) ================= */
 const winampApp=(()=>{
 
@@ -1827,7 +1979,7 @@ ie=initIE({
     hallOfPain:()=>hallOfPain(),
     openText:openTextWindow,
     balloon:(h,t)=>showBalloon(h,t),
-    setNet:on=>{ $("#netico").style.display=on?"":"none"; },
+    setNet:on=>{ netUp=on; $("#netico").style.display=on?"":"none"; },
     hall:ieHall,
     mpOn:()=>MP.on,
     netGuests:()=>mpGuestData(),
@@ -1902,6 +2054,7 @@ let epochLen=150, upT=0, epochStart=0;   /* uptime never resets: the desktop sta
 let R=null, epochHist=[];
 function newRoundRecord(){ return {pot:0,deploys:0,myIn:0,myOut:0,myKills:0,bigBank:null,deaths:0}; }
 
+let localCurId=0;   /* the offline sandbox numbers its cursors too — Device Manager lists them by id */
 const CURSVG=`<svg viewBox="0 0 14 22"><use href="#ic-cursor"/></svg>`;
 function makeCur(owner,isMine){
   const el=document.createElement("div");
@@ -1928,7 +2081,7 @@ function makeCur(owner,isMine){
     if(isMine){ ax=x; ay=arena.y1-80; }
     else{ ax=clamp(x+rand(-40,40),arena.x0+50,arena.x1-50); ay=clamp(y+rand(-40,40),arena.y0+50,arena.y1-50); }
   }
-  const c={owner,isMine,el,x,y,ax,ay,bounty:ENTRY,
+  const c={id:++localCurId,owner,isMine,el,x,y,ax,ay,bounty:ENTRY,
     h:rand(0,Math.PI*2),spd:rand(78,124),mode:"hold",prevMode:"roam",recallT:0,
     grace:1.4,riskAt:1.5+Math.random()*5,dead:false,s:1,r:10,
     /* the death certificate is written from these — a cursor carries its own obituary */
@@ -2091,7 +2244,7 @@ function renderPhase(){
 }
 
 /* ================= deploy / recall / bank ================= */
-function canDeploy(){ return phase==="battle"&&!shutFired; }
+function canDeploy(){ return phase==="battle"&&!shutFired&&arenaSvc; }
 function deploy(silent){
   if(!canDeploy()||myCurs().length>=MAXCUR||wallet<STAKE) return;
   if(MP.on){ mpSend({t:"deploy"}); if(!silent) sysSnd("hwin",.5); return; }
@@ -2339,7 +2492,8 @@ function move(c,dt){
       if(o===c||o.owner!==c.owner) continue;
       const dx=c.x-o.x, dy=c.y-o.y, d2=dx*dx+dy*dy;
       if(d2>SEP*SEP) continue;
-      const d=Math.max(4,Math.sqrt(d2));
+      if(d2<1){ const a=(curs.indexOf(c)%8)/8*Math.PI*2; rx+=Math.cos(a)*SEP; ry+=Math.sin(a)*SEP; continue; }
+      const d=Math.sqrt(d2);
       rx+=dx/d*(SEP-d); ry+=dy/d*(SEP-d);
     }
     if(rx||ry){ tx=c.x+rx*3; ty=c.y+ry*3; turn=Math.max(turn,5.5); }
@@ -2356,19 +2510,23 @@ function move(c,dt){
     c.h+=clamp(angDiff(want-c.h),-1,1)*turn*dt;
   }
   c.h+=(Math.random()-.5)*(c.mode==="hold"?2.2:3.0)*dt;
-  /* a wide, firm margin: at M=30 a cursor chasing something pinned to the wall
-     slid along it for seconds, which is what "stuck at the top" was */
+  /* one vector away from the near walls, not four axis pulls that cancel in a
+     corner and weld a cursor to it (see the server sim for the whole note) */
   const M=64, WT=7;
-  if(c.x<arena.x0+M) c.h+=clamp(angDiff(0-c.h),-1,1)*WT*dt;
-  if(c.x>arena.x1-M) c.h+=clamp(angDiff(Math.PI-c.h),-1,1)*WT*dt;
-  if(c.y<arena.y0+M) c.h+=clamp(angDiff(Math.PI/2-c.h),-1,1)*WT*dt;
-  if(c.y>arena.y1-M) c.h+=clamp(angDiff(-Math.PI/2-c.h),-1,1)*WT*dt;
+  let wx=0,wy=0;
+  if(c.x<arena.x0+M) wx+=(arena.x0+M-c.x)/M;
+  if(c.x>arena.x1-M) wx-=(c.x-(arena.x1-M))/M;
+  if(c.y<arena.y0+M) wy+=(arena.y0+M-c.y)/M;
+  if(c.y>arena.y1-M) wy-=(c.y-(arena.y1-M))/M;
+  if(wx||wy) c.h+=clamp(angDiff(Math.atan2(wy,wx)-c.h),-1,1)*WT*dt*Math.min(1,Math.hypot(wx,wy));
   const weight=1+.25*(c.s-1);
   /* attacking is 12% faster, defending 10% slower, so a hunt can actually end
      instead of the two of them orbiting forever. Duel odds never move. */
   const sp=c.spd*sped*(c.mode==="hold"?.5:1)/weight;
-  c.x=clamp(c.x+Math.cos(c.h)*sp*dt,arena.x0+24,arena.x1-24);
-  c.y=clamp(c.y+Math.sin(c.h)*sp*dt,arena.y0+24,arena.y1-24);
+  const ux=c.x+Math.cos(c.h)*sp*dt, uy=c.y+Math.sin(c.h)*sp*dt;
+  c.x=clamp(ux,arena.x0+24,arena.x1-24); c.y=clamp(uy,arena.y0+24,arena.y1-24);
+  if(c.x!==ux) c.h=Math.PI-c.h;    /* the clamp bit: bounce, never weld */
+  if(c.y!==uy) c.h=-c.h;
   c.el.style.transform=`translate(${c.x-8}px,${c.y-4}px)`;
 }
 function startDuel(a,b){
@@ -3618,6 +3776,22 @@ if(location.hash.indexOf("#desktop-cx")===0) setTimeout(()=>{ /* dev: capture a 
       lost:485,mult:5,peak:485,odds:71,kills:3,lived:88,round:roundNo,at:"09:41:12"});
     deathCert(binDead[0]);
   }
+},900);
+if(location.hash.indexOf("#desktop-sys")===0) setTimeout(()=>{ /* dev: the XP applications */
+  $("#balloon").style.display="none";
+  const p=location.hash.replace("#desktop-sys","");
+  if(p==="-cmd"||p===""){
+    openWin("win-cmd");
+    if(p==="-cmd"){ const type=t=>{ for(const ch of t) sys.key({key:ch}); sys.key({key:"Enter"}); };
+      setTimeout(()=>{ type("ver"); type("arena"); type("dir"); },300); }
+  }
+  if(p==="-control") openWin("win-control");
+  if(p==="-classic"){ store.data.cplClassic=true; openWin("win-control"); }
+  if(p==="-svc") openWin("win-services");
+  if(p==="-svcprops") { openWin("win-services"); setTimeout(()=>$$("#svc-list .mmc-row")[2].dispatchEvent(new MouseEvent("dblclick",{bubbles:true})),300); }
+  if(p==="-dev") openWin("win-devmgr");
+  if(p==="-gp") openWin("win-gpedit");
+  if(p==="-gpprops"){ openWin("win-gpedit"); setTimeout(()=>$$("#pol-list .mmc-row")[1].dispatchEvent(new MouseEvent("dblclick",{bubbles:true})),300); }
 },900);
 if(location.hash==="#desktop-vol") setTimeout(()=>{ /* dev: the tray volume flyout */
   $("#balloon").style.display="none"; $("#sndico").click();

@@ -435,7 +435,29 @@ epochs, global guestbook + gallery, cursorTV watch-together.
 **What is left, in order** (owner, 2026-08-09: *"we dont care about simulations, or audits
 or economics until the design is fully done"* — finish the product first, prove the money
 second):
-0. **The XP applications track — the owner's current priority.** Carbon copies, in depth:
+0. ~~**The XP applications track**~~ **SHIPPED 2026-08-10.** `apps/web/src/sysapps.js`
+   (import-free sibling, ~900 lines). **cmd.exe** is a real interpreter over the same
+   `TREE` Explorer walks (`explorer.list(path)`): cd/dir/tree/type resolve real paths and
+   real sizes, plus ver/vol/date/time/echo/color/cls/hostname/ipconfig/ping/systeminfo/
+   tasklist/taskkill/net start/sc query/start, and the game as commands — `ARENA`,
+   `ARENA /LIST`, `ARENA /DISK`, `CURSOR /DEPLOY|/RECALL|/STANCE|/LIST`. Destructive verbs
+   answer "Access is denied." Keyboard comes through a hidden input so a phone raises its
+   on-screen keyboard and `--kb` lifts the window. **Control Panel** has XP's category view
+   (eight categories, task lists, blue side pane) and classic view, persisted; applets open
+   the real dialogs. **Services** lists 17 services and stopping one *does* something —
+   Windows Audio mutes, Themes drops to classic, Arena closes deploys and banks everyone,
+   the Rakeback ledger stops accruing; the two core services confirm first. **Device
+   Manager**'s "Mice and other pointing devices" are the live cursors, refreshed while
+   open, with per-device Properties. **gpedit.msc** has real policy folders and the
+   settings apply (CRT off, mute, hide desktop icons, remove Run, remove clock, no
+   balloons, prohibit autoplay, always show duel odds, prevent cmd). One shared properties
+   sheet, MMC chrome shared by all three consoles. Dev hashes: `#desktop-sys-cmd`,
+   `-control`, `-classic`, `-svc`, `-svcprops`, `-dev`, `-gp`, `-gpprops`.
+   Still open: the two remaining items the owner named in the same breath —
+   **cursorTV as a real YouTube embed** with shared clock + queue + takeover, and the
+   **Paint gallery served to everyone** behind a non-sybillable gate.
+
+1. **The XP applications track — the owner's current priority.** Carbon copies, in depth:
    **Control Panel** (a real applet grid, not a joke box), **cmd.exe** (a real interpreter
    over the C:\ tree `explorer.js` already models — dir/cd/type/echo/ver/tree, plus the
    game's own state as commands), **services.msc**, **Device Manager**, **gpedit.msc**.

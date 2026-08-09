@@ -923,4 +923,136 @@ body.mobile .renamer,body.mobile .usertxtarea{font-size:16px}
 .vf-mute input{margin:0}
 .trayico.muted{opacity:.45}
 
+
+/* ================= cmd.exe ================= */
+.cmd-body{padding:0;background:#000;overflow:hidden}
+.cmd-screen{flex:1;min-height:0;overflow-y:auto;background:#000;color:#C0C0C0;
+  font:14px/1.18 "Lucida Console",Consolas,"Courier New",monospace;padding:2px 4px;
+  white-space:pre-wrap;word-break:break-word;outline:none;cursor:text}
+.cmd-line{min-height:1.18em}
+#cmd-kbd{position:absolute;left:-9999px;width:1px;height:1px;opacity:0}
+.cmd-caret{display:inline-block;width:.62em;height:1em;background:#C0C0C0;vertical-align:text-bottom;
+  animation:cmdblink 1s steps(2,end) infinite}
+@keyframes cmdblink{50%{opacity:0}}
+body.mobile .cmd-screen{font-size:12px}
+
+/* ================= MMC: Services, Device Manager, Group Policy ================= */
+.mmc-body{padding:0;background:#ECE9D8;overflow:hidden}
+.mmc-tb{display:flex;align-items:center;gap:3px;padding:3px 5px;border-bottom:1px solid #C9C4B0;
+  background:linear-gradient(180deg,#FDFDFD 0,#EFEDE2 55%,#E4E0D0 100%);flex:none}
+.mmc-tbb{width:20px;height:18px;border:1px solid transparent;border-radius:2px;position:relative;opacity:.55}
+.mmc-tbb:after{content:"";position:absolute;inset:5px;background:#5A6B84;
+  clip-path:polygon(0 40%,55% 40%,55% 15%,100% 50%,55% 85%,55% 60%,0 60%)}
+.mmc-tbb.back:after{transform:scaleX(-1)}
+.mmc-tbb.up:after{transform:rotate(-90deg)}
+.mmc-tbb.show:after,.mmc-tbb.refresh:after,.mmc-tbb.help:after{clip-path:none;border-radius:2px;background:#8A99AD}
+.mmc-tbsep{width:1px;height:16px;margin:0 3px;background:#C9C4B0}
+.mmc-split{flex:1;min-height:0;display:flex;border-top:1px solid #fff}
+.mmc-tree{width:186px;flex:none;overflow:auto;background:#fff;border-right:1px solid #C9C4B0;padding:3px 0;font-size:11px}
+.mmc-tree.wide{width:auto;flex:1;border-right:0}
+.mmc-right{flex:1;min-width:0;display:flex;flex-direction:column;background:#fff}
+.mmc-tabs{display:flex;flex:none;background:#ECE9D8;border-bottom:1px solid #C9C4B0;padding:2px 4px 0}
+.mmc-tabs span{padding:2px 12px;font-size:11px;border:1px solid #C9C4B0;border-bottom:0;
+  border-radius:3px 3px 0 0;background:#E4E0D0;margin-right:2px;cursor:default}
+.mmc-tabs span.on{background:#fff;position:relative;top:1px}
+.mmc-list{flex:1;min-height:0;overflow:auto;font-size:11px}
+.mmc-row{display:flex;align-items:center;height:19px;cursor:default;border-bottom:1px solid #F1F1F1}
+.mmc-row.sel{background:#316AC5;color:#fff}
+.mmc-row.mmc-head{position:sticky;top:0;z-index:2;height:20px;background:#ECE9D8;border-bottom:1px solid #ACA899;color:#333}
+.mmc-row.mmc-head .mmc-c{border-right:1px solid #ACA899;height:100%;display:flex;align-items:center}
+.mmc-c{padding:0 6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:none}
+.c-name{width:186px}
+.c-desc{flex:1;min-width:0;color:#555}
+.mmc-right.standard .c-desc{display:none}
+.mmc-row.sel .c-desc{color:#D8E4F8}
+.c-st{width:54px}
+.c-start{width:80px}
+.c-log{width:84px}
+.c-pol{flex:1;min-width:0;display:flex;align-items:center;gap:5px}
+.c-state{width:110px}
+.pol-ico{width:11px;height:13px;flex:none;background:#FDFDFD;border:1px solid #9AA9BB;
+  box-shadow:inset 0 -3px 0 #E8C24A}
+.mmc-node{display:flex;align-items:center;gap:3px;height:17px;padding:0 4px 0 6px;cursor:default;white-space:nowrap}
+.mmc-node.sel{background:#316AC5;color:#fff}
+.mmc-node.lvl1{padding-left:20px}
+.mmc-node.lvl2{padding-left:38px}
+.mmc-node.lvl3{padding-left:56px}
+.mmc-node.warn .mmc-lbl{color:#9A5B00}
+.mmc-node.mine .mmc-lbl{font-weight:bold}
+.mmc-tw{width:9px;height:9px;flex:none;border:1px solid #808080;background:#fff;position:relative;cursor:pointer}
+.mmc-tw:before{content:"";position:absolute;left:1px;right:1px;top:3px;height:1px;background:#000}
+.mmc-tw:after{content:"";position:absolute;top:1px;bottom:1px;left:3px;width:1px;background:#000}
+.mmc-tw.open:after{display:none}
+.mmc-tw.none{border-color:transparent;background:none}
+.mmc-tw.none:before,.mmc-tw.none:after{display:none}
+.mmc-dot{width:11px;height:11px;flex:none;border-radius:2px;background:#B8C4D4;border:1px solid #7A8798}
+.mmc-dot.live{background:#8FCB6E;border-color:#3E7A2C}
+.mmc-dot.bad{background:#F7D440;border-color:#B98A00}
+.mmc-lbl{overflow:hidden;text-overflow:ellipsis}
+.mmc-status{flex:none;height:20px;display:flex;align-items:center;padding:0 8px;font-size:11px;color:#333;
+  background:#ECE9D8;border-top:1px solid #fff;box-shadow:inset 0 1px 0 #C9C4B0;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+body.mobile .mmc-tree{width:150px}
+body.mobile .c-name{width:130px}
+body.mobile .c-desc,body.mobile .c-log,body.mobile .c-start{display:none}
+
+/* properties sheets shared by the three consoles */
+.pr-row{display:flex;gap:8px;align-items:flex-start;margin:5px 0}
+.pr-k{width:118px;flex:none;color:#333}
+.pr-v{flex:1;min-width:0;word-break:break-word}
+.pr-desc{flex:1;min-width:0;max-height:76px;overflow:auto;border:1px solid #7F9DB9;background:#fff;padding:3px 5px}
+.pr-hr{height:1px;background:#D5D2C4;border-bottom:1px solid #fff;margin:9px 0}
+.pr-status{flex:1;min-width:0;border:1px solid #7F9DB9;background:#fff;padding:4px 6px;min-height:44px}
+.pr-status.bad{color:#9A2B00}
+.pr-btns{display:flex;gap:6px;margin-top:8px}
+.pr-btns .xbtn{flex:1}
+.xtabs.on-one{pointer-events:none}
+.pol-pane{padding:8px 2px 0}
+.pol-title{font-weight:bold;margin-bottom:8px}
+.pol-radio{display:flex;align-items:center;gap:6px;margin:5px 0}
+.pol-note{margin-top:9px;color:#666}
+
+/* ================= Control Panel ================= */
+.cpl-body{padding:0;background:#fff;overflow:hidden}
+.cpl-split{flex:1;min-height:0;display:flex;overflow:hidden}
+.cpl-side{width:186px;flex:none;overflow:auto;padding:9px 8px;
+  background:linear-gradient(180deg,#7CA7E4 0,#6E9BE0 42%,#8CB4EA 100%)}
+.cpl-box{background:#F0F5FE;border:1px solid #fff;border-radius:4px;margin-bottom:10px;overflow:hidden;
+  box-shadow:0 1px 2px rgba(0,0,0,.18)}
+.cpl-boxhead{padding:3px 8px;font-weight:bold;color:#0C3B94;font-size:11px;
+  background:linear-gradient(180deg,#EEF4FE 0,#DCE7FB 100%);border-bottom:1px solid #C8D8F2}
+.cpl-task{display:block;padding:4px 8px 4px 16px;font-size:11px;color:#215DC6;cursor:pointer;position:relative}
+.cpl-task:before{content:"";position:absolute;left:7px;top:8px;width:4px;height:4px;border-radius:50%;background:#7BA2E0}
+.cpl-task:hover{text-decoration:underline;color:#C33}
+.cpl-main{flex:1;min-width:0;overflow:auto;padding:14px 18px;background:#fff}
+.cpl-h1{margin:0 0 12px;font-size:17px;font-weight:normal;color:#0C3B94}
+.cpl-cats{display:grid;grid-template-columns:1fr 1fr;gap:6px 22px}
+.cpl-cat{display:flex;gap:10px;padding:7px;border-radius:4px;cursor:pointer;align-items:flex-start}
+.cpl-cat:hover{background:#EAF1FD}
+.cpl-caticon{width:44px;height:44px;flex:none;display:grid;place-items:center;
+  background:linear-gradient(180deg,#DCE9FB 0,#BFD4EC 100%);border:1px solid #A8C0DE;border-radius:5px}
+.cpl-caticon img,.cpl-caticon span,.cpl-caticon svg{width:30px;height:30px}
+.cpl-catbody{min-width:0}
+.cpl-catname{color:#215DC6;font-weight:bold;font-size:12px;margin-bottom:2px}
+.cpl-cat:hover .cpl-catname{text-decoration:underline;color:#C33}
+.cpl-cattask{color:#555;font-size:11px;line-height:1.35;padding-left:9px;position:relative}
+.cpl-cattask:before{content:"";position:absolute;left:0;top:6px;width:3px;height:3px;border-radius:50%;background:#A8B8CE}
+.cpl-main.classic{display:flex;flex-wrap:wrap;align-content:flex-start;gap:4px;padding:12px}
+.cpl-applet{width:96px;padding:7px 4px;text-align:center;cursor:default;border:1px solid transparent;border-radius:3px}
+.cpl-applet:hover{background:#EAF1FD;border-color:#B8CCEA}
+.cpl-applet img,.cpl-applet>span:first-child{width:32px;height:32px;display:block;margin:0 auto}
+.cpl-aname{display:block;margin-top:4px;font-size:11px;line-height:1.25;color:#215DC6}
+body.mobile .cpl-side{display:none}
+body.mobile .cpl-cats{grid-template-columns:1fr}
+body.mobile .cpl-main{padding:10px}
+
+/* policy effects: Group Policy settings are not decorative */
+body.showodds .cur .tag .mx{display:inline !important}
+body.classic-theme .title-bar{background:linear-gradient(180deg,#0A246A 0,#0A246A 100%) !important}
+body.classic-theme #taskbar{background:#C0C0C0 !important;border-top:1px solid #fff}
+body.classic-theme #startbtn{filter:grayscale(1) contrast(1.2)}
+body.classic-theme .window{border-radius:0}
+body.verbose-boot #boot:after{content:"Applying computer settings...  Loading arena.dll...  Starting CURSORS.EXE Arena Service...";
+  position:absolute;left:16px;bottom:16px;color:#9AA;font:11px "Lucida Console",monospace}
+
 @media (prefers-reduced-motion:reduce){*{animation-duration:.01s !important;transition:none !important}}

@@ -53,8 +53,8 @@ export function initExplorer(deps) {
         tile: `${fmtSize(freeBytes())} free of ${fmtSize(DISK)}` }),
       dir("CD Drive (D:)", { ico: "cd32", kind: "drive", tile: "no disc", group: "Devices with Removable Storage",
         act: () => showError("D:\\", "Please insert a disc into drive D:.\n\nThere is no disc. There was never a disc.") }),
-      dir("Control Panel", { ico: "cpanel32", tile: "System Folder", group: "Other",
-        act: () => hooks.openWin("win-dispprops") }),
+      dir("Control Panel", { ico: "@ic-cpl", tile: "System Folder", group: "Other",
+        act: () => hooks.openWin("win-control") }),
     ],
     "C:\\": () => [
       dir("Documents and Settings", { go: "C:\\Documents and Settings" }),
@@ -504,6 +504,9 @@ export function initExplorer(deps) {
 
   return {
     go, render, setView,
+    /* cmd.exe reads the same tree this window does — one filesystem, two shells */
+    list: pth => childrenOf(pth),
+    paths: () => Object.keys(TREE),
     menu: (label, x, y) => (MENUS[label] || MENUS.Help)(x, y),
     path: () => path,
     driveProperties,

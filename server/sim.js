@@ -256,7 +256,10 @@ export function createSim(opts) {
       if (o === c || o.key !== c.key) continue;
       const dx = c.x - o.x, dy = c.y - o.y, d2 = dx * dx + dy * dy;
       if (d2 > SEP * SEP) continue;
-      const d = Math.max(4, Math.sqrt(d2));
+      /* exactly coincident gives a zero vector and they stay welded together,
+         so break the tie by id — deterministic, and always opposite */
+      if (d2 < 1) { const a = (c.id % 8) / 8 * Math.PI * 2; rx += Math.cos(a) * SEP; ry += Math.sin(a) * SEP; continue; }
+      const d = Math.sqrt(d2);
       rx += dx / d * (SEP - d); ry += dy / d * (SEP - d);
     }
     if (rx || ry) { tx = c.x + rx * 3; ty = c.y + ry * 3; turn = Math.max(turn, 5.5); }
@@ -272,14 +275,18 @@ export function createSim(opts) {
       c.h += clamp(angDiff(want - c.h), -1, 1) * turn * dt;
     }
     c.h += (rng.next() - .5) * 3.0 * dt;
-    /* Edges: a wide, firm margin. At M=30 a cursor chasing something pinned to
-       the wall slid along it for seconds, which is what "stuck at the top"
-       was. Turning earlier and harder means the field is used, not its rim. */
+    /* Edges. Four independent axis-aligned pulls CANCEL in a corner: heading
+       up-left, "turn right" says +1 and "turn down" says -1 and the cursor sits
+       there, pinned by the clamp, not moving and not fighting, forever. One
+       vector away from whichever walls are near cannot cancel — in a corner it
+       points diagonally out. */
     const M = 64, WT = 7;
-    if (c.x < M) c.h += clamp(angDiff(0 - c.h), -1, 1) * WT * dt;
-    if (c.x > AW - M) c.h += clamp(angDiff(Math.PI - c.h), -1, 1) * WT * dt;
-    if (c.y < M) c.h += clamp(angDiff(Math.PI / 2 - c.h), -1, 1) * WT * dt;
-    if (c.y > AH - M) c.h += clamp(angDiff(-Math.PI / 2 - c.h), -1, 1) * WT * dt;
+    let wx = 0, wy = 0;
+    if (c.x < M) wx += (M - c.x) / M;
+    if (c.x > AW - M) wx -= (c.x - (AW - M)) / M;
+    if (c.y < M) wy += (M - c.y) / M;
+    if (c.y > AH - M) wy -= (c.y - (AH - M)) / M;
+    if (wx || wy) c.h += clamp(angDiff(Math.atan2(wy, wx) - c.h), -1, 1) * WT * dt * Math.min(1, Math.hypot(wx, wy));
     const weight = 1 + .25 * (c.s - 1);
     let sp = c.spd / weight;
     /* A hunt has to be able to end. Everyone moved at the same speed, so an
@@ -290,8 +297,13 @@ export function createSim(opts) {
        forever. Duel odds are untouched, so none of this moves the EV. */
     if (best && st === "attack" && bd < 520 * 520) sp *= 1.12;
     else if (best && st === "defend" && bd < 300 * 300) sp *= .90;
-    c.x = clamp(c.x + Math.cos(c.h) * sp * dt, 24, AW - 24);
-    c.y = clamp(c.y + Math.sin(c.h) * sp * dt, 24, AH - 24);
+    /* and a hard guarantee on top of the soft one: if the clamp actually bit,
+       the cursor is against a wall, so mirror the heading off it. A bounce
+       cannot get stuck the way a slow turn can. */
+    const ux = c.x + Math.cos(c.h) * sp * dt, uy = c.y + Math.sin(c.h) * sp * dt;
+    c.x = clamp(ux, 24, AW - 24); c.y = clamp(uy, 24, AH - 24);
+    if (c.x !== ux) c.h = Math.PI - c.h;
+    if (c.y !== uy) c.h = -c.h;
   }
 
   /* ---------- duels ---------- */
