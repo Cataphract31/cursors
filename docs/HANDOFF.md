@@ -172,6 +172,20 @@ window, server-echoed, bot chatter muted online), the **guestbook is global**, P
 window via the official iframe API, synced by the server: fair FIFO queue (3/person),
 skip by vote, muted-start with a click-for-sound badge (browser autoplay law).
 
+**Egress, the real constraint on a free tier (2026-08-09).** GCP always-free gives 1 GB
+of North-American egress a month. Uncompressed JSON snapshots measured **10.9 MB per
+player-hour** — the whole allowance in 92 player-hours, and worse on a busy arena. Two
+fixes: **permessage-deflate** on the socket (snapshots are extremely repetitive; measured
+**3.9×**, windowBits dialled to 13 so 20 zlib contexts do not matter on a 1 GB VM), and
+**snapshots are not sent to hidden tabs** at all — the client reports `visibilitychange`
+and gets a full `resync` when it comes back, because a backgrounded tab cannot draw a frame
+but must not miss a kill. Result: **0.89 KB/s = 3.3 MB per player-hour, ~305 player-hours
+per free GB**, and an idle open tab now costs essentially nothing. Overage beyond the free
+tier is about $0.12/GB, so this is a cost curve, not a cliff. Measure it again with
+`node /tmp/measure2.mjs`-style probing on `ws._socket.bytesRead` — **not** on the message
+payload length, which reports decompressed bytes and will tell you compression is not
+working when it is.
+
 **Netcode, measured not guessed (2026-08-09).** Reported instability was diagnosed
 before it was touched: the box showed zero restarts, 33 MB of a 230 MB budget, load 0.03,
 and the wire showed p50 100ms cadence with a flat 152ms RTT — hosting, the free tier and
@@ -199,9 +213,20 @@ crashes, the multiplayer beta and its bots, how to check the commit-reveal, rake
 certificates, and the rest of the desktop. It quotes the live disk fill. This is the
 first-run explanation the game never had.
 
-**The disk gauge.** The round clock is the disk, so it has a gauge: a real progress bar
-under the CURSORS.EXE menu bar reading `C: 45% full · 29/64 dead cursors · 0.41 GB free`,
-going amber at 70% and pulsing red at 90%. Same number as Explorer's C: pie chart.
+**The disk gauge, and rounds that actually last (resized 2026-08-09).** The drive is
+**20 GB** (what an XP box shipped with) and an epoch's corpse budget is **900** deaths —
+`CORPSES` in the systemd unit, so it is one edit on the box. Measured death rate is ~25/min
+at bot baseline, so an epoch runs **~36 minutes** instead of the 2.8 it did at 64 corpses.
+Two things had been keeping rounds short: the budget itself, and a bug where the shutdown
+rush started at `CORPSES/10` remaining and then hit its 12s cap immediately, crashing the
+epoch with most of the disk still free. The rush margin is now a small fixed number of
+corpses (6), so the rush is a short dramatic window and the disk really does decide.
+The gauge under the menu bar shows the drive's **real occupancy** — it starts around 47%
+(Windows and the apps) and the round ends exactly when it reaches 100% — with
+`C: 52% full · 79/900 dead cursors · 9.62 GB free`, amber at 70% of the budget and pulsing
+red at 92%. The tray chip, the gauge and Explorer's C: pie chart all read from one
+`diskPct()` so they cannot disagree. **The offline sandbox ends its rounds the same way**
+(`LOCAL_CORPSES`), so a disconnected player is not playing a different game.
 
 **Real players are visible.** The Messenger buddy list leads with **Players in the arena**
 — everyone actually connected, pushed by the server on every join/part — above a group

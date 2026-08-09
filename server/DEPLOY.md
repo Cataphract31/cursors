@@ -12,7 +12,7 @@ both (auto Let's Encrypt via sslip.io). **Never touch the thinice service.**
 |---|---|
 | Code | `/opt/cursors` (owner `cursors`, a system user) |
 | DB | `/var/lib/cursors/cursors.db` (node:sqlite, play money, wipe-at-will) |
-| Service | `cursors.service` — `PORT=8788`, `CORPSES=64`, `MemoryMax=220M`, Restart=always |
+| Service | `cursors.service` — `PORT=8788`, `CORPSES=900` (≈36 min epochs; raise for longer rounds), `MemoryMax=220M`, Restart=always |
 | TLS | site block appended to `/etc/caddy/Caddyfile` (backups: `Caddyfile.bak-*`) |
 
 ## Manage (raw OpenSSH — not `gcloud compute ssh`, it hangs under the harness)
@@ -39,6 +39,15 @@ ssh -i ~/.ssh/google_compute_engine Attrition@34.70.75.204 \
 ssh -i ~/.ssh/google_compute_engine Attrition@34.70.75.204 \
   "sudo systemctl stop cursors && sudo rm /var/lib/cursors/cursors.db* && sudo systemctl start cursors"
 ```
+
+**Tuning round length** is one number — deaths to fill the disk:
+
+```bash
+ssh -i ~/.ssh/google_compute_engine Attrition@34.70.75.204   "sudo sed -i 's/^Environment=CORPSES=.*/Environment=CORPSES=1500/' /etc/systemd/system/cursors.service &&    sudo systemctl daemon-reload && sudo systemctl restart cursors"
+```
+
+At the observed ~25 deaths/min (bots only, more players = faster): 900 ≈ 36 min,
+1500 ≈ 60 min, 450 ≈ 18 min.
 
 ## Local dev
 

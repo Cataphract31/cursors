@@ -871,7 +871,9 @@ const explorer=initExplorer({
     openIcon:ic=>openIcon(ic),
     desktopFiles:()=>allIcons(),
     deadCount:()=>binDead.length,
-    serverDisk:()=>{ if(!MP.on||!MP.disk) return null;
+    serverDisk:()=>{ if(!MP.on||!MP.disk) return {
+        used:20*1024*1024*1024-(LOCAL_CORPSES-Math.min(localDeaths,LOCAL_CORPSES))*12*1024*1024,
+        total:20*1024*1024*1024};
       const base=MP.disk.total-MP.corpses*MP.disk.corpse;
       return {used:base+Math.round(MP.fill*MP.corpses)*MP.disk.corpse,total:MP.disk.total}; },
     binContents:()=>({
@@ -892,9 +894,13 @@ const explorer=initExplorer({
       $("#dv-free").textContent=info.freeStr;
       $("#dv-cap").textContent=info.totalStr;
       $("#dv-barfill").style.width=(100*info.used/info.total).toFixed(1)+"%";
-      $("#dv-note").textContent=info.dead
-        ? `${info.dead} dead cursors are stored on this volume. They are why it is filling up.`
-        : "This disk is mostly empty. Nothing has died yet.";
+      /* online the corpses belong to the whole server, not to what this
+         browser happened to witness, so the volume reports the epoch's count */
+      const d=diskPct();
+      $("#dv-note").textContent=d.dead
+        ? `${d.dead} dead cursors are stored on this volume, of the ${d.cap} it takes to fill it. `+
+          `When it fills, CURSORS.EXE crashes and everyone is banked.`
+        : "Nothing has died yet this round. The free space above is the round clock.";
       openWin("win-driveprops");
       requestAnimationFrame(()=>info.draw($("#dv-pie")));
     },
@@ -1698,6 +1704,10 @@ function syncArena(){
 }
 
 let phase="boot", phaseT=0, roundNo=0, roundId=0;
+/* the offline sandbox ends its rounds the same way the server does — when the
+   disk fills — so a disconnected player is not playing a different game */
+const LOCAL_CORPSES=900;
+let localDeaths=0;
 let epochLen=150, upT=0, epochStart=0;   /* uptime never resets: the desktop stays up, only CURSORS.EXE crashes */
 let R=null, epochHist=[];
 function newRoundRecord(){ return {pot:0,deploys:0,myIn:0,myOut:0,myKills:0,bigBank:null,deaths:0}; }
@@ -1752,7 +1762,10 @@ function setPhase(p,t){ phase=p; phaseT=t; renderPhase(); }
 function startEpoch(){
   roundNo++; roundId++;
   R=newRoundRecord();
-  epochLen=rand(EPOCH_MIN,EPOCH_MAX);
+  /* no clock: the disk decides. phaseT only becomes meaningful once the
+     shutdown rush starts and caps it at T_SHUT seconds. */
+  epochLen=1e9;
+  localDeaths=0;
   epochStart=upT;
   shutFired=false;
   commitSeed();
@@ -1770,6 +1783,7 @@ function startEpoch(){
 let shutFired=false;
 function startShutdownRush(){
   shutFired=true;
+  phaseT=Math.min(phaseT,T_SHUT);
   openWin("win-shutdown",{silent:true});
   sShut();
   chatSys("CURSORS.EXE is not responding — all cursors recalling");
@@ -1821,20 +1835,32 @@ function fmtUp(s){ const t=Math.floor(s); return `${Math.floor(t/60)}:${String(t
    percentage buried in a status line. Offline there is no epoch budget, so the
    sandbox counts its own dead against the same nominal 64. */
 let lastDisk=-1;
+function diskPct(){
+  const cap=MP.on?(MP.corpses||900):LOCAL_CORPSES;
+  const f=MP.on?MP.fill:Math.min(1,localDeaths/cap);
+  const total=MP.on&&MP.disk?MP.disk.total:20*1024*1024*1024;
+  const cB=MP.on&&MP.disk?MP.disk.corpse:12*1024*1024;
+  const base=total-cap*cB;
+  return {f,cap,dead:Math.round(f*cap),cB,total,
+    pct:Math.min(100,Math.round(100*(base+Math.round(f*cap)*cB)/total))};
+}
 function renderDisk(){
-  const f=MP.on?MP.fill:Math.min(1,binDead.length/64);
-  const pct=Math.min(100,Math.round(f*100));
-  if(pct===lastDisk) return;
-  lastDisk=pct;
+  /* fill = how far through the epoch's corpse budget we are (0..1); the number
+     on the bar is the drive's real occupancy, which starts wherever Windows
+     left it and hits 100% exactly when the round ends. Explorer's pie chart
+     reads from the same arithmetic, so the two can never disagree. */
+  const {f,cap,dead,cB,pct}=diskPct();
+  const key=pct*10000+dead;
+  if(key===lastDisk) return;
+  lastDisk=key;
   const bar=$("#diskbar");
   $("#diskfill").style.width=pct+"%";
-  bar.classList.toggle("warn",pct>=70&&pct<90);
-  bar.classList.toggle("crit",pct>=90);
-  const dead=MP.on&&MP.corpses?Math.round(f*MP.corpses):binDead.length;
-  const cap=MP.on&&MP.corpses?MP.corpses:64;
-  $("#disktext").textContent=pct>=90
+  bar.classList.toggle("warn",f>=.7&&f<.92);
+  bar.classList.toggle("crit",f>=.92);
+  const freeGB=(cap-dead)*cB/1073741824;
+  $("#disktext").textContent=f>=.92
     ? `C: ${pct}% FULL — ${cap-dead} cursor${cap-dead===1?"":"s"} from a crash`
-    : `C: ${pct}% full · ${dead}/${cap} dead cursors · ${((cap-dead)*12/1024).toFixed(2)} GB free`;
+    : `C: ${pct}% full · ${dead}/${cap} dead cursors · ${freeGB.toFixed(2)} GB free`;
 }
 let lastPhaseText="";
 function renderPhase(){
@@ -1850,7 +1876,7 @@ function renderPhase(){
   pl.textContent=txt;
   pl.classList.toggle("battle",urgent);
   const chip=phase==="crash"?`R${roundNo} · CRASHED`:shutFired?`R${roundNo} · SHUTDOWN ${mm}`
-    :MP.on?`R${roundNo} · C: ${Math.min(99,Math.round(MP.fill*100))}%`:`R${roundNo} · UP ${fmtUp(upT)}`;
+    :`R${roundNo} · C: ${diskPct().pct}%`;
   $("#phasechip").textContent=chip;
   const mp=$("#mh-phase");
   mp.textContent=chip;
@@ -2146,9 +2172,13 @@ function resolveDuel(a,b){
   if(w.mode==="recall"&&w.recallT<=0) w.recallT=.3;
   updateTag(w);
   explode(l);
-  R.deaths++;
+  R.deaths++; localDeaths++;
   binDead.unshift(certify(l,w,w===a?1-pA:pA)); renderBin();
   removeCur(l);
+  /* every corpse is 12 MB, and a full disk is a crash */
+  if(localDeaths>=LOCAL_CORPSES){ setTimeout(crashSystem,0); }
+  else if(!shutFired&&localDeaths>=LOCAL_CORPSES-6) startShutdownRush();
+  renderDisk();
   log(`${w.owner} > ${l.owner}  +${fmtS(pot)}`);
   if(pot>=ENTRY*2) chatSys(`${w.owner} killed ${l.owner} for ${fmtS(pot)}`);
   if(l.isMine){
@@ -2588,6 +2618,22 @@ function mpClock(serverTs,arrival){
   if(mpOff===null||lo<mpOff) mpOff=lo; else mpOff+=(lo-mpOff)*0.02;
   return serverTs+mpOff;
 }
+/* Coming back from a hidden tab (or a reconnect): throw away the stale world
+   and rebuild it from the server's own description of right now. */
+function mpResync(e){
+  mpPurge();
+  roundNo=e.no; commitHex=e.commit;
+  R=R||newRoundRecord();
+  R.pot=e.pot; R.deploys=e.deploys; R.deaths=e.deaths;
+  upT=e.up; phase=e.phase; shutFired=e.rush!=null; phaseT=shutFired?e.rush:999;
+  MP.fill=e.fill; MP.disk=e.disk; MP.corpses=e.corpses||MP.corpses;
+  for(const sc of e.curs){
+    const c=mpMakeCur(sc.id,sc.owner,sc.x,sc.y,sc.bounty,sc.grace);
+    c.mode=MPMODE[sc.mode]||"roam";
+    if(c.mode==="duel") c.el.classList.add("dueling");
+  }
+  updatePanel(); renderPhase();
+}
 function mpSnap(m){
   upT=m.up; R.pot=m.pot; MP.fill=m.fill;
   const at=m.ts?mpClock(m.ts,performance.now()):performance.now();
@@ -2740,6 +2786,7 @@ function mpMsg(m){
     case "refund": if(MP.on){ const c=mpCurs.get(m.id); if(c&&c.isMine){ R.myIn-=STAKE; stats.deploys--; stats.tIn-=STAKE; log("undeployed in grace — refunded in full"); } mpRemove(c); updatePanel(); } break;
     case "bal": if(MP.on){ wallet=m.balance; myTickets=m.tickets; globalTickets=m.glob; rakeAccrued=m.rake; updatePanel(); } break;
     case "rush": if(MP.on){ shutFired=true; phaseT=m.secs; openWin("win-shutdown",{silent:true}); sShut(); renderPhase(); updatePanel(); } break;
+    case "resync": if(MP.on) mpResync(m.epoch); break;
     case "crash": if(MP.on) mpCrash(m); break;
     case "epoch": if(MP.on) mpEpoch(m); break;
     case "chat": if(MP.on) msn.lobbySay(m.who,m.text); break;
@@ -2754,6 +2801,12 @@ function mpMsg(m){
 }
 const net=MPURL?initNet({url:MPURL,onMsg:mpMsg,onUp:()=>{ if(PLAYER) mpHello(); },onDown:mpDown}):null;
 if(net) net.start();
+/* a backgrounded tab cannot draw snapshots, so it asks not to be sent any —
+   the single cheapest thing we can do for a free tier's egress budget */
+document.addEventListener("visibilitychange",()=>{
+  if(!MP.on) return;
+  mpSend({t:"vis",on:document.visibilityState==="visible"});
+});
 
 /* ---- IE integration: the online guestbook, the gallery, cursorTV ---- */
 function mpRefreshIe(urlPart){

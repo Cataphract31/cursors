@@ -806,7 +806,7 @@ export function initPaint(deps) {
     cancelPending();
     let url;
     try { url = cv.toDataURL("image/png"); }
-    catch (e) { return showError("Save As", "Cannot write to disk. The drive is 4 GB of nostalgia."); }
+    catch (e) { return showError("Save As", "Cannot write to disk. The drive is 20 GB of nostalgia."); }
     const name = deps.savePicture(url);
     if (setTitle) setTitle(name);
     showConfirm("Save As", `Saved as ${name} in My Pictures.\n\nAlso save a copy to your real computer?`, () => {

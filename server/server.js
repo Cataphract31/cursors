@@ -16,7 +16,7 @@ import { openDb } from "./db.js";
 
 const PORT = +(process.env.PORT || 8788);
 const DB_PATH = process.env.DB_PATH || "./cursors.db";
-const CORPSES = process.env.FAST ? 8 : +(process.env.CORPSES || 64);
+const CORPSES = process.env.FAST ? 8 : +(process.env.CORPSES || 900);
 
 const db = openDb(DB_PATH);
 const conns = new Set();          /* live sockets with a completed hello */
@@ -26,6 +26,14 @@ const saveTimers = new Map();
 
 /* ---------- broadcast plumbing ---------- */
 function send(c, msg) { if (c.ws.readyState === 1) c.ws.send(JSON.stringify(msg)); }
+/* A hidden tab cannot draw a snapshot, so it does not get one. Events (kills,
+   banks, chat, the crash) still go to everyone: those are state, not frames,
+   and a returning player must not have missed them. */
+function watchers() { let n = 0; for (const c of conns) if (c.visible) n++; return n; }
+function broadcastSnap(msg) {
+  const s = JSON.stringify(msg);
+  for (const c of conns) if (c.visible && c.ws.readyState === 1) c.ws.send(s);
+}
 function broadcast(msg) { const s = JSON.stringify(msg); for (const c of conns) if (c.ws.readyState === 1) c.ws.send(s); }
 function sys(text) { pushChat("*", text); broadcast({ t: "sys", text }); }
 function pushChat(who, text) { chatLog.push({ who, text, at: Date.now() }); if (chatLog.length > 40) chatLog.shift(); }
@@ -94,7 +102,7 @@ setInterval(() => {
   while (acc >= STEP_MS) {
     acc -= STEP_MS;
     try { sim.tick(STEP); } catch (e) { console.error("sim tick failed:", e); }
-    if (++steps % 2 === 0 && conns.size) broadcast(sim.snapshot());
+    if (++steps % 2 === 0 && watchers()) broadcastSnap(sim.snapshot());
   }
 }, 10);
 
@@ -210,6 +218,11 @@ function handle(c, m) {
       else broadcast({ t: "sys", text: `skip vote: ${skipVotes.size}/${need}` });
       break;
     }
+    case "vis":
+      c.visible = m.on !== false;
+      /* coming back needs the whole world, not the next 66ms of it */
+      if (c.visible) send(c, { t: "resync", epoch: sim.welcomeState() });
+      break;
     case "ping": send(c, { t: "pong" }); break;
   }
 }
@@ -227,10 +240,23 @@ const http = createServer((req, res) => {
   }
   res.writeHead(404); res.end("CURSORS.EXE beta server. The game is elsewhere; this is only the wire.");
 });
-const wss = new WebSocketServer({ server: http, maxPayload: 512 * 1024 });
+/* Egress is the scarce resource on a free-tier box: uncompressed JSON
+   snapshots measured 10.9 MB per player-hour, which spends the 1 GB monthly
+   allowance in 92 player-hours. Snapshots are extremely repetitive, so
+   permessage-deflate pays for itself several times over; windowBits is dialled
+   down because 20 zlib contexts on a 1 GB VM matter more than the last few
+   percent of ratio. */
+const wss = new WebSocketServer({
+  server: http, maxPayload: 512 * 1024,
+  perMessageDeflate: {
+    zlibDeflateOptions: { level: 6, memLevel: 7, windowBits: 13 },
+    clientNoContextTakeover: false, serverNoContextTakeover: false,
+    threshold: 128,
+  },
+});
 
 wss.on("connection", ws => {
-  const c = { ws, key: null, hello: false, lastChat: 0, lastGuest: 0, lastGallery: 0, alive: true };
+  const c = { ws, key: null, hello: false, lastChat: 0, lastGuest: 0, lastGallery: 0, alive: true, visible: true };
   ws.on("pong", () => { c.alive = true; });
   ws.on("message", data => {
     let m; try { m = JSON.parse(data); } catch { return; }

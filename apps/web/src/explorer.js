@@ -5,7 +5,7 @@
    in node, so it must stay pure JS. main.js injects icons + shell hooks. */
 
 const MB = 1024 * 1024, GB = 1024 * MB;
-const DISK = 4 * GB;
+const DISK = 20 * GB;   /* matches the server drive; the round clock lives on it */
 
 export function initExplorer(deps) {
   /* icoNode is the shell's own resolver: it returns an <img> for a raster icon
@@ -50,7 +50,7 @@ export function initExplorer(deps) {
         group: "Files Stored on This Computer" }),
       dir(hooks.playerName() + "'s Documents", { ico: "docs32", go: DOCS, group: "Files Stored on This Computer" }),
       dir("Local Disk (C:)", { ico: "hdd32", go: "C:\\", kind: "drive", group: "Hard Disk Drives",
-        tile: `${fmtSize(freeBytes())} free of 4.00 GB` }),
+        tile: `${fmtSize(freeBytes())} free of ${fmtSize(DISK)}` }),
       dir("CD Drive (D:)", { ico: "cd32", kind: "drive", tile: "no disc", group: "Devices with Removable Storage",
         act: () => showError("D:\\", "Please insert a disc into drive D:.\n\nThere is no disc. There was never a disc.") }),
       dir("Control Panel", { ico: "cpanel32", tile: "System Folder", group: "Other",
@@ -363,7 +363,7 @@ export function initExplorer(deps) {
       : path === BIN
         ? [{ text: `<b>Recycle Bin</b><br>System Folder<br>${hooks.deadCount()} cursors, ${fmtSize(hooks.deadCount() * 12 * MB)}<br>Deleted files can be restored.<br>Cursors cannot.` }]
       : path === "C:\\"
-        ? [{ text: `<b>Local Disk (C:)</b><br>Local Disk<br>File System: NTFS<br>Free Space: ${fmtSize(freeBytes())}<br>Total Size: 4.00 GB` }]
+        ? [{ text: `<b>Local Disk (C:)</b><br>Local Disk<br>File System: NTFS<br>Free Space: ${fmtSize(freeBytes())}<br>Total Size: ${fmtSize(DISK)}` }]
         : [{ text: `<b>${esc(leaf(path))}</b><br>${path === "My Computer" ? "System Folder" : "File Folder"}` }];
     host.appendChild(panel("Details", rows, "details"));
   }
@@ -475,7 +475,7 @@ export function initExplorer(deps) {
   });
   els.foldersBtn.addEventListener("click", () => els.tasks.classList.toggle("off"));
   els.searchBtn.addEventListener("click", () => showError("Search Companion",
-    "The puppy searched the whole disk.\nIt found 4 GB of decisions and one file called luck.dll that will not open."));
+    "The puppy searched the whole disk.\nIt found 20 GB of decisions and one file called luck.dll that will not open."));
   els.addr.addEventListener("keydown", e => {
     e.stopPropagation();
     if (e.key !== "Enter") return;

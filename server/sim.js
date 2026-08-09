@@ -26,9 +26,13 @@ const HALF_LIFE_MS = 45 * 24 * 3600 * 1000;   /* rakeback tickets, 45-day half-l
 const AW = 1280, AH = 800;
 const GRACE_MS = 1400, RECALL_SECS = 3, DUEL_MS = 700, RUSH_MS = 12000, CRASH_MS = 5000;
 
-/* the disk. 4 GB drive, the OS eats its share, every corpse is 12 MB. */
+/* The disk, which is the round clock. A 20 GB drive is what an XP box actually
+   shipped with, and at 12 MB a corpse it holds enough dead cursors to make a
+   round last most of an hour instead of three minutes. Windows and the apps
+   occupy whatever is left over after the corpse budget, so the free space you
+   see really is the space the round has to fill. */
 export const MB = 1024 * 1024, GB = 1024 * MB;
-export const DISK_TOTAL = 4 * GB, CORPSE_BYTES = 12 * MB;
+export const DISK_TOTAL = 20 * GB, CORPSE_BYTES = 12 * MB;
 
 export const BOT_NAMES = ["mumu", "bobo", "clippy", "bonk", "solja", "xp_chad", "deg404"];
 const BOT_REFILL = 50000;   /* play-money bots refill quietly when broke */
@@ -38,8 +42,12 @@ const angDiff = a => { while (a > Math.PI) a -= 2 * Math.PI; while (a < -Math.PI
 
 export function createSim(opts) {
   const emit = opts.emit;                       /* (evt) => void — server forwards */
-  const CORPSES = opts.corpses || 64;           /* deaths that fill the disk */
-  const RUSH_MARGIN = Math.max(2, Math.round(CORPSES / 10));
+  const CORPSES = opts.corpses || 900;          /* deaths that fill the disk */
+  /* The rush is a short dramatic window, not a fraction of the round. It used
+     to start at CORPSES/10 remaining and then hit the 12s cap immediately,
+     which crashed the epoch with most of the disk still free — the reason
+     rounds stayed three minutes long after the disk was supposed to own them. */
+  const RUSH_MARGIN = Math.min(6, Math.max(2, Math.round(CORPSES / 40)));
   const BASE_USED = DISK_TOTAL - CORPSES * CORPSE_BYTES;
 
   const players = new Map();                    /* key -> economic record */
