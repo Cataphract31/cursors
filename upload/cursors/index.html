@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <title>CURSORS.EXE</title>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-  <script type="module" crossorigin src="./assets/index-BnD2XBsV.js"></script>
-  <link rel="stylesheet" crossorigin href="./assets/index-DqRVCuS7.css">
+  <script type="module" crossorigin src="./assets/index-DDZwGBwk.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-BoSwH-YR.css">
 </head>
 <body>
 <svg width="0" height="0" style="position:absolute">
@@ -746,6 +746,84 @@ icons/sounds: winXP (MIT)</div>
     </div>
   </div>
 
+  <!-- Calculator -->
+  <div class="window fixed" id="win-calc" tabindex="-1" style="left:calc(50% - 132px);top:120px;width:264px">
+    <div class="title-bar">
+      <div class="tb-l"><i class="xico tb-ico" data-ico="calc16"></i><div class="title-bar-text">Calculator</div></div>
+      <div class="title-bar-controls"><button aria-label="Minimize"></button><button aria-label="Close"></button></div>
+    </div>
+    <div class="win-body pad">
+      <div class="menubar"><span>Edit</span><span>View</span><span>Help</span></div>
+      <div id="calc-display">0</div>
+      <div id="calc-keys"></div>
+    </div>
+  </div>
+
+  <!-- Character Map -->
+  <div class="window fixed" id="win-charmap" style="left:calc(50% - 190px);top:70px;width:380px">
+    <div class="title-bar">
+      <div class="tb-l"><i class="xico tb-ico" data-ico="note16"></i><div class="title-bar-text">Character Map</div></div>
+      <div class="title-bar-controls"><button aria-label="Minimize"></button><button aria-label="Close"></button></div>
+    </div>
+    <div class="win-body pad">
+      <div class="aprow"><span class="lb">Font:</span><select id="cm-font" style="flex:1"></select></div>
+      <div id="cm-grid"></div>
+      <div class="aprow" style="margin-top:6px">
+        <span class="lb">Characters to copy:</span>
+        <input type="text" id="cm-copybuf" style="flex:1" spellcheck="false">
+        <button class="xbtn" id="cm-select" style="min-width:58px">Select</button>
+        <button class="xbtn" id="cm-copy" style="min-width:52px">Copy</button>
+      </div>
+      <div class="small dim" id="cm-status" style="margin-top:4px">U+0041: A</div>
+    </div>
+  </div>
+
+  <!-- Disk Defragmenter -->
+  <div class="window" id="win-defrag" data-minw="480" data-minh="300" style="left:180px;top:90px;width:600px;height:380px">
+    <div class="title-bar">
+      <div class="tb-l"><i class="xico tb-ico" data-ico="@ic-mmc"></i><div class="title-bar-text">Disk Defragmenter</div></div>
+      <div class="title-bar-controls"><button aria-label="Minimize"></button><button aria-label="Close"></button></div>
+    </div>
+    <div class="win-body pad">
+      <div class="menubar"><span>File</span><span>Action</span><span>View</span><span>Help</span></div>
+      <div style="border:1px solid #ACA899;background:#fff;padding:4px 8px;margin-bottom:6px;font-size:11px" id="df-vol"></div>
+      <div class="small dim" style="margin-bottom:2px">Estimated disk usage after defragmentation:</div>
+      <canvas id="df-map" width="560" height="60" style="width:100%;border:1px solid #808080;background:#fff"></canvas>
+      <div style="display:flex;gap:6px;margin:8px 0 6px">
+        <button class="xbtn" id="df-analyze" style="min-width:80px">Analyze</button>
+        <button class="xbtn" id="df-defrag" style="min-width:96px">Defragment</button>
+        <button class="xbtn" disabled style="min-width:64px">Pause</button>
+        <button class="xbtn" disabled style="min-width:60px">Stop</button>
+        <span class="small" id="df-status" style="align-self:center;margin-left:8px"></span>
+      </div>
+      <div style="display:flex;gap:14px;font-size:11px" class="dim">
+        <span><i class="df-sw" style="background:#C83030"></i> Fragmented files</span>
+        <span><i class="df-sw" style="background:#3050C8"></i> Contiguous files</span>
+        <span><i class="df-sw" style="background:#30A040"></i> Unmovable files</span>
+        <span><i class="df-sw" style="background:#fff;border:1px solid #999"></i> Free space</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Registry Editor -->
+  <div class="window" id="win-regedit" data-minw="460" data-minh="280" style="left:150px;top:60px;width:640px;height:420px">
+    <div class="title-bar">
+      <div class="tb-l"><i class="xico tb-ico" data-ico="@ic-file"></i><div class="title-bar-text">Registry Editor</div></div>
+      <div class="title-bar-controls"><button aria-label="Minimize"></button><button aria-label="Close"></button></div>
+    </div>
+    <div class="win-body pad">
+      <div class="menubar"><span>File</span><span>Edit</span><span>View</span><span>Favorites</span><span>Help</span></div>
+      <div class="reg-split">
+        <div id="reg-tree"></div>
+        <div id="reg-vals-wrap">
+          <div class="reg-valhead"><span style="width:44%">Name</span><span style="width:20%">Type</span><span>Data</span></div>
+          <div id="reg-vals"></div>
+        </div>
+      </div>
+      <div class="ex-status" style="margin-top:4px"><span id="reg-status"></span></div>
+    </div>
+  </div>
+
   <!-- Stretch and Skew: the real four-field dialog -->
   <div class="window fixed" id="win-stretchskew" style="left:calc(50% - 160px);top:calc(50% - 120px);width:320px">
     <div class="title-bar">
@@ -1342,6 +1420,6 @@ icons/sounds: winXP (MIT)</div>
   </div>
   <div class="lg-orange"></div>
   <div class="lg-bot"><button id="lg-off"><img id="lg-offimg" alt="">Turn off computer</button><div class="lg-note">After you log on, you can add or lose funds.</div></div>
-</div>
+</div>
 </body>
 </html>

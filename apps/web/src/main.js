@@ -12,6 +12,7 @@ import { initCompanion } from "./companion.js";
 import { initNet } from "./net.js";
 import { initMouse } from "./mouse.js";
 import { initSavers } from "./savers.js";
+import { initDepthApps } from "./depthapps.js";
 const Webamp = (WebampImport && WebampImport.default) ? WebampImport.default : WebampImport;
 
 "use strict";
@@ -1387,6 +1388,14 @@ const mouse=initMouse({$,store,sysSnd,CURFILES,openWin,closeWin,icoNode,
   /* fires once during boot before the net layer exists — hence the try */
   onScheme:id=>{ try{ if(MP.on) mpSend({t:"skin",skin:id}); }catch(e){} },
 });
+/* Calculator, Character Map, Disk Defragmenter, Registry Editor */
+const depth=initDepthApps({$,store,sysSnd,showMenu,showError,openWin,closeWin,hooks:{
+  disk:()=>{ const d=diskPct(); return {pct:d.pct,corpses:(binDead&&binDead.length)||0}; },
+  regGame:()=>({ name:playerNameFull(), wallet:fmtS(Math.round(wallet))+" SOL",
+    kills:stats.kills, deaths:stats.deaths, scheme:mouse.labelOf(mouse.current()),
+    epoch:roundNo, uptime:fmtUp(upT) }),
+  schemeLabel:()=>mouse.labelOf(mouse.current()),
+}});
 const explorer=initExplorer({
   IMG,
   els:{
@@ -1406,6 +1415,9 @@ const explorer=initExplorer({
     desktopFiles:()=>allIcons(),
     sentDocs:()=>store.data.sentDocs||[],
     unusedFiles:()=>store.data.unusedIcons||[],
+    openDefrag:()=>depth.openDefrag(),
+    openRegedit:()=>depth.openRegedit(),
+    ieFavs:()=>store.data.ieFavs||[],
     deadCount:()=>binDead.length,
     serverDisk:()=>{ if(!MP.on||!MP.disk) return {
         used:20*1024*1024*1024-(LOCAL_CORPSES-Math.min(localDeaths,LOCAL_CORPSES))*12*1024*1024,
@@ -1762,13 +1774,13 @@ function allProgramsMenu(){
         {label:"On-Screen Keyboard",disabled:1}]},
       {label:"System Tools",sub:[
         {label:"Disk Cleanup",action:()=>{ closeStart(); openWin("win-explorer"); explorer.go("C:\\"); setTimeout(()=>explorer.driveProperties(),350); }},
-        {label:"Disk Defragmenter",disabled:1},
+        {label:"Disk Defragmenter",action:()=>{ closeStart(); depth.openDefrag(); }},
         {label:"System Information",action:()=>{ closeStart(); $("#sp-user").textContent=playerNameFull(); openWin("win-sysprops"); }},
-        {label:"Character Map",disabled:1}]},
+        {label:"Character Map",action:()=>{ closeStart(); depth.openCharmap(); }}]},
       {sep:1},
       {label:"Notepad",action:go("win-readme")},
       {label:"Paint",action:go("win-paint")},
-      {label:"Calculator",action:()=>{ closeStart(); showError("Calculator","Cannot compute expected value: it is zero. It is always zero. Read the README."); }},
+      {label:"Calculator",action:()=>{ closeStart(); depth.openCalc(); }},
       {label:"Command Prompt",action:go("win-cmd")}]},
     {label:"Administrative Tools",sub:[
       {label:"Services",action:go("win-services")},
@@ -1827,6 +1839,10 @@ const RUNMAP={
   "notepad":"win-readme","notepad.exe":"win-readme",
   "winmine":"win-mine","winmine.exe":"win-mine",
   "mspaint":"win-paint","mspaint.exe":"win-paint","paint":"win-paint","pbrush":"win-paint",
+  "calc":"win-calc","calc.exe":"win-calc",
+  "charmap":"win-charmap","charmap.exe":"win-charmap",
+  "dfrg.msc":"win-defrag","defrag":"win-defrag",
+  "main.cpl":"win-mouse",
   "desk.cpl":"win-dispprops",
   "explorer":"win-explorer","explorer.exe":"win-explorer","c:":"win-explorer","sysdm.cpl":"win-sysprops",
   "timedate.cpl":"win-datetime",
@@ -1841,6 +1857,8 @@ const RUNMAP={
 function runNamed(k){
   k=String(k||"").trim().toLowerCase().replace(/^"|"$/g,"");
   if(k==="control"){ openWin("win-control"); return true; }
+  if(k==="dfrg.msc"||k==="defrag"||k==="defrag.exe"){ depth.openDefrag(); return true; }
+  if(k==="main.cpl"){ mouse.open(); return true; }
   if(RUNMAP[k]){ sysSnd("nav",.5); openWin(RUNMAP[k]); return true; }
   return false;
 }
@@ -1850,7 +1868,7 @@ function runCommand(){
   if(!v) return;
   const k=v.toLowerCase();
   if(runNamed(k)) return;
-  if(k==="regedit"||k==="regedit.exe"){ showError("Registry Editor","HKEY_CURRENT_LOSER is locked by another process."); return; }
+  if(k==="regedit"||k==="regedit.exe"){ depth.openRegedit(); return; }
   if(k==="format c:"||k==="format c"){ showError("Format Local Disk (C:)","The disk is in use by CURSORS.EXE. Your losses are load-bearing and cannot be erased."); return; }
   /* Run took URLs in 2003, and so does this one */
   if(!/\.(exe|msc|cpl|dll|bat|com|ini|sys|txt|log)$/i.test(k)&&
@@ -4422,6 +4440,9 @@ if(location.hash.indexOf("#desktop-sys")===0) setTimeout(()=>{ /* dev: the XP ap
   if(p==="-gpprops"){ openWin("win-gpedit"); setTimeout(()=>$$("#pol-list .mmc-row")[1].dispatchEvent(new MouseEvent("dblclick",{bubbles:true})),300); }
 },900);
 if(location.hash==="#desktop-mouse") setTimeout(()=>mouse.open(),300); /* dev: Mouse Properties */
+if(location.hash==="#desktop-depth") setTimeout(()=>{ /* dev: the four depth apps at once */
+  depth.openDefrag(); depth.openRegedit(); depth.openCalc(); depth.openCharmap();
+},400);
 if(location.hash.startsWith("#desktop-saver-")) setTimeout(()=>startSaver(location.hash.slice(15)),600); /* dev: any saver fullscreen */
 if(location.hash==="#desktop-mouse-bronze") setTimeout(()=>{ /* dev: the gold cursor, applied and visible on the field */
   mouse.applyScheme("bronze");

@@ -89,13 +89,9 @@ export function initExplorer(deps) {
         act: () => showError("NTUSER.DAT", "Access is denied.\n\nEverything you have ever clicked is in this file.") }),
     ],
     [HOME + "\\Favorites"]: () => [
-      /* the Favorites folder is the browser's bookmark list, and these really navigate */
-      f("cursor$land.url", { size: 128, ico: "ie32", tile: "Internet Shortcut", act: () => hooks.browse("http://www.cursor.land/") }),
-      f("the odds.url", { size: 128, ico: "ie32", tile: "Internet Shortcut", act: () => hooks.browse("http://www.cursor.land/odds.html") }),
-      f("hall of fame.url", { size: 128, ico: "ie32", tile: "Internet Shortcut", act: () => hooks.browse("http://www.cursor.land/hall.html") }),
-      f("THE CURSOR WEBRING.url", { size: 128, ico: "ie32", tile: "Internet Shortcut", act: () => hooks.browse("http://www.cursorwebring.org/") }),
-      f("mumus page.url", { size: 128, ico: "ie32", tile: "Internet Shortcut", act: () => hooks.browse("http://mumu.tripod.com/") }),
-      f("cursorbot (do not).url", { size: 128, ico: "ie32", tile: "Internet Shortcut", act: () => hooks.browse("http://deg404.neocities.org/") }),
+      /* the browser's actual Favorites list, which the user edits in IE */
+      ...(hooks.ieFavs ? hooks.ieFavs() : []).map(fav =>
+        f(fav.label + ".url", { size: 128, ico: "ie32", tile: "Internet Shortcut", act: () => hooks.browse(fav.u) })),
     ],
     [HOME + "\\Desktop"]: () => hooks.desktopFiles().map(ic => (
       ic.app === "bin"
@@ -156,6 +152,10 @@ export function initExplorer(deps) {
       f("luck.dll", { size: 0, ico: "err32", act: () => showError("luck.dll", "The file or directory is corrupted and unreadable.\n\nIt has been like this since you got here.") }),
       f("mumu.exe", { size: 44 * 1024, ico: "@ic-app", act: () => showError("mumu.exe", "This process is already running and cannot be stopped.\nIt is up 0.4 SOL and will not be taking questions.") }),
       f("shell32.dll", { size: 8.4 * MB, ico: "@ic-file", act: () => sysErr("shell32.dll") }),
+      f("calc.exe", { size: 114 * 1024, ico: "calc16", act: () => hooks.openWin("win-calc") }),
+      f("charmap.exe", { size: 82 * 1024, ico: "note16", act: () => hooks.openWin("win-charmap") }),
+      f("defrag.exe", { size: 227 * 1024, ico: "@ic-mmc", act: () => hooks.openDefrag && hooks.openDefrag() }),
+      f("regedit.exe", { size: 146 * 1024, ico: "@ic-file", act: () => hooks.openRegedit && hooks.openRegedit() }),
     ],
   };
   function sysErr(n) { showError(n, "Access is denied.\n\nSystem files are protected. The house patches itself."); }

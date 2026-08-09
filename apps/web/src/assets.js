@@ -73,6 +73,8 @@ import wavdoc16 from "./assets/xp/icons/234(16x16).png";
 import writedoc16 from "./assets/xp/icons/153(16x16).png";
 import volmix16 from "./assets/xp/icons/120(16x16).png";
 import cmd16 from "./assets/xp/icons/56(16x16).png";
+import calc16 from "./assets/xp/icons/74(16x16).png";
+import calc32 from "./assets/xp/icons/74(32x32).png";
 
 import paintTools from "./assets/xp/paint/tools.png";
 import paintTrans from "./assets/xp/paint/options-transparency.png";
@@ -108,7 +110,7 @@ export const IMG = {
   trayVol, trayUsb, trayRisk, offBig, flag16,
   paint16, paint32,
   hdd32, cd32, progfolder32, openfolder32, winfolder32, shareddocs32, sysfile32,
-  bmpdoc32, wavdoc16, writedoc16, volmix16, cmd16,
+  bmpdoc32, wavdoc16, writedoc16, volmix16, cmd16, calc16, calc32,
   navBack, navFwd, navUp, navFolders, navSearch, navDrop,
   navStop, navRefresh, navHome, navFav, navHistory, navMail, navLinks, navMedia,
   earth16, connect16,

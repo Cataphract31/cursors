@@ -1176,3 +1176,35 @@ body.tray-open .tray-idle{display:inline-block}
 .at-cell.on{border-color:#0A246A;background:#B6BDD2}
 .at-cell img,.at-cell .xico,.at-cell svg{width:24px;height:24px}
 .at-cap{margin-top:8px;padding-top:5px;border-top:1px solid #ACA899;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:320px}
+
+/* ---------- Calculator ---------- */
+#calc-display{border:1px solid #7F9DB9;background:#fff;text-align:right;font:13px "Lucida Console",Consolas,monospace;
+  padding:4px 6px;margin:6px 0;min-height:20px;overflow:hidden;white-space:nowrap}
+#calc-keys{display:flex;flex-direction:column;gap:4px;padding-bottom:4px}
+.calc-row{display:flex;gap:4px;justify-content:flex-end}
+.calc-k{min-width:36px;height:27px;min-height:0;padding:0;font-size:11px;flex:1}
+.calc-k.num{color:#00007F}
+.calc-k.op,.calc-k.mem{color:#7F0000}
+/* ---------- Character Map ---------- */
+#cm-grid{border:1px solid #7F9DB9;background:#fff;height:190px;overflow:auto;display:flex;flex-wrap:wrap;align-content:flex-start;padding:1px}
+.cm-cell{width:18px;height:20px;display:grid;place-items:center;border:1px solid #E4E4E4;margin:-1px 0 0 -1px;font-size:12px;cursor:default}
+.cm-cell:hover{transform:scale(1.7);background:#fff;border:1px solid #316AC5;z-index:5;box-shadow:1px 2px 4px rgba(0,0,0,.35)}
+.cm-cell.on{background:#316AC5;color:#fff}
+/* ---------- Disk Defragmenter ---------- */
+.df-sw{display:inline-block;width:10px;height:10px;margin-right:3px;vertical-align:-1px}
+/* ---------- Registry Editor ---------- */
+.reg-split{flex:1;display:flex;min-height:0;border:1px solid #ACA899;background:#fff}
+#reg-tree{width:44%;border-right:1px solid #ACA899;overflow:auto;padding:2px 0;font-size:11px}
+.reg-key{white-space:nowrap;padding:1px 4px;cursor:default}
+.reg-key.on{background:#316AC5;color:#fff}
+.reg-exp{display:inline-block;width:11px;font-style:normal;text-align:center;border:1px solid #999;margin-right:3px;background:#fff;color:#000;font-size:9px;line-height:9px}
+.reg-fold{font-style:normal}
+#reg-vals-wrap{flex:1;display:flex;flex-direction:column;min-width:0}
+.reg-valhead{display:flex;border-bottom:1px solid #ACA899;background:#ECE9D8;font-size:11px;padding:2px 6px;gap:4px}
+#reg-vals{flex:1;overflow:auto;font-size:11px}
+.reg-val{display:flex;gap:4px;padding:2px 6px;white-space:nowrap}
+.reg-val:hover{background:#EFEFEF}
+.reg-vn{font-style:normal}
+.rv-n{width:40%;overflow:hidden;text-overflow:ellipsis}
+.rv-t{width:20%;color:#555}
+.rv-v{flex:1;overflow:hidden;text-overflow:ellipsis;color:#333}
