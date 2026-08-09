@@ -370,9 +370,8 @@ AUTO-BATTLER. you command, they fight.
   is EV-neutral. always.
 · RECALL: 3 seconds to bank, from
   anywhere. killable the whole way.
-· the resolution shrinks mid-round.
-  there is nowhere to hide at
-  640×480.
+· cursors get angrier as the round
+  ages. hiding is not a strategy.
 · shutdown: everyone auto-recalls.
   nothing is confiscated.
 · lose your last cursor? deploys
@@ -969,8 +968,6 @@ function phaseTick(dt){
   if(phase==="join"&&phaseT<=0){ shutFired=false; startBattle(); }
   else if(phase==="battle"){
     const elapsed=T_BATTLE-phaseT;
-    if(arenaStage===0&&elapsed>=T_BATTLE*.4) setArenaStage(1,false);
-    if(arenaStage===1&&elapsed>=T_BATTLE*.7) setArenaStage(2,false);
     if(!shutFired&&phaseT<=T_SHUT) startShutdownRush();
     if(shutFired) $("#shuttimer").textContent="0:"+String(Math.max(0,Math.ceil(phaseT))).padStart(2,"0");
     if(phaseT<=0||(elapsed>3&&curs.length===0)) endBattle();

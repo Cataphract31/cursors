@@ -1,0 +1,101 @@
+# Implementation plan — the desktop, component by component
+
+The mandate (owner, 2026-08-09): **reference-grade fidelity or don't ship the component.** unicorn.meme is the density bar. One component per working session, built to production-final — UI, UX, sounds, easter eggs, mobile behavior — before moving to the next. No breadth-first sketches. Gambling is load-bearing but visually secondary: the product is a 2003 computer that happens to have a casino on it.
+
+Standing rules for every phase:
+- All assets hand-built originals (own pixel art, own glyphs, own audio, own copy). Layout/vibe homage to era software is the product; shipping trademarks, logos, ripped skins, or copyrighted music is off the table — that's a legal constraint AND the reason we can go arbitrarily hard.
+- Every phase ends: syntax check → artifact republish → commit → owner plays it.
+- Right-click anywhere must be OURS (no browser context menu, no 4th wall).
+- Each component gets: its sounds, its context menus, its easter eggs, its mobile behavior, its keyboard shortcuts.
+- Owner reshuffles phase order at will; default order below.
+
+---
+
+## Phase 0 — Shell foundation (everything sits on this)
+
+The window system and desktop chrome, finished. This unblocks every later app, so it goes first.
+
+- **Window manager v2**: resize from all 8 edges/corners (per-app min sizes), double-click titlebar to maximize/restore, XP minimize-to-taskbar animation, proper focus rings, taskbar tab overflow (shrink → group), windows remember position/size per session.
+- **Right-click everything**: desktop menu (Arrange Icons, Refresh — with the flicker —, New ▸, Properties → Display Properties), icon menus (Open, Delete → lands in Recycle Bin), taskbar menu, titlebar menu. `contextmenu` suppressed globally.
+- **Desktop icons**: draggable with grid snap, marquee multi-select, positions persist, pixel-perfect label shadows.
+- **Taskbar perfection**: quick-launch strip, tray icons with tooltips, balloon anchoring, **clock: hover shows full date, double-click opens Date & Time Properties with a working analog clock + month calendar** (owner named this specifically).
+- **Boot & login sequence**: boot screen with scrolling progress bar → login screen (Administrator tile) → desktop reveal with original startup chime. Log Off / Turn Off get the full-screen dim treatment.
+- **Display Properties**: real tabbed dialog; wallpaper picker (Bliss + 3-4 original alternates), screensaver tab (working idle screensaver — starfield/pipes-flavored original, wakes on input).
+- **Sound scheme**: full original UI set (open, close, minimize, error ding, balloon, empty-bin).
+- Shadow/gradient audit across every existing surface.
+
+## Phase 1 — The player (the thing that got me yelled at)
+
+Full classic three-deck player at reference density, hand-drawn pixel skin (gunmetal + green LED language, original art, own name on the plate).
+
+- **Main deck**: scrolling title marquee, kbps/kHz readouts, LED time display (toggle elapsed/remaining), spectrum analyzer AND oscilloscope toggle, full transport, shuffle/repeat latches, seek bar, volume + balance sliders, windowshade mode (collapse to title strip), clutterbar.
+- **Equalizer deck**: ON/AUTO latches, preamp + 10 band sliders **actually wired** to a BiquadFilter chain, preset menu, the little EQ curve display.
+- **Playlist deck**: ADD/REM/SEL/MISC buttons, scrolling list with durations, double-click to play, current track highlighted, resizable, total-time readout.
+- Decks snap/dock to each other and drag as a stack.
+- **Audio**: (a) 6-8 authored original tracks — proper synthesis (drum voices, bass, chords, arps, sidechain pump) across era moods: eurodance, trance, nightcore-tempo, chiptune; (b) **drag-and-drop / open-file MP3 playback of the user's own library** — real files, real ID3 title in the marquee, real spectrum. That's how the owner's actual jams get in, legally. (c) Production ships licensed or original music only.
+- Stretch: fullscreen visualizer window (milkdrop-flavored canvas shaders, original).
+
+## Phase 2 — Messenger, for real
+
+- **Contact list window**: sign-in animation, status (Online/Away/Busy/Appear Offline), grouped contacts (Bots, Degens), display pictures (original avatar set), custom status messages, the slide-up toast when someone signs in.
+- **Conversation windows**: one per chat (global lobby + per-bot DMs with bot AI replies), authentic layout — To: header with avatar, message area with "says:" formatting, typing indicator ("bobo is typing…"), emoticon picker grid, font/color options, **nudge done properly** (window shake, cooldown, sound, "you have just sent a nudge" system line).
+- Wire lobby chat to the real server plumbing at production (THIN ICE ring buffer + rate buckets already reusable).
+- Easter eggs: away-message autoresponders on bots, "wants to send you a file: virus.exe" joke prompt (declining is the joke).
+
+## Phase 3 — My Computer & the filesystem illusion
+
+- **Explorer windows**: address bar, toolbar (Back/Forward/Up/Views), XP task pane sidebar, icon/list/details views.
+- **Fake C:\ drive**: My Documents, Program Files (app shortcuts that actually launch apps), WINDOWS (joke system files), file associations — .txt → Notepad, .mp3 → player, .cur → cursor properties.
+- **Properties dialogs everywhere**: files (size/created/attributes), Drive C: with the pie chart (disk usage = live game stats: wagered, banked, rake returned), **System Properties** (General tab: "CURSORS XP · 2003 · 1 cursor @ 3.2 GHz · 512 MB RAM · Registered to: Administrator").
+- Live lobby stats stay here (cursors online, pot, biggest bounty) presented as system monitors.
+- Easter eggs: hidden folder, "DO NOT OPEN" folder (opening it is its own reward), defrag.exe that "defragments" the desktop icons.
+
+## Phase 4 — Recycle Bin with a purpose
+
+- Dead cursors land as `.cur` files with full tombstone metadata: name, bounty lost, killer, round, timestamp.
+- Open one → **death certificate** properties dialog (the 92:8 that killed it, replay link once fairness records exist).
+- Restore → XP-style error: restoration is not possible; the desktop keeps what it takes.
+- Empty Recycle Bin → confirmation dialog + the correct paper-crunch sound + empty/full icon states.
+- **Hall of Pain**: all-time biggest losses leaderboard, this-boot graveyard, your personal cemetery.
+
+## Phase 5 — Notepad & text apps
+
+- Real editable Notepad: File/Edit/Format/View menus that work (New, Open from fake FS, Save to fake FS), word wrap, font dialog, status bar, Ctrl+S/Ctrl+F.
+- fights.log = live auto-appending file opened in Notepad (pausable scroll).
+- README.txt editable but resets on reboot (the file remembers nothing; the desktop remembers everything).
+- Stretch: **Paint** — pencil/brush/eraser/fill/text/color palette, and **Save As Wallpaper** (meme machine; drawings shareable later).
+
+## Phase 6 — CURSORS.EXE, production pass
+
+The game app rebuilt as a proper XP application (mechanics already proven in prototype):
+
+- Menu bar (Game · View · Help), panes: **Play** (deploy/stances/recall, pot odometer, live field list sorted by bounty), **Stats** (session + lifetime, charts), **Rakeback** (tickets, share, accrued, half-life explainer), **History** (every round, every duel, browseable), **Verify** (the seven-receipt fairness page, THIN ICE style).
+- Game-layer render upgrade: cursors move to canvas (trails, soft shadows, chunkier explosions, duel lock-on effect), DOM only for windows.
+- Moments: bank ≥×10 gets a full celebration sequence; BSOD variants; first-run tutorial styled as a Found New Hardware wizard.
+- Spectate UX for between-deploys.
+
+## Phase 7 — Internet Explorer & the web of 2003
+
+- Full IE chrome: toolbar, address bar with dropdown history, throbber, status bar with progress segments, Favorites.
+- **An internal handmade web** (works everywhere, including the sandboxed prototype): cursor$land (rebuilt to unicorn.meme density — tiled backgrounds, GIF-collage sidebars as original pixel-art animations, guestbook wired to Messenger, hit counter, webring that actually rings through 6-10 handmade sites: search engine with joke results, bot fanpages, conspiracy page about the house edge, 404 wasteland).
+- Dial-up connect sequence (modem handshake audio, original synthesis) the first time IE opens per session.
+- **Real internet, honest limits**: on the production site we can embed YouTube's official player (watch videos next to the arena — works), plus curated embeds. Arbitrary site browsing inside a fake browser isn't feasible (sites block framing) and a proxy is a liability — not doing that. In the prototype artifact, network is sandboxed entirely, so the handmade web is the whole web there.
+
+## Phase 8 — Start menu & system completeness
+
+- All Programs flyout with full roster, pinned column, recent apps that actually track usage.
+- **Run… dialog**: launch apps by name; cheat-code strings; `format c:` → politely catastrophic error dialog.
+- Search companion with an original mascot character (our own, not anyone else's assistant).
+- Help & Support Center = game rules + fairness docs in XP help chrome.
+- Hibernate/Standby jokes, the full shutdown dim, and a Windows-Update-style "installing update 1 of 1: do not turn off your casino" gag on version bumps.
+
+---
+
+## Cut / parked
+
+- ~~Resolution-shrink battle royale~~ — cut by owner (2026-08-09). Aggression ramp + shutdown recall rush carry the anti-camp job. Confirmed: the mass brawl at the start bar during shutdown recall is **intended** — it's the round's climax.
+- Multi-OS stake lobbies — parked (liquidity). Eras live inside the one desktop.
+
+## Sequencing note
+
+Phase 0 first (everything depends on it). After that the order is the owner's; default is as listed — player and Messenger next because they're the identity pieces. The engine-side track (sim port + invariants proof, netcode fast channel — see `reuse-from-thinice.md`) runs as its own parallel workstream and doesn't block any UI phase.
