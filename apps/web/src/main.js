@@ -1506,13 +1506,27 @@ const auto={on:false,count:3,bankAt:2};
    you then see the whole fight instead of a corner of it. */
 const AW=1280, AH=800;
 let arena={x0:0,y0:0,x1:AW,y1:AH};
-let AS=1, CMAG=1;
+let AS=1, CMAG=1, AROT=false;
 function syncArena(){
   arena={x0:0,y0:0,x1:AW,y1:AH};
   const el=$("#arena"); if(!el) return;
-  AS=Math.min(W/AW,H/AH);
-  const ox=Math.round((W-AW*AS)/2), oy=Math.round((H-AH*AS)/2);
-  el.style.transform=`translate(${ox}px,${oy}px) scale(${AS})`;
+  /* Portrait phones ROTATE THE VIEW 90° instead of letterboxing. The sim is
+     untouched — same fixed field, same positions, same fairness — but shown
+     sideways the field fills the screen (~0.49 scale instead of ~0.30) and
+     cursors spread everywhere instead of hiding in a strip behind the icons.
+     Text elements counter-rotate so they stay readable. */
+  AROT=MOBILE&&H>W;
+  if(AROT){
+    AS=Math.min(W/AH,H/AW);
+    const ox=Math.round((W-AH*AS)/2), oy=Math.round((H-AW*AS)/2);
+    /* origin 0,0: point (x,y) → scale → rotate90 (x,y)→(-y,x) → translate */
+    el.style.transform=`translate(${ox+AH*AS}px,${oy}px) rotate(90deg) scale(${AS})`;
+  }else{
+    AS=Math.min(W/AW,H/AH);
+    const ox=Math.round((W-AW*AS)/2), oy=Math.round((H-AH*AS)/2);
+    el.style.transform=`translate(${ox}px,${oy}px) scale(${AS})`;
+  }
+  el.classList.toggle("rot",AROT);
   /* counter-magnify the sprites so cursors stay legible on a scaled-down arena */
   CMAG=Math.max(1,.52/AS);
   el.style.setProperty("--cmag",CMAG);
@@ -1557,7 +1571,10 @@ function updateTag(c){
   const sv=c.el.querySelector("svg");
   sv.style.width=(17*v)+"px"; sv.style.height=(26*v)+"px";
   const tag=c.el.querySelector(".tag");
-  tag.style.left=(13*v)+"px"; tag.style.top=(25*v)+"px";
+  /* rotated view: the tag's anchor maps (screenX,screenY)=(−top,+left), so
+     these offsets land it just under the counter-rotated sprite */
+  if(AROT){ tag.style.left=(18*v)+"px"; tag.style.top=(25*v)+"px"; }
+  else{ tag.style.left=(13*v)+"px"; tag.style.top=(25*v)+"px"; }
 }
 function removeCur(c){
   c.dead=true; c.el.remove();
@@ -1716,7 +1733,7 @@ function bank(c,atShutdown){
       /* the ×10: 1-in-10 exactly, and it should feel like it */
       sysSnd("tada",.6);
       for(let i=0;i<3;i++) setTimeout(()=>goldBurst(c.x+rand(-44,44),c.y+rand(-30,30)),i*170);
-      showBalloon(`×${m} BANKED`,`${fmtS(c.bounty)} SOL. P(reach ×10) is exactly 1/10 — today you were the 1.`);
+      jackpot(c.bounty);
     }else sBank();
     float(fmtSign(c.bounty)+" ×"+m,c.x,c.y,false);
     goldBurst(c.x,c.y);
@@ -1976,6 +1993,34 @@ function explode(c){
   p.style.width=p.style.height=pw+"px";
   p.style.left=(c.x-pw/2)+"px"; p.style.top=(c.y-pw/2)+"px";
   fxlayer.appendChild(p); setTimeout(()=>p.remove(),500);
+}
+/* the ×10 moment: two seconds of VHS — scanlines, a tracking bar, chromatic
+   aberration on the number, REC blinking in the corner, and gold raining
+   through the arena. All CSS, no libraries, gone before it wears out. */
+let jkT=null;
+function jackpot(amt){
+  const m=(amt/ENTRY).toFixed(1);
+  const j=$("#jackpot");
+  j.innerHTML=
+    `<div class="jk-scan"></div><div class="jk-track"></div>`+
+    `<div class="jk-rec"><i>●</i> REC</div><div class="jk-time">SP ${fmtUp(upT)}</div>`+
+    `<div class="jk-mid"><div class="jk-x">×${m}</div>`+
+    `<div class="jk-amt">+${fmtS(amt)} SOL BANKED</div>`+
+    `<div class="jk-sub">P(reach ×10) = 1/10 · today you were the 1</div></div>`;
+  j.style.display="block";
+  clearTimeout(jkT);
+  jkT=setTimeout(()=>{ j.style.display="none"; },2400);
+  for(let i=0;i<26;i++) setTimeout(()=>{
+    const s=document.createElement("div");
+    s.className="shard gold";
+    s.style.left=rand(arena.x0+30,arena.x1-30)+"px";
+    s.style.top=(arena.y0+16)+"px";
+    s.style.setProperty("--dx",rand(-36,36)+"px");
+    s.style.setProperty("--dy",rand(340,720)+"px");
+    s.style.setProperty("--rot",rand(-420,420)+"deg");
+    s.style.animationDuration="1.15s";
+    fxlayer.appendChild(s); setTimeout(()=>s.remove(),1200);
+  },i*55);
 }
 function goldBurst(x,y){
   for(let i=0;i<9;i++){
@@ -2395,6 +2440,7 @@ if(location.hash.indexOf("#desktop-cx")===0) setTimeout(()=>{ /* dev: capture a 
     ];
     renderCx();
   }
+  if(p==="jackpot") jackpot(ENTRY*11);   /* dev: the VHS moment */
   if(p==="death"){ /* your last cursor dies -> certificate, not a bluescreen */
     binDead.unshift({id:++deathN,name:playerName(),mine:true,killer:"mumu",killerMine:false,
       lost:485,mult:5,peak:485,odds:71,kills:3,lived:88,round:roundNo,at:"09:41:12"});

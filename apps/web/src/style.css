@@ -248,8 +248,8 @@ table.cxh td.neg{color:#A32020;font-weight:bold}
 .cert-head{display:flex;align-items:center;gap:10px}
 .cert-ico{width:32px;height:32px;flex:none;display:block;filter:grayscale(1) brightness(.75)}
 .cert-file{font-weight:bold;font-size:12px;word-break:break-all}
-.cert-r{display:flex;align-items:baseline;gap:8px;padding:2px 0;font-size:11px}
-.cert-r span{width:96px;flex:none;color:#5A5648}
+.cert-r{display:flex;align-items:baseline;gap:8px;padding:2px 0 2px 4px;font-size:11px}
+.cert-r span{width:106px;flex:none;color:#5A5648}
 .cert-r b{flex:1;min-width:0}
 .cert-r.big b{font-size:13px}
 .cert-r.bad b{color:#A32020}
@@ -442,6 +442,15 @@ body.mobile .conv-right{display:none}
 .cur.grace{opacity:.55}
 .cur.dueling svg{animation:shake .13s infinite;filter:drop-shadow(0 0 3px #FF3B20) drop-shadow(0 0 7px rgba(255,40,20,.55))}
 @keyframes shake{0%{transform:translate(0,0)}25%{transform:translate(-1.5px,1px)}50%{transform:translate(1.5px,-1px)}75%{transform:translate(-1px,-1.5px)}100%{transform:translate(1px,1px)}}
+/* portrait phones show the arena rotated 90° (the sim is untouched); every
+   text-bearing element counter-rotates so it reads upright on screen */
+#arena.rot .cur>svg{transform:rotate(-90deg)}
+#arena.rot .cur .tag{transform:rotate(-90deg);transform-origin:0 0}
+#arena.rot .duelfx{transform:rotate(-90deg);transform-origin:50% 50%}
+#arena.rot .float{animation-name:riseRot}
+@keyframes riseRot{from{transform:rotate(-90deg)}to{transform:rotate(-90deg) translateY(-48px);opacity:0}}
+#arena.rot .cur.dueling svg{animation:shakeRot .13s infinite}
+@keyframes shakeRot{0%{transform:rotate(-90deg) translate(0,0)}25%{transform:rotate(-90deg) translate(-1.5px,1px)}50%{transform:rotate(-90deg) translate(1.5px,-1px)}75%{transform:rotate(-90deg) translate(-1px,-1.5px)}100%{transform:rotate(-90deg) translate(1px,1px)}}
 .duelfx{position:absolute;text-align:center;font:bold 10px "Lucida Console",Consolas,monospace;color:#fff;text-shadow:1px 1px 2px #000,0 0 4px #000}
 .duelfx.big{font-size:13px;color:#FFD24A}
 .duelfx .hg{display:inline-block;font-size:15px;animation:flip .5s steps(2) infinite}
@@ -457,6 +466,23 @@ body.mobile .conv-right{display:none}
 @keyframes rise{to{transform:translateY(-48px);opacity:0}}
 
 /* ---------- BSOD / power-off screen ---------- */
+/* ---------- the ×10 jackpot: two seconds of VHS ---------- */
+#jackpot{position:fixed;inset:0;z-index:99998;display:none;pointer-events:none;overflow:hidden}
+.jk-scan{position:absolute;inset:-4px 0;background:repeating-linear-gradient(0deg,rgba(0,0,0,.24) 0 1px,transparent 1px 3px);animation:jkroll .14s steps(2) infinite}
+@keyframes jkroll{to{transform:translateY(3px)}}
+.jk-track{position:absolute;left:0;right:0;height:30px;background:linear-gradient(180deg,transparent,rgba(255,255,255,.30) 38%,rgba(255,255,255,.08) 62%,transparent);filter:blur(1px);animation:jktrack 1.25s linear infinite}
+@keyframes jktrack{from{top:-34px}to{top:100%}}
+.jk-rec{position:absolute;top:16px;left:20px;font:bold 15px "Lucida Console",Consolas,monospace;color:#fff;text-shadow:0 0 4px #000}
+.jk-rec i{color:#FF2A2A;font-style:normal;animation:jkblink 1s steps(2) infinite}
+.jk-time{position:absolute;top:16px;right:20px;font:bold 13px "Lucida Console",Consolas,monospace;color:#fff;text-shadow:0 0 4px #000}
+@keyframes jkblink{50%{opacity:0}}
+.jk-mid{position:absolute;left:0;right:0;top:32%;text-align:center;animation:jkjit .09s steps(2) infinite}
+@keyframes jkjit{0%{transform:translate(0,0)}50%{transform:translate(1.5px,-1px)}100%{transform:translate(-1px,1px)}}
+.jk-x{font:bold 88px "Lucida Console",Consolas,monospace;color:#FFD24A;text-shadow:-3px 0 0 rgba(0,255,255,.75),3px 0 0 rgba(255,0,90,.75),0 3px 16px rgba(0,0,0,.85)}
+.jk-amt{font:bold 20px "Lucida Console",Consolas,monospace;color:#fff;margin-top:6px;text-shadow:-2px 0 0 rgba(0,255,255,.6),2px 0 0 rgba(255,0,90,.6),0 2px 6px #000}
+.jk-sub{font:11px "Lucida Console",Consolas,monospace;color:#EFE49B;margin-top:9px;text-shadow:0 1px 3px #000}
+body.mobile .jk-x{font-size:54px}
+
 /* the real NT stop screen: text-mode metrics, top-left start, tight leading */
 #bsod{position:fixed;inset:0;background:#0000AA;color:#FFF;display:none;z-index:99999;
   font:15px/1.45 "Lucida Console",Consolas,monospace;padding:28px 38px;

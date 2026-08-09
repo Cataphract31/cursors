@@ -170,9 +170,15 @@ explicitly **parked** ("stuff only 2% of users would search for"). Run… jokes 
    stay centered popups), taskbar is an icon app-switcher, Start is a full-screen launcher,
    the game HUD is a permanent thumb bar (`#mhud`) above the taskbar that sheets never
    cover, long-press = right-click (with Minesweeper flag special-case), single tap opens
-   desktop icons, welcome screen stacks vertically. Not yet done: landscape phones
-   (>760px wide) still get the desktop shell; real-device pass (iOS Safari keyboard,
-   safe-area) still owed before launch.
+   desktop icons, welcome screen stacks vertically. **Portrait phones rotate the arena
+   VIEW 90°** (2026-08-09): the sim is untouched — same fixed 1280×800 field, same
+   fairness — but shown sideways it fills the screen (~0.49 scale vs ~0.30 letterboxed,
+   2.6× more battlefield) instead of a thin strip hiding behind the icon column. Tags,
+   floats, duel odds and sprites counter-rotate to read upright (`#arena.rot` rules +
+   `AROT` in `syncArena`/`updateTag`; shake/rise keyframes have rotated variants because
+   keyframes replace the whole transform). Not yet done: landscape phones (>760px wide)
+   still get the desktop shell; real-device pass (iOS Safari keyboard, safe-area) still
+   owed before launch.
 2. ~~Paint~~ **SHIPPED 2026-08-09.** `paint.js`, import-free sibling module. All 16 real
    tools in the real 2-column box, the real 28-colour palette, tool-options box, 3-deep
    undo (authentic), Image menu (flip/rotate/invert/attributes), drag-drop + File > Open to
@@ -218,8 +224,10 @@ explicitly **parked** ("stuff only 2% of users would search for"). Run… jokes 
    explainer), **History** (per-epoch table written at each crash), **Verify** (the fairness
    ceremony: a real random seed is committed via real SHA-256 before each epoch and revealed
    at the crash — honestly labelled: duels still draw browser RNG until the server wires the
-   seed in). Also: ×10 banks celebrate (triple gold burst + balloon), explosions scale with
-   the dead cursor's size, duelists glow red. **BSOD reassigned per owner:** the blue screen
+   seed in). Also: ×10 banks trigger the **VHS jackpot** (2s full-screen: CSS scanlines, a
+   drifting tracking bar, chromatic-aberration ×N, blinking REC + SP counter, gold raining
+   through the arena — `jackpot()` + `#jackpot` styles, no libraries; dev hash
+   `#desktop-cx-jackpot`), explosions scale with the dead cursor's size, duelists glow red. **BSOD reassigned per owner:** the blue screen
    now belongs to the BIG crash — full carbon-copy NT stop screen (Lucida Console, #0000AA,
    the real paragraph cadence) with the epoch receipt in the Technical-information block.
    Losing your last cursor shows its death certificate instead (suppressed during autoplay).
