@@ -33,6 +33,8 @@ Running record of what's locked, what's adopted-pending-prototype, and what's op
 
 ## Open
 
+- Identity: username is chosen at the XP login screen (shipped 2026-08-09, persists locally; right-click the tile to switch users). **Phantom wallet connect replaces/augments this at the chain phase** — owner's call, deferred.
+
 - Bot/liquidity policy for dead hours (disclosed house cursors at fair odds; THIN ICE's bots+banking mutual-exclusion guard currently forbids exactly this — needs a deliberate, disclosed design before real money).
 - Exact round timings (prototype: join 18s / battle 75s / shutdown 15s / results 8s — tune by feel).
 - Session auth is play-money grade (inherited caveat); revisit with mainnet custody.
