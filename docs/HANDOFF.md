@@ -479,7 +479,7 @@ second):
    substrate for cmd and Device Manager to read from.
 1. **Design/UX still owed** — a real-device pass on a phone (the keyboard path above is
    unverified on hardware), Paint's Fonts toolbar and Stretch/Skew, IE Favorites editing and
-   an IE-specific right-click menu, a real Search Companion.
+   an IE-specific right-click menu.
 2. **Prove the invariants offline** — the server asserts pot conservation every crash, but
    nothing yet proves EV per deploy = stake × 0.97 for *every* strategy (hunter, camper,
    instant banker, chain rider, autoplay). This is how THIN ICE caught its wipe leak, and
@@ -533,6 +533,22 @@ escrow (replacement, not hardening); no graceful shutdown.
 `reference_thinice_beta_server.md` (live GCP box for THIN ICE).
 
 ---
+
+### Search Companion — SHIPPED 2026-08-10
+`apps/web/src/companion.js` (import-free) + a search mode in `explorer.js`. Rover, Merlin,
+Courtney and Earl are **drawn from scratch as SVG** — the real ones are Microsoft Agent
+`.acs` assets and the no-copyrighted-art line holds — and animate in CSS, not frames:
+`idle` breathes/blinks/flicks an ear, `hunting` sweeps the head with the magnifying glass,
+`found` wags fast and hops, `empty` slumps with the ears down. Four class names, no sprite
+sheet, no load cost. The chooser (`win-companion`) is XP's "choose your companion" dialog
+and the pick persists.
+The search is **real**: `walk()` is depth-first over the same `childrenOf()` that the
+address bar, the listing and cmd.exe read, so it finds exactly what is on the disk — and
+dead cursors are findable **by owner and by killer**, which is the only search anyone runs
+twice. Four scopes (dead cursors / documents / my losses / everything). Opens from Start >
+Search, Explorer's Search button, and **F3**. Verified: searching "dll" returns arena.dll,
+rng.dll, kernel32.dll, luck.dll, shell32.dll with real sizes. Dev hashes: `#desktop-dog`,
+`-found`, `-empty`, `-pick`.
 
 ## 10. Known open items
 

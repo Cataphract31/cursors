@@ -25,6 +25,9 @@ export function initExplorer(deps) {
   function usedBytes() { const o = hooks.serverDisk && hooks.serverDisk(); return o ? o.used : 2.71 * GB + deadBytes(); }
   function freeBytes() { return Math.max(64 * MB, DISK - usedBytes()); }
 
+  /* Search Companion state. `searching` swaps the blue task pane for the
+     companion pane; results replace the listing until you navigate away. */
+  let searching = false, results = null, searchQ = "", searchKind = "all";
   const BIN = "Recycle Bin";
   const HOME = "C:\\Documents and Settings\\Administrator";
   const DOCS = HOME + "\\My Documents";
@@ -162,6 +165,46 @@ export function initExplorer(deps) {
     return null;
   }
 
+  /* ---------- search: a real walk of the real tree ---------- */
+  /* Depth-first over childrenOf(), which is the same function the address bar,
+     cmd.exe and the listing all use — so the dog finds what is actually there,
+     including every dead cursor, and never anything that is not. */
+  function walk(root, hit, out, seen, depth) {
+    if (out.length >= 200 || depth > 6 || seen.has(root)) return;
+    seen.add(root);
+    const items = childrenOf(root);
+    if (!items) return;
+    for (const it of items) {
+      if (hit(it, root)) out.push({ it, where: root });
+      if (it.kind === "folder" || it.kind === "drive") {
+        const child = it.go || (root === "C:\\" ? "C:\\" + it.name : root + "\\" + it.name);
+        walk(child, hit, out, seen, depth + 1);
+      }
+    }
+  }
+  function runSearch(q, kind) {
+    searchQ = q; searchKind = kind;
+    const needle = q.trim().toLowerCase();
+    const hit = (it, where) => {
+      if (kind === "cursors" && !it.dead) return false;
+      if (kind === "docs" && !/\.(txt|log|ini|bat|sys|url|png)$/i.test(it.name)) return false;
+      if (kind === "mine" && !(it.dead && it.dead.mine)) return false;
+      if (!needle) return kind !== "all";
+      if (it.name.toLowerCase().indexOf(needle) >= 0) return true;
+      /* a dead cursor is findable by who owned it and who killed it, which is
+         the only search anybody will actually run twice */
+      if (it.dead && ((it.dead.name || "").toLowerCase().indexOf(needle) >= 0 ||
+                      (it.dead.killer || "").toLowerCase().indexOf(needle) >= 0)) return true;
+      return false;
+    };
+    const out = [];
+    walk("My Computer", hit, out, new Set(), 0);
+    results = out;
+    sel = null;
+    render();
+    return out.length;
+  }
+
   /* ---------- formatting ---------- */
   function fmtSize(b) {
     if (b >= GB) return (b / GB).toFixed(2) + " GB";
@@ -196,6 +239,7 @@ export function initExplorer(deps) {
 
   /* ---------- navigation ---------- */
   function go(p, noHist) {
+    searching = false; results = null;
     if (childrenOf(p) === null) { showError("Windows Explorer", `Cannot find '${p}'.\nCheck the spelling and try again.`); return; }
     if (!noHist && p !== path) { hist.push(path); fwd = []; }
     path = p; sel = null;
@@ -208,22 +252,26 @@ export function initExplorer(deps) {
 
   /* ---------- rendering ---------- */
   function render() {
-    const items = childrenOf(path) || [];
+    const items = searching && results
+      ? results.map(r => Object.assign({}, r.it, { _where: r.where }))
+      : (childrenOf(path) || []);
     /* items are rebuilt every render, so re-point the selection by name (and
        drop it if what was selected has just been restored or emptied) */
     if (sel) sel = items.find(i => i.name === sel.name) || null;
-    els.addr.value = path;
+    els.addr.value = searching ? "Search Results" : path;
     els.addrico.src = IMG[icoOf(path)] || IMG.folder32;
     if (deps.setTitle) deps.setTitle(leaf(path));
     renderList(items);
-    renderTasks(items);
+    if (searching) renderSearchPane(items); else renderTasks(items);
     els.back.disabled = !hist.length;
     els.fwd.disabled = !fwd.length;
     els.up.disabled = !parentOf(path);
     status(items);
   }
   function status(items) {
-    els.st1.textContent = sel ? "1 object selected" : `${items.length} object${items.length === 1 ? "" : "s"}`;
+    els.st1.textContent = searching
+      ? (results ? `${results.length} object${results.length === 1 ? "" : "s"} found` : "Ready to search")
+      : sel ? "1 object selected" : `${items.length} object${items.length === 1 ? "" : "s"}`;
     const bytes = sel ? sel.size : items.reduce((s, i) => s + (i.size || 0), 0);
     els.st2.textContent = bytes ? fmtSize(bytes) : "";
     els.st3.textContent = path === "My Computer" ? "My Computer" : path === BIN ? "Recycle Bin" : "Local Disk (C:)";
@@ -367,6 +415,100 @@ export function initExplorer(deps) {
         : [{ text: `<b>${esc(leaf(path))}</b><br>${path === "My Computer" ? "System Folder" : "File Folder"}` }];
     host.appendChild(panel("Details", rows, "details"));
   }
+  /* ---------- the Search Companion pane ---------- */
+  const KINDS = [
+    ["cursors", "Dead cursors", "@ic-cursor", "Every corpse on the disk. Search by owner or by who killed it."],
+    ["docs", "Documents", "note32", "Text files, logs and settings."],
+    ["mine", "My losses", "err32", "Only cursors that were yours."],
+    ["all", "All files and folders", "hdd32", "Everything on this computer."],
+  ];
+  function renderSearchPane(items) {
+    const host = els.tasks;
+    host.innerHTML = "";
+    const box = document.createElement("div");
+    box.className = "ex-panel srch";
+    box.innerHTML = `<div class="ex-phead">Search Companion</div>`;
+    const body = document.createElement("div");
+    body.className = "ex-pbody";
+
+    const ask = document.createElement("div");
+    ask.className = "srch-ask";
+    ask.textContent = results ? (results.length ? "Here is what I found." : "I could not find anything.") : "What do you want to search for?";
+    body.appendChild(ask);
+
+    for (const [id, label, ico, tip] of KINDS) {
+      const a = document.createElement("a");
+      a.className = "ex-task srch-kind" + (searchKind === id ? " on" : "");
+      a.title = tip;
+      a.appendChild(deps.icoNode(ico));
+      const sp = document.createElement("span");
+      sp.textContent = label;
+      a.appendChild(sp);
+      a.addEventListener("click", () => { searchKind = id; doSearch(); });
+      body.appendChild(a);
+    }
+
+    const lab = document.createElement("div");
+    lab.className = "srch-lab";
+    lab.textContent = "All or part of the name:";
+    body.appendChild(lab);
+    const inp = document.createElement("input");
+    inp.className = "srch-in";
+    inp.spellcheck = false;
+    inp.value = searchQ;
+    inp.addEventListener("keydown", e => { e.stopPropagation(); if (e.key === "Enter") { searchQ = inp.value; doSearch(); } });
+    body.appendChild(inp);
+
+    const row = document.createElement("div");
+    row.className = "srch-btns";
+    const go1 = document.createElement("button");
+    go1.className = "xbtn"; go1.textContent = "Search";
+    go1.addEventListener("click", () => { searchQ = inp.value; doSearch(); });
+    const stop = document.createElement("button");
+    stop.className = "xbtn"; stop.textContent = "Back";
+    stop.addEventListener("click", () => { searching = false; results = null; render(); });
+    row.appendChild(go1); row.appendChild(stop);
+    body.appendChild(row);
+
+    /* the dog. this is the whole reason anybody remembers this feature. */
+    const pet = document.createElement("div");
+    pet.className = "srch-pet";
+    const cmp = deps.companion.node();
+    cmp.id = "srch-cmp";
+    pet.appendChild(cmp);
+    const links = document.createElement("div");
+    links.className = "srch-links";
+    for (const [txt, fn] of [
+      ["Change preferences", () => deps.companion.chooser(() => render())],
+      ["Choose a different animation", () => deps.companion.chooser(() => render())],
+    ]) {
+      const a = document.createElement("a");
+      a.className = "ex-task";
+      a.textContent = txt;
+      a.addEventListener("click", fn);
+      links.appendChild(a);
+    }
+    pet.appendChild(links);
+    body.appendChild(pet);
+
+    box.appendChild(body);
+    host.appendChild(box);
+    if (results) deps.companion.setMood(cmp, results.length ? "found" : "empty");
+  }
+  function doSearch() {
+    const cmp = document.getElementById("srch-cmp");
+    deps.companion.setMood(cmp, "hunting");
+    sysSnd("nav", .35);
+    /* a beat of hunting before the answer, because instant search from a dog
+       with a magnifying glass reads as broken */
+    setTimeout(() => { runSearch(searchQ, searchKind); }, 620);
+  }
+  function openSearch() {
+    searching = true; results = null;
+    els.tasks.classList.remove("off");
+    render();
+  }
+
   const esc = s => String(s).replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
 
   /* ---------- drive properties: the pie is your body count ---------- */
@@ -474,8 +616,7 @@ export function initExplorer(deps) {
     MENUS.View(r.left, r.bottom + 2);
   });
   els.foldersBtn.addEventListener("click", () => els.tasks.classList.toggle("off"));
-  els.searchBtn.addEventListener("click", () => showError("Search Companion",
-    "The puppy searched the whole disk.\nIt found 20 GB of decisions and one file called luck.dll that will not open."));
+  els.searchBtn.addEventListener("click", () => (searching ? (searching = false, results = null, render()) : openSearch()));
   els.addr.addEventListener("keydown", e => {
     e.stopPropagation();
     if (e.key !== "Enter") return;
@@ -503,7 +644,7 @@ export function initExplorer(deps) {
      shell calls render() once during boot instead */
 
   return {
-    go, render, setView,
+    go, render, setView, openSearch,
     /* cmd.exe reads the same tree this window does — one filesystem, two shells */
     list: pth => childrenOf(pth),
     paths: () => Object.keys(TREE),

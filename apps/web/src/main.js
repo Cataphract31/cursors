@@ -8,6 +8,7 @@ import { initPaint } from "./paint.js";
 import { initExplorer } from "./explorer.js";
 import { initIE } from "./ie.js";
 import { initSysApps } from "./sysapps.js";
+import { initCompanion } from "./companion.js";
 import { initNet } from "./net.js";
 const Webamp = (WebampImport && WebampImport.default) ? WebampImport.default : WebampImport;
 
@@ -661,6 +662,7 @@ function startRename(ic){
   let done=false;
   const commit=()=>{ if(done) return; done=true; ic.label=inp.value.trim()||ic.label; store.save(); renderIcons(); };
   inp.addEventListener("keydown",e=>{
+  if(e.key==="F3"&&desktopActive()){ e.preventDefault(); openWin("win-explorer"); explorer.openSearch(); return; }
     e.stopPropagation();
     if(e.key==="Enter") commit();
     if(e.key==="Escape"){ done=true; renderIcons(); }
@@ -985,6 +987,9 @@ function openTextWindow(name,body){
   $("#usertxtarea").value=body;
   openWin("win-usertxt");
 }
+/* the Search Companion's cast, drawn from scratch — Explorer's search pane and
+   the chooser dialog both pull their characters from here */
+const companion=initCompanion({$,store,sysSnd,openWin,closeWin});
 const explorer=initExplorer({
   IMG,
   els:{
@@ -1037,6 +1042,7 @@ const explorer=initExplorer({
       requestAnimationFrame(()=>info.draw($("#dv-pie")));
     },
   },
+  companion,
 });
 $("#cert-ok").addEventListener("click",()=>closeWin("win-cert"));
 $("#cert-hall").addEventListener("click",()=>{ closeWin("win-cert",{silent:true}); hallOfPain(); });
@@ -1278,7 +1284,7 @@ function smAction(act,itemEl){
     case "mypics": openFolderWin("My Pictures"); break;
     case "connect": showError("Network Connections","Dial-up to Solana Mainnet: no dial tone. Ships with the chain update."); break;
     case "printers": showError("Printers and Faxes","CURSORS-PRINTER is out of ink. It was printing money."); break;
-    case "search": showError("Search Companion","The puppy looked everywhere. Whatever you lost is in the Recycle Bin."); break;
+    case "search": openWin("win-explorer"); explorer.openSearch(); break;
     case "allprograms":{
       const r=itemEl.getBoundingClientRect();
       showMenu(allProgramsMenu(),r.right+4,Math.max(8,r.top-180));
@@ -3791,6 +3797,14 @@ if(location.hash.indexOf("#desktop-cx")===0) setTimeout(()=>{ /* dev: capture a 
       lost:485,mult:5,peak:485,odds:71,kills:3,lived:88,round:roundNo,at:"09:41:12"});
     deathCert(binDead[0]);
   }
+},900);
+if(location.hash.indexOf("#desktop-dog")===0) setTimeout(()=>{ /* dev: the Search Companion */
+  $("#balloon").style.display="none";
+  const p=location.hash.replace("#desktop-dog","");
+  if(p==="-pick"){ companion.chooser(); return; }
+  openWin("win-explorer"); explorer.openSearch();
+  if(p==="-found") setTimeout(()=>{ $(".srch-in").value="dll"; $$(".srch-btns .xbtn")[0].click(); },400);
+  if(p==="-empty") setTimeout(()=>{ $(".srch-in").value="zzzzz"; $$(".srch-btns .xbtn")[0].click(); },400);
 },900);
 if(location.hash.indexOf("#desktop-sys")===0) setTimeout(()=>{ /* dev: the XP applications */
   $("#balloon").style.display="none";
