@@ -328,8 +328,13 @@ export function initMessenger(deps) {
   /* ---------- toasts (they stack; newest nearest the tray) ---------- */
   const toasts = [];
   function reflowToasts() {
-    let b = 40;
-    for (const t of toasts) { t.style.bottom = b + "px"; b += t.offsetHeight + 6; }
+    /* on the mobile shell the stack starts above the game HUD, not the taskbar */
+    const mob = document.body.classList.contains("mobile");
+    let b = mob ? 104 : 40;
+    for (const t of toasts) {
+      t.style.bottom = mob ? `calc(${b}px + env(safe-area-inset-bottom,0px))` : b + "px";
+      b += t.offsetHeight + 6;
+    }
   }
   function toast(c, text, openId) {
     const balloon = document.getElementById("balloon");

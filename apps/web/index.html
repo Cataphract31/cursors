@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <title>CURSORS.EXE</title>
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 </head>
 <body>
 <svg width="0" height="0" style="position:absolute">
@@ -455,6 +455,21 @@ music: Kevin MacLeod
     <i class="xico trayico" data-ico="trayUsb" data-tip="Safely Remove Hardware: never"></i>
     <i class="xico trayico" data-ico="trayRisk" data-tip="Your computer might be at risk"></i>
     <span id="clock" data-tip="@clock">--:--</span>
+  </div>
+</div>
+
+<!-- mobile game HUD: the permanent thumb bar (shown by body.mobile only) -->
+<div id="mhud">
+  <div class="mh-top" id="mh-info">
+    <span class="mh-wallet mono" id="mh-wallet">5.000 SOL</span>
+    <span class="mh-phase mono" id="mh-phase">BOOT</span>
+    <span class="mh-live mono" id="mh-live">0/5 · 0.000</span>
+  </div>
+  <div class="mh-btns">
+    <button class="xbtn" id="mh-deploy">▸ DEPLOY 0.1</button>
+    <button class="xbtn chip" id="mh-attack">⚔</button>
+    <button class="xbtn chip" id="mh-defend">🛡</button>
+    <button class="xbtn" id="mh-recall">◂ RECALL</button>
   </div>
 </div>
 

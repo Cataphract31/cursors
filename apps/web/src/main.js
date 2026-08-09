@@ -12,9 +12,13 @@ const clamp=(v,a,b)=>v<a?a:v>b?b:v;
 const rand=(a,b)=>a+Math.random()*(b-a);
 const pick=a=>a[Math.floor(Math.random()*a.length)];
 const desktop=$("#desktop"), curlayer=$("#curlayer"), fxlayer=$("#fxlayer");
+/* the mobile shell: below 760px apps are full-screen sheets (one at a time),
+   the taskbar is an app switcher, and the game HUD is a fixed thumb bar.
+   Decided once, at boot — the class must be on <body> before W/H are read. */
+const MOBILE=innerWidth<760;
+if(MOBILE) document.body.classList.add("mobile");
 let W=desktop.clientWidth, H=desktop.clientHeight;
 addEventListener("resize",()=>{W=desktop.clientWidth;H=desktop.clientHeight;syncArena();});
-const SMALL=innerWidth<700;
 
 /* ---- money: integer units, 1 unit = 0.001 SOL ---- */
 const STAKE=100, FEE_PLAT=1, FEE_RAKE=2, ENTRY=97, MAXCUR=5;
@@ -142,7 +146,8 @@ function tabTitle(id){ const a=openApps.get(id); if(a&&a.title) return a.title; 
 function tabIconHTML(id){
   const el=$("#"+id+" .title-bar .tb-ico");
   if(!el) return "";
-  const img=el.querySelector("img");
+  /* .tb-ico is either a wrapper (static windows) or the <img> itself (conversations) */
+  const img=el.tagName==="IMG"?el:el.querySelector("img");
   if(img) return `<img src="${img.src}" alt="">`;
   const u=el.querySelector("use");
   return u?`<svg><use href="${u.getAttribute("href")}"/></svg>`:"";
@@ -178,10 +183,12 @@ function tbInactive(el,inactive){
   if(tb) tb.classList.toggle("inactive",inactive);
 }
 function saveWinRect(el){
+  if(MOBILE) return; /* sheet/popup positions must never leak into desktop rects */
   store.data.wins[el.id]={l:el.style.left,t:el.style.top,w:el.style.width||"",h:el.style.height||"",max:el.classList.contains("maxed")?1:0};
   store.save();
 }
 function applyWinRect(el){
+  if(MOBILE) return; /* CSS owns sheets; fitWin centers popups */
   const s=store.data.wins[el.id]; if(!s) return;
   if(s.max){ el._prevRect={l:s.l,t:s.t,w:s.w,h:s.h}; el.classList.add("maxed"); el.style.left="0px"; el.style.top="0px"; el.style.width=W+"px"; el.style.height=H+"px"; return; }
   if(s.l) el.style.left=Math.min(parseFloat(s.l)||0,W-60)+"px";
@@ -208,11 +215,17 @@ function openWin(id,opts){
 /* no window may hang off the screen — the small-screen safety net */
 function fitWin(el){
   if(!el||el.classList.contains("maxed")) return;
+  if(MOBILE&&!el.classList.contains("fixed")) return; /* sheets: CSS owns the rect */
   const r=el.getBoundingClientRect();
   if(!r.width&&!r.height) return;
   if(r.height>H-6) el.style.height=(H-10)+"px";
   const h=Math.min(r.height,H-10), w=Math.min(r.width,W-4);
   if(r.width>W-4) el.style.width=w+"px";
+  if(MOBILE){ /* dialogs on the phone: centered, upper third, clear of the HUD */
+    el.style.left=Math.max(2,Math.round((W-w)/2))+"px";
+    el.style.top=Math.max(8,Math.round((H-h)/3))+"px";
+    return;
+  }
   if(r.top+h>H-2||r.top<0) el.style.top=clamp(H-h-2,0,Math.max(0,H-h-2))+"px";
   if(r.left+w>W-2) el.style.left=Math.max(2,W-w-2)+"px";
   if(r.left<0) el.style.left="2px";
@@ -259,6 +272,7 @@ function minWin(id){
   tbInactive(el,true);
 }
 function maxWin(id){
+  if(MOBILE) return; /* sheets are already the whole screen */
   const el=document.getElementById(id);
   if(el.classList.contains("fixed")) return;
   if(el.classList.contains("maxed")){
@@ -274,7 +288,22 @@ function maxWin(id){
   }
   saveWinRect(el);
 }
+/* a "sheet" is a real app window; .fixed dialogs float above the sheet */
+function isSheet(id){
+  const el=document.getElementById(id);
+  return !!el&&!el.classList.contains("fixed")&&!NOTAB.has(id);
+}
 function focusWin(id){
+  if(MOBILE&&isSheet(id)){
+    /* one sheet at a time: focusing a sheet sends every other sheet home.
+       Webamp just hides (its audio keeps playing behind the sheet). */
+    for(const [k,a] of openApps){
+      if(k===id||a.min) continue;
+      if(a.kind==="webamp"){ a.min=true; hideWamp(); continue; }
+      if(!isSheet(k)) continue;
+      a.min=true; a.el.style.display="none"; a.el.classList.remove("focused");
+    }
+  }
   zTop++; focusedId=id;
   for(const [k,a] of openApps){
     if(a.kind==="webamp") continue;
@@ -305,7 +334,7 @@ function wireWindow(w){
   const btnClose=w.querySelector('.title-bar-controls button[aria-label="Close"]');
   if(btnMin) btnMin.addEventListener("click",e=>{e.stopPropagation();minWin(w.id);});
   if(btnClose) btnClose.addEventListener("click",e=>{e.stopPropagation();closeWin(w.id);});
-  if(!w.classList.contains("fixed")&&btnClose){
+  if(!MOBILE&&!w.classList.contains("fixed")&&btnClose){
     const btnMax=document.createElement("button");
     btnMax.setAttribute("aria-label","Maximize");
     btnClose.before(btnMax);
@@ -342,6 +371,7 @@ function wireWindow(w){
   tb.addEventListener("pointerdown",e=>{
     if(e.target.closest(".title-bar-controls")) return;
     if(w.classList.contains("maxed")) return;
+    if(MOBILE&&!w.classList.contains("fixed")) return; /* sheets don't drag */
     const r=w.getBoundingClientRect(), dx=e.clientX-r.left, dy=e.clientY-r.top;
     const move=ev=>{
       w.style.left=clamp(ev.clientX-dx,-r.width+80,W-40)+"px";
@@ -415,7 +445,12 @@ function hookIcon(el,ic){
     const up=()=>{
       removeEventListener("pointermove",mv); removeEventListener("pointerup",up);
       el.style.opacity=""; el.style.zIndex="";
-      if(!moved) return;
+      if(!moved){
+        /* on the phone the desktop is a launcher: one tap opens (unless this
+           release is the tail end of a long-press that already opened a menu) */
+        if(MOBILE&&e.pointerType==="touch"&&performance.now()-lpFiredAt>600) openIcon(ic);
+        return;
+      }
       const maxC=Math.max(0,Math.floor((W-GX-72)/CELLW));
       const maxR=Math.max(0,Math.floor((H-GY-84)/CELLH));
       let c=clamp(Math.round((parseFloat(el.style.left)-GX)/CELLW),0,maxC);
@@ -555,6 +590,7 @@ function emptyBin(){
 
 /* ================= context menus ================= */
 const ctx=$("#ctx");
+let menuShownAt=0; /* a long-press opens the menu under the finger — the release must not pick an item */
 function buildMenu(host,items){
   for(const it of items){
     if(it.sep){ const s=document.createElement("div"); s.className="csep"; host.appendChild(s); continue; }
@@ -566,11 +602,15 @@ function buildMenu(host,items){
       const sub=document.createElement("div"); sub.className="csub";
       buildMenu(sub,it.sub); d.appendChild(sub);
     }
-    if(!it.disabled&&it.action) d.addEventListener("pointerup",e=>{ e.stopPropagation(); hideMenu(); sClick(); it.action(); });
+    if(!it.disabled&&it.action) d.addEventListener("pointerup",e=>{
+      if(e.pointerType==="touch"&&performance.now()-menuShownAt<400) return;
+      e.stopPropagation(); hideMenu(); sClick(); it.action();
+    });
     host.appendChild(d);
   }
 }
 function showMenu(items,x,y){
+  menuShownAt=performance.now();
   ctx.innerHTML=""; buildMenu(ctx,items);
   ctx.style.display="block"; ctx.style.left="0px"; ctx.style.top="0px";
   const r=ctx.getBoundingClientRect();
@@ -729,6 +769,49 @@ document.addEventListener("contextmenu",e=>{
   else if(win){ /* app body: ours, but nothing to offer */ }
   else if(e.target.closest("#desktop")){ showMenu(desktopMenu(),e.clientX,e.clientY); }
 });
+
+/* ================= long-press = right-click ================= */
+/* Capture phase, because icons stopPropagation their pointerdowns. Android
+   fires a native contextmenu on long-press (sawNative) — then we stand down. */
+let lpFiredAt=0;
+addEventListener("pointerdown",e=>{
+  if(e.pointerType!=="touch") return;
+  const sx=e.clientX, sy=e.clientY, target=e.target;
+  let sawNative=false;
+  const onNative=()=>{ sawNative=true; };
+  addEventListener("contextmenu",onNative,true);
+  const t=setTimeout(()=>{
+    cleanup();
+    if(sawNative) return;
+    lpFiredAt=performance.now();
+    if(navigator.vibrate) navigator.vibrate(12);
+    const cell=target.closest&&target.closest(".ms-c");
+    if(cell){ /* Minesweeper: long-press plants a flag (its cells speak mousedown) */
+      cell.dispatchEvent(new MouseEvent("mousedown",{bubbles:true,button:2,buttons:2,clientX:sx,clientY:sy}));
+      cell.dispatchEvent(new MouseEvent("mouseup",{bubbles:true,button:2,clientX:sx,clientY:sy}));
+    }else{
+      target.dispatchEvent(new MouseEvent("contextmenu",{bubbles:true,cancelable:true,clientX:sx,clientY:sy}));
+    }
+  },550);
+  const cleanup=()=>{
+    removeEventListener("pointermove",onMove,true);
+    removeEventListener("pointerup",onEnd,true);
+    removeEventListener("pointercancel",onEnd,true);
+    removeEventListener("contextmenu",onNative,true);
+  };
+  const onMove=ev=>{
+    const dx=ev.clientX-sx, dy=ev.clientY-sy;
+    if(dx*dx+dy*dy>81){ clearTimeout(t); cleanup(); } /* moved: it's a drag/scroll */
+  };
+  const onEnd=()=>{ clearTimeout(t); cleanup(); };
+  addEventListener("pointermove",onMove,true);
+  addEventListener("pointerup",onEnd,true);
+  addEventListener("pointercancel",onEnd,true);
+},true);
+/* the release of a long-press must not ALSO left-click (compat mouse events) */
+addEventListener("touchend",e=>{
+  if(performance.now()-lpFiredAt<700) e.preventDefault();
+},{capture:true,passive:false});
 
 /* ================= quick launch / cascade ================= */
 let deskStash=null;
@@ -1380,7 +1463,11 @@ function renderPhase(){
   const pl=$("#phaseline");
   pl.textContent=txt;
   pl.classList.toggle("battle",phase==="battle");
-  $("#phasechip").textContent=`R${roundNo} · ${txt.replace(`ROUND ${roundNo} · `,"")}`;
+  const chip=`R${roundNo} · ${txt.replace(`ROUND ${roundNo} · `,"")}`;
+  $("#phasechip").textContent=chip;
+  const mp=$("#mh-phase");
+  mp.textContent=chip;
+  mp.classList.toggle("battle",phase==="battle");
 }
 
 /* ================= deploy / recall / bank ================= */
@@ -1426,6 +1513,12 @@ $("#btn-deploy").addEventListener("click",()=>deploy(false));
 $("#btn-recall").addEventListener("click",recallAll);
 $("#st-attack").addEventListener("click",()=>{ stance="attack"; sClick(); updatePanel(); });
 $("#st-defend").addEventListener("click",()=>{ stance="defend"; sClick(); updatePanel(); });
+/* the mobile thumb bar mirrors the dashboard verbs; the info row opens the full app */
+$("#mh-deploy").addEventListener("click",()=>deploy(false));
+$("#mh-recall").addEventListener("click",recallAll);
+$("#mh-attack").addEventListener("click",()=>{ stance="attack"; sClick(); updatePanel(); });
+$("#mh-defend").addEventListener("click",()=>{ stance="defend"; sClick(); updatePanel(); });
+$("#mh-info").addEventListener("click",()=>openWin("win-cursors"));
 function bank(c,atShutdown){
   const m=(c.bounty/ENTRY).toFixed(1);
   if(!R.bigBank||c.bounty>R.bigBank.amt) R.bigBank={owner:c.owner,amt:c.bounty};
@@ -1657,6 +1750,16 @@ function updatePanel(){
   $("#rakeline").textContent=`rakeback: ${myTickets.toLocaleString()} tk · ${share.toFixed(2)}% · +${(rakeAccrued/1000).toFixed(4)} SOL`;
   const pl=wallet+liveVal-5000;
   $("#statline").textContent=`kills ${stats.kills} · deaths ${stats.deaths} · best ×${stats.best.toFixed(1)} · P/L ${fmtSign(pl)}`;
+  /* the thumb bar shows the same state in fewer letters */
+  const hd=$("#mh-deploy");
+  hd.disabled=dep.disabled;
+  hd.textContent=wallet<STAKE?"NO FUNDS":mine.length>=MAXCUR?"MAX 5 LIVE":canDeploy()?"▸ DEPLOY 0.1":"NEXT ROUND";
+  const hrc=$("#mh-recall");
+  hrc.disabled=rec.disabled;
+  hrc.textContent=phase==="join"?"◂ UNDO":"◂ RECALL";
+  $("#mh-attack").classList.toggle("on",stance==="attack");
+  $("#mh-defend").classList.toggle("on",stance==="defend");
+  $("#mh-live").textContent=`${mine.length}/5 · ${fmtS(liveVal)}`;
 }
 function updateSys(){
   const total=curs.reduce((s,c)=>s+c.bounty,0);
@@ -1715,16 +1818,12 @@ function frame(t){
     walletShown+=(wallet-walletShown)*Math.min(1,dt*7);
     if(Math.abs(walletShown-wallet)<.6) walletShown=wallet;
     $("#walletamt").textContent=fmtS(Math.round(walletShown))+" SOL";
+    $("#mh-wallet").textContent=fmtS(Math.round(walletShown))+" SOL";
   }
   requestAnimationFrame(frame);
 }
 
 /* ================= boot ================= */
-if(SMALL){
-  $("#win-cursors").style.left="4px"; $("#win-cursors").style.top="4px"; $("#win-cursors").style.width="min(316px,96vw)";
-  $("#win-chat").style.left="4px"; $("#win-chat").style.top="calc(100% - 330px)"; $("#win-chat").style.height="300px";
-  $("#win-log").style.left="4px"; $("#win-log").style.top="calc(100% - 244px)"; $("#win-log").style.width="min(316px,96vw)";
-}
 syncArena();
 renderIcons();
 setWallpaper(store.data.wallpaper);
@@ -1733,12 +1832,18 @@ $("#sv-sel").value=store.data.saver.t;
 $("#sv-wait").value=store.data.saver.wait;
 R=newRoundRecord();
 log("CURSORS.EXE started");
-openWin("win-cursors",{silent:true});
-if(!SMALL) openWin("win-chat",{silent:true});
-openWin("win-log",{silent:true});
-if(SMALL) minWin("win-log");
-if(!SMALL){ msn.place("lobby",258,Math.max(40,H-336)); msn.openConv("lobby"); }
-focusWin("win-cursors");
+if(MOBILE){
+  /* the phone boots to a clean desktop: icons, the arena, and the thumb bar.
+     Every app is one tap away; none of them start covering the field. */
+  $("#mh-wallet").textContent=fmtS(wallet)+" SOL";
+}else{
+  openWin("win-cursors",{silent:true});
+  openWin("win-chat",{silent:true});
+  openWin("win-log",{silent:true});
+  msn.place("lobby",258,Math.max(40,H-336));
+  msn.openConv("lobby");
+  focusWin("win-cursors");
+}
 chatSys("welcome to the desktop. say gm.");
 renderBin(); updatePanel(); updateSys();
 startJoin();

@@ -116,12 +116,14 @@ BSOD on losing your last cursor, shutdown rush, results, rakeback tracking, auto
 ## 6. Working practices that matter
 
 - **Screenshot loop.** Claude can see its own UI work:
-  `& "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" --headless=new
-  --disable-gpu --screenshot="out.png" --window-size=1280,800 --hide-scrollbars
-  --virtual-time-budget=9000 --user-data-dir="$env:TEMP\edge-N" <url>` then Read the PNG.
-  **Use a fresh `--user-data-dir` per shot.** `--force-device-scale-factor=3` to inspect
-  pixels. `--dump-dom` returns empty on this Edge — paint diagnostics into the page instead.
-  **This has caught every visual bug so far. Do not skip it.**
+  `node scripts/shot.mjs <url> out.png [w] [h] [settleMs]` (run from `apps/web`), then Read
+  the PNG. It drives Edge over the DevTools protocol with real viewport emulation.
+  **Do not use plain `msedge --headless --screenshot` for phone sizes**: on this machine
+  headless Edge clamps the window to ~500px wide and steals ~95px of height, so
+  `--window-size=390,844` silently renders a 504×749 layout (verified 2026-08-09). The old
+  incantation is fine for desktop-sized shots but shot.mjs works for everything.
+  `--dump-dom` returns empty on this Edge — paint diagnostics into the page instead.
+  **The loop has caught every visual bug so far. Do not skip it.**
 - **Dev hashes** (skip boot/login and drive states headlessly): `#desktop`, `#desktop-start`,
   `#desktop-mine-play`, `#desktop-msn`, `#desktop-msn-emo`, `#desktop-msn-toast`,
   `#desktop-amptest`, `#desktop-logfill`.
@@ -140,14 +142,15 @@ BSOD on losing your last cursor, shutdown rush, results, rakeback tracking, auto
 **Owner directive: visible + fun first.** cmd.exe, gpedit.msc, Device Manager, regedit are
 explicitly **parked** ("stuff only 2% of users would search for"). Run… jokes about them.
 
-1. **Phase M step 2 — the mobile shell** (NEXT, owner: "mobile will probably be the majority
-   playerbase"). Keep XP chrome — owner confirmed: "Obviously always keep XP." Below ~760px:
-   apps become **full-screen sheets** (one at a time, no dragging/overlap — so adding apps
-   stops costing screen space); taskbar becomes an **app switcher**; Start becomes a
-   full-screen launcher; the **game HUD leaves its window** and becomes a permanent bottom
-   bar in the thumb zone (wallet, timer, DEPLOY/ATTACK/DEFEND/RECALL) that app sheets never
-   cover; **long-press = right-click**. Arena already scales correctly — that part is done.
-2. **Paint** — via a real library/embed if possible; Save As Wallpaper (meme machine).
+1. ~~Phase M step 2 — the mobile shell~~ **SHIPPED 2026-08-09.** Below 760px (decided once
+   at boot, `body.mobile`): apps are full-screen sheets (one at a time, `.fixed` dialogs
+   stay centered popups), taskbar is an icon app-switcher, Start is a full-screen launcher,
+   the game HUD is a permanent thumb bar (`#mhud`) above the taskbar that sheets never
+   cover, long-press = right-click (with Minesweeper flag special-case), single tap opens
+   desktop icons, welcome screen stacks vertically. Not yet done: landscape phones
+   (>760px wide) still get the desktop shell; real-device pass (iOS Safari keyboard,
+   safe-area) still owed before launch.
+2. **Paint** (NEXT) — via a real library/embed if possible; Save As Wallpaper (meme machine).
 3. **My Computer / Explorer + fake C:\ drive** — address bar, task pane, Properties dialogs,
    System Properties joke, disk-usage pie fed by real game stats.
 4. **Recycle Bin with a purpose** — dead cursors as `.cur` files with death certificates
@@ -205,7 +208,8 @@ escrow (replacement, not hardening); no graceful shutdown.
 
 ## 10. Known open items
 
-- Mobile shell (item 1 above) — the arena scales, the chrome does not yet
+- Mobile: landscape phones get the desktop shell (mode is decided at boot from width <760);
+  needs either a smarter detector (pointer:coarse) or a landscape HUD layout
 - Artifact viewer may hand the page a desktop-width viewport on phones; real hosting won't
 - `main.js` should keep shedding modules as apps grow (minesweeper/messenger set the pattern)
 - Bot/liquidity policy for dead hours needs a disclosed design before real money

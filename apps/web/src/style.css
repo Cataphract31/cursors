@@ -11,7 +11,11 @@ input{user-select:text}
 .svgbox{display:block;width:100%;height:100%}
 
 /* ---------- desktop ---------- */
-#desktop{position:absolute;inset:0 0 30px 0;overflow:hidden}
+/* --tb taskbar · --hud the mobile thumb bar (0 on desktop) · --sab phone home-indicator inset */
+:root{--tb:30px;--hud:0px;--sab:0px}
+body.mobile{--hud:64px;--sab:env(safe-area-inset-bottom,0px)}
+@supports (height:100dvh){body.mobile{height:100dvh}}
+#desktop{position:absolute;inset:0 0 calc(var(--tb) + var(--hud) + var(--sab)) 0;overflow:hidden}
 #wallpaper{position:absolute;inset:0;background:#3A6EA5;background-position:center;background-size:cover;background-repeat:no-repeat}
 
 /* ---------- desktop icons ---------- */
@@ -21,7 +25,9 @@ input{user-select:text}
 .icon .lbl{margin-top:3px;color:#fff;font-size:11px;line-height:1.2;text-shadow:1px 1px 2px #000,0 0 3px rgba(0,0,0,.8);padding:0 2px}
 .icon.sel .lbl{background:#316AC5;text-shadow:none}
 .icon.sel img,.icon.sel svg,.icon.sel>span{opacity:.8}
-@media (max-width:700px){.icon{width:62px}.icon img,.icon svg,.icon>span{width:26px;height:26px}.icon .lbl{font-size:10px}}
+body.mobile .icon{width:62px}
+body.mobile .icon img,body.mobile .icon svg,body.mobile .icon>span{width:26px;height:26px}
+body.mobile .icon .lbl{font-size:10px}
 
 #marquee{position:absolute;border:1px solid #316AC5;background:rgba(49,106,197,.28);display:none;z-index:60;pointer-events:none}
 
@@ -64,7 +70,7 @@ input{user-select:text}
 .aprow .lb{width:70px;color:#555}
 
 /* ---------- taskbar (winXP values) ---------- */
-#taskbar{position:fixed;left:0;right:0;bottom:0;height:30px;display:flex;align-items:stretch;z-index:9000;background:linear-gradient(to bottom,#1f2f86 0,#3165c4 3%,#3682e5 6%,#4490e6 10%,#3883e5 12%,#2b71e0 15%,#2663da 18%,#235bd6 20%,#2258d5 23%,#2157d6 38%,#245ddb 54%,#2562df 86%,#245fdc 89%,#2158d4 92%,#1d4ec0 95%,#1941a5 98%)}
+#taskbar{position:fixed;left:0;right:0;bottom:0;height:calc(var(--tb) + var(--sab));padding-bottom:var(--sab);display:flex;align-items:stretch;z-index:9000;background:linear-gradient(to bottom,#1f2f86 0,#3165c4 3%,#3682e5 6%,#4490e6 10%,#3883e5 12%,#2b71e0 15%,#2663da 18%,#235bd6 20%,#2258d5 23%,#2157d6 38%,#245ddb 54%,#2562df 86%,#245fdc 89%,#2158d4 92%,#1d4ec0 95%,#1941a5 98%)}
 #startbtn{height:30px;width:auto;cursor:pointer;flex:none}
 #startbtn:hover{filter:brightness(105%)}
 #startbtn:active{filter:brightness(85%)}
@@ -85,10 +91,14 @@ input{user-select:text}
 #sndico.muted{filter:grayscale(1) opacity(.55)}
 #phasechip{font-family:"Lucida Console",Consolas,monospace;font-size:10px;white-space:nowrap}
 #clock{margin:0 5px;font-variant-numeric:tabular-nums}
-@media (max-width:700px){#clock{display:none}.task-tab span{display:none}.task-tab{min-width:34px;flex:none;width:38px}}
+body.mobile #clock{display:none}
+body.mobile #phasechip{display:none} /* the HUD carries the round clock */
+body.mobile .task-tab{flex:none;width:42px;min-width:0;justify-content:center;padding:0}
+body.mobile .task-tab span{display:none}
+body.mobile #tray{padding:0 8px;margin-left:0;gap:8px}
 
 /* ---------- start menu (winXP values) ---------- */
-#startmenu{position:fixed;left:0;bottom:30px;display:none;flex-direction:column;z-index:9500;font-size:11px;line-height:14px;background-color:#4282d6;border-top-left-radius:5px;border-top-right-radius:5px;box-shadow:2px -2px 6px rgba(0,0,0,.4)}
+#startmenu{position:fixed;left:0;bottom:calc(var(--tb) + var(--sab));display:none;flex-direction:column;z-index:9500;font-size:11px;line-height:14px;background-color:#4282d6;border-top-left-radius:5px;border-top-right-radius:5px;box-shadow:2px -2px 6px rgba(0,0,0,.4)}
 #startmenu.open{display:flex}
 .sm-head{position:relative;display:flex;align-items:center;color:#fff;height:54px;padding:6px 5px 5px;border-radius:5px 5px 0 0;overflow:hidden;background:linear-gradient(to bottom,#1868ce 0%,#0e60cb 12%,#0e60cb 20%,#1164cf 32%,#1667cf 33%,#1b6cd3 47%,#1e70d9 54%,#2476dc 60%,#297ae0 65%,#3482e3 77%,#3786e5 79%,#428ee9 90%,#4791eb 100%)}
 .sm-head:before{content:"";position:absolute;top:1px;left:0;width:100%;height:3px;background:linear-gradient(to right,transparent 0,rgba(255,255,255,.3) 1%,rgba(255,255,255,.5) 2%,rgba(255,255,255,.5) 95%,rgba(255,255,255,.3) 98%,rgba(255,255,255,.2) 99%,transparent 100%);box-shadow:inset 0 -1px 1px #0e60cb}
@@ -119,7 +129,6 @@ input{user-select:text}
 .sm-fitem:hover{background-color:rgba(60,80,210,.5)}
 .sm-fitem:hover:active>*{transform:translate(1px,1px)}
 .sm-fitem .xico{width:22px;height:22px;margin-right:2px;border-radius:3px}
-@media (max-width:420px){.sm-left,.sm-right{width:47vw}}
 
 /* ---------- minesweeper (classic metrics: 16px cells, 13x23 LEDs) ---------- */
 #win-mine{min-width:0}
@@ -192,7 +201,7 @@ input{user-select:text}
 .conv-dp{width:80px;height:80px;object-fit:contain;image-rendering:pixelated}
 .window.nudged{animation:nudge .5s}
 @keyframes nudge{0%,100%{transform:translate(0,0)}20%{transform:translate(-6px,4px)}40%{transform:translate(5px,-5px)}60%{transform:translate(-5px,-4px)}80%{transform:translate(6px,5px)}}
-@media (max-width:700px){.conv-right{display:none}}
+body.mobile .conv-right{display:none}
 
 /* emoticon picker */
 .emo-picker{position:fixed;z-index:99995;background:#fff;border:1px solid #7F9DB9;box-shadow:3px 3px 7px rgba(0,0,0,.3);padding:3px;width:230px;display:flex;flex-wrap:wrap;gap:1px}
@@ -231,7 +240,7 @@ input{user-select:text}
 .geo .small{color:#aaa;font-size:9px}
 
 /* ---------- balloon (XP notification) ---------- */
-#balloon{position:fixed;right:14px;bottom:48px;width:236px;background:#FFFFE1;border:1px solid #000;border-radius:7px;padding:9px 22px 9px 11px;display:none;z-index:9600;box-shadow:2px 3px 8px rgba(0,0,0,.35);line-height:1.45}
+#balloon{position:fixed;right:14px;bottom:calc(var(--tb) + var(--hud) + var(--sab) + 18px);width:236px;background:#FFFFE1;border:1px solid #000;border-radius:7px;padding:9px 22px 9px 11px;display:none;z-index:9600;box-shadow:2px 3px 8px rgba(0,0,0,.35);line-height:1.45}
 #balloon:after{content:"";position:absolute;right:28px;bottom:-11px;border:11px solid transparent;border-top-color:#FFFFE1;border-bottom:0}
 #balloon b{display:block;margin-bottom:3px}
 #balloon-x{position:absolute;right:6px;top:5px;font-size:9px;border:1px solid #8A867A;padding:0 2px;cursor:pointer;background:#ECE9D8}
@@ -366,5 +375,52 @@ input{user-select:text}
 #saver{position:fixed;inset:0;z-index:100008;display:none;background:#000;cursor:none}
 .renamer{width:76px;font:11px Tahoma;border:1px solid #316AC5;text-align:center}
 .usertxtarea{flex:1;border:0;resize:none;font:12px "Lucida Console",Consolas,monospace;padding:7px;outline:none;background:#fff;color:#111;min-height:120px;box-shadow:none}
+
+/* ---------- the mobile shell (body.mobile, set at boot below 760px) ---------- */
+
+/* the game HUD leaves its window: a permanent thumb bar above the taskbar.
+   App sheets never cover it — the desktop area stops where it starts. */
+#mhud{position:fixed;left:0;right:0;bottom:calc(var(--tb) + var(--sab));height:var(--hud);display:none;flex-direction:column;z-index:9100;padding:3px 6px 5px;background:linear-gradient(180deg,#2E6FE0 0,#245DDB 40%,#1E4FC4 90%,#1941A5 100%);border-top:1px solid #4E7DE8}
+body.mobile #mhud{display:flex}
+.mh-top{display:flex;align-items:center;justify-content:space-between;gap:8px;color:#fff;padding:0 2px 3px}
+.mh-wallet{font-weight:bold;font-size:12px}
+.mh-phase{background:#FFF7DE;color:#000;border:1px solid #E0C05A;border-radius:2px;padding:0 5px;font-size:10px;line-height:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mh-phase.battle{background:#FFE9E0;border-color:#E08A5A}
+.mh-live{color:#CFE0FF;font-size:10px;white-space:nowrap}
+.mh-btns{display:flex;gap:5px;flex:1;min-height:0}
+.mh-btns .xbtn{min-height:0;min-width:0;height:100%;font-weight:bold;font-size:12px;padding:0 2px}
+#mh-deploy{flex:2.1}
+#mh-attack,#mh-defend{flex:.8;font-size:14px}
+#mh-recall{flex:1.5}
+
+/* apps become full-screen sheets: one at a time, no dragging, no overlap.
+   Dialogs (.fixed) stay small popups, centered by fitWin(). The > keeps
+   Webamp's own .window elements (inside #webamp-wrap) out of this. */
+body.mobile #desktop>.window:not(.fixed){left:0 !important;top:0 !important;width:100% !important;height:100% !important;max-width:none;min-width:0}
+body.mobile #desktop>.window:not(.fixed) .title-bar{padding:5px 5px 5px 3px}
+body.mobile #desktop>.window:not(.fixed) .paper{max-height:none}
+body.mobile .title-bar-controls button{min-width:26px;min-height:26px}
+body.mobile .ms-body{overflow:auto}
+
+/* the Start menu becomes a full-screen launcher (HUD stays visible) */
+body.mobile #startmenu{left:0;right:0;top:0;bottom:calc(var(--tb) + var(--hud) + var(--sab));border-radius:0;font-size:12px;line-height:16px}
+body.mobile .sm-menu{flex:1;min-height:0;overflow-y:auto}
+body.mobile .sm-left{width:50%;padding:8px 6px 0}
+body.mobile .sm-right{width:50%}
+body.mobile .sm-left .sm-item{height:44px}
+body.mobile .sm-left .sm-item.two{height:46px}
+body.mobile .sm-left .sm-item.allprog{height:34px}
+body.mobile .sm-right .sm-item{height:38px}
+body.mobile .sm-foot{flex:none}
+
+/* welcome screen stacks: brand above the user tiles */
+body.mobile .lg-mid{flex-direction:column;justify-content:center;gap:30px}
+body.mobile .lg-left{flex:none;align-items:center;padding:0;gap:12px}
+body.mobile .lg-brandtext{font-size:34px}
+body.mobile .lg-flag{width:56px}
+body.mobile .lg-hint{font-size:13px}
+body.mobile .lg-div{display:none}
+body.mobile .lg-right{flex:none;width:100%;padding:0 34px}
+body.mobile .lg-note{display:none}
 
 @media (prefers-reduced-motion:reduce){*{animation-duration:.01s !important;transition:none !important}}
