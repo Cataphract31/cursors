@@ -318,9 +318,31 @@ explicitly **parked** ("stuff only 2% of users would search for"). Run… jokes 
    2.6× more battlefield) instead of a thin strip hiding behind the icon column. Tags,
    floats, duel odds and sprites counter-rotate to read upright (`#arena.rot` rules +
    `AROT` in `syncArena`/`updateTag`; shake/rise keyframes have rotated variants because
-   keyframes replace the whole transform). Not yet done: landscape phones (>760px wide)
-   still get the desktop shell; real-device pass (iOS Safari keyboard, safe-area) still
-   owed before launch.
+   keyframes replace the whole transform).
+   **Landscape phones + the shell detector, 2026-08-09 (late).** The shell used to be
+   picked from `innerWidth<760`, so a phone lying down (844px) fell through to the desktop
+   shell — unusable with a thumb. It now asks about the DEVICE: `pointer:coarse` plus the
+   *short* side of `screen` under 600px (widest phone ≈440, narrowest tablet ≈744, so a
+   tablet keeps the real desktop it has room for). A narrow desktop *window* still gets the
+   phone shell at <760, because that is how the phone shell gets tested. The short side does
+   not change when you rotate, so the shell can never flip underneath a running game.
+   **`body.mobile.land` is the landscape shell**: lying down, height is the scarce axis, so
+   the thumb bar stands up as a 112px right rail (`--hud:0px; --rail:112px`) with the info
+   stacked at the top and the four verbs on a 2-column grid pinned to the foot of the rail.
+   Everything downstream reads `--rail`, so the desktop area, sheets, the Start launcher and
+   the balloon all stop at it. Icon cells shrink on the phone (68×72 vs 84×86) and re-flow on
+   rotate — only when the row count actually changes, because iOS fires `resize` on every
+   URL-bar nudge. **Behind a full-screen sheet the arena drops to 16% opacity** (`body.mobile.sheeted`,
+   synced in `renderTaskbar`): cursors crawl over every window by design, but over a Stats
+   table on a phone that is just noise.
+   **Safe area + keyboard, same pass.** `--sal/--sar` (notch) join `--sab`; the taskbar pads
+   to them and `#icons` shifts, while the arena stays centred (it letterboxes anyway).
+   `mobKeyboard()` watches `visualViewport` — iOS never announces the keyboard, it just
+   shrinks the visual viewport under a layout that still thinks it owns the screen — and
+   publishes `--kb`; `body.mobile.kb` hides the taskbar and HUD and ends the desktop at the
+   keyboard, so every sheet's own bottom row lands above it. Focusable text fields go to 16px
+   on the phone so iOS stops zooming the page on tap. **The keyboard path is reasoned, not
+   yet run on hardware** — a real-device pass is still owed.
 2. ~~Paint~~ **SHIPPED 2026-08-09.** `paint.js`, import-free sibling module. All 16 real
    tools in the real 2-column box, the real 28-colour palette, tool-options box, 3-deep
    undo (authentic), Image menu (flip/rotate/invert/attributes), drag-drop + File > Open to
@@ -394,13 +416,18 @@ epochs, global guestbook + gallery, cursorTV watch-together.
   filling surfaces (called the IE fake-web text "AI slop"). Keep authored gag text
   minimal; prefer real systems and real player content over pastiche.
 
-**What is left, in order:**
-1. **Prove the invariants offline** — the server asserts pot conservation every crash, but
+**What is left, in order** (owner, 2026-08-09: *"we dont care about simulations, or audits
+or economics until the design is fully done"* — finish the product first, prove the money
+second):
+1. **Design/UX still owed** — a real-device pass on a phone (the keyboard path above is
+   unverified on hardware), Paint's Fonts toolbar and Stretch/Skew, IE Favorites editing and
+   an IE-specific right-click menu, a real Search Companion, the full Recycle Bin desktop
+   icon (no MIT source found yet).
+2. **Prove the invariants offline** — the server asserts pot conservation every crash, but
    nothing yet proves EV per deploy = stake × 0.97 for *every* strategy (hunter, camper,
    instant banker, chain rider, autoplay). This is how THIN ICE caught its wipe leak, and
-   it is the last thing between the beta and real money.
-2. **Mobile landscape** (>760px wide phones still get the desktop shell) and a real-device
-   pass (iOS Safari keyboard, safe-area).
+   it is the last thing between the beta and real money. **Parked by the owner until the
+   design is done — do not start it unprompted.**
 3. **Bot/liquidity policy disclosed** before real money — the buddy list labels them now,
    but the written policy is still owed.
 4. Then: Phantom wallet at the login tile, real custody, real DMs.
@@ -452,8 +479,8 @@ escrow (replacement, not hardening); no graceful shutdown.
 
 ## 10. Known open items
 
-- Mobile: landscape phones get the desktop shell (mode is decided at boot from width <760);
-  needs either a smarter detector (pointer:coarse) or a landscape HUD layout
+- Mobile: the phone keyboard path (`--kb`, `body.mobile.kb`) is written from the spec and
+  has never run on a real iPhone — first real-device pass should start there
 - Artifact viewer may hand the page a desktop-width viewport on phones; real hosting won't
 - `main.js` should keep shedding modules as apps grow (minesweeper/messenger set the pattern)
 - Bot/liquidity policy for dead hours needs a disclosed design before real money

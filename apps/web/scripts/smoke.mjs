@@ -58,6 +58,11 @@ g.requestAnimationFrame = () => 0;
 g.cancelAnimationFrame = () => {};
 g.innerWidth = 1280;
 g.innerHeight = 800;
+// the shell picks phone-vs-desktop from the DEVICE (screen's short side and
+// pointer:coarse), so the stub has to be a plausible desktop, not just a width
+g.screen = { width: 1280, height: 800 };
+g.matchMedia = () => ({ matches: false, addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {} });
+g.visualViewport = undefined;
 g.location = { hash: "", href: "http://localhost/" };
 // node 22 ships a real global WebSocket — without this the smoke run would
 // genuinely dial the production game server and never exit

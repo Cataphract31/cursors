@@ -57,9 +57,16 @@ await new Promise(res => ws.addEventListener("open", res));
 
 try {
   await send("Page.enable");
+  // Phone-ness is the SHORT side, not the width — a landscape phone is 844px
+  // wide and must still emulate as a phone. screenWidth/screenHeight matter
+  // because the app picks its shell from window.screen, and touch emulation
+  // matters because it picks it from (pointer:coarse).
+  const phone = Math.min(+w, +h) < 800;
   await send("Emulation.setDeviceMetricsOverride", {
-    width: +w, height: +h, deviceScaleFactor: 1, mobile: +w < 800,
+    width: +w, height: +h, deviceScaleFactor: 1, mobile: phone,
+    screenWidth: +w, screenHeight: +h,
   });
+  if (phone) await send("Emulation.setTouchEmulationEnabled", { enabled: true, maxTouchPoints: 5 });
   await send("Page.navigate", { url });
   await Promise.race([loaded, new Promise(r => setTimeout(r, 15000))]);
   await new Promise(r => setTimeout(r, +settle)); // boot animations, arena, fonts

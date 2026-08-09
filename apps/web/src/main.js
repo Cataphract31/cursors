@@ -16,13 +16,45 @@ const clamp=(v,a,b)=>v<a?a:v>b?b:v;
 const rand=(a,b)=>a+Math.random()*(b-a);
 const pick=a=>a[Math.floor(Math.random()*a.length)];
 const desktop=$("#desktop"), curlayer=$("#curlayer"), fxlayer=$("#fxlayer");
-/* the mobile shell: below 760px apps are full-screen sheets (one at a time),
-   the taskbar is an app switcher, and the game HUD is a fixed thumb bar.
-   Decided once, at boot — the class must be on <body> before W/H are read. */
-const MOBILE=innerWidth<760;
+/* the mobile shell: apps are full-screen sheets (one at a time), the taskbar
+   is an app switcher, and the game HUD is a permanent thumb bar. Decided once,
+   at boot — the class must be on <body> before W/H are read.
+   The test is the DEVICE, not the window. A phone lying down is 844px wide and
+   used to fall through to the desktop shell, which is unusable with a thumb;
+   the screen's short side does not change when you rotate, so the shell can
+   never flip underneath a running game either. A narrow desktop window still
+   gets the phone shell, because that is how the phone shell gets tested. */
+const COARSE=matchMedia("(pointer:coarse)").matches;
+const SHORTSIDE=Math.min(screen.width||innerWidth,screen.height||innerHeight);
+/* 600 on a touch device, not 760: the widest phone is ~440 CSS px across and
+   the narrowest tablet is ~744 (iPad mini), so 600 sits in the gap and a
+   tablet keeps the real desktop, which it has the room for. */
+const MOBILE=COARSE?SHORTSIDE<600:innerWidth<760;
 if(MOBILE) document.body.classList.add("mobile");
+/* landscape is a different shell, not a wider one: lying down, height is the
+   scarce axis, so the HUD stands up as a right rail and the taskbar keeps the
+   floor. One class; the CSS variables do the rest. */
+function syncOrient(){ if(MOBILE) document.body.classList.toggle("land",innerWidth>innerHeight); }
+syncOrient();
 let W=desktop.clientWidth, H=desktop.clientHeight;
-addEventListener("resize",()=>{W=desktop.clientWidth;H=desktop.clientHeight;syncArena();});
+addEventListener("resize",()=>{syncOrient();W=desktop.clientWidth;H=desktop.clientHeight;syncArena();reflowIcons();});
+/* iOS never tells you the keyboard opened — it just shrinks the visual
+   viewport out from under a layout that still thinks it owns the screen, and
+   the Messenger composer ends up beneath the keys. Measure the gap, publish it
+   as --kb, and the CSS moves the taskbar and the HUD out of the way. */
+function mobKeyboard(){
+  const vv=window.visualViewport; if(!vv) return;
+  const kb=Math.max(0,innerHeight-vv.height-vv.offsetTop);
+  const up=kb>120;                       /* an accessory bar on its own is not a keyboard */
+  document.body.classList.toggle("kb",up);
+  document.documentElement.style.setProperty("--kb",(up?Math.round(kb):0)+"px");
+  W=desktop.clientWidth; H=desktop.clientHeight; syncArena();
+  if(up&&document.activeElement) try{ document.activeElement.scrollIntoView({block:"nearest"}); }catch(e){}
+}
+if(MOBILE&&window.visualViewport){
+  visualViewport.addEventListener("resize",mobKeyboard);
+  visualViewport.addEventListener("scroll",mobKeyboard);
+}
 
 /* ---- money: integer units, 1 unit = 0.001 SOL ---- */
 const STAKE=100, FEE_PLAT=1, FEE_RAKE=2, ENTRY=97, MAXCUR=5;
@@ -178,6 +210,12 @@ function renderTaskbar(){
     host.appendChild(tab);
     a.tabEl=tab;
   }
+  /* Cursors crawl above every window by design — that is the point of the
+     desktop. But on a phone a sheet IS the whole screen, and tags scrolling
+     over a Stats table is just noise, so behind a sheet the arena drops to a
+     hint of motion and comes straight back when you close it. */
+  if(MOBILE) document.body.classList.toggle("sheeted",
+    [...openApps.values()].some(a=>!a.min&&!a.notab&&a.el&&!a.el.classList.contains("fixed")));
 }
 function tabClick(id){
   const a=openApps.get(id); if(!a) return;
@@ -413,7 +451,16 @@ const SYSICONS=[
   {id:"log",label:"fights.log",ico:"note32",app:"win-log",sys:1},
   {id:"readme",label:"README.txt",ico:"note32",app:"win-readme",sys:1},
 ];
-const CELLW=84, CELLH=86, GX=12, GY=8;
+const CELLW=MOBILE?68:84, CELLH=MOBILE?72:86, GX=12, GY=8;
+/* rotating a phone changes how many icons fit in a column, so the default grid
+   has to be recomputed — but iOS fires resize on every URL-bar nudge, so only
+   rebuild when the row count actually moved. */
+let iconRows=-1;
+function reflowIcons(){
+  const rows=Math.max(1,Math.floor((H-GY-70)/CELLH)+1);
+  if(rows===iconRows) return;
+  iconRows=rows; renderIcons();
+}
 let curTxtIcon=null, binFiles=[];
 function allIcons(){ return SYSICONS.concat(store.data.userIcons); }
 function iconById(id){ return allIcons().find(i=>i.id===id); }
@@ -432,6 +479,7 @@ function layoutDefaults(){
 }
 function renderIcons(){
   layoutDefaults();
+  iconRows=Math.max(1,Math.floor((H-GY-70)/CELLH)+1);
   const host=$("#icons"); host.innerHTML="";
   for(const ic of allIcons()){
     const p=posOf(ic);
@@ -1853,10 +1901,13 @@ function renderDisk(){
   const key=pct*10000+dead;
   if(key===lastDisk) return;
   lastDisk=key;
-  const bar=$("#diskbar");
+  const bar=$("#diskbar"), mbar=$("#mh-disk");
   $("#diskfill").style.width=pct+"%";
-  bar.classList.toggle("warn",f>=.7&&f<.92);
-  bar.classList.toggle("crit",f>=.92);
+  $("#mh-diskfill").style.width=pct+"%";
+  for(const b of [bar,mbar]){
+    b.classList.toggle("warn",f>=.7&&f<.92);
+    b.classList.toggle("crit",f>=.92);
+  }
   const freeGB=(cap-dead)*cB/1073741824;
   $("#disktext").textContent=f>=.92
     ? `C: ${pct}% FULL — ${cap-dead} cursor${cap-dead===1?"":"s"} from a crash`

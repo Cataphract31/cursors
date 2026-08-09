@@ -12,10 +12,17 @@ input{user-select:text}
 
 /* ---------- desktop ---------- */
 /* --tb taskbar · --hud the mobile thumb bar (0 on desktop) · --sab phone home-indicator inset */
-:root{--tb:30px;--hud:0px;--sab:0px}
-body.mobile{--hud:64px;--sab:env(safe-area-inset-bottom,0px)}
+:root{--tb:30px;--hud:0px;--rail:0px;--sab:0px;--sal:0px;--sar:0px;--kb:0px}
+body.mobile{--hud:64px;--sab:env(safe-area-inset-bottom,0px);--sal:env(safe-area-inset-left,0px);--sar:env(safe-area-inset-right,0px)}
+/* phone lying down: height is the scarce axis, so the HUD leaves the bottom
+   and becomes a right-hand rail. Everything below reads --hud/--rail, so the
+   two orientations are the same layout with one variable moved. */
+body.mobile.land{--hud:0px;--rail:112px}
 @supports (height:100dvh){body.mobile{height:100dvh}}
-#desktop{position:absolute;inset:0 0 calc(var(--tb) + var(--hud) + var(--sab)) 0;overflow:hidden}
+#desktop{position:absolute;inset:0 calc(var(--rail) + var(--sar)) calc(var(--tb) + var(--hud) + var(--sab)) 0;overflow:hidden}
+/* the notch eats into the desktop only where icons live — the arena is
+   letterboxed and centred anyway, so shifting it would only make it lopsided */
+#icons{position:absolute;inset:0 0 0 var(--sal)}
 #wallpaper{position:absolute;inset:0;background:#3A6EA5;background-position:center;background-size:cover;background-repeat:no-repeat}
 
 /* ---------- desktop icons ---------- */
@@ -70,7 +77,7 @@ body.mobile .icon .lbl{font-size:10px}
 .aprow .lb{width:70px;color:#555}
 
 /* ---------- taskbar (winXP values) ---------- */
-#taskbar{position:fixed;left:0;right:0;bottom:0;height:calc(var(--tb) + var(--sab));padding-bottom:var(--sab);display:flex;align-items:stretch;z-index:9000;background:linear-gradient(to bottom,#1f2f86 0,#3165c4 3%,#3682e5 6%,#4490e6 10%,#3883e5 12%,#2b71e0 15%,#2663da 18%,#235bd6 20%,#2258d5 23%,#2157d6 38%,#245ddb 54%,#2562df 86%,#245fdc 89%,#2158d4 92%,#1d4ec0 95%,#1941a5 98%)}
+#taskbar{position:fixed;left:0;right:0;bottom:0;height:calc(var(--tb) + var(--sab));padding-bottom:var(--sab);padding-left:var(--sal);padding-right:var(--sar);display:flex;align-items:stretch;z-index:9000;background:linear-gradient(to bottom,#1f2f86 0,#3165c4 3%,#3682e5 6%,#4490e6 10%,#3883e5 12%,#2b71e0 15%,#2663da 18%,#235bd6 20%,#2258d5 23%,#2157d6 38%,#245ddb 54%,#2562df 86%,#245fdc 89%,#2158d4 92%,#1d4ec0 95%,#1941a5 98%)}
 #startbtn{height:30px;width:auto;cursor:pointer;flex:none}
 #startbtn:hover{filter:brightness(105%)}
 #startbtn:active{filter:brightness(85%)}
@@ -551,13 +558,15 @@ body.mobile .ie-doc{padding:7px;font-size:12px}
 body.mobile .ie-doc table{max-width:100%}
 
 /* ---------- balloon (XP notification) ---------- */
-#balloon{position:fixed;right:14px;bottom:calc(var(--tb) + var(--hud) + var(--sab) + 18px);width:236px;background:#FFFFE1;border:1px solid #000;border-radius:7px;padding:9px 22px 9px 11px;display:none;z-index:9600;box-shadow:2px 3px 8px rgba(0,0,0,.35);line-height:1.45}
+#balloon{position:fixed;right:calc(14px + var(--rail) + var(--sar));bottom:calc(var(--tb) + var(--hud) + var(--sab) + 18px);width:236px;background:#FFFFE1;border:1px solid #000;border-radius:7px;padding:9px 22px 9px 11px;display:none;z-index:9600;box-shadow:2px 3px 8px rgba(0,0,0,.35);line-height:1.45}
 #balloon:after{content:"";position:absolute;right:28px;bottom:-11px;border:11px solid transparent;border-top-color:#FFFFE1;border-bottom:0}
 #balloon b{display:block;margin-bottom:3px}
 #balloon-x{position:absolute;right:6px;top:5px;font-size:9px;border:1px solid #8A867A;padding:0 2px;cursor:pointer;background:#ECE9D8}
 
 /* ---------- game layer ---------- */
 #arena{position:absolute;left:0;top:0;width:1280px;height:800px;transform-origin:0 0;z-index:5000;pointer-events:none}
+body.mobile #arena{transition:opacity .18s ease-out}
+body.mobile.sheeted #arena{opacity:.16}
 /* the crash hiccup: filter-only, because syncArena owns this element's transform */
 #arena.crashed{animation:crashfx .9s steps(1) both}
 @keyframes crashfx{
@@ -777,6 +786,46 @@ body.mobile #mhud{display:flex}
 #mh-deploy{flex:2.1}
 #mh-attack,#mh-defend{flex:.8;font-size:14px}
 #mh-recall{flex:1.5}
+/* the round clock, in the thumb bar: C: filling is the only thing that ends a
+   round, so it belongs where a phone player is already looking */
+.mh-disk{display:block;height:5px;margin:3px 2px 0;background:#0E2E6E;border:1px solid #14357C;border-radius:2px;overflow:hidden}
+.mh-disk b{display:block;height:100%;width:0;background:linear-gradient(180deg,#7BD160 0,#3E9E27 100%);transition:width .3s linear}
+.mh-disk.warn b{background:linear-gradient(180deg,#F5D14E 0,#D89A1E 100%)}
+.mh-disk.crit b{background:linear-gradient(180deg,#FF7A6B 0,#C22C1B 100%)}
+.mh-disk.crit{animation:diskpulse 1s steps(2,end) infinite}
+@keyframes diskpulse{50%{border-color:#FF9C90}}
+
+/* ---- landscape: the thumb bar stands up as a right rail ---- */
+body.mobile.land #mhud{top:0;bottom:calc(var(--tb) + var(--sab));left:auto;right:0;
+  width:calc(var(--rail) + var(--sar));height:auto;padding:6px 6px 8px;
+  padding-right:calc(6px + var(--sar));border-top:0;border-left:1px solid #4E7DE8;
+  background:linear-gradient(90deg,#1E4FC4 0,#245DDB 40%,#2E6FE0 100%)}
+body.mobile.land .mh-top{flex-direction:column;align-items:stretch;gap:3px;padding:0 0 6px;text-align:center}
+body.mobile.land .mh-wallet{font-size:13px}
+body.mobile.land .mh-phase{font-size:9px;line-height:15px}
+body.mobile.land .mh-live{font-size:10px}
+body.mobile.land .mh-disk{margin:0 0 6px;order:-1}
+/* buttons sit at the FOOT of the rail — that is where a thumb is when the
+   phone is held in two hands — and keep XP-sized rows instead of stretching
+   into slabs just because the rail is tall */
+body.mobile.land .mh-btns{display:grid;grid-template-columns:1fr 1fr;grid-auto-rows:44px;gap:5px;flex:none;margin-top:auto}
+body.mobile.land .mh-btns .xbtn{height:auto}
+body.mobile.land #mh-deploy,body.mobile.land #mh-recall{grid-column:1/3}
+body.mobile.land #mh-attack,body.mobile.land #mh-defend{font-size:17px}
+/* the full-screen launcher and every sheet stop at the rail, never under it */
+body.mobile.land #startmenu{right:calc(var(--rail) + var(--sar));bottom:calc(var(--tb) + var(--sab))}
+body.mobile.land .sm-head{height:38px}
+body.mobile.land .sm-ava{width:30px;height:30px}
+body.mobile.land .sm-foot{height:30px}
+body.mobile.land .sm-left{width:44%}
+body.mobile.land .sm-right{width:56%}
+body.mobile.land .sm-left .sm-item{height:36px}
+body.mobile.land .sm-left .sm-item.two{height:40px}
+body.mobile.land .sm-left .sm-item.allprog{height:30px}
+body.mobile.land .sm-right .sm-item{height:32px}
+body.mobile.land .lg-mid{gap:14px}
+body.mobile.land .lg-brandtext{font-size:26px}
+body.mobile.land .lg-flag{width:40px}
 
 /* apps become full-screen sheets: one at a time, no dragging, no overlap.
    Dialogs (.fixed) stay small popups, centered by fitWin(). The > keeps
@@ -807,5 +856,19 @@ body.mobile .lg-hint{font-size:13px}
 body.mobile .lg-div{display:none}
 body.mobile .lg-right{flex:none;width:100%;padding:0 34px}
 body.mobile .lg-note{display:none}
+
+/* ---- the phone keyboard ---- */
+/* iOS shrinks the visual viewport without touching layout, so a composer at
+   the bottom of a sheet ends up under the keys. --kb is the measured keyboard
+   height (see mobKeyboard() in main.js): the taskbar and HUD step aside and
+   the desktop ends where the keyboard begins, which puts every sheet's own
+   bottom row right above it. Nothing here fires unless a keyboard is up. */
+body.mobile.kb #taskbar,body.mobile.kb #mhud{display:none}
+body.mobile.kb #desktop{inset:0 calc(var(--rail) + var(--sar)) var(--kb) 0}
+/* and 16px stops iOS zooming the page in the moment you tap a text field —
+   the one place XP's 11px type has to give way to the hardware */
+body.mobile #ie-addr,body.mobile #ex-addr,body.mobile #hlp-search,
+body.mobile #run-in,body.mobile #lg-user,body.mobile .conv-input textarea,
+body.mobile .renamer,body.mobile .usertxtarea{font-size:16px}
 
 @media (prefers-reduced-motion:reduce){*{animation-duration:.01s !important;transition:none !important}}
