@@ -110,6 +110,9 @@ export function initExplorer(deps) {
       dir("My Music", { ico: "music32", go: DOCS + "\\My Music" }),
       f("fights.log", { size: hooks.logSize(), act: () => hooks.openWin("win-log") }),
       f("README.txt", { size: 2_048, act: () => hooks.openWin("win-readme") }),
+      /* whatever Send To > My Documents actually sent — the copy has to exist */
+      ...(hooks.sentDocs ? hooks.sentDocs() : []).map(d =>
+        f(d.label, { ico: d.ico, size: 4096, act: () => showError(d.label, "This file was sent here from the Desktop.") })),
     ],
     [DOCS + "\\My Music"]: () => hooks.tracks().map(t =>
       f(t.title + ".mp3", { size: 3.4 * MB, ico: "music32", act: () => hooks.openWin("win-amp") })),
@@ -161,6 +164,9 @@ export function initExplorer(deps) {
   /* dynamic branch: a user folder made on the desktop */
   function childrenOf(p) {
     if (TREE[p]) return TREE[p]();
+    if (p === HOME + "\\Desktop\\Unused Desktop Shortcuts")
+      return (hooks.unusedFiles ? hooks.unusedFiles() : []).map(ic =>
+        f(ic.label + ".lnk", { ico: ic.ico, size: 1024, act: () => hooks.openIcon(ic) }));
     if (p.indexOf(HOME + "\\Desktop\\") === 0) return [];   /* user folders really are empty */
     return null;
   }
@@ -546,16 +552,34 @@ export function initExplorer(deps) {
       { label: "Properties", action: () => it.dead ? hooks.deathCert(it.dead)
           : showError("Properties: " + it.name, `Type: ${typeOf(it.name)}\nLocation: Recycle Bin\nSize: ${fmtSize(it.size)}\nOriginal location: C:\\Desktop`) },
     ];
+    const denied = t => showError("Error " + t + " File or Folder",
+      `Cannot ${t.toLowerCase()} ${it.name}: Access is denied.\n\nMake sure the disk is not full or write-protected and that the file is not currently in use.`);
     return [
-      { label: "Open", bold: 1, action: () => openItem(it) },
+      { label: it.kind === "folder" || it.kind === "drive" ? "Open" : "Open", bold: 1, action: () => openItem(it) },
+      ...(it.kind === "drive" || it.kind === "folder" ? [
+        { label: "Explore", action: () => openItem(it) },
+        { label: "Search...", action: () => openSearch() }] : []),
+      ...(it.kind === "file" && /\.(exe|msc)$/i.test(it.name) ? [
+        { label: "Open With", sub: [
+          { label: "Notepad", action: () => showError(it.name, "This file is an application. Notepad politely declines.") },
+          { sep: 1 },
+          { label: "Choose Program...", disabled: 1 }] }] : []),
+      { sep: 1 },
+      { label: "Send To", sub: [
+        { label: "Compressed (zipped) Folder", action: () => denied("Copying") },
+        { label: "Desktop (create shortcut)", action: () => denied("Copying") },
+        { label: "My Documents", action: () => denied("Copying") },
+        { sep: 1 },
+        { label: "3½ Floppy (A:)", action: () => showError(it.name, "A:\\ is not accessible.\n\nThe device is not ready.") }] },
       { sep: 1 },
       { label: "Cut", disabled: 1 },
       { label: "Copy", disabled: 1 },
       { sep: 1 },
-      { label: "Delete", action: () => showError("Delete " + it.name, it.kind === "drive"
-        ? "You cannot delete a drive. Not this one. Not today."
-        : "Access is denied. This file is load-bearing.") },
-      { label: "Rename", disabled: 1 },
+      { label: "Create Shortcut", disabled: 1 },
+      { label: "Delete", action: () => it.kind === "drive"
+        ? showError("Error Deleting File or Folder", "Cannot delete Local Disk (C:): Access is denied.\n\nThe drive is where the money lives.")
+        : denied("Deleting") },
+      { label: "Rename", action: () => denied("Renaming") },
       { sep: 1 },
       { label: "Properties", action: () => it.kind === "drive" && it.go === "C:\\"
         ? driveProperties()
@@ -633,7 +657,23 @@ export function initExplorer(deps) {
     showMenu([
       { label: "View", sub: ["tiles", "icons", "list", "details"].map(v => ({
         label: v[0].toUpperCase() + v.slice(1), check: view === v, action: () => setView(v) })) },
+      { label: "Arrange Icons By", sub: [
+        { label: "Name", check: 1, action: render },
+        { label: "Size", action: render },
+        { label: "Type", action: render },
+        { label: "Modified", action: render },
+        { sep: 1 },
+        { label: "Show in Groups", disabled: 1 },
+        { label: "Auto Arrange", check: 1, disabled: 1 }] },
       { label: "Refresh", action: render },
+      { sep: 1 },
+      { label: "Paste", disabled: 1 },
+      { label: "Paste Shortcut", disabled: 1 },
+      { sep: 1 },
+      { label: "New", sub: [
+        { label: "Folder", action: () => showError("Unable to create the folder 'New Folder'", "Access is denied.\n\nNew folders are made on the Desktop. This part of the disk belongs to the house.") },
+        { sep: 1 },
+        { label: "Text Document", action: () => showError("Unable to create the file 'New Text Document.txt'", "Access is denied.\n\nNew files are made on the Desktop. This part of the disk belongs to the house.") }] },
       { sep: 1 },
       { label: "Properties", action: () => path === "C:\\" ? driveProperties() : hooks.systemProperties() },
     ], e.clientX, e.clientY);

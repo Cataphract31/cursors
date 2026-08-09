@@ -157,8 +157,9 @@ $("#vf-slider").addEventListener("input",e=>{
 });
 $("#vf-slider").addEventListener("change",()=>{ if(!muted) sysSnd("balloon",.5); });   /* XP previews on release */
 $("#vf-mute").addEventListener("change",e=>{ muted=e.target.checked; volSync(); });
-volf.addEventListener("pointerdown",e=>e.stopPropagation());
-addEventListener("pointerdown",()=>volOpen(false),true);
+/* capture-phase, so stopPropagation inside the flyout can't save it — the
+   guard has to be the target check itself, or the slider closes on grab */
+addEventListener("pointerdown",e=>{ if(!e.target.closest("#volflyout,#sndico")) volOpen(false); },true);
 
 /* ================= shell persistence ================= */
 const store={
@@ -171,6 +172,14 @@ const store={
     this.data.texts=this.data.texts||{};
     this.data.wallpaper=this.data.wallpaper||"bliss";
     this.data.saver=this.data.saver||{t:"stars",wait:3};
+    /* desktop shell switches, all straight off XP's desktop menu */
+    if(this.data.alignGrid==null) this.data.alignGrid=1;
+    if(this.data.showIcons==null) this.data.showIcons=1;
+    if(this.data.lockWeb==null) this.data.lockWeb=0;
+    this.data.autoArr=this.data.autoArr||0;
+    this.data.iconSort=this.data.iconSort||"name";
+    this.data.unusedIcons=this.data.unusedIcons||[];
+    this.data.pinned=this.data.pinned||[];
   },
   save(){ clearTimeout(this._t); this._t=setTimeout(()=>{ try{ localStorage.setItem("cursorsxp",JSON.stringify(this.data)); }catch(e){} },250); }
 };
@@ -251,7 +260,7 @@ function hideWamp(){ const w=wampWrap(); if(w) w.style.display="none"; }
 function wampHidden(){ const w=wampWrap(); return !w||w.style.display==="none"; }
 let zTop=100, focusedId=null;
 const openApps=new Map();
-const NOTAB=new Set(["win-logoff","win-shutdown","win-error","win-confirm","win-props","win-run","win-cert"]);
+const NOTAB=new Set(["win-logoff","win-shutdown","win-error","win-confirm","win-props","win-run","win-cert","win-runas"]);
 function tabTitle(id){ const a=openApps.get(id); if(a&&a.title) return a.title; const t=$("#"+id+" .title-bar-text"); return t?t.textContent:id; }
 function tabIconHTML(id){
   const el=$("#"+id+" .title-bar .tb-ico");
@@ -566,11 +575,13 @@ function renderIcons(){
   layoutDefaults();
   iconRows=Math.max(1,Math.floor((H-GY-70)/CELLH)+1);
   const host=$("#icons"); host.innerHTML="";
+  host.style.display=store.data.showIcons?"":"none";
   for(const ic of allIcons()){
     const p=posOf(ic);
     const el=document.createElement("div");
     el.className="icon"; el.dataset.iid=ic.id;
-    el.style.left=(GX+p.c*CELLW)+"px"; el.style.top=(GY+p.r*CELLH)+"px";
+    if(p.x!=null){ el.style.left=p.x+"px"; el.style.top=p.y+"px"; }
+    else{ el.style.left=(GX+p.c*CELLW)+"px"; el.style.top=(GY+p.r*CELLH)+"px"; }
     el.appendChild(icoNode(ic.ico));
     const lbl=document.createElement("div"); lbl.className="lbl"; lbl.textContent=ic.label;
     el.appendChild(lbl);
@@ -602,6 +613,12 @@ function hookIcon(el,ic){
         if(MOBILE&&e.pointerType==="touch"&&performance.now()-lpFiredAt>600) openIcon(ic);
         return;
       }
+      if(store.data.autoArr){ arrangeIcons(store.data.iconSort); return; }   /* Auto Arrange wins: the grid re-packs itself */
+      if(!store.data.alignGrid){
+        /* Align to Grid off: the icon stays exactly where you dropped it, XP's one concession to chaos */
+        store.data.icons[ic.id]={x:clamp(parseFloat(el.style.left),0,W-72),y:clamp(parseFloat(el.style.top),0,H-84)};
+        store.save(); renderIcons(); return;
+      }
       const maxC=Math.max(0,Math.floor((W-GX-72)/CELLW));
       const maxR=Math.max(0,Math.floor((H-GY-84)/CELLH));
       let c=clamp(Math.round((parseFloat(el.style.left)-GX)/CELLW),0,maxC);
@@ -629,6 +646,16 @@ function openIcon(ic){
     openWin("win-explorer"); explorer.go("Recycle Bin");
   }else if(ic.app==="folder"){
     openFolderWin(ic.label);
+  }else if(ic.app==="paintdoc"){
+    openWin("win-paint");
+  }else if(ic.app==="wavdoc"){
+    showError("Windows Media Player","Windows Media Player cannot play the file. The file is either corrupt or the Player does not support the format you are trying to play.");
+  }else if(ic.app==="applnk"){
+    openWin(ic.target);
+  }else if(ic.app==="deadlnk"){
+    showError("Problem with Shortcut",`The item '${(ic.loc||ic.label).split(/[\\/]/).pop()}' that this shortcut refers to has been changed or moved, so this shortcut will no longer work properly.
+
+Do you want to delete this shortcut?`);
   }else if(ic.app==="usertxt"){
     curTxtIcon=ic;
     $("#win-usertxt .title-bar-text").textContent=ic.label+" - Notepad";
@@ -678,10 +705,17 @@ function deleteIcon(ic){
   delete store.data.icons[ic.id];
   store.save(); renderBin(); renderIcons(); sCrunch();
 }
-function arrangeIcons(shuffle){
+/* every file lies about its size, but it lies consistently */
+function fakeKB(ic){ let h=0; for(const ch of ic.id) h=(h*31+ch.charCodeAt(0))>>>0; return 1+h%940; }
+function iconType(ic){ return ic.kind==="folder"?"File Folder":ic.kind==="bmp"?"Bitmap Image":ic.kind==="wav"?"Wave Sound":ic.kind==="lnk"?"Shortcut":ic.sys?"Application":"Text Document"; }
+function arrangeIcons(mode){
   const list=allIcons().slice();
-  if(shuffle) list.sort(()=>Math.random()-.5);
-  else list.sort((a,b)=>a.label.toLowerCase().localeCompare(b.label.toLowerCase()));
+  const byName=(a,b)=>a.label.toLowerCase().localeCompare(b.label.toLowerCase());
+  if(mode==="size") list.sort((a,b)=>fakeKB(a)-fakeKB(b)||byName(a,b));
+  else if(mode==="type") list.sort((a,b)=>iconType(a).localeCompare(iconType(b))||byName(a,b));
+  else if(mode==="modified") list.sort((a,b)=>(+(a.id.split("_")[1])||-1)-(+(b.id.split("_")[1])||-1));
+  else list.sort(byName);
+  if(mode==="name"||mode==="size"||mode==="type"||mode==="modified"){ store.data.iconSort=mode; }
   const rows=Math.max(1,Math.floor((H-GY-70)/CELLH)+1);
   store.data.icons={};
   list.forEach((ic,i)=>{ store.data.icons[ic.id]={c:Math.floor(i/rows),r:i%rows}; });
@@ -733,8 +767,9 @@ function showConfirm(title,text,cb){
 function showProps(ic){
   const host=$("#prop-ico"); host.innerHTML=""; host.appendChild(icoNode(ic.ico));
   $("#prop-name").textContent=ic.label;
-  const type=ic.sys?"System file":(ic.kind==="folder"?"File Folder":"Text Document");
-  $("#prop-rows").innerHTML=`Type: <b>${type}</b><br>Location: <b>C:\\Desktop</b><br>Size: <b>4.00 KB (4,096 bytes of nostalgia)</b><br>Created: <b>Tuesday, August 24, 2001</b>`;
+  const type=iconType(ic);
+  const kb=ic.sys?4:fakeKB(ic);
+  $("#prop-rows").innerHTML=`Type: <b>${type}</b><br>Location: <b>C:\\Documents and Settings\\Administrator\\Desktop</b><br>Size: <b>${kb.toFixed(2)} KB (${(kb*1024).toLocaleString("en-US")} bytes)</b><br>Created: <b>Tuesday, August 24, 2001</b>`;
   openWin("win-props");
 }
 $("#err-ok").addEventListener("click",()=>closeWin("win-error"));
@@ -751,6 +786,119 @@ function emptyBin(){
     ()=>{ binDead=[]; binFiles=[]; renderBin(); syncBinIcon(diskPct().f); sCrunch(); });
 }
 
+/* ---- Run As ---- */
+let runAsIc=null;
+function runAsDialog(ic){
+  runAsIc=ic;
+  $("#ras-user").textContent=(store.data.userName||"Administrator");
+  $("#ras-cur").checked=true; $("#ras-other").checked=false;
+  $("#ras-name").disabled=$("#ras-pass").disabled=true;
+  openWin("win-runas");
+}
+$("#ras-cur").addEventListener("change",()=>{ $("#ras-name").disabled=$("#ras-pass").disabled=true; });
+$("#ras-other").addEventListener("change",()=>{ $("#ras-name").disabled=$("#ras-pass").disabled=false; $("#ras-name").focus(); });
+$("#ras-ok").addEventListener("click",()=>{
+  const other=$("#ras-other").checked, who=$("#ras-name").value.trim();
+  closeWin("win-runas");
+  if(other){
+    showError("Run As",`Unable to log on: ${who||"user"}.
+
+Logon failure: unknown user name or bad password.`);
+    return;
+  }
+  if(runAsIc) openIcon(runAsIc);
+});
+$("#ras-cancel").addEventListener("click",()=>closeWin("win-runas"));
+
+/* ---- Create Shortcut wizard ---- */
+let scwPage=1;
+function shortcutWizard(){
+  scwPage=1; $("#scw-loc").value=""; $("#scw-name").value="";
+  scwShow(); openWin("win-shortcutwiz");
+  setTimeout(()=>$("#scw-loc").focus(),50);
+}
+function scwShow(){
+  $("#scw-p1").style.display=scwPage===1?"":"none";
+  $("#scw-p2").style.display=scwPage===2?"":"none";
+  $("#scw-back").disabled=scwPage===1;
+  $("#scw-next").textContent=scwPage===2?"Finish":"Next >";
+}
+/* what a typed location resolves to: known .exe names land on real apps */
+const SCW_APPS={"cursors.exe":"win-cursors","iexplore.exe":"win-ie","mspaint.exe":"win-paint",
+  "winmine.exe":"win-mine","msnmsgr.exe":"win-chat","notepad.exe":"win-readme","cmd.exe":"win-cmd",
+  "taskmgr.exe":"win-taskmgr","services.msc":"win-services","gpedit.msc":"win-gpedit","winamp.exe":"win-amp"};
+function scwResolve(loc){
+  const base=loc.toLowerCase().split(/[\\/]/).pop();
+  return SCW_APPS[base]||null;
+}
+$("#scw-browse").addEventListener("click",()=>{ openWin("win-explorer"); explorer.go("C:\\"); });
+$("#scw-back").addEventListener("click",()=>{ scwPage=1; scwShow(); });
+$("#scw-next").addEventListener("click",()=>{
+  if(scwPage===1){
+    const loc=$("#scw-loc").value.trim();
+    if(!loc){ showError("Create Shortcut","You must type a location. To continue, type the location of the item and then click Next."); return; }
+    $("#scw-name").value=loc.split(/[\/]/).pop().replace(/\.[a-z0-9]+$/i,"")||loc;
+    scwPage=2; scwShow(); setTimeout(()=>{ $("#scw-name").focus(); $("#scw-name").select(); },50);
+    return;
+  }
+  const loc=$("#scw-loc").value.trim(), nm=$("#scw-name").value.trim()||"New Shortcut";
+  const ic={id:"user_"+userN++,label:nm,ico:"note32",app:"deadlnk",kind:"lnk",target:scwResolve(loc),loc};
+  if(ic.target){ ic.app="applnk"; ic.ico=(SMAPPS[ic.target]||{}).ico||"note32"; }
+  store.data.userIcons.push(ic); store.data.icons[ic.id]=firstFreeCell(); store.save();
+  renderIcons(); closeWin("win-shortcutwiz"); sysSnd("nav",.4);
+});
+$("#scw-cancel").addEventListener("click",()=>closeWin("win-shortcutwiz"));
+
+/* ---- Desktop Cleanup Wizard ---- */
+let dcwPage=1;
+function cleanupWizard(){
+  dcwPage=1; dcwShow(); openWin("win-cleanup");
+}
+function dcwShow(){
+  $("#dcw-p1").style.display=dcwPage===1?"":"none";
+  $("#dcw-p2").style.display=dcwPage===2?"":"none";
+  $("#dcw-p3").style.display=dcwPage===3?"":"none";
+  $("#dcw-back").disabled=dcwPage===1;
+  $("#dcw-next").textContent=dcwPage===3?"Finish":"Next >";
+  if(dcwPage===2){
+    const host=$("#dcw-list"); host.innerHTML="";
+    const cand=store.data.userIcons.filter(ic=>!ic.unused);
+    if(!cand.length) host.innerHTML='<div style="padding:8px" class="dim">There are no unused shortcuts on your desktop.</div>';
+    for(const ic of cand){
+      const row=document.createElement("label");
+      row.style.cssText="display:flex;gap:6px;align-items:center;padding:2px 6px";
+      row.innerHTML=`<input type="checkbox" data-uid="${ic.id}"> <span></span> <span class="dim" style="margin-left:auto">Never</span>`;
+      row.children[1].textContent=ic.label;
+      host.appendChild(row);
+    }
+  }
+  if(dcwPage===3){
+    const ids=[...$("#dcw-list").querySelectorAll("input:checked")].map(i=>i.dataset.uid);
+    $("#dcw-sum").textContent=ids.length
+      ? store.data.userIcons.filter(ic=>ids.includes(ic.id)).map(ic=>ic.label).join("\n")
+      : "(none)";
+    $("#dcw-sum").style.whiteSpace="pre-line";
+  }
+}
+$("#dcw-back").addEventListener("click",()=>{ dcwPage--; dcwShow(); });
+$("#dcw-next").addEventListener("click",()=>{
+  if(dcwPage<3){ dcwPage++; dcwShow(); return; }
+  const ids=[...$("#dcw-list").querySelectorAll("input:checked")].map(i=>i.dataset.uid);
+  if(ids.length){
+    const moved=store.data.userIcons.filter(ic=>ids.includes(ic.id));
+    store.data.userIcons=store.data.userIcons.filter(ic=>!ids.includes(ic.id));
+    for(const ic of moved){ delete store.data.icons[ic.id]; store.data.unusedIcons.push(ic); }
+    /* the folder itself appears on the desktop once something is in it */
+    if(!store.data.userIcons.some(ic=>ic.id==="unusedfld")){
+      store.data.userIcons.push({id:"unusedfld",label:"Unused Desktop Shortcuts",ico:"folder32",app:"folder",kind:"folder"});
+      store.data.icons.unusedfld=firstFreeCell();
+    }
+    store.save(); renderIcons();
+  }
+  closeWin("win-cleanup"); sysSnd("nav",.4);
+});
+$("#dcw-cancel").addEventListener("click",()=>closeWin("win-cleanup"));
+
 /* ================= context menus ================= */
 const ctx=$("#ctx");
 let menuShownAt=0; /* a long-press opens the menu under the finger — the release must not pick an item */
@@ -760,7 +908,9 @@ function buildMenu(host,items){
     if(it.sep){ const s=document.createElement("div"); s.className="csep"; host.appendChild(s); continue; }
     const d=document.createElement("div");
     d.className="cit"+(it.disabled?" dis":"")+(it.bold?" bold":"")+(it.check?" chk":"");
-    d.textContent=it.label;
+    const lb=document.createElement("span"); lb.className="clabel"; lb.textContent=it.label;
+    d.appendChild(lb);
+    if(it.accel){ const a=document.createElement("span"); a.className="caccel"; a.textContent=it.accel; d.appendChild(a); }
     if(it.sub){
       d.classList.add("has-sub");
       const sub=document.createElement("div"); sub.className="csub";
@@ -782,39 +932,154 @@ function showMenu(items,x,y){
   ctx.style.top=Math.min(y,innerHeight-r.height-4)+"px";
   sMenu();
 }
-function hideMenu(){ ctx.style.display="none"; }
+function hideMenu(){ ctx.style.display="none"; ctx.querySelectorAll(".kbd").forEach(e=>e.classList.remove("kbd")); }
+/* menus walk with the keyboard, exactly as far as XP let them */
+addEventListener("keydown",e=>{
+  if(ctx.style.display!=="block") return;
+  if(e.key==="Escape"){ hideMenu(); e.preventDefault(); return; }
+  /* the deepest open (hovered or keyboard-entered) menu level owns the keys */
+  let host=ctx;
+  for(;;){ const nxt=host.querySelector(":scope>.cit.kbd>.csub.open, :scope>.cit:hover>.csub"); if(nxt&&getComputedStyle(nxt).visibility!=="hidden") host=nxt; else break; }
+  const its=[...host.children].filter(c=>c.classList.contains("cit")&&!c.classList.contains("dis"));
+  if(!its.length) return;
+  const cur=its.findIndex(c=>c.classList.contains("kbd"));
+  const setK=i=>{ its.forEach(c=>c.classList.remove("kbd")); its[(i+its.length)%its.length].classList.add("kbd"); };
+  if(e.key==="ArrowDown"){ setK(cur+1); e.preventDefault(); }
+  else if(e.key==="ArrowUp"){ setK(cur<0?its.length-1:cur-1); e.preventDefault(); }
+  else if(e.key==="ArrowRight"&&cur>=0&&its[cur].classList.contains("has-sub")){
+    its[cur].querySelector(".csub").classList.add("open"); e.preventDefault();
+  }
+  else if(e.key==="ArrowLeft"&&host!==ctx){ host.classList.remove("open"); host.closest(".cit").classList.add("kbd"); e.preventDefault(); }
+  else if(e.key==="Enter"&&cur>=0){ its[cur].dispatchEvent(new PointerEvent("pointerup",{bubbles:true})); e.preventDefault(); }
+},true);
 addEventListener("pointerdown",e=>{ if(!e.target.closest("#ctx")) hideMenu(); },true);
+/* ---- the shell clipboard: Cut/Copy/Paste on desktop icons ---- */
+let clip=null;   /* {mode:"copy"|"cut", ic} */
+function copyOf(ic,label){
+  const nu=Object.assign({},ic,{id:"user_"+userN++,label:label||ic.label,sys:0});
+  delete nu._dc; delete nu._dr;
+  return nu;
+}
+function pasteClip(asShortcut){
+  if(!clip) return;
+  const src=clip.ic;
+  if(asShortcut){
+    const nu=copyOf(src,src.label+" - Shortcut");
+    nu.kind="lnk"; nu.shortcut=1;
+    store.data.userIcons.push(nu); store.data.icons[nu.id]=firstFreeCell();
+  }else if(clip.mode==="cut"&&!src.sys){
+    /* a desktop-to-desktop move: the icon just lands at the next free cell */
+    store.data.icons[src.id]=firstFreeCell(); clip=null;
+  }else{
+    const nu=copyOf(src,"Copy of "+src.label);
+    if(src.kind==="txt") store.data.texts[nu.id]=store.data.texts[src.id]||"";
+    store.data.userIcons.push(nu); store.data.icons[nu.id]=firstFreeCell();
+  }
+  store.save(); renderIcons();
+}
+/* ---- the New submenu factory: every document type XP offered ---- */
+function newItem(kind){
+  const p=firstFreeCell();
+  const DEF={
+    folder:{label:"New Folder",ico:"folder32",app:"folder"},
+    briefcase:{label:"New Briefcase",ico:"folder32",app:"folder"},
+    bmp:{label:"New Bitmap Image.bmp",ico:"bmpdoc32",app:"paintdoc"},
+    doc:{label:"New WordPad Document.doc",ico:"writedoc16",app:"usertxt"},
+    rtf:{label:"New Rich Text Document.rtf",ico:"writedoc16",app:"usertxt"},
+    txt:{label:"New Text Document.txt",ico:"note32",app:"usertxt"},
+    wav:{label:"New Wave Sound.wav",ico:"wavdoc16",app:"wavdoc"},
+    zip:{label:"New Compressed (zipped) Folder.zip",ico:"folder32",app:"folder"},
+  }[kind];
+  const ic=Object.assign({id:"user_"+userN++,kind},DEF);
+  store.data.userIcons.push(ic); store.data.icons[ic.id]=p; store.save();
+  renderIcons(); startRename(ic);
+}
 function desktopMenu(){
   return [
     {label:"Arrange Icons By",sub:[
-      {label:"Name",action:()=>arrangeIcons(false)},
-      {label:"Vibes",action:()=>arrangeIcons(true)},
+      {label:"Name",action:()=>arrangeIcons("name")},
+      {label:"Size",action:()=>arrangeIcons("size")},
+      {label:"Type",action:()=>arrangeIcons("type")},
+      {label:"Modified",action:()=>arrangeIcons("modified")},
       {sep:1},
-      {label:"Auto Arrange",action:()=>arrangeIcons(false)}]},
+      {label:"Show in Groups",disabled:1},
+      {label:"Auto Arrange",check:!!store.data.autoArr,action(){ store.data.autoArr=store.data.autoArr?0:1; if(store.data.autoArr) arrangeIcons(store.data.iconSort); store.save(); }},
+      {label:"Align to Grid",check:!!store.data.alignGrid,action(){ store.data.alignGrid=store.data.alignGrid?0:1; store.save(); }},
+      {sep:1},
+      {label:"Show Desktop Icons",check:!!store.data.showIcons,action(){ store.data.showIcons=store.data.showIcons?0:1; store.save(); renderIcons(); }},
+      {label:"Lock Web Items on Desktop",check:!!store.data.lockWeb,action(){ store.data.lockWeb=store.data.lockWeb?0:1; store.save(); }},
+      {sep:1},
+      {label:"Run Desktop Cleanup Wizard",action:cleanupWizard}]},
     {label:"Refresh",action:refreshDesktop},
     {sep:1},
-    {label:"Paste",disabled:1},
-    {label:"Paste Shortcut",disabled:1},
+    {label:"Paste",disabled:!clip,action:()=>pasteClip(false)},
+    {label:"Paste Shortcut",disabled:!clip,action:()=>pasteClip(true)},
+    binFiles.length?{label:"Undo Delete",accel:"Ctrl+Z",action:()=>restoreOne(binFiles[0])}:{label:"Undo",accel:"Ctrl+Z",disabled:1},
     {sep:1},
     {label:"New",sub:[
-      {label:"Folder",action:newFolder},
-      {label:"Text Document",action:newTextDoc},
+      {label:"Folder",action:()=>newItem("folder")},
+      {label:"Shortcut",action:shortcutWizard},
+      {sep:1},
+      {label:"Briefcase",action:()=>newItem("briefcase")},
+      {label:"Bitmap Image",action:()=>newItem("bmp")},
+      {label:"WordPad Document",action:()=>newItem("doc")},
+      {label:"Rich Text Document",action:()=>newItem("rtf")},
+      {label:"Text Document",action:()=>newItem("txt")},
+      {label:"Wave Sound",action:()=>newItem("wav")},
+      {label:"Compressed (zipped) Folder",action:()=>newItem("zip")},
+      {sep:1},
       {label:"Cursor (0.1 SOL)",action:()=>{ openWin("win-cursors"); deploy(false); }}]},
     {sep:1},
     {label:"Properties",action:()=>openWin("win-dispprops")}
   ];
 }
+function sendToMenu(ic){
+  return [
+    {label:"Compressed (zipped) Folder",action(){
+      const nu=copyOf(ic,ic.label.replace(/\.[a-z]+$/i,"")+".zip");
+      nu.kind="folder"; nu.app="folder"; nu.ico="folder32";
+      store.data.userIcons.push(nu); store.data.icons[nu.id]=firstFreeCell();
+      store.save(); renderIcons();
+    }},
+    {label:"Desktop (create shortcut)",action(){ clip={mode:"copy",ic}; pasteClip(true); clip=null; }},
+    {label:"Mail Recipient",action:()=>openWin("win-chat")},
+    {label:"My Documents",action(){
+      store.data.sentDocs=store.data.sentDocs||[];
+      if(!store.data.sentDocs.some(d=>d.label===ic.label)) store.data.sentDocs.push({label:ic.label,ico:ic.ico,kind:ic.kind||"txt"});
+      store.save();
+      if(openApps.has("win-explorer")) explorer.render();
+    }},
+    {sep:1},
+    {label:"3½ Floppy (A:)",action:()=>showError(ic.label,
+      "A:\\ is not accessible.\n\nThe device is not ready.")},
+  ];
+}
 function iconMenu(ic){
   const items=[{label:"Open",bold:1,action:()=>openIcon(ic)}];
   if(ic.id==="recycle"){
-    items.push({label:"Empty Recycle Bin",action:emptyBin});
+    items.push({label:"Explore",action:()=>{ openWin("win-explorer"); explorer.go("Recycle Bin"); }});
+    items.push({label:"Empty Recycle Bin",disabled:binEmpty(),action:emptyBin});
     items.push({label:"Hall of Pain",action:()=>hallOfPain()});
   }
-  if(ic.id==="computer") items.push({label:"Explore",action:()=>{ openWin("win-explorer"); explorer.go("C:\\"); }});
+  if(ic.id==="computer"){
+    items.push({label:"Explore",action:()=>{ openWin("win-explorer"); explorer.go("C:\\"); }});
+    items.push({label:"Search...",action:()=>{ openWin("win-explorer"); explorer.openSearch(); }});
+    items.push({label:"Manage",action:()=>openWin("win-services")});
+  }
+  if(ic.sys&&ic.app&&ic.app.indexOf("win-")===0) items.push({label:"Run as...",action:()=>runAsDialog(ic)});
   items.push({sep:1});
+  items.push({label:"Send To",sub:sendToMenu(ic)});
+  items.push({sep:1});
+  items.push({label:"Cut",disabled:!!ic.sys,action(){ clip={mode:"cut",ic}; }});
+  items.push({label:"Copy",action(){ clip={mode:"copy",ic}; }});
+  items.push({sep:1});
+  items.push({label:"Create Shortcut",action(){ clip={mode:"copy",ic}; pasteClip(true); clip=null; }});
   if(ic.sys){
-    items.push({label:"Delete",action:()=>showError("Cannot Delete "+ic.label,"This is a system file. The desktop needs it more than you do.")});
-    items.push({label:"Rename",action:()=>showError("Cannot Rename "+ic.label,"System files keep their names. It builds character.")});
+    /* the real strings: XP refused politely and blamed the disk */
+    items.push({label:"Delete",action:()=>showError("Error Deleting File or Folder",
+      `Cannot delete ${ic.label}: Access is denied.\n\nMake sure the disk is not full or write-protected and that the file is not currently in use.`)});
+    items.push({label:"Rename",action:()=>showError("Error Renaming File or Folder",
+      `Cannot rename ${ic.label}: Access is denied.\n\nMake sure the disk is not full or write-protected and that the file is not currently in use.`)});
   }else{
     items.push({label:"Delete",action:()=>deleteIcon(ic)});
     items.push({label:"Rename",action:()=>startRename(ic)});
@@ -822,38 +1087,142 @@ function iconMenu(ic){
   items.push({sep:1},{label:"Properties",action:()=>showProps(ic)});
   return items;
 }
+/* Move and Size drive the window with the arrow keys, exactly like Alt+Space M did */
+function kbdWinDrive(id,mode){
+  const el=document.getElementById(id); if(!el) return;
+  const orig={l:el.offsetLeft,t:el.offsetTop,w:el.offsetWidth,h:el.offsetHeight};
+  const minw=+(el.dataset.minw||232), minh=+(el.dataset.minh||130);
+  const onKey=e=>{
+    e.preventDefault(); e.stopPropagation();
+    const d=e.shiftKey?1:8;
+    if(e.key==="Escape"){
+      el.style.left=orig.l+"px"; el.style.top=orig.t+"px";
+      if(mode==="size"){ el.style.width=orig.w+"px"; el.style.height=orig.h+"px"; }
+      end(); return;
+    }
+    if(e.key==="Enter"){ saveWinRect(el); end(); return; }
+    const dx=e.key==="ArrowLeft"?-d:e.key==="ArrowRight"?d:0;
+    const dy=e.key==="ArrowUp"?-d:e.key==="ArrowDown"?d:0;
+    if(!dx&&!dy) return;
+    if(mode==="move"){ el.style.left=clamp(el.offsetLeft+dx,-el.offsetWidth+80,W-40)+"px"; el.style.top=clamp(el.offsetTop+dy,0,H-30)+"px"; }
+    else{ el.style.width=Math.max(minw,el.offsetWidth+dx)+"px"; el.style.height=Math.max(minh,el.offsetHeight+dy)+"px"; }
+  };
+  const onDown=()=>end();
+  const end=()=>{ removeEventListener("keydown",onKey,true); removeEventListener("pointerdown",onDown,true); };
+  addEventListener("keydown",onKey,true);
+  addEventListener("pointerdown",onDown,true);
+}
 function winMenu(id){
-  if(id==="win-amp") return [{label:"Close",bold:1,action:()=>closeWin("win-amp")}];
+  if(id==="win-amp") return [{label:"Close",bold:1,accel:"Alt+F4",action:()=>closeWin("win-amp")}];
   const el=document.getElementById(id);
   const fixed=el.classList.contains("fixed");
+  const maxed=el.classList.contains("maxed");
   return [
-    {label:"Restore",disabled:!el.classList.contains("maxed"),action:()=>maxWin(id)},
-    {label:"Move",disabled:1},
-    {label:"Size",disabled:fixed},
+    {label:"Restore",disabled:!maxed,action:()=>maxWin(id)},
+    {label:"Move",disabled:maxed,action:()=>kbdWinDrive(id,"move")},
+    {label:"Size",disabled:fixed||maxed,action:()=>kbdWinDrive(id,"size")},
     {label:"Minimize",disabled:NOTAB.has(id),action:()=>minWin(id)},
-    {label:"Maximize",disabled:fixed,action:()=>maxWin(id)},
+    {label:"Maximize",disabled:fixed||maxed,action:()=>maxWin(id)},
     {sep:1},
-    {label:"Close",bold:1,action:()=>closeWin(id)}
+    {label:"Close",bold:1,accel:"Alt+F4",action:()=>closeWin(id)}
   ];
+}
+function tileWins(vert){
+  const ids=[...openApps.entries()].filter(([id,a])=>!a.min&&!NOTAB.has(id)&&a.kind!=="webamp").map(([id])=>id);
+  if(!ids.length) return;
+  const n=ids.length, tb=H;
+  ids.forEach((id,i)=>{
+    const el=document.getElementById(id);
+    if(el.classList.contains("maxed")) maxWin(id);
+    if(vert){ el.style.left=Math.floor(W*i/n)+"px"; el.style.top="0px"; el.style.width=Math.floor(W/n)+"px"; el.style.height=tb+"px"; }
+    else{ el.style.left="0px"; el.style.top=Math.floor(tb*i/n)+"px"; el.style.width=W+"px"; el.style.height=Math.floor(tb/n)+"px"; }
+    saveWinRect(el);
+  });
+  sClick();
 }
 function taskbarMenu(){
   return [
-    {label:"Toolbars",disabled:1},
+    {label:"Toolbars",sub:[
+      {label:"Address",check:!!store.data.tbAddr,action(){ store.data.tbAddr=store.data.tbAddr?0:1; store.save(); }},
+      {label:"Links",check:!!store.data.tbLinks,action(){ store.data.tbLinks=store.data.tbLinks?0:1; store.save(); }},
+      {label:"Desktop",check:!!store.data.tbDesk,action(){ store.data.tbDesk=store.data.tbDesk?0:1; store.save(); }},
+      {label:"Quick Launch",check:store.data.quickLaunch!==0,action(){
+        store.data.quickLaunch=store.data.quickLaunch===0?1:0; store.save();
+        $$("#taskbar .qlb").forEach(b=>b.style.display=store.data.quickLaunch===0?"none":"");
+      }}]},
     {sep:1},
     {label:"Cascade Windows",action:cascadeWins},
+    {label:"Tile Windows Horizontally",action:()=>tileWins(false)},
+    {label:"Tile Windows Vertically",action:()=>tileWins(true)},
     {label:"Show the Desktop",action:showDesktopToggle},
     {sep:1},
     {label:"Task Manager",action:()=>openWin("win-taskmgr")},
     {sep:1},
-    {label:"Lock the Taskbar",disabled:1},
+    {label:"Lock the Taskbar",check:!!store.data.lockTb,action(){ store.data.lockTb=store.data.lockTb?0:1; store.save(); }},
     {label:"Properties",disabled:1}
   ];
 }
-function trayMenu(){
+function trayMenu(target){
+  if(target&&target.id==="sndico") return [
+    {label:"Open Volume Control",bold:1,action:()=>volOpen(true)},
+    {label:"Adjust Audio Properties",action:()=>volOpen(true)},
+  ];
+  if(target&&target.id==="netico") return [
+    {label:"Disable",action:()=>showError("Network Connections","You do not have sufficient privileges to disable this connection.\n\nThe dial-up is the game server. Hanging up is called logging off.")},
+    {label:"Status",action:()=>openWin("win-dialup")},
+    {label:"Repair",action(){
+      showBalloon("Repairing connection...","cursor$net 56.6 Kbps");
+      setTimeout(()=>showError("Repair Local Area Connection","The following steps of the repair operation completed successfully:\n\nRenewing the IP address.\nFlushing the ARP cache.\nFlushing the NetBIOS name cache.\nFlushing the DNS resolver cache.",true),1400);
+    }},
+    {sep:1},
+    {label:"Open Network Connections",action:()=>openWin("win-dialup")},
+  ];
+  if(target&&target.dataset&&target.dataset.ico==="trayUsb") return [
+    {label:"Safely Remove Hardware",bold:1,action:()=>showError("Safely Remove Hardware",
+      "The device 'USB Mass Storage Device' cannot be stopped right now. Try stopping the device again later.")},
+  ];
+  if(target&&target.dataset&&target.dataset.ico==="trayRisk") return [
+    {label:"Open Security Center",bold:1,action:()=>showError("Windows Security Center",
+      "Your computer might be at risk.\n\nAntivirus software might not be installed.\nThis is a gambling machine. It is not wrong.")},
+  ];
   return [
     {label:"Adjust Date/Time",action:()=>openWin("win-datetime")},
     {sep:1},
-    {label:"Customize Notifications",disabled:1}
+    {label:"Customize Notifications...",disabled:1}
+  ];
+}
+/* ---- the edit-control menu, with the submenu nobody ever used ---- */
+function editMenu(t){
+  const hasSel=()=>t.selectionStart!==t.selectionEnd;
+  const ins=ch=>{
+    const s=t.selectionStart, e=t.selectionEnd, v=t.value;
+    t.value=v.slice(0,s)+ch+v.slice(e);
+    t.selectionStart=t.selectionEnd=s+ch.length;
+    t.dispatchEvent(new Event("input",{bubbles:true})); t.focus();
+  };
+  const UNI=[["LRM","Left-to-right mark","\u200E"],["RLM","Right-to-left mark","\u200F"],
+    ["ZWJ","Zero width joiner","\u200D"],["ZWNJ","Zero width non-joiner","\u200C"],
+    ["LRE","Start of left-to-right embedding","\u202A"],["RLE","Start of right-to-left embedding","\u202B"],
+    ["LRO","Start of left-to-right override","\u202D"],["RLO","Start of right-to-left override","\u202E"],
+    ["PDF","Pop directional formatting","\u202C"],["NADS","National digit shapes substitution","\u206E"],
+    ["NODS","Nominal (European) digit shapes","\u206F"],["ASS","Activate symmetric swapping","\u206B"],
+    ["ISS","Inhibit symmetric swapping","\u206A"],["AAFS","Activate Arabic form shaping","\u206D"],
+    ["IAFS","Inhibit Arabic form shaping","\u206C"],["RS","Record Separator (Block separator)","\u001E"],
+    ["US","Unit Separator (Segment separator)","\u001F"]];
+  const ro=t.readOnly||t.disabled;
+  return [
+    {label:"Undo",accel:"Ctrl+Z",disabled:ro,action:()=>{ t.focus(); document.execCommand("undo"); }},
+    {sep:1},
+    {label:"Cut",accel:"Ctrl+X",disabled:ro||!hasSel(),action:()=>{ t.focus(); document.execCommand("cut"); }},
+    {label:"Copy",accel:"Ctrl+C",disabled:!hasSel(),action:()=>{ t.focus(); document.execCommand("copy"); }},
+    {label:"Paste",accel:"Ctrl+V",disabled:ro,action:async()=>{ t.focus(); try{ ins(await navigator.clipboard.readText()); }catch(e){ document.execCommand("paste"); } }},
+    {label:"Delete",accel:"Del",disabled:ro||!hasSel(),action:()=>{ t.focus(); document.execCommand("delete"); }},
+    {sep:1},
+    {label:"Select All",accel:"Ctrl+A",action:()=>{ t.focus(); t.select(); }},
+    {sep:1},
+    {label:"Right to left Reading order",check:t.dir==="rtl",disabled:ro,action:()=>{ t.dir=t.dir==="rtl"?"":"rtl"; }},
+    {label:"Show Unicode control characters",disabled:1},
+    {label:"Insert Unicode control character",disabled:ro,sub:UNI.map(([ab,name,ch])=>({label:ab+"\u2002"+name,action:()=>ins(ch)}))},
   ];
 }
 
@@ -1007,6 +1376,8 @@ const explorer=initExplorer({
     browse:u=>{ openWin("win-ie"); ie.go(u); },
     openIcon:ic=>openIcon(ic),
     desktopFiles:()=>allIcons(),
+    sentDocs:()=>store.data.sentDocs||[],
+    unusedFiles:()=>store.data.unusedIcons||[],
     deadCount:()=>binDead.length,
     serverDisk:()=>{ if(!MP.on||!MP.disk) return {
         used:20*1024*1024*1024-(LOCAL_CORPSES-Math.min(localDeaths,LOCAL_CORPSES))*12*1024*1024,
@@ -1073,6 +1444,13 @@ document.addEventListener("contextmenu",e=>{
     }}],e.clientX,e.clientY);
     return;
   }
+  /* any text control gets XP's edit menu — including the one submenu nobody ever opened */
+  const ed=e.target.closest("textarea,input");
+  if(ed&&(ed.tagName==="TEXTAREA"||/^(text|search|number|url|password|)$/.test(ed.type||""))){
+    showMenu(editMenu(ed),e.clientX,e.clientY); return;
+  }
+  const smItem=e.target.closest(".sm-item[data-app],.sm-item[data-act]");
+  if(smItem){ showMenu(startItemMenu(smItem),e.clientX,e.clientY); return; }
   const icon=e.target.closest(".icon");
   const tb=e.target.closest(".title-bar");
   const tab=e.target.closest(".task-tab");
@@ -1082,7 +1460,7 @@ document.addEventListener("contextmenu",e=>{
   if(icon){ const ic=iconById(icon.dataset.iid); if(ic){ selectOnly(icon); showMenu(iconMenu(ic),e.clientX,e.clientY); } }
   else if(tb){ const w=tb.closest(".window"); showMenu(winMenu(w.id),e.clientX,e.clientY); }
   else if(tab){ showMenu(winMenu(tab.dataset.win),e.clientX,e.clientY); }
-  else if(tray){ showMenu(trayMenu(),e.clientX,e.clientY); }
+  else if(tray){ showMenu(trayMenu(e.target.closest(".trayico")),e.clientX,e.clientY); }
   else if(bar){ showMenu(taskbarMenu(),e.clientX,e.clientY); }
   else if(win){ /* app body: ours, but nothing to offer */ }
   else if(e.target.closest("#desktop")){ showMenu(desktopMenu(),e.clientX,e.clientY); }
@@ -1199,8 +1577,9 @@ const SMAPPS={
 };
 const SM_DEFAULT=["win-cursors","win-chat","win-amp","win-paint","win-mine","win-log"];
 function smRecent(){
-  const r=(store.data.recent||[]).filter(id=>SMAPPS[id]);
-  for(const id of SM_DEFAULT) if(r.length<6&&r.indexOf(id)<0) r.push(id);
+  /* pinned apps leave the MRU: XP never listed a program twice */
+  const r=(store.data.recent||[]).filter(id=>SMAPPS[id]&&!store.data.pinned.includes(id));
+  for(const id of SM_DEFAULT) if(r.length<6&&r.indexOf(id)<0&&!store.data.pinned.includes(id)) r.push(id);
   return r.slice(0,6);
 }
 function smTouch(id){
@@ -1225,6 +1604,38 @@ function renderMru(){
     el.addEventListener("click",()=>{ closeStart(); sysSnd("nav",.5); openWin(id); });
     host.appendChild(el);
   }
+}
+/* pinned items live above the separator and survive reloads, like real pins */
+function renderPinned(){
+  const host=$("#sm-pinned"); if(!host) return;
+  host.innerHTML="";
+  for(const id of store.data.pinned){
+    const a=SMAPPS[id]; if(!a) continue;
+    const el=document.createElement("div");
+    el.className="sm-item"; el.dataset.app=id;
+    el.innerHTML=`<i class="xico"></i><div class="sm-texts"><div class="sm-text"></div></div>`;
+    el.querySelector(".xico").appendChild(icoNode(a.ico));
+    el.querySelector(".sm-text").textContent=a.label;
+    el.addEventListener("click",()=>{ closeStart(); sysSnd("nav",.5); openWin(id); });
+    host.appendChild(el);
+  }
+}
+renderPinned();
+function startItemMenu(el){
+  const id=el.dataset.app;
+  const items=[{label:"Open",bold:1,action:()=>{ closeStart(); el.click(); }}];
+  if(id&&SMAPPS[id]){
+    const pinned=store.data.pinned.includes(id);
+    items.push({sep:1});
+    items.push(pinned
+      ?{label:"Unpin from Start menu",action(){ store.data.pinned=store.data.pinned.filter(p=>p!==id); store.save(); renderPinned(); }}
+      :{label:"Pin to Start menu",action(){ if(!store.data.pinned.includes(id)) store.data.pinned.push(id); store.save(); renderPinned(); }});
+    if(el.closest("#sm-mru")) items.push({label:"Remove from This List",action(){
+      store.data.recent=(store.data.recent||[]).filter(r=>r!==id); store.save(); renderMru();
+    }});
+  }
+  items.push({sep:1},{label:"Properties",disabled:1});
+  return items;
 }
 $("#startbtn").addEventListener("click",e=>{ e.stopPropagation(); sClick(); startmenu.classList.toggle("open"); });
 addEventListener("pointerdown",e=>{ if(!e.target.closest("#startmenu,#startbtn")) closeStart(); });
@@ -2005,6 +2416,7 @@ ie=initIE({
     netGallery:()=>mpGalleryData(),
     tvMounted:p=>mpTvMounted(p),
     galleryMounted:()=>mpGalleryOpen(),
+    setWallpaperFrom:(u,mode)=>setWallpaperFrom(u,mode),
   },
 });
 /* the toolbar is the real IE6 button set, same archive as Explorer's */

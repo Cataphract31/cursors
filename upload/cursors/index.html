@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <title>CURSORS.EXE</title>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-  <script type="module" crossorigin src="./assets/index-I2QEyykZ.js"></script>
-  <link rel="stylesheet" crossorigin href="./assets/index-BTt6MJur.css">
+  <script type="module" crossorigin src="./assets/index-DZcWY9kJ.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-BhnGt71t.css">
 </head>
 <body>
 <svg width="0" height="0" style="position:absolute">
@@ -735,6 +735,87 @@ icons/sounds: winXP (MIT)</div>
     </div>
   </div>
 
+  <!-- Run As dialog: the real radio pair, and only one identity on this machine -->
+  <div class="window fixed" id="win-runas" style="left:calc(50% - 178px);top:calc(50% - 120px);width:356px">
+    <div class="title-bar">
+      <div class="tb-l"><div class="title-bar-text">Run As</div></div>
+      <div class="title-bar-controls"><button aria-label="Close"></button></div>
+    </div>
+    <div class="win-body">
+      <div style="display:flex;gap:11px;padding:6px 2px 10px">
+        <i class="xico" data-ico="user48" style="width:32px;height:32px;flex:none"></i>
+        <div style="line-height:1.5">Which user account do you want to use to run this program?</div>
+      </div>
+      <label style="display:flex;gap:6px;align-items:center;padding:2px 6px"><input type="radio" name="ras" id="ras-cur" checked> <span>Current user (<b id="ras-user">Administrator</b>)</span></label>
+      <label style="display:flex;gap:6px;align-items:center;padding:2px 6px 2px 24px"><input type="checkbox" checked disabled> <span class="dim">Protect my computer and data from unauthorized program activity</span></label>
+      <label style="display:flex;gap:6px;align-items:center;padding:6px 6px 2px"><input type="radio" name="ras" id="ras-other"> <span>The following user:</span></label>
+      <div style="display:grid;grid-template-columns:74px 1fr;gap:5px;align-items:center;padding:2px 6px 8px 24px">
+        <span>User name:</span><input type="text" id="ras-name" disabled value="">
+        <span>Password:</span><input type="password" id="ras-pass" disabled value="">
+      </div>
+      <div style="display:flex;gap:7px;justify-content:flex-end;margin-top:4px">
+        <button class="xbtn" id="ras-ok" style="min-width:74px">OK</button>
+        <button class="xbtn" id="ras-cancel" style="min-width:74px">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Create Shortcut wizard -->
+  <div class="window fixed" id="win-shortcutwiz" style="left:calc(50% - 210px);top:calc(50% - 140px);width:420px">
+    <div class="title-bar">
+      <div class="tb-l"><div class="title-bar-text">Create Shortcut</div></div>
+      <div class="title-bar-controls"><button aria-label="Close"></button></div>
+    </div>
+    <div class="win-body">
+      <div id="scw-p1">
+        <div style="line-height:1.5;padding:4px 2px 10px">This wizard helps you to create shortcuts to local or network programs, files, folders, computers, or Internet addresses.</div>
+        <div style="padding:0 2px 4px">Type the location of the item:</div>
+        <div style="display:flex;gap:6px;padding:0 2px 10px"><input type="text" id="scw-loc" style="flex:1" spellcheck="false"><button class="xbtn" id="scw-browse" style="min-width:70px">Browse...</button></div>
+        <div class="small dim" style="padding:0 2px 10px">Click Next to continue.</div>
+      </div>
+      <div id="scw-p2" style="display:none">
+        <div style="line-height:1.5;padding:4px 2px 10px">Type a name for this shortcut:</div>
+        <div style="padding:0 2px 14px"><input type="text" id="scw-name" style="width:100%" spellcheck="false"></div>
+        <div class="small dim" style="padding:0 2px 10px">Click Finish to create the shortcut.</div>
+      </div>
+      <div style="display:flex;gap:7px;justify-content:flex-end;border-top:1px solid #D4D0C8;padding-top:8px">
+        <button class="xbtn" id="scw-back" style="min-width:74px" disabled>&lt; Back</button>
+        <button class="xbtn" id="scw-next" style="min-width:74px">Next &gt;</button>
+        <button class="xbtn" id="scw-cancel" style="min-width:74px">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Desktop Cleanup Wizard: sweeps what you never open into a folder -->
+  <div class="window fixed" id="win-cleanup" style="left:calc(50% - 220px);top:calc(50% - 160px);width:440px">
+    <div class="title-bar">
+      <div class="tb-l"><div class="title-bar-text">Desktop Cleanup Wizard</div></div>
+      <div class="title-bar-controls"><button aria-label="Close"></button></div>
+    </div>
+    <div class="win-body">
+      <div id="dcw-p1">
+        <div style="font-weight:bold;font-size:12px;padding:4px 2px 8px">Welcome to the Desktop Cleanup Wizard</div>
+        <div style="line-height:1.55;padding:0 2px 10px">This wizard helps you clean up your desktop by moving unused shortcuts to a folder called Unused Desktop Shortcuts. You can restore shortcuts from the folder to your desktop at any time.</div>
+        <div class="small dim" style="padding:0 2px 10px">To continue, click Next.</div>
+      </div>
+      <div id="dcw-p2" style="display:none">
+        <div style="line-height:1.5;padding:4px 2px 8px">Select the shortcuts you want to move to the Unused Desktop Shortcuts folder, and then click Next.</div>
+        <div style="border:1px solid #7F9DB9;background:#fff;height:150px;overflow:auto;margin:0 2px 8px" id="dcw-list"></div>
+      </div>
+      <div id="dcw-p3" style="display:none">
+        <div style="font-weight:bold;font-size:12px;padding:4px 2px 8px">Completing the Desktop Cleanup Wizard</div>
+        <div style="line-height:1.55;padding:0 2px 6px">You have chosen to move these shortcuts:</div>
+        <div style="border:1px solid #7F9DB9;background:#fff;max-height:120px;overflow:auto;margin:0 2px 8px;padding:4px 6px" id="dcw-sum"></div>
+        <div class="small dim" style="padding:0 2px 10px">To close this wizard, click Finish.</div>
+      </div>
+      <div style="display:flex;gap:7px;justify-content:flex-end;border-top:1px solid #D4D0C8;padding-top:8px">
+        <button class="xbtn" id="dcw-back" style="min-width:74px" disabled>&lt; Back</button>
+        <button class="xbtn" id="dcw-next" style="min-width:74px">Next &gt;</button>
+        <button class="xbtn" id="dcw-cancel" style="min-width:74px">Cancel</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Confirm dialog -->
   <div class="window fixed" id="win-confirm" style="left:calc(50% - 165px);top:calc(50% - 80px);width:330px">
     <div class="title-bar">
@@ -873,6 +954,7 @@ icons/sounds: winXP (MIT)</div>
     <div class="sm-left">
       <div class="sm-item two" data-app="win-ie"><i class="xico" data-ico="ie32"></i><div class="sm-texts"><div class="sm-text b">Internet</div><div class="sm-sub">Internet Explorer</div></div></div>
       <div class="sm-item two" data-act="email"><i class="xico" data-ico="outlook32"></i><div class="sm-texts"><div class="sm-text b">E-mail</div><div class="sm-sub">Outlook Express</div></div></div>
+      <div id="sm-pinned"></div>
       <div class="sm-sep"></div>
       <!-- XP's left column below the pins is a most-recently-used list, not a
            fixed roster: it rebuilds itself from what you actually open -->

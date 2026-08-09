@@ -838,6 +838,76 @@ Internet Explorer</p>
     if (e.key === "Enter" && e.target.id === "sq") { e.preventDefault(); ACTIONS.search(); }
   });
 
+  /* IE6 had three different right-click menus: page, link and image.
+     All three are here, and Set as Background genuinely redecorates. */
+  els.page.addEventListener("contextmenu", e => {
+    if (e.target.closest("input,textarea")) return;   /* the shell's edit menu owns those */
+    e.preventDefault(); e.stopPropagation();
+    const a = e.target.closest("[data-go]");
+    const img = e.target.closest("img");
+    const sel = () => (window.getSelection() || "").toString();
+    let items;
+    if (a) {
+      const u = a.dataset.go;
+      items = [
+        { label: "Open", bold: 1, action: () => { sysSnd("nav", .4); go(u); } },
+        { label: "Open in New Window", action: () => { sysSnd("nav", .4); go(u); } },
+        { label: "Save Target As...", action: () => showError("Save As", "Access is denied.\n\nThe disk is nearly full of dead cursors. Saving is not going to help.") },
+        { label: "Print Target", action: () => noPrinter() },
+        { sep: 1 },
+        { label: "Copy Shortcut", action: () => { try { navigator.clipboard.writeText(/^https?:/i.test(u) ? u : ""); } catch (err) {} } },
+        { sep: 1 },
+        { label: "Add to Favorites...", action: () => menu("Favorites", e.clientX, e.clientY) },
+        { sep: 1 },
+        { label: "Properties", action: () => showError("Properties", `Protocol: HyperText Transfer Protocol\nType: HTML Document\nAddress:\n(URL) ${u}`, true) },
+      ];
+    } else if (img && img.src) {
+      items = [
+        { label: "Save Picture As...", action: () => showError("Save Picture", "Access is denied.\n\nRight-click was free. The picture is not leaving.") },
+        { label: "E-mail Picture...", action: () => hooks.openLobby() },
+        { label: "Print Picture...", action: () => noPrinter() },
+        { sep: 1 },
+        { label: "Set as Background", action: () => { hooks.setWallpaperFrom && hooks.setWallpaperFrom(img.src, "center"); } },
+        { label: "Set as Desktop Item...", disabled: 1 },
+        { sep: 1 },
+        { label: "Copy", disabled: 1 },
+        { sep: 1 },
+        { label: "Properties", action: () => showError("Properties", `Type: ${/^data:/.test(img.src) ? "Bitmap Image" : "GIF Image"}\nAddress:\n(URL) ${url || HOME}`, true) },
+      ];
+    } else {
+      items = [
+        { label: "Back", disabled: !past.length, action: () => els.back.dispatchEvent(new Event("click")) },
+        { label: "Forward", disabled: !future.length, action: () => els.fwd.dispatchEvent(new Event("click")) },
+        { sep: 1 },
+        { label: "Save Background As...", disabled: 1 },
+        { label: "Set as Background", disabled: 1 },
+        { label: "Copy Background", disabled: 1 },
+        { label: "Set as Desktop Item...", disabled: 1 },
+        { sep: 1 },
+        { label: "Select All", accel: "Ctrl+A", action: () => { const r = document.createRange(); r.selectNodeContents(els.page); const s = getSelection(); s.removeAllRanges(); s.addRange(r); } },
+        { label: "Paste", disabled: 1 },
+        { sep: 1 },
+        { label: "Create Shortcut", disabled: 1 },
+        { label: "Add to Favorites...", action: () => menu("Favorites", e.clientX, e.clientY) },
+        { label: "View Source", action: () => hooks.openText(srcName(), srcView()) },
+        { sep: 1 },
+        { label: "Encoding", sub: [
+          { label: "Auto-Select" },
+          { sep: 1 },
+          { label: "Western European (Windows)", check: 1 },
+          { label: "Unicode (UTF-8)" },
+          { sep: 1 },
+          { label: "More", disabled: 1 }] },
+        { sep: 1 },
+        { label: "Print...", action: () => noPrinter() },
+        { label: "Refresh", action: () => ACTIONS.refresh() },
+        { sep: 1 },
+        { label: "Properties", action: () => showError("Properties", `Protocol: HyperText Transfer Protocol\nType: HTML Document\nConnection: 56.6 Kbps modem\nAddress:\n(URL) ${url || "about:blank"}`, true) },
+      ];
+    }
+    showMenu(items, e.clientX, e.clientY);
+  });
+
   /* the hit counter only moves while somebody is looking at it */
   setInterval(() => {
     if (!hooks.isOpen()) return;

@@ -67,6 +67,12 @@ import navMedia from "./assets/xp/icons/846(16x16).png";
 import earth16 from "./assets/xp/icons/earth.png";
 import connect16 from "./assets/xp/icons/309(16x16).png";
 import sysfile32 from "./assets/xp/icons/546(32x32).png";
+/* file-type icons for the desktop New menu, same shell32-numbered set */
+import bmpdoc32 from "./assets/xp/icons/680(32x32).png";
+import wavdoc16 from "./assets/xp/icons/234(16x16).png";
+import writedoc16 from "./assets/xp/icons/153(16x16).png";
+import volmix16 from "./assets/xp/icons/120(16x16).png";
+import cmd16 from "./assets/xp/icons/56(16x16).png";
 
 import paintTools from "./assets/xp/paint/tools.png";
 import paintTrans from "./assets/xp/paint/options-transparency.png";
@@ -102,6 +108,7 @@ export const IMG = {
   trayVol, trayUsb, trayRisk, offBig, flag16,
   paint16, paint32,
   hdd32, cd32, progfolder32, openfolder32, winfolder32, shareddocs32, sysfile32,
+  bmpdoc32, wavdoc16, writedoc16, volmix16, cmd16,
   navBack, navFwd, navUp, navFolders, navSearch, navDrop,
   navStop, navRefresh, navHome, navFav, navHistory, navMail, navLinks, navMedia,
   earth16, connect16,
