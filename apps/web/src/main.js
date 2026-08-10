@@ -868,6 +868,25 @@ function pinballOpen(){
   openWin("win-pinball");
   setTimeout(()=>{ try{ fr.contentWindow.focus(); fr.contentWindow.dispatchEvent(new Event("resize")); }catch(e){} },300);
 }
+/* ================= Solitaire ================= */
+/* rjanjic's MIT js-solitaire, which already wears the classic Windows deck.
+   Same recipe as pinball: lazy iframe, our chrome, their game. */
+function solitaireOpen(){
+  const fr=$("#solitaire-frame");
+  if(!fr.src){
+    fr.src="solitaire/index.html";
+    fr.addEventListener("load",()=>{
+      try{
+        const d=fr.contentDocument;
+        const st=d.createElement("style");
+        st.textContent=".window__heading{display:none!important}"+
+          "body{margin:0!important}.window{border:0!important;box-shadow:none!important}";
+        d.head.appendChild(st);
+      }catch(e){}
+    },{once:true});
+  }
+  openWin("win-solitaire");
+}
 /* ================= file operations ================= */
 /* XP never moved a file without showing you it moving. Every multi-item shell
    operation runs through here: the flying-paper animation, the segmented bar,
@@ -2015,7 +2034,7 @@ function allProgramsMenu(){
       {label:"Control Panel",action:go("win-control")}]},
     {label:"Games",sub:[
       {label:"Minesweeper",action:go("win-mine")},
-      {label:"Solitaire",action:()=>{ closeStart(); showError("Solitaire","You are already gambling."); }},
+      {label:"Solitaire",action:()=>{ closeStart(); solitaireOpen(); }},
       {label:"FreeCell",disabled:1},
       {label:"Hearts",disabled:1},
       {label:"Pinball",action:()=>{ closeStart(); pinballOpen(); }}]},
@@ -2088,6 +2107,7 @@ function runNamed(k){
   if(k==="wordpad"||k==="wordpad.exe"||k==="write"||k==="write.exe"){ write.openWordpad(null); return true; }
   if(k==="clipbrd"||k==="clipbrd.exe"){ write.openClipbook(); return true; }
   if(k==="pinball"||k==="pinball.exe"){ pinballOpen(); return true; }
+  if(k==="sol"||k==="sol.exe"||k==="solitaire"){ solitaireOpen(); return true; }
   if(RUNMAP[k]){ sysSnd("nav",.5); openWin(RUNMAP[k]); return true; }
   return false;
 }
@@ -4735,6 +4755,7 @@ if(location.hash.indexOf("#desktop-sys")===0) setTimeout(()=>{ /* dev: the XP ap
 },900);
 if(location.hash==="#desktop-mouse") setTimeout(()=>mouse.open(),300); /* dev: Mouse Properties */
 if(location.hash==="#desktop-pinball") setTimeout(()=>pinballOpen(),400); /* dev: the actual game */
+if(location.hash==="#desktop-solitaire") setTimeout(()=>solitaireOpen(),400); /* dev: the classic deck */
 if(location.hash==="#desktop-write") setTimeout(()=>{ /* dev: all four writing apps */
   write.openNotepad({title:"session.LOG",get:()=>".LOG\nfirst entry",set:null});
   write.openWordpad(null);

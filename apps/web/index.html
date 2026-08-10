@@ -16,6 +16,12 @@
       <rect x="4" y="4" width="24" height="24" rx="4" fill="none" stroke="#7FB2EC" stroke-width="1"/>
       <path d="M11 7 L11 22 L15 18.6 L17.4 24.4 L19.8 23.3 L17.5 17.7 L21.5 17.7 Z" fill="#fff" stroke="#0A2A5C" stroke-width="1" stroke-linejoin="round"/>
     </symbol>
+    <symbol id="ic-cards" viewBox="0 0 32 32">
+      <rect x="4" y="6" width="14" height="19" rx="2" fill="#fff" stroke="#333"/>
+      <rect x="13" y="9" width="14" height="19" rx="2" fill="#fff" stroke="#333"/>
+      <path d="M20 14 c-1.4-2.6-5-1-4 1.6 .7 1.8 4 4 4 4 s3.3-2.2 4-4 c1-2.6-2.6-4.2-4-1.6z" fill="#C00"/>
+      <path d="M11 11 l2.4 4.2 h-4.8z M11 19 l-2.4-4.2 h4.8z" fill="#111"/>
+    </symbol>
     <symbol id="ic-file" viewBox="0 0 32 32">
       <path d="M7 3 h13 l6 6 v20 a1 1 0 0 1 -1 1 h-18 a1 1 0 0 1 -1 -1 v-25 a1 1 0 0 1 1 -1 z" fill="#FDFDFD" stroke="#9AA5B1"/>
       <path d="M20 3 v6 h6" fill="#E4E9EF" stroke="#9AA5B1" stroke-linejoin="round"/>
@@ -1218,6 +1224,18 @@ icons/sounds: winXP (MIT)</div>
     </div>
     <div class="win-body pad" style="background:#000">
       <iframe id="pinball-frame" style="flex:1;border:0;min-height:0" title="3D Pinball"></iframe>
+    </div>
+  </div>
+
+  <!-- Solitaire: rjanjic/js-solitaire (MIT), already styled as the classic
+       Windows game. Vendored under public/solitaire, lazy like pinball. -->
+  <div class="window" id="win-solitaire" data-minw="420" data-minh="320" style="left:170px;top:56px;width:660px;height:520px">
+    <div class="title-bar">
+      <div class="tb-l"><i class="xico tb-ico" data-ico="@ic-cards"></i><div class="title-bar-text">Solitaire</div></div>
+      <div class="title-bar-controls"><button aria-label="Minimize"></button><button aria-label="Maximize"></button><button aria-label="Close"></button></div>
+    </div>
+    <div class="win-body pad" style="background:#008000">
+      <iframe id="solitaire-frame" style="flex:1;border:0;min-height:0" title="Solitaire"></iframe>
     </div>
   </div>
 

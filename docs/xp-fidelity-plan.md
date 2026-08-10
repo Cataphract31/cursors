@@ -401,8 +401,14 @@ every 404 into index.html — test against `python -m http.server`. A plain
 `.win-body` is not a flex column; iframe children collapse to the 300x150
 default unless the body has the `pad` class.
 
-Still owed from Phase 11: Solitaire (real deck, win cascade), then
-Spider/FreeCell off the same deck.
+Also shipped: **Solitaire** — rjanjic/js-solitaire (MIT), which already wears
+the classic Windows deck and felt. Same recipe: vendored under
+`public/solitaire/` (44 KB), lazy iframe, our chrome over its game, its
+"New game" menu kept. Games ▸ Solitaire and Run ▸ sol. The "You are already
+gambling" gag is gone; the real game is funnier.
+
+Still owed from Phase 11: Spider/FreeCell, only if wanted — same vendor
+approach or not at all.
 
 ## Phase 12 — the maintenance apps (delver bait, round two)
 
