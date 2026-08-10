@@ -629,7 +629,7 @@ icons/sounds: winXP (MIT)</div>
   </div>
 
   <!-- Task Manager -->
-  <div class="window" id="win-taskmgr" data-minw="310" data-minh="300" style="left:120px;top:80px;width:344px">
+  <div class="window" id="win-taskmgr" data-minw="380" data-minh="380" style="left:120px;top:60px;width:412px;height:470px">
     <div class="title-bar">
       <div class="tb-l"><i class="xico tb-ico" data-ico="@ic-app"></i><div class="title-bar-text">Windows Task Manager</div></div>
       <div class="title-bar-controls"><button aria-label="Minimize"></button><button aria-label="Close"></button></div>
@@ -640,17 +640,45 @@ icons/sounds: winXP (MIT)</div>
         <span class="xtab on" data-pane="tm-apps">Applications</span>
         <span class="xtab" data-pane="tm-procs">Processes</span>
         <span class="xtab" data-pane="tm-perf">Performance</span>
+        <span class="xtab" data-pane="tm-net">Networking</span>
+        <span class="xtab" data-pane="tm-users">Users</span>
       </div>
       <div class="xpane on" id="tm-apps">
         <div class="tm-list" id="tmapps"></div>
         <div style="display:flex;justify-content:flex-end;gap:6px;padding-top:8px"><button class="xbtn" id="tm-switch">Switch To</button><button class="xbtn" id="tm-end">End Task</button></div>
       </div>
       <div class="xpane" id="tm-procs">
-        <div class="tm-list" id="tmprocs" style="height:190px"></div>
+        <div class="tm-list" id="tmprocs" style="flex:1;min-height:0"></div>
+        <div style="display:flex;justify-content:flex-end;padding-top:8px"><button class="xbtn" id="tm-endproc">End Process</button></div>
       </div>
       <div class="xpane" id="tm-perf">
-        <canvas id="tmgraph" width="300" height="90" style="width:100%;border:1px solid #7F9DB9;background:#000"></canvas>
-        <div class="mono small" id="tmstats" style="margin-top:7px;line-height:1.9"></div>
+        <div class="tm-gaugerow">
+          <fieldset class="tm-fs"><legend>CPU Usage</legend><div class="tm-gauge" id="tm-cpugauge"><i></i><b>0%</b></div></fieldset>
+          <fieldset class="tm-fs" style="flex:1"><legend>CPU Usage History</legend><canvas id="tmgraph" width="240" height="62"></canvas></fieldset>
+        </div>
+        <div class="tm-gaugerow">
+          <fieldset class="tm-fs"><legend>PF Usage</legend><div class="tm-gauge" id="tm-pfgauge"><i></i><b>0</b></div></fieldset>
+          <fieldset class="tm-fs" style="flex:1"><legend>Page File Usage History</legend><canvas id="tmpf" width="240" height="62"></canvas></fieldset>
+        </div>
+        <div class="tm-statgrid" id="tmstats"></div>
+      </div>
+      <div class="xpane" id="tm-net">
+        <fieldset class="tm-fs"><legend>cursor$net Dial-up Connection</legend><canvas id="tmnet" width="360" height="120" style="width:100%"></canvas></fieldset>
+        <div class="tm-list" style="height:auto">
+          <div class="row hdr"><span>Adapter Name</span><span>Network Utilization</span></div>
+          <div class="row"><span>cursor$net 56.6 Kbps</span><span id="tm-netpct">0%</span></div>
+        </div>
+      </div>
+      <div class="xpane" id="tm-users">
+        <div class="tm-list" style="flex:1;min-height:0">
+          <div class="row hdr"><span>User</span><span>Status</span></div>
+          <div class="row"><span id="tm-user1">Administrator</span><span>Active</span></div>
+          <div class="row dim"><span>Guest</span><span>Disconnected</span></div>
+        </div>
+        <div style="display:flex;justify-content:flex-end;gap:6px;padding-top:8px">
+          <button class="xbtn" id="tm-disconnect">Disconnect</button>
+          <button class="xbtn" id="tm-logoffbtn">Logoff</button>
+        </div>
       </div>
       <div class="tm-stat"><span id="tmfoot">Processes: 14 · CPU Usage: 2%</span></div>
     </div>
@@ -1509,6 +1537,7 @@ icons/sounds: winXP (MIT)</div>
   <div id="tabs"></div>
   <div id="tray">
     <span id="tray-chev" data-tip="Show hidden icons">‹</span>
+    <span id="tray-cpu" data-tip="CPU Usage"><i></i></span>
     <span id="phasechip" data-tip="System status">R0 · BOOT</span>
     <i class="xico trayico" id="netico" data-ico="connect16" data-tip="cursor$net · 56.6 Kbps" style="display:none"></i>
     <i class="xico trayico" id="sndico" data-ico="trayVol" data-tip="Volume"></i>

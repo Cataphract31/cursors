@@ -2548,10 +2548,32 @@ Contact your computer administrator.`));
 let duelPulse=0, tmSel=null, tmHist=[];
 const TMPROCS=["cursors.exe","explorer.exe","msnmsgr.exe","winamp.exe","wallet.dll","hopium.sys","rundll32.exe","svchost.exe","svchost.exe","mumu.exe","copium.drv","System Idle Process"];
 function tmCpu(){ return Math.min(99,Math.round(3+duelPulse*24+curs.length*.6+Math.random()*4)); }
+let tmPfHist=[], tmNetHist=[], tmProcSel=null, tmNetLast=0;
+function tmHeapMB(){
+  /* real memory where the browser will tell us; a plausible commit elsewhere */
+  try{ return Math.round(performance.memory.usedJSHeapSize/1048576); }catch(e){ return 96+Math.round(upT/60)%32; }
+}
+function tmGraph(cv,hist,color){
+  const g=cv.getContext("2d");
+  g.fillStyle="#000"; g.fillRect(0,0,cv.width,cv.height);
+  g.strokeStyle="#123A12"; g.lineWidth=1;
+  for(let x=0;x<cv.width;x+=12){ g.beginPath(); g.moveTo(x+.5,0); g.lineTo(x+.5,cv.height); g.stroke(); }
+  for(let y=0;y<cv.height;y+=12){ g.beginPath(); g.moveTo(0,y+.5); g.lineTo(cv.width,y+.5); g.stroke(); }
+  g.strokeStyle=color; g.lineWidth=1.5; g.beginPath();
+  hist.forEach((v,i)=>{
+    const x=cv.width-(hist.length-i)*4, y=cv.height-Math.min(1,v/100)*cv.height;
+    i?g.lineTo(x,y):g.moveTo(x,y);
+  });
+  g.stroke();
+}
 setInterval(()=>{
   duelPulse=Math.max(0,duelPulse-.34);
-  if($("#win-taskmgr").style.display!=="flex") return;
+  const open=$("#win-taskmgr").style.display==="flex";
+  $("#tray-cpu").style.display=open?"flex":"none";
+  if(!open) return;
   const cpu=tmCpu();
+  $("#tray-cpu i").style.height=Math.max(8,cpu)+"%";
+  $("#tray-cpu").dataset.tip="CPU Usage: "+cpu+"%";
   if($("#tm-apps").classList.contains("on")){
     const host=$("#tmapps"); host.innerHTML="";
     for(const [id] of openApps){
@@ -2569,32 +2591,63 @@ setInterval(()=>{
   }
   if($("#tm-procs").classList.contains("on")){
     const host=$("#tmprocs"); host.innerHTML="";
+    const hdr=document.createElement("div"); hdr.className="row hdr";
+    hdr.innerHTML="<span>Image Name</span><span>CPU</span>";
+    host.appendChild(hdr);
     for(const name of TMPROCS){
       const c=name==="System Idle Process"?100-cpu
         :name==="cursors.exe"?Math.max(1,cpu-6)
         :Math.round(Math.random()*2);
-      const row=document.createElement("div"); row.className="row";
+      const row=document.createElement("div"); row.className="row"+(tmProcSel===name?" on":"");
       row.innerHTML=`<span>${name}</span><span>${String(c).padStart(2,"0")}</span>`;
+      row.addEventListener("click",()=>{ tmProcSel=name;
+        [...host.children].forEach(r=>r.classList.remove("on")); row.classList.add("on"); });
       host.appendChild(row);
     }
   }
   if($("#tm-perf").classList.contains("on")){
     tmHist.push(cpu); if(tmHist.length>60) tmHist.shift();
-    const cv=$("#tmgraph"), g=cv.getContext("2d");
-    g.fillStyle="#000"; g.fillRect(0,0,cv.width,cv.height);
-    g.strokeStyle="#123A12"; g.lineWidth=1;
-    for(let x=0;x<cv.width;x+=15){ g.beginPath(); g.moveTo(x+.5,0); g.lineTo(x+.5,cv.height); g.stroke(); }
-    for(let y=0;y<cv.height;y+=15){ g.beginPath(); g.moveTo(0,y+.5); g.lineTo(cv.width,y+.5); g.stroke(); }
-    g.strokeStyle="#2FD858"; g.lineWidth=1.5; g.beginPath();
-    tmHist.forEach((v,i)=>{
-      const x=cv.width-(tmHist.length-i)*5, y=cv.height-v/100*cv.height;
-      i?g.lineTo(x,y):g.moveTo(x,y);
-    });
-    g.stroke();
-    $("#tmstats").innerHTML=`CPU Usage: <b>${cpu}%</b> · Commit Charge: <b>${fmtS(wallet)} SOL</b><br>Cursors on field: <b>${curs.length}</b> · Uptime: it's 2003, nobody reboots`;
+    const heap=tmHeapMB();
+    tmPfHist.push(Math.min(100,heap/4)); if(tmPfHist.length>60) tmPfHist.shift();
+    tmGraph($("#tmgraph"),tmHist,"#2FD858");
+    tmGraph($("#tmpf"),tmPfHist,"#E8D830");
+    $("#tm-cpugauge i").style.height=cpu+"%"; $("#tm-cpugauge b").textContent=cpu+"%";
+    $("#tm-pfgauge i").style.height=Math.min(100,heap/4)+"%"; $("#tm-pfgauge b").textContent=heap+" MB";
+    $("#tmstats").innerHTML=
+      `<span>Handles: <b>${(4200+curs.length*31)%9999}</b></span><span>Commit Charge: <b>${heap} MB</b></span>`+
+      `<span>Threads: <b>${390+binDead.length%99}</b></span><span>Physical Memory: <b>523 MB</b></span>`+
+      `<span>Processes: <b>${TMPROCS.length}</b></span><span>Up Time: <b>${fmtUpLong(performance.now()/1000)}</b></span>`;
   }
-  $("#tmfoot").textContent=`Processes: ${TMPROCS.length} · CPU Usage: ${cpu}%`;
+  if($("#tm-net").classList.contains("on")){
+    /* real traffic: socket messages per tick, scaled to a 56.6k's idea of busy */
+    const d=tmNetMsgs-tmNetLast; tmNetLast=tmNetMsgs;
+    const pct=Math.min(100,d*4);
+    tmNetHist.push(pct); if(tmNetHist.length>85) tmNetHist.shift();
+    tmGraph($("#tmnet"),tmNetHist,"#E8D830");
+    $("#tm-netpct").textContent=(MP.on?pct:0)+"%";
+  }
+  if($("#tm-users").classList.contains("on")) $("#tm-user1").textContent=playerNameFull();
+  $("#tmfoot").textContent=`Processes: ${TMPROCS.length} · CPU Usage: ${cpu}% · Commit Charge: ${tmHeapMB()}M`;
 },700);
+$("#tm-endproc").addEventListener("click",()=>{
+  if(!tmProcSel) return;
+  showConfirm("Task Manager Warning",
+    `WARNING: Terminating a process can cause undesired results including loss of data and system instability. The process will not be given the chance to save its state or data before it is terminated. Are you sure you want to terminate the process?`,
+    ()=>{
+      if(tmProcSel==="cursors.exe"){ closeWin("win-cursors"); }
+      else if(tmProcSel==="explorer.exe"){
+        /* the classic: the shell blinks out, then picks itself back up */
+        $("#taskbar").style.display="none"; $("#icons").style.display="none";
+        setTimeout(()=>{ $("#taskbar").style.display=""; $("#icons").style.display=store.data.showIcons?"":"none"; sysSnd("logon",.4); },2600);
+      }
+      else if(tmProcSel==="System Idle Process") showError("Task Manager","The operation could not be completed."+String.fromCharCode(10,10)+"Access is denied.");
+      else if(tmProcSel==="winamp.exe") closeWin("win-amp");
+      else if(tmProcSel==="msnmsgr.exe") closeWin("win-chat");
+      else showError("Task Manager","The operation could not be completed."+String.fromCharCode(10,10)+"Access is denied.");
+    });
+});
+$("#tm-disconnect").addEventListener("click",()=>showError("Task Manager","Guest is already disconnected."));
+$("#tm-logoffbtn").addEventListener("click",()=>{ openWin("win-logoff"); });
 $("#tm-end").addEventListener("click",()=>{ if(tmSel&&openApps.has(tmSel)){ closeWin(tmSel); tmSel=null; } });
 $("#tm-switch").addEventListener("click",()=>{
   if(!tmSel||!openApps.has(tmSel)) return;
@@ -4136,7 +4189,9 @@ function mpDown(){
     startEpoch();
   },7000);
 }
+let tmNetMsgs=0;
 function mpMsg(m){
+  tmNetMsgs++;
   switch(m.t){
     case "welcome": mpWelcome(m); break;
     case "snap": if(MP.on) mpSnap(m); break;

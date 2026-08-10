@@ -1309,3 +1309,24 @@ body.tb-auto.tb-peek #taskbar{transform:none}
 .wmp-row{padding:3px 10px;cursor:default}
 .wmp-row:hover{background:#1b2a40}
 .wmp-row.on{background:#265088;color:#fff}
+
+/* ---------- Phase 12: Task Manager, all five tabs ---------- */
+.tm-gaugerow{display:flex;gap:8px;margin-bottom:6px}
+.tm-fs{border:1px groove #fff;padding:4px 6px;margin:0}
+.tm-fs legend{font-size:10px;padding:0 3px}
+.tm-fs canvas{background:#000;border:1px solid #333;display:block;width:100%}
+/* the LED bar gauge: black well, green segments lit from the bottom */
+.tm-gauge{position:relative;width:44px;height:62px;background:#000;border:1px solid #333;
+  display:flex;align-items:flex-end;justify-content:center}
+.tm-gauge i{display:block;width:26px;margin:0 auto 2px;
+  background:repeating-linear-gradient(0deg,#2FD858 0 3px,#0a3f14 3px 5px);height:0%}
+.tm-gauge b{position:absolute;bottom:2px;left:0;right:0;text-align:center;color:#2FD858;
+  font:700 10px Tahoma;text-shadow:0 0 2px #000}
+.tm-statgrid{display:grid;grid-template-columns:1fr 1fr;gap:2px 12px;font-size:10px;
+  padding:4px 2px;line-height:1.7}
+.tm-list .row.hdr{font-weight:700;border-bottom:1px solid #ACA899;background:#ECE9D8;position:sticky;top:0}
+.tm-list .row.dim{color:#777}
+/* the tray CPU meter while Task Manager is open */
+#tray-cpu{display:none;width:16px;height:16px;background:#000;border:1px solid #3c6;
+  align-items:flex-end;justify-content:center;padding:1px;box-sizing:border-box}
+#tray-cpu i{display:block;width:10px;background:#2FD858;height:10%}
