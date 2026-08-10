@@ -1201,6 +1201,67 @@ icons/sounds: winXP (MIT)</div>
     </div>
   </div>
 
+  <!-- ===== Accessibility: the Magnifier strip, its window, the OSK, the options ===== -->
+  <div id="magnifier"><div class="mag-view"></div></div>
+  <div class="window fixed" id="win-magnifier" style="left:calc(50% - 170px);top:220px;width:340px">
+    <div class="title-bar">
+      <div class="tb-l"><i class="xico tb-ico" data-ico="help16"></i><div class="title-bar-text">Magnifier Settings</div></div>
+      <div class="title-bar-controls"><button aria-label="Minimize"></button><button aria-label="Close"></button></div>
+    </div>
+    <div class="win-body pad" style="background:#ECE9D8"><div id="mg-body"></div></div>
+  </div>
+
+  <div class="window" id="win-osk" data-minw="420" data-minh="180" style="left:calc(50% - 300px);top:420px;width:600px;height:236px">
+    <div class="title-bar">
+      <div class="tb-l"><i class="xico tb-ico" data-ico="help16"></i><div class="title-bar-text">On-Screen Keyboard</div></div>
+      <div class="title-bar-controls"><button aria-label="Minimize"></button><button aria-label="Close"></button></div>
+    </div>
+    <div class="win-body pad" style="background:#ECE9D8">
+      <div class="menubar"><span>File</span><span>Keyboard</span><span>Settings</span><span>Help</span></div>
+      <div class="osk-keys" id="osk-keys"></div>
+    </div>
+  </div>
+
+  <div class="window fixed" id="win-access" style="left:calc(50% - 190px);top:64px;width:380px">
+    <div class="title-bar">
+      <div class="tb-l"><i class="xico tb-ico" data-ico="help16"></i><div class="title-bar-text">Accessibility Options</div></div>
+      <div class="title-bar-controls"><button aria-label="Close"></button></div>
+    </div>
+    <div class="win-body pad" style="background:#ECE9D8">
+      <div class="xtabs">
+        <span class="xtab on" data-pane="ac-kbd">Keyboard</span>
+        <span class="xtab" data-pane="ac-snd">Sound</span>
+        <span class="xtab" data-pane="ac-disp">Display</span>
+        <span class="xtab" data-pane="ac-mouse">Mouse</span>
+      </div>
+      <div class="xpane on" id="ac-kbd"></div>
+      <div class="xpane" id="ac-snd"></div>
+      <div class="xpane" id="ac-disp"></div>
+      <div class="xpane" id="ac-mouse"></div>
+      <div style="display:flex;gap:7px;justify-content:flex-end;margin-top:8px">
+        <button class="xbtn" id="ac-ok" style="min-width:74px">OK</button>
+        <button class="xbtn" id="ac-cancel" style="min-width:74px">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Scheduled Tasks ===== -->
+  <div class="window" id="win-tasks" data-minw="460" data-minh="280" style="left:140px;top:78px;width:600px;height:380px">
+    <div class="title-bar">
+      <div class="tb-l"><i class="xico tb-ico" data-ico="@ic-mmc"></i><div class="title-bar-text">Scheduled Tasks</div></div>
+      <div class="title-bar-controls"><button aria-label="Minimize"></button><button aria-label="Close"></button></div>
+    </div>
+    <div class="win-body pad">
+      <div class="menubar"><span>File</span><span>Edit</span><span>View</span><span>Favorites</span><span>Advanced</span><span>Help</span></div>
+      <div class="st-head">
+        <span class="st-n">Name</span><span class="st-s">Schedule</span>
+        <span class="st-r">Next Run Time</span><span class="st-l">Last Run Time</span><span class="st-t">Status</span>
+      </div>
+      <div class="st-list" id="st-list"></div>
+      <div class="ex-status" style="margin-top:4px"><span id="st-status"></span></div>
+    </div>
+  </div>
+
   <!-- per-screensaver Settings dialog: content built by main.js -->
   <div class="window fixed" id="win-saveropts" style="left:calc(50% - 160px);top:calc(50% - 90px);width:320px">
     <div class="title-bar">

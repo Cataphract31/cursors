@@ -16,6 +16,7 @@ import { initDepthApps } from "./depthapps.js";
 import { initWriteApps } from "./writeapps.js";
 import { initSoundApps } from "./soundapps.js";
 import { initSysMaint } from "./sysmaint.js";
+import { initAccess } from "./access.js";
 const Webamp = (WebampImport && WebampImport.default) ? WebampImport.default : WebampImport;
 
 "use strict";
@@ -437,6 +438,7 @@ function restoreWin(id){
   focusWin(id);
 }
 function closeWin(id,opts){
+  try{ if(id==="win-magnifier"&&access.magnifying()) access.stopMagnifier(); }catch(e){}
   if(id==="win-amp"){ winampApp.close(); return; }
   const a=openApps.get(id); if(!a) return;
   if(id==="win-mine") mine.pause(); /* the clock does not run while the box is shut */
@@ -1708,6 +1710,9 @@ const maint=initSysMaint({$,store,sysSnd,showError,showConfirm,openWin,closeWin,
   },
   applyStartup:on=>applyStartupItems(on),
   diskBytes:()=>diskPct().total,
+  startSaver:()=>startSaver(store.data.saver.t==="none"?"pipes":store.data.saver.t),
+  diskCleanup:()=>{ openWin("win-explorer"); explorer.go("C:" + String.fromCharCode(92)); setTimeout(()=>explorer.driveProperties(),350); },
+  openDefrag:()=>depth.openDefrag(),
   freeBytes:()=>{ const d=diskPct(); return Math.max(0,d.total-Math.round(d.total*d.pct/100)); },
   usage(){
     const c=store.data.useCount||{}, l=store.data.useLast||{}, out={};
@@ -1728,6 +1733,11 @@ const maint=initSysMaint({$,store,sysSnd,showError,showConfirm,openWin,closeWin,
     setTimeout(()=>{ if(sd.style.display!=="grid") return; sd.style.display="none"; showBootThenLogin(); },1600); },
 }});
 maint.init();
+/* the Magnifier, the On-Screen Keyboard, High Contrast and StickyKeys */
+const access=initAccess({$,store,sysSnd,showError,openWin,closeWin,hooks:{
+  confirm:(t,b,ok)=>showConfirm(t,b,ok),
+}});
+access.init();
 /* the Startup tab is not decoration: unchecking one of these really stops it */
 /* Quick Launch shows only what is installed and what startup left running */
 function syncQuickLaunch(){
@@ -2140,13 +2150,15 @@ function allProgramsMenu(){
     {sep:1},
     {label:"Accessories",sub:[
       {label:"Accessibility",sub:[
-        {label:"Magnifier",disabled:1},
+        {label:"Accessibility Wizard",action:()=>{ closeStart(); access.openAccessOptions(); }},
+        {label:"Magnifier",action:()=>{ closeStart(); access.openMagnifier(); }},
         {label:"Narrator",disabled:1},
-        {label:"On-Screen Keyboard",disabled:1}]},
+        {label:"On-Screen Keyboard",action:()=>{ closeStart(); access.openOSK(); }}]},
       {label:"System Tools",sub:[
         {label:"Disk Cleanup",action:()=>{ closeStart(); openWin("win-explorer"); explorer.go("C:\\"); setTimeout(()=>explorer.driveProperties(),350); }},
         {label:"Disk Defragmenter",action:()=>{ closeStart(); depth.openDefrag(); }},
         {label:"System Restore",action:()=>{ closeStart(); maint.openRestore(); }},
+        {label:"Scheduled Tasks",action:()=>{ closeStart(); maint.openTasks(); }},
         {label:"System Information",action:()=>{ closeStart(); $("#sp-user").textContent=playerNameFull(); openWin("win-sysprops"); }},
         {label:"Character Map",action:()=>{ closeStart(); depth.openCharmap(); }},
         {label:"Fonts",action:()=>{ closeStart(); maint.openFonts(); }}]},
@@ -2261,6 +2273,10 @@ function runNamed(k){
   if(k==="appwiz.cpl"||k==="add or remove programs"){ maint.openAddRemove(); return true; }
   if(k==="fonts"||k==="control fonts"){ maint.openFonts(); return true; }
   if(k==="cttune"||k==="cttune.exe"||k==="cleartype"){ maint.openClearType(); return true; }
+  if(k==="control schedtasks"||k==="tasks"||k==="schedtasks"){ maint.openTasks(); return true; }
+  if(k==="magnify"||k==="magnify.exe"){ access.openMagnifier(); return true; }
+  if(k==="osk"||k==="osk.exe"){ access.openOSK(); return true; }
+  if(k==="access.cpl"||k==="accessibility"){ access.openAccessOptions(); return true; }
   if(k==="rstrui"||k==="rstrui.exe"||k==="system restore"){ maint.openRestore(); return true; }
   if(k==="control folders"||k==="folders"||k==="folder options"){ maint.openFolderOptions(); return true; }
   if(k==="sndvol32"||k==="sndvol32.exe"||k==="sndvol"){ snd.openMixer(); return true; }
@@ -2940,7 +2956,7 @@ sys=initSysApps({
     openNetwork:()=>{ if(ie&&ie.dial) ie.dial(); else openWin("win-ie"); },
     printers:()=>showError("Printers and Faxes","There are no printers installed on this computer."),
     userAccounts:()=>openWin("win-logoff"),
-    accessibility:()=>openWin("win-dispprops"),
+    accessibility:()=>access.openAccessOptions(),
     addRemove:()=>maint.openAddRemove(),
     fonts:()=>maint.openFonts(),
     clearType:()=>maint.openClearType(),

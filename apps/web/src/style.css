@@ -1481,3 +1481,62 @@ body.tb-auto.tb-peek #taskbar{transform:none}
 .ct-off,body.ct-off{-webkit-font-smoothing:none;text-rendering:optimizeSpeed}
 /* Task Manager, Options > Always On Top */
 .window.always-on-top{z-index:9200 !important}
+
+/* ---- Magnifier: the docked strip ---- */
+#magnifier{display:none;position:fixed;left:0;top:0;right:0;height:124px;z-index:9500;
+  background:#fff;border-bottom:2px solid #0A246A;overflow:hidden;pointer-events:none}
+#magnifier.flash{animation:magflash .35s}
+@keyframes magflash{from{background:#FFFFC0}to{background:#fff}}
+#magnifier .mag-view{position:absolute;inset:0;overflow:hidden}
+#magnifier .mag-clone{position:absolute;pointer-events:none}
+body.mag-on #desktop,body.mag-on #icons{margin-top:0}
+body.mag-on #taskbar{z-index:9400}
+
+/* ---- On-Screen Keyboard ---- */
+.osk-keys{flex:1;min-height:0;display:flex;flex-direction:column;gap:3px;padding:4px 2px}
+.osk-row{display:flex;gap:3px;flex:1}
+.osk-key{flex:1;min-width:0;font:inherit;font-size:11px;padding:0;cursor:default;
+  border:1px solid;border-color:#fff #808080 #808080 #fff;background:#ECE9D8;color:#000}
+.osk-key:active,.osk-key.on{border-color:#808080 #fff #fff #808080;background:#D8D4C4}
+.osk-gap{flex:.4}
+
+/* ---- Scheduled Tasks ---- */
+.st-head,.st-row{display:flex;gap:6px;font-size:11px;padding:2px 5px;align-items:center}
+.st-head{background:#ECE9D8;border:1px solid #ACA899;font-weight:bold}
+.st-list{flex:1;min-height:0;overflow:auto;border:1px solid #ACA899;border-top:0;background:#fff}
+.st-row{cursor:default;border-bottom:1px solid #F0EEE4}
+.st-row:hover{background:#EAF1FB}
+.st-row.on{background:#316AC5;color:#fff}
+.st-n{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.st-s{width:108px;flex:0 0 108px}
+.st-r{width:96px;flex:0 0 96px}
+.st-l{width:96px;flex:0 0 96px}
+.st-t{width:64px;flex:0 0 64px}
+.st-ico{width:16px;height:16px;flex:0 0 16px}
+
+/* ---- High Contrast: the black scheme, applied to the whole shell ---- */
+body.high-contrast{filter:none}
+body.high-contrast .window{background:#000;color:#fff;border-color:#fff}
+body.high-contrast .win-body,body.high-contrast .win-body.pad{background:#000 !important;color:#fff}
+body.high-contrast .title-bar{background:#fff !important;color:#000}
+body.high-contrast .title-bar-text{color:#000}
+body.high-contrast .xbtn,body.high-contrast .osk-key{background:#000;color:#fff;border-color:#fff}
+body.high-contrast input,body.high-contrast textarea,body.high-contrast select{background:#000;color:#fff;border-color:#fff}
+body.high-contrast .menubar,body.high-contrast .xtabs .xtab{background:#000;color:#fff;border-color:#fff}
+body.high-contrast .xtab.on{background:#fff;color:#000}
+body.high-contrast #taskbar{background:#000;border-top:1px solid #fff}
+body.high-contrast #icons .lbl{background:#000;color:#FFFF00;text-shadow:none}
+body.high-contrast #wallpaper{background:#000 !important;background-image:none !important}
+body.high-contrast fieldset,body.high-contrast .mo-fs{border-color:#fff}
+body.high-contrast .small,body.high-contrast .dim,body.high-contrast .mc-note{color:#FFFF00}
+body.high-contrast .title-bar{background-image:none !important}
+body.high-contrast .title-bar.inactive{background:#808080 !important}
+body.high-contrast legend,body.high-contrast .mo-fs legend{color:#fff;background:#000}
+body.high-contrast .sr-head,body.high-contrast .aw-head,body.high-contrast .cpl-boxhead{background:#000;color:#FFFF00}
+body.high-contrast .sr-side,body.high-contrast .sr-main,body.high-contrast .aw-side,
+body.high-contrast .aw-main,body.high-contrast .sr-list,body.high-contrast .aw-list,
+body.high-contrast .mc-inibox,body.high-contrast .mc-svcbox,body.high-contrast .mc-startbox,
+body.high-contrast .st-list,body.high-contrast .fnt-list,body.high-contrast #fo-adv,
+body.high-contrast .ex-list,body.high-contrast .ex-tasks{background:#000;color:#fff;border-color:#fff}
+body.high-contrast #startmenu,body.high-contrast #ctx{background:#000;color:#fff;border-color:#fff}
+body.high-contrast .cit:hover,body.high-contrast .sm-item:hover{background:#fff;color:#000}

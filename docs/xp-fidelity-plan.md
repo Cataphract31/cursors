@@ -522,8 +522,26 @@ the ClearType tuner, and Task Manager's menubar. Also in `src/sysmaint.js`.
   the refresh interval (Paused pauses it, and the tray meter stops lying), and Shut Down
   routes to the real stand-by, restart, turn-off and log-off flows.
 
-**Still open in Phase 12**: Scheduled Tasks, and Accessibility (Magnifier and the
-On-Screen Keyboard, which should type into the focused window).
+**Third pass** — Scheduled Tasks and the accessibility set (`src/access.js`).
+
+- **Scheduled Tasks** (`schedtasks`, Start > Accessories > System Tools): five tasks,
+  and every one of them is something this computer really does — the daily System
+  Checkpoint, the screen saver idle timer, Disk Cleanup, the defragmenter, and the
+  autoplay watchdog that disarms autoplay ten minutes after the machine goes away.
+  Run really runs the task and Last Run Time is when it last actually happened.
+- **Magnifier** (`magnify`): XP's docked strip across the top of the screen, showing
+  what the pointer is over at 2x to 9x. It magnifies the live desktop, not a picture of
+  it: field contents and canvases are copied across on each re-clone, so a clock in the
+  strip keeps ticking and the arena keeps moving.
+- **On-Screen Keyboard** (`osk`): the full XP layout, and it types into whatever window
+  had focus — Notepad, the Run box, the command prompt. Shift and Caps really change the
+  key faces. It never steals focus, which is the whole trick.
+- **Accessibility Options** (`access.cpl`, Control Panel): four tabs. High Contrast
+  really repaints the shell black-and-yellow. ToggleKeys really beeps on the OSK's Caps.
+  StickyKeys really latches a modifier — and five taps on Shift really summons the
+  dialog asking whether you meant to.
+
+Phase 12 is complete.
 
 ## Phase 13 — the mobile pass (unchanged, still last)
 

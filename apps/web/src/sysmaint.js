@@ -11,7 +11,7 @@
    the bin. A restore point is a photograph of the wallpaper, not of the money.
    Import-free sibling module; main.js injects the shell. */
 export function initSysMaint(deps) {
-  const { $, store, sysSnd, showError, showConfirm, openWin, closeWin, hooks } = deps;
+  const { $, store, sysSnd, showMenu, showError, showConfirm, openWin, closeWin, hooks } = deps;
 
   const el = (tag, cls, txt) => {
     const d = document.createElement(tag);
@@ -1116,6 +1116,79 @@ export function initSysMaint(deps) {
   }
 
   /* ================================================================
+     8b. Scheduled Tasks
+     ================================================================ */
+  /* Everything in this folder is something this computer really does on a
+     schedule. Run Now really runs it, and Last Run Time is the last time it
+     actually happened, not a printed date. */
+  function taskDefs() {
+    const d = store.data.taskRuns = store.data.taskRuns || {};
+    return [
+      { id: "checkpoint", n: "System Checkpoint", sched: "At system startup, daily",
+        next: "At next boot", run: () => { point("Manual checkpoint from Scheduled Tasks", "manual"); },
+        note: "Takes the restore point System Restore offers you tomorrow." },
+      { id: "saver", n: "Screen Saver", sched: "After " + (store.data.saver.wait || 3) + " minutes idle",
+        next: "When you stop moving", run: () => hooks.startSaver(),
+        note: "The idle timer that runs the screen saver. Moving the mouse cancels it." },
+      { id: "cleanup", n: "Disk Cleanup", sched: "When the disk fills",
+        next: "At the next crash", run: () => hooks.diskCleanup(),
+        note: "The disk fills with corpses at 12 MB each. Cleanup happens when the round ends, and it is not optional." },
+      { id: "defrag", n: "Disk Defragmenter", sched: "Weekly, Sunday 01:00",
+        next: "Sunday 1:00 AM", run: () => hooks.openDefrag(),
+        note: "Analyses the drive. The red stripes are the dead." },
+      { id: "autoplay", n: "Autoplay watchdog", sched: "Every 10 minutes",
+        next: "Running now", run: () => showError("Autoplay watchdog",
+          "This task disarms autoplay when this machine has been away for ten minutes. It runs whether this folder is open or not, and it cannot be stopped from here."),
+        note: "Disarms autoplay after the machine goes away." },
+    ];
+  }
+  let taskSel = null;
+  function openTasks() {
+    taskRender();
+    openWin("win-tasks");
+  }
+  function taskRender() {
+    const host = $("#st-list"); if (!host) return;
+    const runs = store.data.taskRuns = store.data.taskRuns || {};
+    host.innerHTML = "";
+    for (const t of taskDefs()) {
+      const row = el("div", "st-row" + (taskSel === t.id ? " on" : ""));
+      const n = el("span", "st-n");
+      const ic = deps.icoNode("@ic-mmc"); ic.classList.add("st-ico");
+      n.appendChild(ic);
+      n.appendChild(document.createTextNode(" " + t.n));
+      row.appendChild(n);
+      row.appendChild(el("span", "st-s", t.sched));
+      row.appendChild(el("span", "st-r", t.next));
+      row.appendChild(el("span", "st-l", runs[t.id] ? timeStr(runs[t.id]) + " " + new Date(runs[t.id]).toLocaleDateString() : "Never"));
+      row.appendChild(el("span", "st-t", "Ready"));
+      row.addEventListener("click", () => { taskSel = t.id; taskRender(); $("#st-status").textContent = t.note; });
+      row.addEventListener("dblclick", () => taskRun(t));
+      row.addEventListener("contextmenu", ev => {
+        ev.preventDefault(); ev.stopPropagation();
+        taskSel = t.id; taskRender();
+        showMenu([
+          { label: "Run", bold: 1, action: () => taskRun(t) },
+          { label: "End Task", disabled: 1 },
+          { sep: 1 },
+          { label: "Delete", action: () => showError("Scheduled Tasks", "This task is part of how this computer works. It cannot be deleted from here.") },
+          { label: "Properties", action: () => showError(t.n, t.note + "\n\nSchedule: " + t.sched) },
+        ], ev.clientX, ev.clientY);
+      });
+      host.appendChild(row);
+    }
+    $("#st-status").textContent = taskDefs().length + " objects";
+  }
+  function taskRun(t) {
+    const runs = store.data.taskRuns = store.data.taskRuns || {};
+    runs[t.id] = Date.now();
+    store.save();
+    sysSnd("nav", .4);
+    t.run();
+    taskRender();
+  }
+
+  /* ================================================================
      9. wiring
      ================================================================ */
   function init() {
@@ -1146,7 +1219,7 @@ export function initSysMaint(deps) {
     init, openRestore, openMsconfig, openFolderOptions,
     point, dailyCheckpoint, maybeNag,
     startupOn, applyStartup, bootIniText,
-    openBinProps, binOpt, openAddRemove, openFonts, openClearType,
+    openBinProps, binOpt, openAddRemove, openFonts, openClearType, openTasks,
     installed, ctApply,
     /* the boot screen asks how long to sit there */
     bootWaitMs: () => Math.max(900, Math.min(99, mc().boot.timeout | 0) * 143),
