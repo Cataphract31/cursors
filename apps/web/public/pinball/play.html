@@ -20,7 +20,12 @@ body{display:flex;align-items:center;justify-content:center}
 progress{position:absolute;top:26px;left:50%;width:220px;margin-left:-110px}
 #stage{position:relative}
 canvas{display:block;outline:none}
-#canvas{opacity:0.001}   /* invisible but composited and clickable */
+/* The engine measures this element to size its window. It must NEVER be
+   display:none and must have real dimensions from the first byte: on one
+   machine the boot won a race against the loader's reveal, measured a hidden
+   canvas as 0x0, and fell back to the 300x150 default — the whole game
+   rendered into a postage stamp and the screen stayed black. */
+#canvas{opacity:0.001;width:600px;height:440px}
 #view{position:absolute;left:0;top:0;pointer-events:none}
 </style>
 </head>
@@ -28,7 +33,7 @@ canvas{display:block;outline:none}
 <div id="status">Downloading...</div>
 <progress hidden id="progress" max="100" value="0"></progress>
 <div id="stage">
-<canvas id="canvas" oncontextmenu="event.preventDefault()" tabindex="-1" style="display:none"></canvas>
+<canvas id="canvas" width="600" height="440" oncontextmenu="event.preventDefault()" tabindex="-1"></canvas>
 <canvas id="view" style="display:none"></canvas>
 </div>
 <script>
@@ -49,8 +54,11 @@ addEventListener("load",function(){
   var logged=false;
   (function pump(){
     requestAnimationFrame(pump);
-    if(cv.style.display==="none"||!cv.width) return;
-    if(view.width!==cv.width||view.height!==cv.height){ view.width=cv.width; view.height=cv.height; }
+    if(!cv.width) return;
+    if(view.width!==cv.width||view.height!==cv.height){
+      view.width=cv.width; view.height=cv.height;
+      console.log("[pinball] buffer now",cv.width+"x"+cv.height);
+    }
     view.style.display="block";
     try{ g2.drawImage(cv,0,0); }catch(e){}
     if(!logged){
