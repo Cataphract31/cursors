@@ -543,7 +543,60 @@ the ClearType tuner, and Task Manager's menubar. Also in `src/sysmaint.js`.
 
 Phase 12 is complete.
 
-## Phase 13 — the mobile pass (unchanged, still last)
+## Phase 13 — the mobile pass
+
+### Phase 13 status, pass 1 (2026-08-10)
+
+Everything below was found by driving the built site at 390x844 (CDP, DPR 2) and
+looking at it, rather than by reasoning about the CSS.
+
+**Bugs that were real**
+
+- **The dial-up box behind Internet Explorer.** On the phone an app is a
+  full-screen sheet, so a dialog that falls behind one is not behind a window, it
+  is gone. Opening IE, switching to another app and coming back put IE's z above
+  the dial-up dialog that was waiting for an answer — the browser looked frozen
+  and offline with no way to connect. Dialogs now live in a z-band above every
+  sheet and remember which sheet opened them: leave IE and the dial-up box goes
+  with it, come back and it is there.
+- **Cursors at nine pixels.** The arena is drawn small so the whole field fits
+  and the sprites are counter-magnified back up; the floor for that (`0.52/AS`)
+  was tuned for a monitor. On a phone it left an arrow 9x13. The mobile floor is
+  now `0.95/AS` — about 16x25, a real XP arrow.
+- **Every wrapped radio button in the app was invisible** — 0x0 at opacity 0, on
+  desktop as much as on the phone, because xp.css only ever fixed checkboxes.
+  Folder Options, System Restore, MSConfig, Group Policy and Accessibility were
+  all showing labels with nothing to click.
+- **The Start menu's left column was empty on the phone** until you opened an
+  app: `renderMru()` only ran on first launch, and the phone boots to a bare
+  desktop on purpose.
+- **Solitaire was unplayable by touch** (the vendored game speaks
+  `onmousedown`/`onmousemove` only) and only 4 of its 7 columns fit. It now has a
+  one-finger touch bridge injected into the frame, and the board is scaled to
+  the window instead of clipped.
+- The volume flyout hung 2px off the right edge (clamped against a guessed width).
+
+**Layout folded for a phone**
+
+Add or Remove Programs (rail becomes a tab strip), System Restore (panes stack,
+calendar full width), MSConfig / Folder Options / Recycle Bin Properties /
+Accessibility (full-width dialogs, finger-height rows), the Fonts folder (three
+columns), Scheduled Tasks (name and schedule only), Task Manager (panes fill the
+sheet), the mixer (kept at its real 330px instead of stretching its sliders down
+a 1200px sheet), Paint (a portrait canvas instead of a landscape one on a
+portrait screen), and the On-Screen Keyboard (a docked palette above the HUD,
+not a full-screen sheet). Menus, tabs, buttons, tray icons and Explorer rows are
+all sized for a finger, and Explorer opens on a single tap.
+
+**The desktop.** The crowded-shortcut collection covered the arena on a 390px
+screen, so the phone shows the machine's own icons and leaves the `.lnk` ones in
+All Programs. One column of icons, the field legible, cursors readable.
+
+**Still to do**: a real-device pass (iOS Safari's viewport, `--kb`, safe areas,
+the 100dvh dance), and the question of whether tapping your own cursor should
+bank it — that is a gameplay verb, not a layout fix, so it waits for the owner.
+
+
 
 Real-device pass on iPhone: the `--kb` path, long-press timing on every Round-2 menu,
 and per-app calls on phone layout vs "rotate to landscape". Everything above must not

@@ -156,7 +156,10 @@ function volOpen(on){
   volf.classList.toggle("on",on);
   if(!on) return;
   const r=$("#sndico").getBoundingClientRect(), tb=$("#taskbar").getBoundingClientRect();
-  volf.style.left=Math.max(4,Math.min(innerWidth-72,Math.round(r.left+r.width/2-32)))+"px";
+  /* clamp against the flyout's real width, not a guess: on a phone the tray
+     sits hard against the right edge and a 72px guess put it off-screen */
+  const w=volf.offsetWidth||72;
+  volf.style.left=Math.max(4,Math.min(innerWidth-w-4,Math.round(r.left+r.width/2-w/2)))+"px";
   volf.style.top=Math.round(tb.top-volf.offsetHeight-2)+"px";
 }
 $("#sndico").addEventListener("click",e=>{ e.stopPropagation(); volOpen(!volf.classList.contains("on")); });
@@ -929,6 +932,60 @@ desktop.addEventListener("pointerdown",e=>{
 /* ================= Solitaire ================= */
 /* rjanjic's MIT js-solitaire, which already wears the classic Windows deck.
    Same recipe as pinball: lazy iframe, our chrome, their game. */
+/* The vendored Solitaire is from 2013 and speaks onmousedown/onmousemove only.
+   A phone never sends those for a drag, so the game was unplayable by touch:
+   this bridges one finger onto the three mouse events it listens for. It is
+   injected into the frame, which is same-origin, so no fork of the game. */
+function solitaireTouch(d){
+  const send=(type,t)=>{
+    const el=d.elementFromPoint(t.clientX,t.clientY)||d.body;
+    el.dispatchEvent(new MouseEvent(type,{bubbles:true,cancelable:true,
+      clientX:t.clientX,clientY:t.clientY,button:0,buttons:type==="mouseup"?0:1}));
+  };
+  let down=null;
+  d.addEventListener("touchstart",e=>{
+    if(e.touches.length!==1) return;
+    down=e.touches[0]; e.preventDefault(); send("mousedown",down);
+  },{passive:false});
+  d.addEventListener("touchmove",e=>{
+    if(!down||e.touches.length!==1) return;
+    e.preventDefault(); send("mousemove",e.touches[0]);
+  },{passive:false});
+  d.addEventListener("touchend",e=>{
+    if(!down) return;
+    const t=e.changedTouches[0];
+    e.preventDefault(); send("mouseup",t);
+    /* a tap is a click as well: the deck and the auto-move both want one */
+    if(Math.abs(t.clientX-down.clientX)<8&&Math.abs(t.clientY-down.clientY)<8) send("click",t);
+    down=null;
+  },{passive:false});
+}
+/* seven columns of cards need ~700px. A phone has 390. Scale the board rather
+   than clip it — the frame is laid out at full width and shrunk to fit, which
+   keeps every column on screen and keeps touch coordinates correct. */
+function solitaireFit(fr,d){
+  const fit=()=>{
+    const host=fr.parentElement;
+    if(!host) return;
+    /* the felt runs to the edges of the window instead of stopping where the
+       game's own page does */
+    try{
+      const board=d.querySelector(".window__content")||d.body;
+      const bg=d.defaultView.getComputedStyle(board).backgroundColor;
+      if(bg&&bg!=="rgba(0, 0, 0, 0)") host.style.background=bg;
+    }catch(e){}
+    const w=host.clientWidth, h=host.clientHeight;
+    const need=(d&&d.body&&d.body.scrollWidth)||700;
+    const sc=Math.min(1,w/Math.max(560,need));
+    fr.style.width=Math.round(w/sc)+"px";
+    fr.style.height=Math.round(h/sc)+"px";
+    fr.style.transformOrigin="0 0";
+    fr.style.transform=sc<1?"scale("+sc+")":"";
+  };
+  fit();
+  addEventListener("resize",fit);
+  setTimeout(fit,400);
+}
 function solitaireOpen(){
   const fr=$("#solitaire-frame");
   if(!fr.dataset.live){
@@ -939,8 +996,11 @@ function solitaireOpen(){
         const d=fr.contentDocument;
         const st=d.createElement("style");
         st.textContent=".window__heading{display:none!important}"+
-          "body{margin:0!important}.window{border:0!important;box-shadow:none!important}";
+          "html,body{margin:0!important;background:transparent!important}"+
+          ".window{border:0!important;box-shadow:none!important;background:transparent!important}";
         d.head.appendChild(st);
+        solitaireTouch(d);
+        solitaireFit(fr,d);
       }catch(e){}
     },{once:true});
   }
@@ -1810,7 +1870,7 @@ const explorer=initExplorer({
     viewsBtn:$("#ex-views"), foldersBtn:$("#ex-folders"), searchBtn:$("#ex-search"),
     st1:$("#ex-st1"), st2:$("#ex-st2"), st3:$("#ex-st3"),
   },
-  store, sysSnd, showMenu, showError, icoNode,
+  store, sysSnd, showMenu, showError, icoNode, isMobile:MOBILE,
   setTitle:name=>{ $("#win-explorer .title-bar-text").textContent=name; renderTaskbar(); },
   hooks:{
     openWin, close:()=>closeWin("win-explorer"),

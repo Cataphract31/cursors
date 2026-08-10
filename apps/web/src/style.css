@@ -1656,3 +1656,11 @@ body.mobile .menubar span{padding:4px 9px}
 body.mobile .xtab{padding:6px 10px}
 body.mobile .xbtn{min-height:28px}
 body.mobile .ex-item{min-height:34px}
+/* the mixer is a 300px-tall utility window, not a page: as a full-screen sheet
+   its vertical sliders grew to 1200px and the columns came apart */
+body.mobile #desktop>#win-sndvol{height:330px !important;top:52px !important}
+body.mobile .sv32-col{padding:4px 5px;gap:4px}
+body.mobile .sv32-name{font-size:10px}
+body.mobile .sv32-brow{display:none}
+body.mobile .sv32-mute span{display:none}
+body.mobile .sv32-vrow input{min-height:110px}

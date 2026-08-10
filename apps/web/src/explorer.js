@@ -335,7 +335,9 @@ export function initExplorer(deps) {
       }
       row.addEventListener("click", () => {
         sel = it; markSel(host, row); status(items); renderTasks(items);
-        if (fo("click") === "single") openItem(it);   /* Folder Options said one click */
+        /* one click, if Folder Options says so — and always on a phone, where
+           double-tapping a 34px row is nobody's idea of a good time */
+        if (fo("click") === "single" || deps.isMobile) openItem(it);
       });
       row.addEventListener("dblclick", () => openItem(it));
       row.addEventListener("contextmenu", e => {
