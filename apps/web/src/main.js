@@ -441,6 +441,7 @@ function closeWin(id,opts){
   if(id==="win-pinball"||id==="win-solitaire"){
     const fr=$(id==="win-pinball"?"#pinball-frame":"#solitaire-frame");
     if(fr){ fr.src="about:blank"; delete fr.dataset.live; }
+    if(id==="win-pinball") pbPaused=false;
   }
   if(id==="win-wmp"&&snd) snd.stopWmp();
   if(id==="win-sndrec"&&snd) snd.stopRecorder();   /* also releases the microphone */
@@ -453,6 +454,7 @@ function closeWin(id,opts){
 }
 function minWin(id){
   const a=openApps.get(id); if(!a||a.min) return;
+  if(id==="win-pinball") pinballActive(false);
   if(a.kind==="webamp"){ tabClick(id); return; }
   a.min=true;
   if(focusedId===id) focusedId=null;
@@ -492,6 +494,7 @@ function isSheet(id){
   return !!el&&!el.classList.contains("fixed")&&!NOTAB.has(id);
 }
 function focusWin(id){
+  if(openApps.has("win-pinball")) pinballActive(id==="win-pinball");
   if(MOBILE&&isSheet(id)){
     /* one sheet at a time: focusing a sheet sends every other sheet home.
        Webamp just hides (its audio keeps playing behind the sheet). */
@@ -875,33 +878,38 @@ function pinballOpen(){
   const fr=$("#pinball-frame");
   if(!fr.dataset.live){
     fr.dataset.live="1";
-    /* trailing slash on purpose: Vercel redirects "pinball/index.html" to
-       "pinball", which rebases the loader's relative fetches to the site root
-       and the 7 MB of game data 404s. "pinball/" survives every host. */
-    fr.src="pinball/";
-    fr.addEventListener("load",()=>{
-      try{
-        const d=fr.contentDocument;
-        const st=d.createElement("style");
-        /* our XP window already provides the chrome; hide the port's own */
-        /* keep the port's real Game/Options/Help menu; lose only its fake
-           title bar. Its own layout knows how to size the table — leave it. */
-        /* touch as little of the foreign page as possible: hide its fake
-           title bar, black behind it, done. Centring is OUR iframe's job —
-           repositioning their .window collapsed it on at least one engine
-           (the black-window-with-a-white-sliver report). */
-        st.textContent=".titlebar{display:none!important}"+
-          "body{background:#000!important;margin:0!important;overflow:hidden!important}";
-        d.head.appendChild(st);
-        /* the port computed its layout before our CSS landed; a resize makes
-           SDL re-measure the canvas and draw at the new size */
-        setTimeout(()=>{ try{ fr.contentWindow.dispatchEvent(new Event("resize")); }catch(e){} },250);
-        setTimeout(()=>{ try{ fr.contentWindow.dispatchEvent(new Event("resize")); }catch(e){} },2500);
-      }catch(e){}
-    },{once:true});
+    /* play.html is OUR host page around the game engine: black room, centred
+       canvas, no upstream layout left to collapse (the port's fake-window CSS
+       crushed itself to a white sliver on at least one real machine while the
+       game played on underneath). Named file, not index.html — Vercel
+       redirects "dir/index.html" to "dir", rebasing every relative fetch. */
+    fr.src="pinball/play.html";
   }
   openWin("win-pinball");
-  setTimeout(()=>{ try{ fr.contentWindow.focus(); fr.contentWindow.dispatchEvent(new Event("resize")); }catch(e){} },300);
+  setTimeout(()=>{ try{ fr.contentWindow.focus(); }catch(e){} },300);
+}
+let pbPaused=false;
+function pinballKey(code,key){
+  try{
+    const w=$("#pinball-frame").contentWindow;
+    for(const t of ["keydown","keyup"]){
+      const ev=new KeyboardEvent(t,{key,code:key,bubbles:true});
+      /* SDL's emscripten backend reads keyCode, which synthetic events lack */
+      Object.defineProperty(ev,"keyCode",{get:()=>code});
+      Object.defineProperty(ev,"which",{get:()=>code});
+      w.dispatchEvent(ev);
+    }
+  }catch(e){}
+}
+/* deactivating the window pauses the table (F3, the game's own pause key),
+   exactly like the original — which also ends the "pinball keeps clattering
+   behind other apps" noise */
+function pinballActive(on){
+  const fr=$("#pinball-frame");
+  if(!fr||!fr.dataset.live) return;
+  if(on===!pbPaused) return;
+  pinballKey(114,"F3");
+  pbPaused=!on;
 }
 /* ================= Solitaire ================= */
 /* rjanjic's MIT js-solitaire, which already wears the classic Windows deck.
