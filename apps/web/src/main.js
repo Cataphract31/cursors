@@ -601,6 +601,14 @@ const SYSICONS=[
   {id:"cpl",label:"Control Panel",ico:"@ic-cpl",app:"win-control",sys:1,lnk:1},
   {id:"mouse",label:"Mouse Properties",ico:"@ic-dev",app:"run",cmd:"main.cpl",sys:1,lnk:1},
   {id:"calc",label:"Calculator",ico:"calc32",app:"run",cmd:"calc",sys:1,lnk:1},
+  /* the crowded-desktop look: everything from the last four phases, pinned
+     the way a 2003 family PC accreted shortcuts nobody ever cleaned up */
+  {id:"pinball",label:"3D Pinball",ico:"pinball16",app:"run",cmd:"pinball",sys:1,lnk:1},
+  {id:"solitaire",label:"Solitaire",ico:"@ic-cards",app:"run",cmd:"sol",sys:1,lnk:1},
+  {id:"wmp",label:"Windows Media Player",ico:"wmp32",app:"run",cmd:"wmplayer",sys:1,lnk:1},
+  {id:"sndrec",label:"Sound Recorder",ico:"wavdoc16",app:"run",cmd:"sndrec32",sys:1,lnk:1},
+  {id:"notepad",label:"Notepad",ico:"note32",app:"run",cmd:"notepad",sys:1,lnk:1},
+  {id:"wordpad",label:"WordPad",ico:"writedoc16",app:"run",cmd:"wordpad",sys:1,lnk:1},
 ];
 const CELLW=MOBILE?68:84, CELLH=MOBILE?72:86, GX=12, GY=8;
 /* rotating a phone changes how many icons fit in a column, so the default grid
@@ -1153,6 +1161,20 @@ function buildMenu(host,items){
       d.classList.add("has-sub");
       const sub=document.createElement("div"); sub.className="csub";
       buildMenu(sub,it.sub); d.appendChild(sub);
+      /* a submenu longer than the screen is unreadable and unclickable; XP
+         shifts it up to fit and flips it left of the parent when the right
+         edge runs out. visibility:hidden still has layout, so measuring
+         before the hover reveal is safe. */
+      d.addEventListener("mouseenter",()=>{
+        sub.style.top=""; sub.style.left=""; sub.style.right="";
+        sub.style.maxHeight=""; sub.style.overflowY="";
+        const r=sub.getBoundingClientRect();
+        if(r.height>innerHeight-12){ sub.style.maxHeight=(innerHeight-12)+"px"; sub.style.overflowY="auto"; }
+        const r2=sub.getBoundingClientRect();
+        const over=r2.bottom-(innerHeight-6);
+        if(over>0) sub.style.top=(-3-over)+"px";
+        if(r2.right>innerWidth-4){ sub.style.left="auto"; sub.style.right="100%"; }
+      });
     }
     if(!it.disabled&&it.action) d.addEventListener("pointerup",e=>{
       if(e.pointerType==="touch"&&performance.now()-menuShownAt<400) return;
@@ -1165,9 +1187,16 @@ function showMenu(items,x,y){
   menuShownAt=performance.now();
   ctx.innerHTML=""; buildMenu(ctx,items);
   ctx.style.display="block"; ctx.style.left="0px"; ctx.style.top="0px";
-  const r=ctx.getBoundingClientRect();
+  ctx.style.maxHeight=""; ctx.style.overflowY="";
+  let r=ctx.getBoundingClientRect();
+  if(r.height>innerHeight-8){
+    /* submenus inside a scrolling root would clip, but a menu nobody can
+       read clips harder; the shift-up path below handles the normal case */
+    ctx.style.maxHeight=(innerHeight-8)+"px"; ctx.style.overflowY="auto";
+    r=ctx.getBoundingClientRect();
+  }
   ctx.style.left=Math.min(x,innerWidth-r.width-4)+"px";
-  ctx.style.top=Math.min(y,innerHeight-r.height-4)+"px";
+  ctx.style.top=Math.max(4,Math.min(y,innerHeight-r.height-4))+"px";
   sMenu();
 }
 function hideMenu(){ ctx.style.display="none"; ctx.querySelectorAll(".kbd").forEach(e=>e.classList.remove("kbd")); }

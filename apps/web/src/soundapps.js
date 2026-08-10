@@ -40,6 +40,7 @@ export function initSoundApps(deps) {
         `<label class="sv32-mute"><input type="checkbox" class="sv32-m"${(k === "master" ? hooks.getMuted() : m[k].m) ? " checked" : ""}> Mute${k === "master" ? " all" : ""}</label>`;
       const vs = col.querySelector(".sv32-vol"), mc = col.querySelector(".sv32-m"),
             bs = col.querySelector(".sv32-bal");
+      vertDrag(vs);
       vs.addEventListener("input", () => {
         if (k === "master") hooks.setMaster(vs.value / 100);
         else { m[k].v = +vs.value; store.save(); applyMix(); }
@@ -52,6 +53,26 @@ export function initSoundApps(deps) {
       bs.addEventListener("input", () => { m[k].b = +bs.value; store.save(); });
       host.appendChild(col);
     }
+  }
+  /* Native vertical <input type=range> only reacts to clicks in some
+     engines. Owning the pointer makes the thumb ride the drag like the
+     real sndvol32 knob did. */
+  function vertDrag(inp) {
+    inp.addEventListener("pointerdown", e => {
+      e.preventDefault();
+      inp.setPointerCapture(e.pointerId);
+      const set = ev => {
+        const r = inp.getBoundingClientRect();
+        const f = 1 - (ev.clientY - r.top) / r.height;
+        const v = Math.round(Math.max(0, Math.min(1, f)) * 100);
+        if (+inp.value !== v) { inp.value = v; inp.dispatchEvent(new Event("input", { bubbles: false })); }
+      };
+      set(e);
+      const mv = ev => set(ev);
+      const up = () => { inp.removeEventListener("pointermove", mv); inp.removeEventListener("pointerup", up); };
+      inp.addEventListener("pointermove", mv);
+      inp.addEventListener("pointerup", up);
+    });
   }
   function openMixer() { volRender(); openWin("win-sndvol"); }
   function mixerMenu(which, x, y) {

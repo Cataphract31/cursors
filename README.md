@@ -27,3 +27,10 @@ Winamp is the real one — [Webamp](https://github.com/captbaritone/webamp) from
 - Duel: P(A wins) = A/(A+B), winner takes both bounties. P(ever reaching ×N) = 1/N.
 - Each deploy mints 200 rakeback tickets, 45-day half-life; ticket share pays the 2% pool. Effective RTP 99%.
 - Round shape: join (deploys open) → battle (duels; late join in the first 30s) → shutdown (last 15s, all cursors auto-recall to start) → results. Nothing is confiscated at shutdown.
+
+## Deploy
+
+Vercel builds this repo directly: root `vercel.json` runs `npm run build`
+(workspace -> apps/web) and serves `apps/web/dist`. Nothing built is committed.
+Ship = push to `main`. The game server (server/) deploys separately over ssh —
+see server/DEPLOY.md.
