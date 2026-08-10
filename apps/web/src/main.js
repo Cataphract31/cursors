@@ -371,6 +371,7 @@ function openWin(id,opts){
   opts=opts||{};
   const el=document.getElementById(id);
   const was=openApps.has(id);
+  const prevFocus=focusedId;   /* the sheet this dialog belongs to */
   if(!was&&!el._rectApplied){ applyWinRect(el); el._rectApplied=true; }
   el.style.display="flex";
   if(!was){
@@ -383,6 +384,7 @@ function openWin(id,opts){
   }
   else if(openApps.get(id).min){ restoreWin(id); return; }
   requestAnimationFrame(()=>fitWin(el));
+  noteDialog(id,prevFocus);
   focusWin(id);
   if(id==="win-run") setTimeout(()=>{ const i=$("#run-in"); i.value=""; i.focus(); },0);
   if(id==="win-ie"&&ie) ie.boot();   /* an empty browser dials out on its own */
@@ -439,6 +441,7 @@ function restoreWin(id){
 }
 function closeWin(id,opts){
   try{ if(id==="win-magnifier"&&access.magnifying()) access.stopMagnifier(); }catch(e){}
+  dlgOwner.delete(id);
   if(id==="win-amp"){ winampApp.close(); return; }
   const a=openApps.get(id); if(!a) return;
   if(id==="win-mine") mine.pause(); /* the clock does not run while the box is shut */
@@ -493,7 +496,33 @@ function maxWin(id){
   }
   saveWinRect(el);
 }
-/* a "sheet" is a real app window; .fixed dialogs float above the sheet */
+/* a "sheet" is a real app window; .fixed dialogs float above the sheet.
+   On the phone a sheet fills the screen, so a dialog that falls behind one is
+   not "behind a window", it is gone — which is how the dial-up box vanished
+   the moment you switched apps and came back to Internet Explorer. Dialogs
+   therefore live in their own z-band above every sheet, and they remember
+   which sheet opened them so they travel with it. */
+const DLG_Z = 8500;
+let dlgTop = 0;
+const dlgOwner = new Map();
+function noteDialog(id, owner){
+  if(!MOBILE) return;
+  const el=document.getElementById(id);
+  if(!el||!el.classList.contains("fixed")) return;
+  if(owner&&owner!==id&&isSheet(owner)) dlgOwner.set(id,owner);
+}
+/* focusing a sheet hides the dialogs that belong to other sheets and brings
+   back the ones that belong to this one */
+function syncDialogs(sheetId){
+  for(const [k,a] of openApps){
+    if(!a.el||!a.el.classList.contains("fixed")) continue;
+    const own=dlgOwner.get(k);
+    if(!own) continue;
+    const mine=own===sheetId;
+    a.el.style.display=mine?"flex":"none";
+    if(mine) a.el.style.zIndex=DLG_Z+(++dlgTop);
+  }
+}
 function isSheet(id){
   const el=document.getElementById(id);
   return !!el&&!el.classList.contains("fixed")&&!NOTAB.has(id);
@@ -508,6 +537,7 @@ function focusWin(id){
       if(!isSheet(k)) continue;
       a.min=true; a.el.style.display="none"; a.el.classList.remove("focused");
     }
+    syncDialogs(id);
   }
   zTop++; focusedId=id;
   for(const [k,a] of openApps){
@@ -518,7 +548,8 @@ function focusWin(id){
     tbInactive(a.el,!on);
   }
   const el=document.getElementById(id);
-  if(el) el.style.zIndex=zTop;
+  /* on the phone a dialog is always above the sheets, never among them */
+  if(el) el.style.zIndex=(MOBILE&&el.classList.contains("fixed"))?DLG_Z+(++dlgTop):zTop;
   renderTaskbar();
 }
 /* resize cursors route through the scheme vars, so a skinned pointer skins
@@ -633,6 +664,10 @@ function allIcons(){
   if(sys&&sys.policyOn("nobin")) a=a.filter(i=>i.id!=="recycle");
   /* Add or Remove Programs really removes the shortcut */
   try{ a=a.filter(i=>!i.sys||maint.installed(i.id)); }catch(e){}
+  /* A phone screen is a tenth of a desktop's. The crowded-desktop shortcuts
+     (the .lnk ones this machine accreted) would cover the arena, so on the
+     phone they stay in All Programs where there is room for them. */
+  if(MOBILE) a=a.filter(i=>!i.lnk);
   return a;
 }
 function iconById(id){ return allIcons().find(i=>i.id===id); }
@@ -1569,7 +1604,7 @@ const paint=initPaint({
     tools:$("#pt-tools"), opts:$("#pt-opts"), colors:$("#pt-colors"), left:$("#pt-left"),
     status:$("#pt-status"), st1:$("#pt-st1"), st2:$("#pt-st2"), st3:$("#pt-st3"),
   },
-  store, sysSnd, showError, showMenu, showConfirm,
+  store, sysSnd, showError, showMenu, showConfirm, isMobile:MOBILE,
   publish:png=>mpPublishPainting("untitled by "+playerName(),png),
   setWallpaperFrom,
   close:()=>closeWin("win-paint"),
@@ -1585,7 +1620,6 @@ const paint=initPaint({
     store.data.pictures=store.data.pictures.slice(0,6);
     store.save();
     if(openApps.has("win-explorer")) explorer.render();
-renderMru();
     return n;
   },
 });
@@ -2039,6 +2073,10 @@ function renderPinned(){
   }
 }
 renderPinned();
+/* the MRU used to be drawn only when an app was opened, so the phone — which
+   boots to a bare desktop on purpose — showed a Start menu with an empty left
+   column until you launched something */
+renderMru();
 function startItemMenu(el){
   const id=el.dataset.app;
   const items=[{label:"Open",bold:1,action:()=>{ closeStart(); el.click(); }}];
@@ -3194,7 +3232,10 @@ function syncArena(){
   }
   el.classList.toggle("rot",AROT);
   /* counter-magnify the sprites so cursors stay legible on a scaled-down arena */
-  CMAG=Math.max(1,.52/AS);
+  /* the arena is drawn small so the whole field fits, then the sprites are
+     magnified back up. A phone needs a much higher floor: at .52 an arrow came
+     out nine pixels wide on a screen held at arm's length. */
+  CMAG=Math.max(1,(MOBILE?.95:.52)/AS);
   el.style.setProperty("--cmag",CMAG);
   for(const c of curs) updateTag(c);
 }

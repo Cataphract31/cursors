@@ -1101,7 +1101,11 @@ export function initPaint(deps) {
   addEventListener("keydown", key);
 
   /* ---------- boot ---------- */
-  resize(store.data.paintW || 384, store.data.paintH || 272, false);
+  /* the phone gets a canvas the shape of the phone: 384x272 is a landscape
+     sheet of paper on a screen that is not landscape, and it left half the
+     window grey */
+  resize(store.data.paintW || (deps.isMobile ? 336 : 384),
+         store.data.paintH || (deps.isMobile ? 460 : 272), false);
   renderTools(); renderOpts(); renderColors();
   if (store.data.paintImage) loadDataURL(store.data.paintImage, false);
 

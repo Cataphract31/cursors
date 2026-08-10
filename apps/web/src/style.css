@@ -779,6 +779,17 @@ label>input[type=checkbox]:active{background-color:#ECE9D8}
 label>input[type=checkbox][disabled]{background-color:#ECE9D8}
 label>input[type=checkbox][disabled]:checked{background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg width='7' height='7' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath fill-rule='evenodd' clip-rule='evenodd' d='M7 0H6v1H5v1H4v1H3v1H2V3H1V2H0v3h1v1h1v1h1V6h1V5h1V4h1V3h1V0z' fill='gray'/%3E%3C/svg%3E")}
 
+/* ...and the same for radios, which nothing had fixed: every wrapped radio in
+   this app was rendering as 0x0 at opacity 0, so Folder Options, System
+   Restore, MSConfig and Group Policy were showing bare labels with nothing to
+   click. XP's radio is a 13px sunken circle with a black dot. */
+label>input[type=radio]{position:static;opacity:1;flex:none;display:inline-block;
+  width:13px;height:13px;margin:0;border-radius:50%;background:#fff;
+  box-shadow:inset -1px -1px #fff,inset 1px 1px grey,inset -2px -2px #dfdfdf,inset 2px 2px #0a0a0a}
+label>input[type=radio]:checked{background:#fff radial-gradient(circle at 50% 50%,#000 0 2.4px,transparent 2.6px)}
+label>input[type=radio][disabled]{background-color:#ECE9D8}
+label>input[type=radio][disabled]:checked{background:#ECE9D8 radial-gradient(circle at 50% 50%,gray 0 2.4px,transparent 2.6px)}
+
 .tz-chk{display:flex;align-items:center;gap:5px;margin:9px 0 0;color:#555}
 .tz-chk input{margin:0}
 /* the old Time Zone tab was a grey box saying "map data went home". XP put a
@@ -1540,3 +1551,108 @@ body.high-contrast .st-list,body.high-contrast .fnt-list,body.high-contrast #fo-
 body.high-contrast .ex-list,body.high-contrast .ex-tasks{background:#000;color:#fff;border-color:#fff}
 body.high-contrast #startmenu,body.high-contrast #ctx{background:#000;color:#fff;border-color:#fff}
 body.high-contrast .cit:hover,body.high-contrast .sm-item:hover{background:#fff;color:#000}
+
+/* ---------- Phase 13: the Round-2 apps, folded for a phone ---------- */
+/* Everything below only fires on body.mobile. The rule throughout: a pane that
+   sat beside another on a 1024px screen sits above it on a 390px one, lists
+   grow instead of scrolling inside a 150px box, and nothing is 150px of
+   permanent chrome on a 390px screen. */
+
+/* Add or Remove Programs: the left rail becomes a scrolling row of tabs */
+body.mobile .aw-body{flex-direction:column}
+body.mobile .aw-side{width:auto;flex:none;display:flex;overflow-x:auto;padding:4px;
+  border-right:0;border-bottom:1px solid #ACA899;gap:4px}
+body.mobile .aw-tab{flex:none;padding:5px 8px;white-space:nowrap;align-items:center;
+  border:1px solid transparent;border-radius:3px}
+body.mobile .aw-tab.on{border-color:#ACA899;background:#fff}
+body.mobile .aw-tico{width:20px;height:20px;flex:0 0 20px}
+body.mobile .aw-tt{display:flex;gap:4px;font-size:11px}
+body.mobile .aw-main{padding:8px 9px}
+body.mobile .aw-rowsub{flex-wrap:wrap;justify-content:flex-start}
+body.mobile .aw-det{margin-left:0}
+body.mobile .aw-panel{flex-direction:column;align-items:stretch;gap:7px}
+body.mobile .aw-compsz{display:none}
+
+/* System Restore: the blue task pane goes on top and shrinks to its text */
+body.mobile .sr-split{flex-direction:column;overflow:auto}
+body.mobile .sr-side{width:auto;flex:none;border-right:0;border-bottom:1px solid #C2D2E8;padding:8px 10px}
+body.mobile .sr-main{padding:10px}
+body.mobile .sr-head{font-size:13px;padding:6px 10px}
+body.mobile .sr-cols{flex-direction:column;gap:10px}
+body.mobile .sr-cal{width:100%;flex:none}
+body.mobile .sr-calday{padding:5px 0;font-size:12px}
+body.mobile .sr-list{height:132px}
+body.mobile .sr-foot{padding:7px 10px}
+body.mobile .sr-foot .xbtn{flex:1;min-width:0}
+
+/* MSConfig, Folder Options, Recycle Bin, Accessibility: dialogs on a phone get
+   full width and finger-sized rows */
+body.mobile #win-msconfig,body.mobile #win-foldopt,body.mobile #win-binprops,
+body.mobile #win-access,body.mobile #win-cleartype,body.mobile #win-magnifier,
+body.mobile #win-awprog{width:calc(100% - 12px) !important;max-width:none}
+body.mobile .mc-radio,body.mobile .mc-check,body.mobile .io-advrow,body.mobile .sr-radio{
+  min-height:26px;align-items:center}
+body.mobile .mc-sl,body.mobile .mc-svcm{display:none}
+body.mobile .mc-si{width:64px;flex:0 0 64px}
+body.mobile .mc-inibox,body.mobile .mc-svcbox,body.mobile .mc-startbox{height:150px}
+body.mobile .mc-bootrow{flex-direction:column}
+body.mobile .mc-timeout{padding-top:4px}
+body.mobile #fo-adv{height:170px}
+body.mobile #fo-typelist{height:120px}
+body.mobile .fo-ttype{display:none}
+body.mobile #fo-viewfoot{flex-wrap:wrap}
+body.mobile #fo-viewfoot .xbtn{flex:1;min-width:0}
+
+/* the Fonts folder: fewer, bigger tiles */
+body.mobile .fnt-item{width:calc(33.33% - 2px)}
+body.mobile .fnt-glyph{font-size:26px;line-height:30px;height:32px}
+body.mobile .fv-line{white-space:normal}
+
+/* Scheduled Tasks: name and schedule only, the rest is desktop trivia */
+body.mobile .st-r,body.mobile .st-l,body.mobile .st-t{display:none}
+body.mobile .st-s{width:120px;flex:0 0 120px}
+body.mobile .st-row{min-height:30px}
+
+/* Task Manager's five tabs wrap instead of overflowing */
+body.mobile #win-taskmgr .xtabs{flex-wrap:wrap}
+body.mobile .tm-statgrid{grid-template-columns:1fr}
+
+/* the On-Screen Keyboard is the one window that must fit the width exactly */
+body.mobile #desktop>#win-osk{left:0 !important;right:0;width:100% !important;
+  top:auto !important;bottom:calc(var(--tb) + var(--hud) + var(--sab)) !important;
+  height:210px !important}
+body.mobile .osk-key{font-size:12px}
+body.mobile #win-osk .menubar{display:none}
+/* with the keyboard up, the HUD is not in the way of anything */
+body.mobile.kb #desktop>#win-osk{bottom:0 !important}
+/* the keyboard is a palette, not a page: it never covers the whole screen */
+#win-osk .win-body{padding:2px}
+
+/* the Magnifier strip on a phone is shorter, and never over the taskbar */
+body.mobile #magnifier{height:96px}
+
+/* the tour balloon points at a tray that a sheet is covering, so on the phone
+   it steps aside as soon as an app is open */
+body.mobile.sheeted #balloon{display:none !important}
+/* Task Manager on a phone: a tab pane fills the sheet instead of sitting in a
+   470px-tall box at the top of a 844px screen */
+body.mobile #win-taskmgr .win-body{display:flex;flex-direction:column}
+body.mobile #win-taskmgr .xpane.on{flex:1;min-height:0;display:flex;flex-direction:column}
+body.mobile #win-taskmgr .tm-list{flex:1;min-height:0;height:auto}
+body.mobile #win-taskmgr .tm-fs{flex:none}
+body.mobile #tmgraph,body.mobile #tmpf,body.mobile #tmnet{width:100%}
+/* the launcher covers the tray the balloon points at */
+body.mobile #startmenu.open ~ #balloon{display:none !important}
+
+/* ---- phone: things a finger has to hit ---- */
+/* XP's menu rows are 22px because a mouse is a pixel. A finger is not. */
+body.mobile .cit{padding:8px 24px 8px 18px;line-height:16px;font-size:12px}
+body.mobile #ctx,body.mobile .csub{min-width:180px}
+body.mobile .csub{max-height:60vh;overflow-y:auto}
+body.mobile .trayico{width:20px;height:20px}
+body.mobile #tray{gap:11px}
+body.mobile #tray-chev{font-size:14px;padding:0 3px}
+body.mobile .menubar span{padding:4px 9px}
+body.mobile .xtab{padding:6px 10px}
+body.mobile .xbtn{min-height:28px}
+body.mobile .ex-item{min-height:34px}
