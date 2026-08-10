@@ -24,7 +24,11 @@ export function initSoundApps(deps) {
     return store.data.mixer;
   }
   const factor = k => { const c = mix()[k]; return c.m ? 0 : c.v / 100; };
-  function applyMix() { try { wmpVol(); } catch (e) {} }
+  function applyMix() { try { wmpVol(); } catch (e) {} try { ampVol(); } catch (e) {} }
+  /* Winamp is a program on this machine, so it goes through the mixer like
+     one: its own slider is the app's volume, Wave is its bus, and Volume
+     Control is the master over both. */
+  function ampVol() { if (hooks.ampVolume) hooks.ampVolume(factor("wave")); }
 
   /* ================= sndvol32 ================= */
   function volRender() {
@@ -57,10 +61,12 @@ export function initSoundApps(deps) {
   /* Native vertical <input type=range> only reacts to clicks in some
      engines. Owning the pointer makes the thumb ride the drag like the
      real sndvol32 knob did. */
+  let dragging = null;
   function vertDrag(inp) {
     inp.addEventListener("pointerdown", e => {
       e.preventDefault();
       inp.setPointerCapture(e.pointerId);
+      dragging = inp;
       const set = ev => {
         const r = inp.getBoundingClientRect();
         const f = 1 - (ev.clientY - r.top) / r.height;
@@ -69,7 +75,7 @@ export function initSoundApps(deps) {
       };
       set(e);
       const mv = ev => set(ev);
-      const up = () => { inp.removeEventListener("pointermove", mv); inp.removeEventListener("pointerup", up); };
+      const up = () => { dragging = null; inp.removeEventListener("pointermove", mv); inp.removeEventListener("pointerup", up); };
       inp.addEventListener("pointermove", mv);
       inp.addEventListener("pointerup", up);
     });
@@ -323,6 +329,26 @@ export function initSoundApps(deps) {
     stopWmp(){ try{ const a=wmpAudio(); a.pause(); a.currentTime=0; cancelAnimationFrame(wmp.raf); }catch(e){} },
     stopRecorder(){ srStopAll(); },
     factor,                       /* wave/cd scaling for the shell's own sounds */
-    mixerChanged() { wmpVol(); if ($("#win-sndvol").style.display !== "none") volRender(); },
+    /* Winamp's bus. Webamp re-applies its own gain on every state change, and
+       it changes state on every time tick, so the answer has to be available
+       when it asks — not only when the fader moves. */
+    ampBus: () => factor("wave"),
+    /* The master slider moves the shell's volume, which calls back in here.
+       Rebuilding the mixer at that point destroyed the input being dragged, so
+       the master knob moved one step per click while the other four rode the
+       drag. Patch the master column in place instead, and never touch the
+       control that currently has the pointer. */
+    mixerChanged() {
+      wmpVol();
+      ampVol();
+      const win = $("#win-sndvol");
+      if (!win || win.style.display === "none") return;
+      const col = $("#sv32-cols") && $("#sv32-cols").firstElementChild;
+      if (!col) return;
+      const vs = col.querySelector(".sv32-vol"), mc = col.querySelector(".sv32-m");
+      const v = Math.round(hooks.getMaster() * 100);
+      if (vs && vs !== dragging && +vs.value !== v) vs.value = v;
+      if (mc) mc.checked = hooks.getMuted();
+    },
   };
 }

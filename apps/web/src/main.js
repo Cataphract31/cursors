@@ -83,6 +83,10 @@ const RECALL_SECS=3, DUEL_MS=700;
 let AC=null, muted=false, masterVol=.7;   /* the tray slider, 0..1 — see volFlyout() */
 let snd=null;   /* the sndvol32 module, once booted — its Wave slider scales everything below */
 const waveF=()=>snd?snd.factor("wave"):1;
+/* every oscillator on this machine is the software synthesiser, so SW Synth is
+   its fader: the dial-up handshake, the deploy sweep, the kill chirp. Sampled
+   sounds are Wave. That is exactly the split sndvol32 was drawing. */
+const synthF=()=>snd?snd.factor("synth"):1;
 const vol=v=>(v==null?.55:v)*masterVol*waveF();
 function ac(){ if(!AC) AC=new (window.AudioContext||window.webkitAudioContext)(); return AC; }
 function tone(f,dur,type,v,delay,slide){
@@ -92,7 +96,7 @@ function tone(f,dur,type,v,delay,slide){
     const o=c.createOscillator(),g=c.createGain();
     o.type=type||"square"; o.frequency.setValueAtTime(f,t);
     if(slide) o.frequency.exponentialRampToValueAtTime(Math.max(30,f+slide),t+dur);
-    g.gain.setValueAtTime((v||.05)*masterVol*waveF(),t);
+    g.gain.setValueAtTime((v||.05)*masterVol*synthF(),t);
     g.gain.exponentialRampToValueAtTime(.0001,t+dur);
     o.connect(g).connect(c.destination); o.start(t); o.stop(t+dur+.03);
   }catch(e){}
@@ -133,7 +137,7 @@ function noiseBurst(dur,v,delay){
     const d=b.getChannelData(0);
     for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*(1-i/d.length);
     const n=c.createBufferSource(); n.buffer=b;
-    const g=c.createGain(); g.gain.value=v*masterVol*waveF();
+    const g=c.createGain(); g.gain.value=v*masterVol*synthF();   /* generated noise: synth bus */
     n.connect(g).connect(c.destination); n.start(t);
   }catch(e){}
 }
@@ -1770,6 +1774,9 @@ const write=initWriteApps({$,store,sysSnd,showMenu,showError,openWin,closeWin,ho
 }});
 snd=initSoundApps({$,store,sysSnd,showMenu,showError,openWin,closeWin,hooks:{
   getMaster:()=>masterVol,
+  /* the mixer reaches Winamp through the app object: wampApplyVol lives
+     inside its closure, and the mixer can be touched before it exists */
+  ampVolume:bus=>{ try{ winampApp.applyVol(bus); }catch(e){} },
   getMuted:()=>muted,
   setMaster:v=>{ masterVol=clamp(v,0,1); volSync(); },
   setMuted:m=>{ muted=!!m; volSync(); },
@@ -3153,6 +3160,12 @@ function openWinamp(){
       showError("winamp.exe","WINAMP caused a General Protection Fault in module LOADER.DLL. Reboot (F5) and try again.");
       return;
     }
+    /* the tray master and the mixer's Wave fader really move Winamp: its own
+       slider stays where the user left it and we scale the output gain under
+       it, re-applied after every store change because webamp resets that gain
+       from its own state on a track change and on a seek */
+    try{ webamp.store.subscribe(()=>wampApplyVol()); }catch(e){}
+    wampApplyVol();
     webamp.onClose(()=>closeWinamp());
     webamp.onMinimize(()=>{
       const a=openApps.get("win-amp");
@@ -3169,6 +3182,15 @@ function openWinamp(){
   focusedId="win-amp";
   renderTaskbar();
 }
+/* volume = Winamp's own slider x the Wave fader x the master; muted is silent */
+function wampApplyVol(bus){
+  if(!webamp||!webamp.media||!webamp.media.setVolume) return;
+  let own=100;
+  try{ own=webamp.store.getState().media.volume; }catch(e){}
+  const wave=bus!=null?bus:(snd&&snd.ampBus?snd.ampBus():1);
+  const eff=muted?0:Math.max(0,Math.min(100,own*masterVol*wave));
+  try{ webamp.media.setVolume(eff); }catch(e){}
+}
 function closeWinamp(){
   hideWamp();
   if(openApps.delete("win-amp")){
@@ -3176,7 +3198,12 @@ function closeWinamp(){
     renderTaskbar();
   }
 }
-return {open:openWinamp,close:closeWinamp};
+/* dev only, behind the same #desktop hash the other probes use: the gain node
+   is buried inside webamp, and a screenshot cannot show you a volume */
+if(location.hash.indexOf("#desktop")===0)
+  window.__amp={gain:()=>{ try{ return webamp.media._gainNode.gain.value; }catch(e){ return null; } },
+    own:()=>{ try{ return webamp.store.getState().media.volume; }catch(e){ return null; } }};
+return {open:openWinamp,close:closeWinamp,applyVol:wampApplyVol};
 })();
 
 /* ================= Internet Explorer ================= */
@@ -4586,12 +4613,52 @@ function mpTvPlayer(){
   if(!tvPage||!tvPage.isConnected||!MP.tv.now) return;
   const slot=tvPage.querySelector("#tv-slot");
   if(!slot) return;
+  const vid=MP.tv.now.vid;
   const elapsed=Math.max(0,(Date.now()-MP.tv.now.startedAt)/1000);
+  let ready=false;
   ytPlayer=new YT.Player(slot,{
-    width:"100%",height:"100%",videoId:MP.tv.now.vid,
-    playerVars:{autoplay:1,mute:1,start:Math.floor(elapsed),rel:0,modestbranding:1},
-    events:{onStateChange:e=>{ if(e.data===0) mpSend({t:"tvEnded",vid:MP.tv.now&&MP.tv.now.vid}); }},
+    width:"100%",height:"100%",videoId:vid,
+    /* nocookie is the host that survives the most blockers, and an explicit
+       origin is what the IFrame API asks for when it is embedded */
+    host:"https://www.youtube-nocookie.com",
+    playerVars:{autoplay:1,mute:1,start:Math.floor(elapsed),rel:0,modestbranding:1,
+      playsinline:1,origin:location.origin},
+    events:{
+      onReady:()=>{ ready=true; },
+      onStateChange:e=>{ ready=true; if(e.data===0) mpSend({t:"tvEnded",vid:MP.tv.now&&MP.tv.now.vid}); },
+      /* 2 bad id, 5 html5 error, 100 gone, 101/150 embedding disallowed */
+      onError:e=>tvFallback(vid,e&&e.data),
+    },
   });
+  /* the embed can also fail without ever telling us — a blocker or a proxy
+     returning something Chrome will not render leaves a dead grey box. If the
+     player has not said a word in eight seconds, say so and offer the link. */
+  setTimeout(()=>{ if(!ready) tvFallback(vid,null); },8000);
+}
+/* what the TV shows when YouTube will not play inside this page */
+function tvFallback(vid,code){
+  if(!tvPage||!tvPage.isConnected) return;
+  const box=tvPage.querySelector("#tv-slot")||tvPage.querySelector("iframe");
+  if(!box||box.dataset.failed) return;
+  const host=box.parentElement||box;
+  const why=code===2?"That video id is not a video."
+    :code===100?"That video is gone."
+    :(code===101||code===150)?"The owner does not allow this one to be embedded."
+    :"The video did not load. An ad blocker or a privacy extension will do this to YouTube embeds.";
+  const d=document.createElement("div");
+  d.dataset.failed="1";
+  d.style.cssText="width:100%;height:300px;background:#000;color:#CFCFCF;display:flex;"+
+    "flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;padding:12px";
+  const p1=document.createElement("div"); p1.style.cssText="font-size:12px"; p1.textContent=why;
+  const p2=document.createElement("div"); p2.style.cssText="font-size:11px;color:#8FA8CC";
+  p2.textContent="The lobby is still watching it together. The clock keeps running.";
+  const a=document.createElement("a");
+  a.href="https://www.youtube.com/watch?v="+encodeURIComponent(vid);
+  a.target="_blank"; a.rel="noopener";
+  a.style.cssText="color:#7FB2FF;font-size:12px";
+  a.textContent="Open it on youtube.com";
+  d.appendChild(p1); d.appendChild(p2); d.appendChild(a);
+  host.innerHTML=""; host.appendChild(d);
 }
 /* the TV ducks while a duel is on screen: the fight is the main act */
 setInterval(()=>{
