@@ -1279,3 +1279,33 @@ body.tb-auto.tb-peek #taskbar{transform:none}
 .cb-body{flex:1;background:#fff;border:1px solid #ACA899;margin:2px;padding:10px;overflow:auto}
 .cb-empty{color:#666;text-align:center;padding-top:30px}
 .cb-item{display:flex;gap:10px;align-items:center}
+
+/* ---------- Phase 10: the noise apps ---------- */
+.sv32-cols{flex:1;display:flex;gap:0;padding:6px;min-height:0}
+.sv32-col{flex:1;border-right:1px solid #ACA899;padding:4px 8px;display:flex;flex-direction:column;gap:6px}
+.sv32-col:last-child{border-right:0}
+.sv32-name{font-weight:700}
+.sv32-brow input{width:100%}
+.sv32-vrow{flex:1;display:flex;gap:4px;align-items:stretch}
+.sv32-vrow input{writing-mode:vertical-lr;direction:rtl;flex:1;min-height:70px}
+.sv32-mute{display:flex;gap:4px;align-items:center}
+.sv32-dev{flex:none;padding:3px 8px;color:#555;border-top:1px solid #ACA899;font-size:10px}
+.sr-main{padding:8px;display:flex;flex-direction:column;gap:7px}
+.sr-labels{display:flex;justify-content:space-between;align-items:center;gap:8px}
+#sr-scope{border:1px solid;border-color:#808080 #fff #fff #808080;background:#000}
+.sr-btns{display:flex;gap:4px;justify-content:center}
+.sr-btns .xbtn{min-width:44px;height:26px}
+.wmp-body{background:#10151d!important;color:#dfe7f2}
+#wmp-viz{flex:none;width:100%;background:#000;border-bottom:1px solid #2b3a52}
+.wmp-title{flex:none;padding:5px 9px;font-weight:700;color:#bfe0ff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wmp-seek{flex:none;margin:0 8px}
+.wmp-ctl{flex:none;display:flex;align-items:center;gap:6px;padding:6px 9px}
+.wmp-ctl button{width:30px;height:26px;background:linear-gradient(#3d5a85,#1f2c40);color:#dfe7f2;border:1px solid #5577a8;border-radius:3px;cursor:pointer}
+.wmp-ctl button:hover{border-color:#9cc2ef}
+.wmp-big{width:40px!important;height:32px!important;border-radius:16px!important}
+.wmp-time{font-size:10px;color:#9fb4d0;flex:1;text-align:center}
+.wmp-ctl input{width:80px}
+.wmp-list{flex:1;min-height:0;overflow:auto;background:#0b0f16;border-top:1px solid #2b3a52;padding:4px 0}
+.wmp-row{padding:3px 10px;cursor:default}
+.wmp-row:hover{background:#1b2a40}
+.wmp-row.on{background:#265088;color:#fff}

@@ -14,6 +14,7 @@ import { initMouse } from "./mouse.js";
 import { initSavers } from "./savers.js";
 import { initDepthApps } from "./depthapps.js";
 import { initWriteApps } from "./writeapps.js";
+import { initSoundApps } from "./soundapps.js";
 const Webamp = (WebampImport && WebampImport.default) ? WebampImport.default : WebampImport;
 
 "use strict";
@@ -78,7 +79,9 @@ const RECALL_SECS=3, DUEL_MS=700;
 
 /* ================= audio ================= */
 let AC=null, muted=false, masterVol=.7;   /* the tray slider, 0..1 — see volFlyout() */
-const vol=v=>(v==null?.55:v)*masterVol;
+let snd=null;   /* the sndvol32 module, once booted — its Wave slider scales everything below */
+const waveF=()=>snd?snd.factor("wave"):1;
+const vol=v=>(v==null?.55:v)*masterVol*waveF();
 function ac(){ if(!AC) AC=new (window.AudioContext||window.webkitAudioContext)(); return AC; }
 function tone(f,dur,type,v,delay,slide){
   if(muted) return;
@@ -87,7 +90,7 @@ function tone(f,dur,type,v,delay,slide){
     const o=c.createOscillator(),g=c.createGain();
     o.type=type||"square"; o.frequency.setValueAtTime(f,t);
     if(slide) o.frequency.exponentialRampToValueAtTime(Math.max(30,f+slide),t+dur);
-    g.gain.setValueAtTime((v||.05)*masterVol,t);
+    g.gain.setValueAtTime((v||.05)*masterVol*waveF(),t);
     g.gain.exponentialRampToValueAtTime(.0001,t+dur);
     o.connect(g).connect(c.destination); o.start(t); o.stop(t+dur+.03);
   }catch(e){}
@@ -128,7 +131,7 @@ function noiseBurst(dur,v,delay){
     const d=b.getChannelData(0);
     for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*(1-i/d.length);
     const n=c.createBufferSource(); n.buffer=b;
-    const g=c.createGain(); g.gain.value=v*masterVol;
+    const g=c.createGain(); g.gain.value=v*masterVol*waveF();
     n.connect(g).connect(c.destination); n.start(t);
   }catch(e){}
 }
@@ -145,6 +148,7 @@ function volSync(){
   $("#vf-mute").checked=muted;
   $("#sndico").dataset.tip=muted?"Volume: muted":"Volume: "+Math.round(masterVol*100)+"%";
   store.data.vol={v:masterVol,m:muted?1:0}; store.save();
+  if(snd) snd.mixerChanged();
 }
 function volOpen(on){
   volf.classList.toggle("on",on);
@@ -732,6 +736,13 @@ function openIcon(ic){
   }else if(ic.app==="paintdoc"){
     /* double-click views; the viewer's pencil hands it to Paint — XP's split */
     write.openViewer(viewerList(),0);
+  }else if(ic.app==="recwav"){
+    const buf=recWavs.get(ic.id);
+    if(!buf){ showError("Windows Media Player","Windows Media Player cannot play the file. The file is either corrupt or the Player does not support the format you are trying to play."); return; }
+    const ac=new (window.AudioContext||window.webkitAudioContext)();
+    const nsrc=ac.createBufferSource(); nsrc.buffer=buf;
+    const g=ac.createGain(); g.gain.value=muted?0:masterVol*waveF();
+    nsrc.connect(g).connect(ac.destination); nsrc.start();
   }else if(ic.app==="wavdoc"){
     showError("Windows Media Player","Windows Media Player cannot play the file. The file is either corrupt or the Player does not support the format you are trying to play.");
   }else if(ic.app==="run"){
@@ -1376,7 +1387,7 @@ function taskbarMenu(){
 }
 function trayMenu(target){
   if(target&&target.id==="sndico") return [
-    {label:"Open Volume Control",bold:1,action:()=>volOpen(true)},
+    {label:"Open Volume Control",bold:1,action:()=>snd.openMixer()},
     {label:"Adjust Audio Properties",action:()=>volOpen(true)},
   ];
   if(target&&target.id==="netico") return [
@@ -1495,6 +1506,8 @@ $$(".menubar span").forEach(m=>m.addEventListener("click",e=>{
   if(win.id==="win-notepad"){ write.notepadMenu(m.textContent,r.left,r.bottom+2); return; }
   if(win.id==="win-wordpad"){ write.wordpadMenu(m.textContent,r.left,r.bottom+2); return; }
   if(win.id==="win-clipbook"){ showMenu([{label:"Exit",action:()=>closeWin("win-clipbook")}],r.left,r.bottom+2); return; }
+  if(win.id==="win-sndvol"){ snd.mixerMenu(m.textContent,r.left,r.bottom+2); return; }
+  if(win.id==="win-sndrec"){ snd.recorderMenu(m.textContent,r.left,r.bottom+2); return; }
   if(win.id==="win-explorer"){ explorer.menu(m.textContent,r.left,r.bottom+2); return; }
   if(win.id==="win-ie"){ ie.menu(m.textContent,r.left,r.bottom+2); return; }
   showMenu(menubarMenu(m.textContent,win.id),r.left,r.bottom+2);
@@ -1621,6 +1634,23 @@ const write=initWriteApps({$,store,sysSnd,showMenu,showError,openWin,closeWin,ho
     return { label:clip.ic.label, kind:(clip.mode==="cut"?"Move":"Copy")+" — 1 object", icoHTML:"" };
   },
 }});
+snd=initSoundApps({$,store,sysSnd,showMenu,showError,openWin,closeWin,hooks:{
+  getMaster:()=>masterVol,
+  getMuted:()=>muted,
+  setMaster:v=>{ masterVol=clamp(v,0,1); volSync(); },
+  setMuted:m=>{ muted=!!m; volSync(); },
+  tracks:()=>TRACKS,
+  saveWav(buf){
+    /* a desktop .wav that really plays — this session only; a reload turns it
+       back into an ordinary dead file, which is very 2001 */
+    let name="Sound.wav", n=2;
+    while(store.data.userIcons.some(i=>i.label===name)) name="Sound ("+(n++)+").wav";
+    const ic={id:"user_"+userN++,label:name,ico:"wavdoc16",app:"recwav",kind:"wav"};
+    store.data.userIcons.push(ic); store.data.icons[ic.id]=firstFreeCell(); store.save();
+    recWavs.set(ic.id,buf); renderIcons(); sysSnd("nav",.4);
+  },
+}});
+const recWavs=new Map();   /* id -> AudioBuffer, session-lifetime */
 function docForIcon(ic){
   return { title:ic.label,
     get:()=>store.data.texts[ic.id]||"",
@@ -2020,6 +2050,10 @@ function allProgramsMenu(){
         {label:"Disk Defragmenter",action:()=>{ closeStart(); depth.openDefrag(); }},
         {label:"System Information",action:()=>{ closeStart(); $("#sp-user").textContent=playerNameFull(); openWin("win-sysprops"); }},
         {label:"Character Map",action:()=>{ closeStart(); depth.openCharmap(); }}]},
+      {label:"Entertainment",sub:[
+        {label:"Sound Recorder",action:()=>{ closeStart(); snd.openRecorder(); }},
+        {label:"Volume Control",action:()=>{ closeStart(); snd.openMixer(); }},
+        {label:"Windows Media Player",action:()=>{ closeStart(); snd.openWmp(); }}]},
       {sep:1},
       {label:"Notepad",action:()=>{ closeStart(); write.openNotepad(null); }},
       {label:"WordPad",action:()=>{ closeStart(); write.openWordpad(null); }},
@@ -2108,6 +2142,9 @@ function runNamed(k){
   if(k==="clipbrd"||k==="clipbrd.exe"){ write.openClipbook(); return true; }
   if(k==="pinball"||k==="pinball.exe"){ pinballOpen(); return true; }
   if(k==="sol"||k==="sol.exe"||k==="solitaire"){ solitaireOpen(); return true; }
+  if(k==="sndvol32"||k==="sndvol32.exe"||k==="sndvol"){ snd.openMixer(); return true; }
+  if(k==="sndrec32"||k==="sndrec32.exe"){ snd.openRecorder(); return true; }
+  if(k==="wmplayer"||k==="wmplayer.exe"){ snd.openWmp(); return true; }
   if(RUNMAP[k]){ sysSnd("nav",.5); openWin(RUNMAP[k]); return true; }
   return false;
 }
@@ -4756,6 +4793,9 @@ if(location.hash.indexOf("#desktop-sys")===0) setTimeout(()=>{ /* dev: the XP ap
 if(location.hash==="#desktop-mouse") setTimeout(()=>mouse.open(),300); /* dev: Mouse Properties */
 if(location.hash==="#desktop-pinball") setTimeout(()=>pinballOpen(),400); /* dev: the actual game */
 if(location.hash==="#desktop-solitaire") setTimeout(()=>solitaireOpen(),400); /* dev: the classic deck */
+if(location.hash==="#desktop-sound") setTimeout(()=>{ /* dev: mixer + recorder + WMP */
+  snd.openMixer(); snd.openRecorder(); snd.openWmp();
+},400);
 if(location.hash==="#desktop-write") setTimeout(()=>{ /* dev: all four writing apps */
   write.openNotepad({title:"session.LOG",get:()=>".LOG\nfirst entry",set:null});
   write.openWordpad(null);

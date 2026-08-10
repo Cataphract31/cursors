@@ -376,6 +376,20 @@ menus must be routed inside that handler like Paint/IE/Explorer are.
   chrome, the visualization pane (Ambience/Bars and Waves), the playlist drawer. Winamp
   stays; XP shipped both.
 
+### Phase 10 status (2026-08-10)
+
+Shipped, all three: **sndvol32** (five columns — Volume Control/Wave/SW
+Synth/CD Audio/Line In — where the master is the tray slider both ways, Wave
+genuinely scales every shell and game sound, and CD Audio scales the music
+players; Options/Help menus; the tray icon's right-click opens it).
+**Sound Recorder** (green oscilloscope off a live analyser, records the real
+microphone locally, Effects menu does real DSP — echo, reverse, half/double
+speed — and Save As drops a .wav on the desktop that plays for this session).
+**WMP9** (Luna-blue chrome, analyser bar visualization, seek/volume, playlist
+of the MacLeod tracks; sits next to Winamp because XP shipped both).
+All Programs ▸ Accessories ▸ Entertainment holds the three, plus Run names
+(sndvol32, sndrec32, wmplayer).
+
 ## Phase 11 — the games (the shock phase)
 
 - **Solitaire** — the real deal: draw-three, timed scoring, right-click auto-move, and

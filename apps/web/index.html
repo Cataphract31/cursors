@@ -1239,6 +1239,63 @@ icons/sounds: winXP (MIT)</div>
     </div>
   </div>
 
+  <!-- ===== the noise apps ===== -->
+  <div class="window" id="win-sndvol" data-minw="430" data-minh="240" style="left:250px;top:120px;width:560px;height:300px">
+    <div class="title-bar">
+      <div class="tb-l"><i class="xico tb-ico" data-ico="trayVol"></i><div class="title-bar-text">Volume Control</div></div>
+      <div class="title-bar-controls"><button aria-label="Minimize"></button><button aria-label="Close"></button></div>
+    </div>
+    <div class="win-body pad" style="background:#ECE9D8">
+      <div class="menubar"><span>Options</span><span>Help</span></div>
+      <div class="sv32-cols" id="sv32-cols"></div>
+      <div class="sv32-dev">cursor$ AC'97 Audio</div>
+    </div>
+  </div>
+
+  <div class="window" id="win-sndrec" data-minw="300" data-minh="150" style="left:340px;top:170px;width:330px">
+    <div class="title-bar">
+      <div class="tb-l"><i class="xico tb-ico" data-ico="wavdoc16"></i><div class="title-bar-text">Sound - Sound Recorder</div></div>
+      <div class="title-bar-controls"><button aria-label="Minimize"></button><button aria-label="Close"></button></div>
+    </div>
+    <div class="win-body pad" style="background:#ECE9D8">
+      <div class="menubar"><span>File</span><span>Edit</span><span>Effects</span><span>Help</span></div>
+      <div class="sr-main">
+        <div class="sr-labels"><div>Position:<br><b id="sr-pos">0.00 sec.</b></div>
+          <canvas id="sr-scope" width="120" height="60"></canvas>
+          <div style="text-align:right">Length:<br><b id="sr-len">0.00 sec.</b></div></div>
+        <input type="range" id="sr-slider" min="0" max="0" value="0" style="width:100%">
+        <div class="sr-btns">
+          <button class="xbtn" id="sr-home" title="Seek To Start">|◀◀</button>
+          <button class="xbtn" id="sr-end" title="Seek To End">▶▶|</button>
+          <button class="xbtn" id="sr-play" title="Play">▶</button>
+          <button class="xbtn" id="sr-stop" title="Stop">■</button>
+          <button class="xbtn" id="sr-rec" title="Record">●</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="window" id="win-wmp" data-minw="340" data-minh="300" style="left:300px;top:60px;width:460px;height:480px">
+    <div class="title-bar">
+      <div class="tb-l"><i class="xico tb-ico" data-ico="wmp32"></i><div class="title-bar-text">Windows Media Player</div></div>
+      <div class="title-bar-controls"><button aria-label="Minimize"></button><button aria-label="Maximize"></button><button aria-label="Close"></button></div>
+    </div>
+    <div class="win-body pad wmp-body">
+      <canvas id="wmp-viz" width="430" height="200"></canvas>
+      <div class="wmp-title" id="wmp-title">Ready</div>
+      <input type="range" id="wmp-seek" min="0" max="1000" value="0" class="wmp-seek">
+      <div class="wmp-ctl">
+        <button id="wmp-playbtn" class="wmp-big" title="Play/Pause">▶</button>
+        <button id="wmp-stop" title="Stop">■</button>
+        <button id="wmp-prev" title="Previous">|◀</button>
+        <button id="wmp-next" title="Next">▶|</button>
+        <span class="wmp-time" id="wmp-time">0:00 / 0:00</span>
+        <input type="range" id="wmp-vol" min="0" max="100" value="80" title="Volume">
+      </div>
+      <div class="wmp-list" id="wmp-list"></div>
+    </div>
+  </div>
+
   <!-- ===== the writing apps ===== -->
   <div class="window" id="win-notepad" data-minw="300" data-minh="220" style="left:250px;top:80px;width:470px;height:360px">
     <div class="title-bar">
