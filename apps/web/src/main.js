@@ -2443,7 +2443,7 @@ function applyPolicy(id,v){
   if(id==="norun") $$("#startmenu [data-act=run]").forEach(e=>e.style.display=on?"none":"");
   if(id==="noclock") $("#clock").style.display=on?"none":"";
   if(id==="nobal") if(on) $("#balloon").style.display="none";
-  if(id==="noauto"){ if(on&&auto.on){ auto.on=false; updatePanel(); } $(".aprow").parentElement&&$$("#cx-play .aprow").forEach(e=>e.style.display=on?"none":""); }
+  if(id==="noauto"){ if(on&&auto.on){ setAuto(false); updatePanel(); } $(".aprow").parentElement&&$$("#cx-play .aprow").forEach(e=>e.style.display=on?"none":""); }
   if(id==="showodds") document.body.classList.toggle("showodds",on);
   if(id==="nocmd"&&on) closeWin("win-cmd");
   if(id==="verbose") document.body.classList.toggle("verbose-boot",on);
@@ -3039,11 +3039,28 @@ function renderCxVerify(){
 }
 
 /* ================= autoplay ================= */
-$("#ap-toggle").addEventListener("click",()=>{
-  auto.on=!auto.on; sClick();
+function setAuto(on){
+  auto.on=on;
   const b=$("#ap-toggle");
-  b.textContent=auto.on?"ON":"OFF";
-  b.classList.toggle("on",auto.on);
+  b.textContent=on?"ON":"OFF";
+  b.classList.toggle("on",on);
+}
+/* dead-man's switch: autoplay is a session convenience, not a standing order.
+   Wall clock, not performance.now() — a laptop-sleep gap must count as away,
+   and performance.now() can stop ticking through suspend. The check runs on
+   the first gesture back as well as in the deploy loop, so a returning mouse
+   can't re-arm a stale session before the loop notices the gap. */
+const AUTO_IDLE_MS=10*60*1000;
+let lastGesture=Date.now();
+function autoIdleCheck(){
+  if(auto.on&&Date.now()-lastGesture>AUTO_IDLE_MS){
+    setAuto(false);
+    showBalloon("Autoplay switched off","You were away, so automatic deploys were stopped. Turn Autoplay back on when you want it.");
+  }
+}
+["pointermove","pointerdown","keydown","wheel"].forEach(ev=>addEventListener(ev,()=>{ autoIdleCheck(); lastGesture=Date.now(); },{passive:true,capture:true}));
+$("#ap-toggle").addEventListener("click",()=>{
+  setAuto(!auto.on); sClick();
 });
 $$(".apc").forEach(b=>b.addEventListener("click",()=>{ sClick(); auto.count=+b.dataset.c; $$(".apc").forEach(x=>x.classList.toggle("on",x===b)); }));
 $$(".apb").forEach(b=>b.addEventListener("click",()=>{ sClick(); auto.bankAt=+b.dataset.b; $$(".apb").forEach(x=>x.classList.toggle("on",x===b)); }));
@@ -3051,6 +3068,7 @@ $$(".apb").forEach(b=>b.addEventListener("click",()=>{ sClick(); auto.bankAt=+b.
    The target wobbles per epoch so the field breathes; play-money only — the
    real-money bot policy is a disclosed design still owed (see HANDOFF). */
 setInterval(()=>{
+  autoIdleCheck();   /* disarm a stale session before it can spend */
   if(!canDeploy()) return;
   if(auto.on&&myCurs().length<auto.count&&wallet>=STAKE) deploy(true);
   if(MP.on) return;   /* the server runs the bots */
