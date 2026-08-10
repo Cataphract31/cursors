@@ -109,37 +109,32 @@ ${list}
      this page is only the room around them. It is also the home page. */
   site("http://tv.cursor.land/", {
     title: "cursorTV - now showing",
+    /* the class is what theater mode keys off: on this page, and only this
+       page, hiding every element except the picture leaves something to see */
+    cls: "tv",
     mounted: p => hooks.tvMounted && hooks.tvMounted(p),
     body: () => hooks.mpOn && hooks.mpOn() ? `<center>
-<h1>cursorTV</h1>
-<font size="1">one screen &#183; everyone watches &#183; the decks rotate &#183; skip by vote</font>
-<hr width="94%">
-<table border="1" cellpadding="0" cellspacing="0" class="sidebox" width="94%"><tr><td>
-  <div id="tv-slot" style="width:100%;height:300px;background:#000"></div>
-</td></tr></table>
-<div id="tv-now" style="margin:6px 0"></div>
-<div id="tv-meta" style="margin:2px 0"><font size="1"><span id="tv-watch"></span> <span id="tv-skipn"></span></font></div>
-<a id="tv-sound"><span class="badge">&#128266; CLICK FOR SOUND (the browser makes us start muted)</span></a>
-<br><br>
+<div id="tv-stage"><div id="tv-slot"></div><i id="tv-exit" title="Leave theater mode">&#10005;</i></div>
+<div id="tv-bar">
+  <span id="tv-live"></span>
+  <span id="tv-now"></span>
+  <font size="1"><span id="tv-watch"></span> <span id="tv-skipn"></span></font>
+  <a id="tv-theater">[ theater ]</a>
+  <a id="tv-skip">[ skip ]</a>
+</div>
+<a id="tv-sound"><span class="badge">&#128266; CLICK FOR SOUND</span></a>
 <table border="0" cellpadding="3" cellspacing="0"><tr>
-  <td><input id="tv-in" class="gbin" style="width:280px" placeholder="paste a youtube link" spellcheck="false"></td>
+  <td><input id="tv-in" class="gbin" style="width:250px" placeholder="paste a youtube link" spellcheck="false"></td>
   <td><a id="tv-add"><b>[ queue it ]</b></a></td>
-  <td>&nbsp;&#183;&nbsp;</td>
-  <td><a id="tv-skip">[ vote skip ]</a></td>
 </tr></table>
-<br>
 <table border="1" cellpadding="6" cellspacing="0" class="sidebox" width="80%"><tr><td align="left">
   <b>the decks</b>
   <div id="tv-queue"></div>
 </td></tr></table>
-<p><font size="1">3 in the queue per person. the rotation is by person, not by
-who queued first, and it is not for sale.</font></p>
 </center>` : `<center>
 <h1>cursorTV</h1>
 <hr width="94%">
 <p>the antenna is the beta server, and you are not connected to it.</p>
-<p><font size="1">cursorTV is live only on the hosted beta, where the whole lobby
-watches one screen. offline there is nothing on. there is not even static.</font></p>
 </center>`,
   });
 
@@ -314,6 +309,7 @@ Internet Explorer</p>
     els.addr.value = r.url;
     els.throb.classList.remove("spin");
     progress(null);
+    if (theater && (r.cls || "") !== "tv") setTheater(false);
     els.page.className = "ie-doc " + (r.cls || "");
     srcHTML = r.html;
     els.page.innerHTML = r.html;
@@ -536,6 +532,28 @@ Internet Explorer</p>
   });
 
 
+  /* ---------- theater mode ---------- */
+  /* IE is mostly a television here, and a television with a menu bar, two
+     toolbars, a Links bar and a status bar on a phone is 40% picture. Theater
+     mode drops all of it and gives the window to the screen. F11, like it
+     always was. It only blanks the page chrome on the TV page (cls "tv"),
+     because on any other page that would leave an empty white window. */
+  let theater = false, theaterMaxed = false;
+  function setTheater(on) {
+    on = !!on;
+    if (on === theater) return;
+    theater = on;
+    const w = document.getElementById("win-ie");
+    if (w) {
+      w.classList.toggle("theater", theater);
+      if (hooks.maximize) {
+        if (theater && !w.classList.contains("maxed")) { hooks.maximize(); theaterMaxed = true; }
+        else if (!theater && theaterMaxed) { hooks.maximize(); theaterMaxed = false; }
+      }
+    }
+    if (hooks.tvFit) hooks.tvFit();
+  }
+
   /* ---------- menus ---------- */
   /* Favorites: the defaults plus whatever the user added; both editable
      through the real Add/Organize dialogs, persisted in the store */
@@ -598,6 +616,7 @@ ${srcHTML}
         { label: "Toolbars", sub: [
           { label: "Standard Buttons", check: 1 }, { label: "Address Bar", check: 1 }, { label: "Links", check: 1 }] },
         { label: "Status Bar", check: 1 },
+        { label: "Theater Mode", accel: "F11", check: theater, action: () => setTheater(!theater) },
         { label: "Explorer Bar", sub: [
           { label: "Search", accel: "Ctrl+E", check: sideMode === "search", action: () => sidebar("search") },
           { label: "Favorites", accel: "Ctrl+I", check: sideMode === "favs", action: () => sidebar("favs") },
@@ -620,7 +639,7 @@ ${srcHTML}
           { label: "Read Mail", action: () => hooks.openLobby() },
           { label: "New Message", action: () => hooks.openLobby() }] },
         { label: "Synchronize...", disabled: 1 },
-        { label: "Windows Update", action: () => go("http://windowsupdate.microsoft.com/") },
+        { label: "Windows Update", action: () => hooks.windowsUpdate() },
         { sep: 1 },
         { label: "Internet Options...", action: inetOptions },
       ] :
@@ -947,6 +966,8 @@ ${srcHTML}
 
   return {
     open, boot, go, menu, stop, hangup,
+    theater: setTheater,
+    isTheater: () => theater,
     url: () => url,
     isOnline: () => online,
     /* dev: skip the handshake and be on the wire already */

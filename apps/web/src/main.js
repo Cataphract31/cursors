@@ -367,6 +367,12 @@ let netUp=false;   /* cursor$net dial-up state, published by ie.setNet for ipcon
    module (assigned further down) and these two are local service switches */
 let sys=null, toastsOn=true, clockOn=true, msnAuto=true;
 let readmeText=null;
+/* Windows Update used to steer IE at windowsupdate.microsoft.com, which is a
+   dead address here and answered with "page cannot be displayed" from three
+   different menus. It answers the question instead. */
+function windowsUpdate(){
+  showError("Windows Update","0 critical updates available.");
+}
 function openWin(id,opts){
   if(id==="win-ie"&&MP.on&&MP.tv&&MP.tv.now) setTimeout(()=>{ try{ mpTvSync(); }catch(e){} },200);
   if(id==="win-amp"){ winampApp.open(); return; }
@@ -1823,7 +1829,7 @@ const maint=initSysMaint({$,store,sysSnd,showError,showConfirm,openWin,closeWin,
   /* a program that was just installed or removed changes the desktop, the
      menus and the quick launch bar all at once */
   shellRefresh(){ renderIcons(); syncQuickLaunch(); renderMru(); },
-  windowsUpdate(){ openWin("win-ie"); if(ie) ie.go("http://windowsupdate.microsoft.com/"); },
+  windowsUpdate(){ windowsUpdate(); },
   services:()=>sys.services(),
   setService:(name,on)=>sys.svcSet(name,on),
   folderOptions(){ try{ explorer.render(); }catch(e){} },
@@ -2163,6 +2169,10 @@ function startItemMenu(el){
 $("#startbtn").addEventListener("click",e=>{ e.stopPropagation(); sClick(); startmenu.classList.toggle("open"); });
 addEventListener("pointerdown",e=>{ if(!e.target.closest("#startmenu,#startbtn")) closeStart(); });
 addEventListener("keydown",e=>{
+  /* F11 is theater mode, and Escape leaves it — the two keys everybody
+     already tries on a video that fills the window */
+  if(e.key==="F11"&&ie&&openApps.has("win-ie")){ e.preventDefault(); ie.theater(!ie.isTheater()); return; }
+  if(e.key==="Escape"&&ie&&ie.isTheater()){ ie.theater(false); return; }
   if(e.key==="Escape"){ closeStart(); hideMenu(); }
   if(e.ctrlKey&&e.shiftKey&&e.key==="Escape"){ openWin("win-taskmgr"); }
 });
@@ -2295,7 +2305,7 @@ function allProgramsMenu(){
       {label:"CURSORS.EXE",action:go("win-cursors")}]},
     {sep:1},
     {label:"Help and Support",action:go("win-help")},
-    {label:"Windows Update",action:()=>{ closeStart(); showError("Windows Update","0 critical updates available. The house is already patched."); }},
+    {label:"Windows Update",action:()=>{ closeStart(); windowsUpdate(); }},
   ];
 }
 function smAction(act,itemEl){
@@ -3067,7 +3077,7 @@ sys=initSysApps({
     clearType:()=>maint.openClearType(),
     folderOptions:()=>maint.openFolderOptions(),
     systemRestore:()=>maint.openRestore(),
-    windowsUpdate:()=>{ openWin("win-ie"); if(ie) ie.go("http://windowsupdate.microsoft.com/"); },
+    windowsUpdate:()=>windowsUpdate(),
     /* --- services and policies actually do things --- */
     serviceChanged:(ctl,on)=>applyService(ctl,on),
     policyChanged:(id,v)=>applyPolicy(id,v),
@@ -3264,6 +3274,9 @@ ie=initIE({
     postGuest:(who,txt)=>mpGuestPost(who,txt),
     netGallery:()=>mpGalleryData(),
     tvMounted:p=>mpTvMounted(p),
+    tvFit:()=>tvFit(),
+    maximize:()=>maxWin("win-ie"),
+    windowsUpdate:()=>windowsUpdate(),
     galleryMounted:()=>mpGalleryOpen(),
     setWallpaperFrom:(u,mode)=>setWallpaperFrom(u,mode),
   },
@@ -4332,6 +4345,7 @@ function mpWelcome(m){
   $("#walletamt").textContent=fmtS(Math.round(wallet))+" SOL";
   $("#mh-wallet").textContent=fmtS(Math.round(wallet))+" SOL";
   myTickets=m.tickets; globalTickets=m.glob; rakeAccrued=m.rake;
+  if(m.tv&&typeof m.tv.srv==="number") tvSkew=m.tv.srv-Date.now();
   MP.tv=m.tv||MP.tv;
   if(!MP.chatSeeded){
     MP.chatSeeded=true;
@@ -4544,7 +4558,11 @@ function mpMsg(m){
     case "part": if(MP.on){ msn.lobbySys(`${m.name} signed out`); if(m.online){ MP.online=m.online; msn.setHumans(m.online); mpTvRenderQueue(); } } break;
     case "guest": MP.guest=m.list; mpRefreshIe("guest.html"); break;
     case "gallery": MP.gallery=m.list; mpRefreshIe("gallery"); break;
-    case "tv": MP.tv={now:m.now,queue:m.queue,skip:m.skip}; mpTvSync(); break;
+    case "tv":
+      if(typeof m.srv==="number") tvSkew=m.srv-Date.now();
+      MP.tv={now:m.now,queue:m.queue,skip:m.skip};
+      mpTvSync();
+      break;
     case "err": if(m.msg) showBalloon("beta server",m.msg); break;
   }
 }
@@ -4588,6 +4606,31 @@ function mpPublishPainting(name,png){
    click-for-sound overlay. Queue is a fair FIFO, 3 pending per player, skip by
    vote. This is turntable.fm wearing an IE6 costume. */
 let ytApi=0, ytPlayer=null, tvPage=null;
+/* The room's clock is the SERVER's clock. A phone whose clock is two minutes
+   fast would otherwise seek two minutes ahead of everybody and think the room
+   was wrong, so every tv message carries the server's time and we keep the
+   difference. Old servers do not send it; then the skew is zero and this
+   behaves exactly as it did before. */
+let tvSkew=0, tvLastSeek=0, tvFitObs=null;
+function tvElapsed(){
+  if(!MP.tv.now) return 0;
+  return Math.max(0,(Date.now()+tvSkew-MP.tv.now.startedAt)/1000);
+}
+/* the picture is sized to the window, in both directions. 16:9 inside whatever
+   box IE has: widen the window and it grows, make it taller and it grows. */
+function tvFit(){
+  const stage=document.getElementById("tv-stage");
+  const doc=$("#ie-page");
+  if(!stage||!doc) return;
+  const th=$("#win-ie").classList.contains("theater");
+  const availW=Math.max(160,doc.clientWidth-(th?0:22));
+  /* out of theater, leave the bar and the decks room to exist below it */
+  const availH=Math.max(150,th?doc.clientHeight:doc.clientHeight-150);
+  let w=availW,h=w*9/16;
+  if(h>availH){ h=availH; w=h*16/9; }
+  stage.style.width=Math.round(w)+"px";
+  stage.style.height=Math.round(h)+"px";
+}
 function mpTvMounted(page){
   tvPage=page;
   if(!MP.on) return;
@@ -4601,21 +4644,60 @@ function mpTvMounted(page){
   page.querySelector("#tv-add").addEventListener("click",add);
   inp.addEventListener("keydown",e=>{ e.stopPropagation(); if(e.key==="Enter") add(); });
   page.querySelector("#tv-skip").addEventListener("click",()=>mpSend({t:"tvSkip"}));
+  const th=page.querySelector("#tv-theater"), ex=page.querySelector("#tv-exit");
+  if(th) th.addEventListener("click",()=>ie.theater(!ie.isTheater()));
+  if(ex) ex.addEventListener("click",()=>ie.theater(false));
+  const live=page.querySelector("#tv-live");
+  if(live){
+    live.textContent="\u25CF LIVE";
+    live.addEventListener("click",()=>tvCatchUp());
+  }
+  tvFit();
+  /* one observer for the life of the page: every way IE can change size —
+     dragged edge, maximize, sidebar, theater, phone rotation — lands here */
+  if(!tvFitObs&&window.ResizeObserver){
+    tvFitObs=new ResizeObserver(()=>tvFit());
+    tvFitObs.observe($("#ie-page"));
+  }
   const snd=page.querySelector("#tv-sound");
   if(snd) snd.addEventListener("click",()=>{ try{ ytPlayer.unMute(); snd.style.display="none"; }catch(e){} });
   if(ytApi===2) mpTvPlayer();
   else{
     window.onYouTubeIframeAPIReady=()=>{ ytApi=2; mpTvPlayer(); };
-    if(!ytApi){ ytApi=1; const sc=document.createElement("script"); sc.src="https://www.youtube.com/iframe_api"; document.head.appendChild(sc); }
+    if(!ytApi){
+      ytApi=1;
+      const sc=document.createElement("script");
+      sc.src="https://www.youtube.com/iframe_api";
+      sc.onerror=()=>tvFallback(MP.tv.now&&MP.tv.now.vid,-1);
+      document.head.appendChild(sc);
+    }
+    /* a blocked script fires no error in some setups; it simply never runs */
+    setTimeout(()=>{ if(ytApi!==2) tvFallback(MP.tv.now&&MP.tv.now.vid,-1); },12000);
   }
 }
 function mpTvPlayer(){
   if(!tvPage||!tvPage.isConnected||!MP.tv.now) return;
-  const slot=tvPage.querySelector("#tv-slot");
-  if(!slot) return;
+  let slot=tvPage.querySelector("#tv-slot");
+  if(!slot){
+    /* the slot is gone because a fallback panel took the screen, or because a
+       player is already sitting in it. Either way, clear the stage and build
+       a fresh one: a late-arriving YouTube gets its picture back. */
+    const st=tvPage.querySelector("#tv-stage");
+    if(!st) return;
+    const dead=st.querySelector("[data-failed]"), old=st.querySelector("iframe");
+    if(dead) dead.remove();
+    if(old) old.remove();
+    try{ ytPlayer&&ytPlayer.destroy&&ytPlayer.destroy(); }catch(e){}
+    const badge=tvPage.querySelector("#tv-live");
+    if(badge) badge.style.display="";
+    slot=document.createElement("div");
+    slot.id="tv-slot";
+    st.insertBefore(slot,st.firstChild);
+  }
   const vid=MP.tv.now.vid;
-  const elapsed=Math.max(0,(Date.now()-MP.tv.now.startedAt)/1000);
+  const elapsed=tvElapsed();
   let ready=false;
+  tvFit();
   ytPlayer=new YT.Player(slot,{
     width:"100%",height:"100%",videoId:vid,
     /* nocookie is the host that survives the most blockers, and an explicit
@@ -4625,7 +4707,13 @@ function mpTvPlayer(){
       playsinline:1,origin:location.origin},
     events:{
       onReady:()=>{ ready=true; },
-      onStateChange:e=>{ ready=true; if(e.data===0) mpSend({t:"tvEnded",vid:MP.tv.now&&MP.tv.now.vid}); },
+      onStateChange:e=>{
+        ready=true;
+        /* pressing play after a pause rejoins the broadcast rather than
+           starting a private screening from where you left off */
+        if(e.data===1) tvCatchUp();
+        if(e.data===0) mpSend({t:"tvEnded",vid:MP.tv.now&&MP.tv.now.vid});
+      },
       /* 2 bad id, 5 html5 error, 100 gone, 101/150 embedding disallowed */
       onError:e=>tvFallback(vid,e&&e.data),
     },
@@ -4633,21 +4721,25 @@ function mpTvPlayer(){
   /* the embed can also fail without ever telling us — a blocker or a proxy
      returning something Chrome will not render leaves a dead grey box. If the
      player has not said a word in eight seconds, say so and offer the link. */
-  setTimeout(()=>{ if(!ready) tvFallback(vid,null); },8000);
+  setTimeout(()=>{ if(!ready) tvFallback(vid,null); },12000);
 }
 /* what the TV shows when YouTube will not play inside this page */
 function tvFallback(vid,code){
   if(!tvPage||!tvPage.isConnected) return;
   const box=tvPage.querySelector("#tv-slot")||tvPage.querySelector("iframe");
   if(!box||box.dataset.failed) return;
+  const badge=tvPage.querySelector("#tv-live");
+  if(badge) badge.style.display="none";
   const host=box.parentElement||box;
-  const why=code===2?"That video id is not a video."
+  const keep=host.querySelector("#tv-exit");
+  const why=code===-1?"YouTube's player did not load. An ad blocker or a privacy extension will do this."
+    :code===2?"That video id is not a video."
     :code===100?"That video is gone."
     :(code===101||code===150)?"The owner does not allow this one to be embedded."
     :"The video did not load. An ad blocker or a privacy extension will do this to YouTube embeds.";
   const d=document.createElement("div");
   d.dataset.failed="1";
-  d.style.cssText="width:100%;height:300px;background:#000;color:#CFCFCF;display:flex;"+
+  d.style.cssText="width:100%;height:100%;background:#000;color:#CFCFCF;display:flex;"+
     "flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;padding:12px";
   const p1=document.createElement("div"); p1.style.cssText="font-size:12px"; p1.textContent=why;
   const p2=document.createElement("div"); p2.style.cssText="font-size:11px;color:#8FA8CC";
@@ -4659,7 +4751,30 @@ function tvFallback(vid,code){
   a.textContent="Open it on youtube.com";
   d.appendChild(p1); d.appendChild(p2); d.appendChild(a);
   host.innerHTML=""; host.appendChild(d);
+  if(keep) host.appendChild(keep);
 }
+/* dev only, behind the same #desktop hash the other probes use: a screenshot
+   cannot show you a clock, a skew or whether two machines are on the same
+   frame of the same video */
+if(location.hash.indexOf("#desktop")===0)
+  window.__tv={
+    go:()=>{ openWin("win-ie"); ie.connectNow(); ie.go("http://tv.cursor.land/"); },
+    on:()=>MP.on,
+    now:()=>MP.tv.now,
+    skew:()=>tvSkew,
+    live:()=>tvElapsed(),
+    at:()=>{ try{ return ytPlayer.getCurrentTime(); }catch(e){ return null; } },
+    state:()=>{ try{ return ytPlayer.getPlayerState(); }catch(e){ return null; } },
+    badge:()=>{ const b=tvPage&&tvPage.querySelector("#tv-live"); return b?b.textContent:null; },
+    theater:v=>{ ie.theater(v); return ie.isTheater(); },
+    stage:()=>{ const st=document.getElementById("tv-stage");
+      return st?{w:st.clientWidth,h:st.clientHeight,dw:$("#ie-page").clientWidth,dh:$("#ie-page").clientHeight}:null; },
+    queue:v=>mpSend({t:"tvQueue",vid:v}),
+    fit:()=>tvFit(),
+    pause:()=>{ try{ ytPlayer.pauseVideo(); }catch(e){} },
+    rejoin:()=>tvCatchUp(),
+    drift:()=>tvDrift(),
+  };
 /* the TV ducks while a duel is on screen: the fight is the main act */
 setInterval(()=>{
   if(!ytPlayer||!ytPlayer.setVolume) return;
@@ -4670,14 +4785,54 @@ setInterval(()=>{
   }catch(e){}
 },400);
 let ytDuck=-1;
+/* Everyone is watching the same broadcast, so there is one position and the
+   server owns it. If this screen drifts — the tab slept, the phone locked, the
+   window was shut for ten minutes, somebody hit pause — it rejoins the room at
+   the room's position instead of playing a private copy from where it stopped.
+   Time away is time missed, exactly like a television. */
+function tvCatchUp(){
+  if(!ytPlayer||!MP.tv.now||!ytPlayer.getCurrentTime) return;
+  const live=tvElapsed();
+  try{
+    const st=ytPlayer.getPlayerState?ytPlayer.getPlayerState():-1;
+    if(Math.abs((ytPlayer.getCurrentTime()||0)-live)>1.5){ ytPlayer.seekTo(live,true); tvLastSeek=Date.now(); }
+    if(st===2||st===5) ytPlayer.playVideo();
+  }catch(e){}
+}
+function tvDrift(){
+  if(!tvPage||!tvPage.isConnected||!ytPlayer||!MP.tv.now) return;
+  let st=-1,cur=0;
+  try{ st=ytPlayer.getPlayerState?ytPlayer.getPlayerState():-1; cur=ytPlayer.getCurrentTime()||0; }catch(e){ return; }
+  const behind=tvElapsed()-cur;
+  const badge=tvPage.querySelector("#tv-live");
+  const off=st===2||st===-1||Math.abs(behind)>3;
+  if(badge){
+    badge.className=off?"behind":"";
+    badge.textContent=off?"\u25CF BEHIND \u00B7 rejoin":"\u25CF LIVE";
+  }
+  /* only nudge a player that is actually running, and never twice in a row:
+     a seek buffers, and buffering looks like falling behind */
+  if(st===1&&Math.abs(behind)>2.5&&Date.now()-tvLastSeek>4000){
+    try{ ytPlayer.seekTo(tvElapsed(),true); tvLastSeek=Date.now(); }catch(e){}
+  }
+}
+setInterval(tvDrift,2000);
+/* coming back to the tab is coming back to the room */
+document.addEventListener("visibilitychange",()=>{
+  if(!document.hidden) setTimeout(()=>{ try{ mpTvSync(); }catch(e){} },300);
+});
 function mpTvSync(){
   if(!tvPage||!tvPage.isConnected) return;
   mpTvRenderQueue();
   if(!MP.tv.now){ try{ ytPlayer&&ytPlayer.stopVideo(); }catch(e){} return; }
   if(ytApi!==2){ return; }
   try{
-    const elapsed=Math.max(0,(Date.now()-MP.tv.now.startedAt)/1000);
-    if(ytPlayer&&ytPlayer.loadVideoById) ytPlayer.loadVideoById(MP.tv.now.vid,elapsed);
+    /* same show, only late: seek, do not reload — reloading restarts the
+       buffer and makes every window focus a black flash */
+    let vid=null;
+    try{ vid=(ytPlayer.getVideoData&&ytPlayer.getVideoData()||{}).video_id||null; }catch(e){}
+    if(ytPlayer&&vid===MP.tv.now.vid){ tvCatchUp(); return; }
+    if(ytPlayer&&ytPlayer.loadVideoById) ytPlayer.loadVideoById(MP.tv.now.vid,tvElapsed());
     else mpTvPlayer();
   }catch(e){ mpTvPlayer(); }
 }
@@ -4697,8 +4852,7 @@ function mpTvRenderQueue(){
   /* the server hands back the order it will ACTUALLY play in — rotated by
      person, not first-come — so the page shows the deck, not the inbox */
   if(qEl) qEl.innerHTML=MP.tv.queue.length
-    ? `<div style="margin-bottom:3px"><font size="1"><b>on deck</b> &#183; the decks rotate, so queueing three does not buy you three in a row</font></div>`+
-      MP.tv.queue.map((q,i)=>`<div${q.by===MP.name?' style="font-weight:bold"':''}>${i+1}. ${esc(q.vid)} <font size="1" color="#888">&#8212; ${esc(q.by)}${q.by===MP.name?" (you)":""}</font></div>`).join("")
+    ? MP.tv.queue.map((q,i)=>`<div${q.by===MP.name?' style="font-weight:bold"':''}>${i+1}. ${esc(q.vid)} <font size="1" color="#888">&#8212; ${esc(q.by)}${q.by===MP.name?" (you)":""}</font></div>`).join("")
     : `<font size="1">queue is empty</font>`;
 }
 

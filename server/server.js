@@ -140,7 +140,9 @@ function tvOrder() {
 }
 function tvMsg() {
   const need = conns.size <= 2 ? 1 : Math.ceil(conns.size / 3);
-  return { t: "tv", now: tv.now, queue: tvOrder(), skip: { n: skipVotes.size, need } };
+  /* srv is this box's clock. Clients do not trust their own for playback
+     position: a phone two minutes fast would seek two minutes past the room. */
+  return { t: "tv", now: tv.now, queue: tvOrder(), skip: { n: skipVotes.size, need }, srv: Date.now() };
 }
 let skipVotes = new Set();
 function tvAdvance() {
@@ -195,7 +197,7 @@ function handle(c, m) {
         balance: b.balance, tickets: b.tickets, glob: b.glob, rake: b.rake,
         epoch: sim.welcomeState(), chat: chatLog.slice(-25),
         online: onlineNames(),
-        tv: { now: tv.now, queue: tvOrder() },
+        tv: { now: tv.now, queue: tvOrder(), srv: Date.now() },
       });
       broadcast({ t: "join", name, online: onlineNames() });
       sys(`${name} signed in — ${conns.size} player${conns.size === 1 ? "" : "s"} online`);

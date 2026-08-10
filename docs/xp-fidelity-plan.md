@@ -624,3 +624,125 @@ are tasks:
 - The shortcut-arrow overlay icon: needs the real asset found, or it ships without.
 - The guestbook and Hall of Pain in IE: still standing from Round 1 — keep (real player
   content) or demolish with the rest of the fiction. Owner has not ruled.
+
+# Round 3 — after Phase 13 (2026-08-11)
+
+The shell is finished enough that the remaining work is not "more windows". It is
+the two things people actually do here — watch the TV and play the arena on a
+phone — plus one honest sweep over everything already built.
+
+## Phase 14 — cursorTV is a channel
+
+IE is open on this desktop mostly to watch something with other people, so the
+browser is judged as a television, not as a browser.
+
+### Phase 14 status, pass 1 (2026-08-11)
+
+- **The picture is sized in both directions.** The slot was a fixed 300px tall,
+  so widening the window grew the video and making it taller did nothing. The
+  stage is now 16:9 fitted inside whatever box IE has: width-bound when the
+  window is wide, height-bound when it is short. Measured: 432x242 in a 742x394
+  window, 780x438 after dragging it to 900x740.
+- **Theater mode (F11).** Menu bar, both toolbars, the Links bar, the status bar
+  and the Explorer bar step out; the page blanks down to the picture; the window
+  maximizes and restores on the way out. Escape or the corner box leaves. It
+  only blanks the page on the TV page (`cls: "tv"`) — on any other page F11 is
+  IE without its furniture, which is what F11 always was. Measured: 1223x688 of
+  a 1280x800 screen; 597x336 on a phone held sideways, against 265x148 with the
+  chrome up.
+- **Fewer words around it.** The page is the picture, one status line, the sound
+  badge, the queue box and the decks. The header, the subtitle, the rotation
+  paragraph and the deck preamble are gone; the rules are enforced by the
+  server and stated when you hit one.
+- **The room's clock.** Playback position is the server's, not the tab's. Every
+  `tv` message now carries `srv: Date.now()` and the client keeps the difference,
+  so a phone whose clock is two minutes fast no longer seeks two minutes past
+  everyone. Old servers do not send it; the skew is then zero and nothing
+  changes.
+- **Time away is time missed.** A 2s watchdog compares this screen against the
+  room and seeks if it is more than 2.5s out; pressing play after a pause
+  rejoins at the room's position; coming back to the tab resyncs; reopening IE
+  seeks instead of reloading (no black flash on every focus). The badge on the
+  bar reads LIVE, or BEHIND and clicks to rejoin. Measured: joined a broadcast
+  at 106s with the room at 106s, paused 11s and read BEHIND at 106 against 117,
+  rejoined at 121/121.
+- **A blocked embed says so.** The iframe API script is the first thing an ad
+  blocker eats, and until now that failed silently — no player was built, so
+  nothing timed out and the screen stayed black. There is now a 12s timeout on
+  the API itself and on a player that never speaks, a panel naming the likely
+  cause with a link to youtube.com, and recovery if YouTube answers late.
+- **Dead links removed.** Free Hotmail and Windows Update sat in the Links bar
+  and answered with "page cannot be displayed". The bar is now the five pages
+  that exist. Windows Update in IE's Tools menu did the same thing from a third
+  place; all three entry points now answer the question instead.
+
+### Still owed in 14
+
+- **Titles, not ids.** The decks list `dQw4w9WgXcQ`. YouTube's oEmbed endpoint is
+  CORS-open; fetch on queue, cache the title on the server so every screen shows
+  the same string, fall back to the id when the fetch is blocked.
+- **Dead air.** With an empty queue the screen is black and the page says so.
+  Decide whether the channel replays the last thing, shows the arena, or stays
+  black — a decision, not a task.
+- **The watching count** is everyone connected, not everyone with the page open.
+  The server knows `visible`; send that number instead.
+- **Deploy the server.** The `srv` field needs the beta box restarted to exist.
+  Nothing breaks until then.
+- **Landscape prompt on a phone**: portrait gives a 360x202 picture and a lot of
+  white below it. Either default to theater in landscape or say "turn it
+  sideways" once.
+
+## Phase 15 — the sweep: every window, three sizes, one list
+
+Phase 13 found six bugs in an afternoon purely by looking at the built site at
+390x844 instead of reasoning about it. Nothing has been looked at that way at
+1024x768, and only some of it at 1280x800.
+
+- Drive all ~70 windows with the probe at 1280x800, 1024x768 and 390x844, open
+  each one, screenshot it, and write down what is wrong. No fixing during the
+  pass — the list first, so the shape of the problem is visible.
+- Then fix in one pass, grouped by cause. Phase 13's radio-button bug was one
+  CSS rule that had been breaking five apps for weeks; those are the wins here.
+- Include the states that are hard to reach: an app opened from Run, an app
+  opened twice, a window restored from minimized, a dialog whose parent closed,
+  every menu with the window at its minimum size.
+- Include the offline path: with the server down, every window that talks to it
+  should say so in XP's voice rather than hang. The TV, the gallery, the
+  guestbook, the hall, Messenger and the arena all have one.
+
+## Phase 16 — the real-device pass (owner drives)
+
+Headless Chromium cannot fake iOS Safari. Needs the owner's phone, and produces
+a bug list the same way Phase 15 does.
+
+- The viewport dance: `100dvh`, the URL bar growing and shrinking, `--kb` against
+  a real software keyboard, safe areas in both orientations.
+- Long-press timing against every Round-2 context menu (the desktop, Explorer,
+  the tray, the taskbar, the TV page).
+- Per-app call: which apps are worth using on a phone, which should say "rotate
+  it", and which should not be in the phone's All Programs at all.
+- Audio: iOS starts muted until a touch, and Winamp, the mixer, the dial-up
+  handshake and cursorTV all assume a gesture has happened.
+
+## Phase 17 — the shipping pass
+
+The things that decide whether the beta survives contact with real players.
+
+- **First paint** is 2.71 MB. Audit what is in it, move anything that is not the
+  logon screen and the desktop behind a lazy load, and set a budget the
+  postbuild script enforces.
+- **The server runbook.** One document: how to deploy `server/`, how to restart
+  without dropping the epoch, what the DB holds, what to do when the box fills.
+  It exists as knowledge and not as a file.
+- **Reconnect.** What the client does when the socket drops mid-fight: today it
+  reconnects and resyncs, but nothing has tested it against a server that
+  restarts under load.
+- **The crash/epoch boundary on a phone** — the BSOD covers the sheet you were
+  reading and there is no way to tell what happened afterwards.
+
+## Ordering
+
+**14** (finish the TV — it is what IE is for) → **15** (the sweep, biggest
+compounding return) → **16** (real device, needs the owner) → **17** (shipping).
+15 and 16 produce lists; both are two-pass phases and should be scheduled as
+such.
