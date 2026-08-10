@@ -28,6 +28,12 @@ export function initExplorer(deps) {
   /* Search Companion state. `searching` swaps the blue task pane for the
      companion pane; results replace the listing until you navigate away. */
   let searching = false, results = null, searchQ = "", searchKind = "all";
+  /* Folder Options owns these switches; the fallbacks match that dialog's defaults */
+  const FOD = { tasks: 1, click: "double", hidden: 1, ext: 0, fullpath: 0, sysfolders: 1, cplincomp: 1 };
+  const fo = k => { const o = store.data.folderOpts || {}; return o[k] === undefined ? FOD[k] : o[k]; };
+  /* "Hide extensions for known file types" only ever hid the extension */
+  const shownName = n => { if (!fo("ext")) return n; const i = n.lastIndexOf("."); return i > 0 ? n.slice(0, i) : n; };
+  const isSystemPath = p => /windows/i.test(p);
   const BIN = "Recycle Bin";
   const HOME = "C:\\Documents and Settings\\Administrator";
   const DOCS = HOME + "\\My Documents";
@@ -64,7 +70,7 @@ export function initExplorer(deps) {
       dir("Program Files", { ico: "progfolder32", go: "C:\\Program Files" }),
       dir("WINDOWS", { ico: "winfolder32", go: "C:\\WINDOWS" }),
       f("AUTOEXEC.BAT", { size: 0, ico: "@ic-file", act: () => txt("AUTOEXEC.BAT", "@ECHO OFF\nREM nothing to load. it is 2003 and this file is\nREM already vestigial.\n") }),
-      f("boot.ini", { size: 211, ico: "@ic-file", act: () => txt("boot.ini", "[boot loader]\ntimeout=30\ndefault=multi(0)disk(0)rdisk(0)partition(1)\\WINDOWS\n\n[operating systems]\nmulti(0)disk(0)rdisk(0)partition(1)\\WINDOWS=\"Windows XP Professional\" /fastdetect\nmulti(0)disk(0)rdisk(0)partition(1)\\WINDOWS=\"Windows XP (last known good decision)\" /safeboot\n") }),
+      f("boot.ini", { size: 211, ico: "@ic-file", act: () => hooks.bootIni ? txt("boot.ini", hooks.bootIni()) : txt("boot.ini", "[boot loader]\ntimeout=30\ndefault=multi(0)disk(0)rdisk(0)partition(1)\\WINDOWS\n\n[operating systems]\nmulti(0)disk(0)rdisk(0)partition(1)\\WINDOWS=\"Windows XP Professional\" /fastdetect\nmulti(0)disk(0)rdisk(0)partition(1)\\WINDOWS=\"Windows XP (last known good decision)\" /safeboot\n") }),
       f("CONFIG.SYS", { size: 0, ico: "@ic-file", act: () => txt("CONFIG.SYS", "REM this file is empty and has been for years.\n") }),
       f("pagefile.sys", { size: 768 * MB, ico: "@ic-file", hidden: 1,
         act: () => showError("pagefile.sys", "Access is denied.\n\nThis file is in use by the system, by which we mean it is holding your regrets in memory.") }),
@@ -258,16 +264,20 @@ export function initExplorer(deps) {
 
   /* ---------- rendering ---------- */
   function render() {
-    const items = searching && results
+    let items = searching && results
       ? results.map(r => Object.assign({}, r.it, { _where: r.where }))
       : (childrenOf(path) || []);
+    if (!fo("hidden")) items = items.filter(i => !i.hidden);
+    if (!fo("cplincomp") && path === "My Computer") items = items.filter(i => i.name !== "Control Panel");
     /* items are rebuilt every render, so re-point the selection by name (and
        drop it if what was selected has just been restored or emptied) */
     if (sel) sel = items.find(i => i.name === sel.name) || null;
     els.addr.value = searching ? "Search Results" : path;
     els.addrico.src = IMG[icoOf(path)] || IMG.folder32;
-    if (deps.setTitle) deps.setTitle(leaf(path));
-    renderList(items);
+    if (deps.setTitle) deps.setTitle(searching ? "Search Results" : fo("fullpath") ? path : leaf(path));
+    if (!searching && !fo("sysfolders") && isSystemPath(path)) renderSysWarning();
+    else renderList(items);
+    els.tasks.style.display = fo("tasks") ? "" : "none";
     if (searching) renderSearchPane(items); else renderTasks(items);
     els.back.disabled = !hist.length;
     els.fwd.disabled = !fwd.length;
@@ -285,7 +295,7 @@ export function initExplorer(deps) {
   function renderList(items) {
     const host = els.list;
     host.innerHTML = "";
-    host.className = "ex-list v-" + view;
+    host.className = "ex-list v-" + view + (fo("click") === "single" ? " sc" : "");
     let group = null;
     for (const it of items) {
       /* XP files its own computer under headings; so do we */
@@ -302,7 +312,7 @@ export function initExplorer(deps) {
       img.classList.add("ex-ico");   /* icoNode returns <img> OR <span><svg>; one class sizes both */
       const nm = document.createElement("div");
       nm.className = "ex-nm";
-      nm.textContent = it.name;
+      nm.textContent = shownName(it.name);
       row.appendChild(img); row.appendChild(nm);
       if (view === "tiles") {
         const sub = document.createElement("div");
@@ -322,7 +332,10 @@ export function initExplorer(deps) {
           add(it.file ? "deleted from Desktop" : "24/08/2001 09:00", "dt");
         }
       }
-      row.addEventListener("click", () => { sel = it; markSel(host, row); status(items); renderTasks(items); });
+      row.addEventListener("click", () => {
+        sel = it; markSel(host, row); status(items); renderTasks(items);
+        if (fo("click") === "single") openItem(it);   /* Folder Options said one click */
+      });
       row.addEventListener("dblclick", () => openItem(it));
       row.addEventListener("contextmenu", e => {
         e.preventDefault(); e.stopPropagation();
@@ -331,6 +344,29 @@ export function initExplorer(deps) {
       });
       host.appendChild(row);
     }
+  }
+  /* "Display the contents of system folders" off: XP shows this page instead */
+  function renderSysWarning() {
+    const host = els.list;
+    host.innerHTML = "";
+    host.className = "ex-list v-warn";
+    const w = document.createElement("div");
+    w.className = "ex-warn";
+    const h = document.createElement("b");
+    h.textContent = "These files are hidden.";
+    w.appendChild(h);
+    const p = document.createElement("div");
+    p.textContent = "This folder contains files that keep your system working properly. You should not modify its contents.";
+    w.appendChild(p);
+    const a = document.createElement("a");
+    a.className = "ex-warnlink";
+    a.textContent = "Show the contents of this folder";
+    a.addEventListener("click", () => {
+      const o = store.data.folderOpts = store.data.folderOpts || {};
+      o.sysfolders = 1; store.save(); render();
+    });
+    w.appendChild(a);
+    host.appendChild(w);
   }
   function markSel(host, row) {
     [...host.children].forEach(c => c.classList.remove("on"));
@@ -621,7 +657,7 @@ export function initExplorer(deps) {
     Tools: (x, y) => showMenu([
       { label: "Map Network Drive...", action: () => showError("Map Network Drive", "There is no network. There is only this computer and the chain.") },
       { sep: 1 },
-      { label: "Folder Options...", action: () => showError("Folder Options", "Show hidden files: they are already showing. That is what the faded ones are.") },
+      { label: "Folder Options...", action: () => hooks.folderOptions() },
     ], x, y),
     Help: (x, y) => showMenu([
       { label: "Help Topics", action: () => showError("Windows Explorer", "Double-click a folder to open it. Use Up to go back out.\n\nThe interesting files are in C:\\WINDOWS\\system32 and C:\\Program Files\\CURSORS.EXE.", true) },

@@ -450,6 +450,54 @@ approach or not at all.
   **ClearType tuner**, **Accessibility** (Magnifier and On-Screen Keyboard genuinely
   running; the OSK types into the focused window).
 
+### Phase 12 status (2026-08-10)
+
+**Task Manager** — done in the previous pass: five tabs, real Commit Charge (JS heap),
+real Networking (socket traffic), End Process with XP's warning, tray CPU meter.
+
+**System Restore, MSConfig, Folder Options** — done, `src/sysmaint.js` (import-free
+sibling module, wired through `main.js`).
+
+- **System Restore** (`rstrui`, Start → Accessories → System Tools): the real wizard —
+  welcome radios, the bold-dates calendar, the per-day point list, the confirm page, the
+  progress run, "Restoration Complete", and "Undo my last restoration" once you have
+  restored something. Points are taken at real moments: a System Checkpoint on the first
+  boot of each calendar day, a display change, a pointer-scheme change, an MSConfig
+  apply, and any point you create by hand. Twelve are kept, and a manual point outlives
+  an automatic one.
+  A restore genuinely reverts: wallpaper (incl. the Paint-set one and its mode), screen
+  saver and wait, pointer scheme, the CRT switch, Control Panel view, desktop icon
+  arrangement switches, taskbar switches, Explorer view, Folder Options and the startup
+  list. **The snapshot has no money in it** — no wallet, no cursors, no bin, no rakeback.
+  Those are the server's and this window cannot touch them, which is the whole selection
+  rule for what goes in a restore point.
+- **MSConfig** (`msconfig`, Administrative Tools): six tabs. General's three startup
+  modes drive the Startup tab and vice-versa. BOOT.INI is generated, not decorative —
+  `/SOS` really turns on the verbose boot and `timeout=` really sets how long the boot
+  screen sits there. Services lists the same table the Services console owns and toggles
+  it through the same code path (the house's own services still refuse with Error 5).
+  Startup is load-bearing: `SoundMan` owns the tray volume icon, `winampa` the Winamp
+  quick-launch button, `cursors` the tray phase chip, `msmsgs` whether Messenger signs in
+  at boot (unchecked, the lobby stays quiet until you open the window yourself). Changes
+  apply on restart, like XP, and XP's nag dialog greets you on every boot until startup
+  goes back to Normal.
+- **Folder Options** (`control folders`, or Explorer → Tools, or Control Panel): three
+  tabs. Working switches: common tasks vs classic folders (the blue pane), single-click
+  vs double-click (Explorer *and* the desktop), show hidden files, hide known extensions,
+  full path in the title bar, show Control Panel in My Computer, and "display the
+  contents of system folders" — off, `C:\WINDOWS` shows XP's "These files are hidden"
+  page with the link that puts them back. File Types lists the real extension table
+  Explorer types files with.
+
+Verified by CDP probe on the built dist: a manual point taken, the wallpaper set to
+(None), a restore performed, and the wallpaper genuinely back to Bliss with the undo
+point recorded; the startup list unchecked, restarted, and the tray icons gone on the
+other side; the nag on the boot after that.
+
+**Still open in Phase 12**: Task Manager's menubar (File/Options/View/Shut Down),
+Scheduled Tasks, the Fonts folder, Recycle Bin Properties, Add or Remove Programs,
+ClearType tuner, Accessibility (Magnifier and On-Screen Keyboard).
+
 ## Phase 13 — the mobile pass (unchanged, still last)
 
 Real-device pass on iPhone: the `--kb` path, long-press timing on every Round-2 menu,
@@ -466,7 +514,8 @@ apps, cheap) → **11** (games; Pinball is the flagship shock) → **10** (noise
 
 Real assets only, never drawn. System apps stay cosmetic — nothing touches money,
 rakeback, or another player. Copy stays flat and terse. Every phase ships with
-`upload/cursors/` rebuilt, and anything that grows first paint gets routed to `media/`.
+a push to GitHub (Vercel builds `apps/web` from source), and anything that grows first
+paint gets routed to `media/`.
 
 ## Game-side items parked for the owner's call
 

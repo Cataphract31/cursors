@@ -1330,3 +1330,89 @@ body.tb-auto.tb-peek #taskbar{transform:none}
 #tray-cpu{display:none;width:16px;height:16px;background:#000;border:1px solid #3c6;
   align-items:flex-end;justify-content:center;padding:1px;box-sizing:border-box}
 #tray-cpu i{display:block;width:10px;background:#2FD858;height:10%}
+
+/* ================= Phase 12b — System Restore, MSConfig, Folder Options ================= */
+/* rstrui's own chrome: a white page with a blue header and a task strip */
+.sr-body{display:flex;flex-direction:column;padding:0;background:#fff}
+.sr-head{background:linear-gradient(#F0F4FB,#D6E2F5);border-bottom:1px solid #8FA8CC;
+  padding:8px 12px;font-size:15px;font-weight:bold;color:#1B3F87;flex:0 0 auto}
+.sr-split{flex:1;display:flex;min-height:0}
+.sr-side{width:190px;flex:0 0 190px;background:#EDF3FB;border-right:1px solid #C2D2E8;
+  padding:10px;overflow:auto;font-size:11px}
+.sr-main{flex:1;padding:12px 14px;overflow:auto}
+.sr-box{margin-bottom:8px}
+.sr-boxh{font-size:11px;color:#1B3F87;margin-bottom:6px}
+.sr-boxp{font-size:11px;color:#333;margin-bottom:6px}
+.sr-radio{display:flex;gap:6px;align-items:flex-start;font-size:11px;margin:5px 0;cursor:default}
+.sr-radio input{margin:1px 0 0}
+.sr-p{font-size:11px;margin:0 0 9px;line-height:1.45}
+.sr-p.b{font-weight:bold}
+.sr-p.dim{color:#666}
+.sr-input{width:100%;font:inherit;font-size:11px;padding:2px 3px;border:1px solid #7F9DB9;margin-bottom:9px}
+.sr-foot{flex:0 0 auto;display:flex;gap:7px;justify-content:flex-end;padding:8px 12px;
+  background:#ECE9D8;border-top:1px solid #C2D2E8}
+.sr-cols{display:flex;gap:12px;align-items:flex-start}
+.sr-cal{width:198px;flex:0 0 198px;border:1px solid #7F9DB9;background:#fff}
+.sr-calhead{display:flex;align-items:center;justify-content:space-between;
+  background:linear-gradient(#4A80D8,#2A5CB0);color:#fff;font-size:11px;font-weight:bold;padding:3px 5px}
+.sr-arrow{border:0;background:transparent;color:#fff;font:inherit;font-size:11px;cursor:default;padding:0 5px}
+.sr-arrow:hover{background:rgba(255,255,255,.25)}
+.sr-calgrid{display:grid;grid-template-columns:repeat(7,1fr);padding:3px;gap:1px}
+.sr-caldow{font-size:10px;text-align:center;color:#555;font-weight:bold}
+.sr-calday{font-size:11px;text-align:center;padding:2px 0;cursor:default}
+.sr-calday.has{font-weight:bold;color:#00379B;text-decoration:underline;cursor:pointer}
+.sr-calday.on{background:#316AC5;color:#fff;text-decoration:none}
+.sr-listwrap{flex:1;min-width:0}
+.sr-listhead{font-size:11px;font-weight:bold;margin-bottom:3px}
+.sr-list{border:1px solid #7F9DB9;background:#fff;height:168px;overflow:auto}
+.sr-row{display:flex;gap:8px;font-size:11px;padding:2px 4px;cursor:default}
+.sr-row.on{background:#316AC5;color:#fff}
+.sr-rowt{width:58px;flex:0 0 58px}
+.sr-rowd{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sr-empty{font-size:11px;color:#666;padding:6px}
+.sr-warn{border:1px solid #C0B490;background:#FFFFE1;padding:7px 9px;margin-top:4px}
+.sr-warnh{font-size:11px;font-weight:bold;margin-bottom:3px}
+.sr-warnp{font-size:11px;color:#444;line-height:1.4}
+
+/* msconfig */
+.mc-radio{display:flex;gap:6px;align-items:flex-start;font-size:11px;margin:3px 0;cursor:default}
+.mc-check{display:flex;gap:6px;align-items:center;font-size:11px;margin:2px 0;cursor:default}
+.mc-note{font-size:11px;color:#666;margin:0 0 3px 19px}
+.mc-sub{margin:4px 0 0 19px;border-left:1px dotted #ACA899;padding-left:8px}
+.mc-btnrow{display:flex;gap:6px;align-items:center;margin-top:8px;flex-wrap:wrap}
+.mc-inibox{border:1px solid #7F9DB9;background:#fff;height:190px;overflow:auto;padding:3px 4px;margin:4px 0}
+.mc-inibox.tall{height:150px;font-family:"Lucida Console",monospace}
+.mc-iniline{display:flex;gap:6px;align-items:center;font-size:11px;padding:1px 2px;cursor:default}
+.mc-bootline{font-size:11px;white-space:pre}
+.mc-bootrow{display:flex;gap:10px;align-items:flex-start}
+.mc-bootrow .mo-fs{flex:1}
+.mc-timeout{display:flex;gap:5px;align-items:center;font-size:11px;padding-top:12px}
+.mc-timeout input{width:46px;font:inherit;font-size:11px;border:1px solid #7F9DB9;padding:1px 2px}
+.mc-svcbox,.mc-startbox{border:1px solid #7F9DB9;background:#fff;height:196px;overflow:auto;margin:4px 0}
+.mc-svcrow,.mc-startrow,.mc-starthead{display:flex;gap:6px;align-items:center;font-size:11px;padding:1px 4px;cursor:default}
+.mc-starthead{background:#ECE9D8;border-bottom:1px solid #ACA899;font-weight:bold;position:sticky;top:0}
+.mc-svcrow:hover,.mc-startrow:hover{background:#EAF1FB}
+.mc-svcn{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mc-svcm{width:82px;flex:0 0 82px;color:#555}
+.mc-svcs{width:56px;flex:0 0 56px;color:#555}
+.mc-si{width:74px;flex:0 0 74px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mc-sc{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#333}
+.mc-sl{width:124px;flex:0 0 124px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#555}
+
+/* folder options */
+.io-advrow.indent{padding-left:28px}
+.fo-advsub{font-size:11px;padding:2px 2px 0 14px}
+.fo-trow{display:flex;gap:6px;align-items:center;font-size:11px;padding:1px 4px;cursor:default}
+.fo-trow.on{background:#316AC5;color:#fff}
+.fo-tico{width:16px;height:16px;flex:0 0 16px}
+.fo-text{width:56px;flex:0 0 56px;font-weight:bold}
+.fo-ttype{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#fo-typelist{border:1px solid #7F9DB9;background:#fff;height:150px;overflow:auto}
+.fo-det{border:1px solid #ACA899;background:#F7F6F1;padding:6px 8px;margin-top:7px;font-size:11px;line-height:1.5;min-height:52px}
+/* Explorer under Folder Options: the system-folder warning and single-click */
+.ex-list.v-warn{display:block;padding:22px 26px}
+.ex-warn{max-width:420px;font-size:11px;line-height:1.55}
+.ex-warn b{display:block;margin-bottom:6px}
+.ex-warnlink{display:inline-block;margin-top:10px;color:#00379B;text-decoration:underline;cursor:pointer}
+.ex-list.sc .ex-nm{color:#00379B;text-decoration:underline}
+.ex-list.sc .ex-item:hover .ex-nm{color:#D03030}

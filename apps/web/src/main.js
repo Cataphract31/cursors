@@ -15,6 +15,7 @@ import { initSavers } from "./savers.js";
 import { initDepthApps } from "./depthapps.js";
 import { initWriteApps } from "./writeapps.js";
 import { initSoundApps } from "./soundapps.js";
+import { initSysMaint } from "./sysmaint.js";
 const Webamp = (WebampImport && WebampImport.default) ? WebampImport.default : WebampImport;
 
 "use strict";
@@ -356,7 +357,7 @@ let ie=null;   /* the browser, wired further down; openWin needs the handle */
 let netUp=false;   /* cursor$net dial-up state, published by ie.setNet for ipconfig/ping */
 /* declared here because boot-time code reads them: `sys` is the XP applications
    module (assigned further down) and these two are local service switches */
-let sys=null, toastsOn=true, clockOn=true;
+let sys=null, toastsOn=true, clockOn=true, msnAuto=true;
 let readmeText=null;
 function openWin(id,opts){
   if(id==="win-ie"&&MP.on&&MP.tv&&MP.tv.now) setTimeout(()=>{ try{ mpTvSync(); }catch(e){} },200);
@@ -705,6 +706,8 @@ function hookIcon(el,ic){
         /* on the phone the desktop is a launcher: one tap opens (unless this
            release is the tail end of a long-press that already opened a menu) */
         if(MOBILE&&e.pointerType==="touch"&&performance.now()-lpFiredAt>600) openIcon(ic);
+        /* Folder Options, "single-click to open an item" — it means the desktop too */
+        else if(!MOBILE&&e.button===0&&!e.ctrlKey&&!e.shiftKey&&maint.fo().click==="single") openIcon(ic);
         return;
       }
       crew.forEach(o=>{ o.el.classList.remove("dragging"); o.el.style.zIndex=""; });
@@ -1603,11 +1606,16 @@ function openTextWindow(name,body){
 /* the Search Companion's cast, drawn from scratch — Explorer's search pane and
    the chooser dialog both pull their characters from here */
 const companion=initCompanion({$,store,sysSnd,openWin,closeWin,AGENT_PNG,AGENT_DEF});
+let schemeSeen=null, cosmeticApplying=false;
 /* the pointer schemes: main.cpl, the trails, and the arena identity */
 const mouse=initMouse({$,store,sysSnd,CURFILES,openWin,closeWin,icoNode,
   openDevice:()=>openWin("win-devmgr"),
   /* fires once during boot before the net layer exists — hence the try */
-  onScheme:id=>{ try{ if(MP.on) mpSend({t:"skin",skin:id}); }catch(e){} },
+  /* applyScheme also runs at boot and during a restore, so a point is only
+     worth taking when the scheme genuinely changed under the user's hand */
+  onScheme:id=>{ try{ if(MP.on) mpSend({t:"skin",skin:id}); }catch(e){}
+    try{ if(!cosmeticApplying&&schemeSeen!==null&&schemeSeen!==id) maint.point("Pointer scheme change"); }catch(e){}
+    schemeSeen=id; },
 });
 /* Calculator, Character Map, Disk Defragmenter, Registry Editor */
 const depth=initDepthApps({$,store,sysSnd,showMenu,showError,openWin,closeWin,hooks:{
@@ -1661,6 +1669,41 @@ snd=initSoundApps({$,store,sysSnd,showMenu,showError,openWin,closeWin,hooks:{
   },
 }});
 const recWavs=new Map();   /* id -> AudioBuffer, session-lifetime */
+/* System Restore, the System Configuration Utility, Folder Options */
+const maint=initSysMaint({$,store,sysSnd,showError,showConfirm,openWin,closeWin,icoNode,hooks:{
+  /* a restore point puts every one of these back where it was */
+  applyCosmetic(){
+    cosmeticApplying=true;
+    wpSel=store.data.wallpaper||"bliss";
+    setWallpaper(wpSel); renderWplist();
+    try{ mouse.applyScheme(store.data.curScheme||""); }catch(e){}
+    $("#sv-sel").value=store.data.saver.t; $("#sv-wait").value=store.data.saver.wait;
+    $("#crt-chk").checked=store.data.crt!==false; applyCrt();
+    $$("#taskbar .qlb").forEach(b=>b.style.display=store.data.quickLaunch===0?"none":"");
+    syncAutoHide(); renderIcons();
+    try{ sys.cplRender(); }catch(e){}
+    try{ explorer.render(); }catch(e){}
+    try{ if(MP.on) mpSend({t:"skin",skin:store.data.curScheme||""}); }catch(e){}
+    cosmeticApplying=false;
+  },
+  applyStartup:on=>applyStartupItems(on),
+  services:()=>sys.services(),
+  setService:(name,on)=>sys.svcSet(name,on),
+  folderOptions(){ try{ explorer.render(); }catch(e){} },
+  /* the same path the Start menu takes, so a restart is a restart */
+  restart(){ closeStart(); sysSnd("shutdown",.55);
+    const sd=$("#shutdown"); sd.style.display="grid";
+    /* clicking the shutdown screen boots it early; do not boot it twice */
+    setTimeout(()=>{ if(sd.style.display!=="grid") return; sd.style.display="none"; showBootThenLogin(); },1600); },
+}});
+maint.init();
+/* the Startup tab is not decoration: unchecking one of these really stops it */
+function applyStartupItems(on){
+  msnAuto=on("msmsgs");
+  const amp=$('#ql [data-app="win-amp"]'); if(amp) amp.style.display=on("winampa")?"":"none";
+  $("#sndico").style.display=on("soundman")?"":"none";
+  $("#phasechip").style.display=on("cursors")?"":"none";
+}
 function docForIcon(ic){
   return { title:ic.label,
     get:()=>store.data.texts[ic.id]||"",
@@ -1697,6 +1740,8 @@ const explorer=initExplorer({
     unusedFiles:()=>store.data.unusedIcons||[],
     openDefrag:()=>depth.openDefrag(),
     openRegedit:()=>depth.openRegedit(),
+    folderOptions:()=>maint.openFolderOptions(),
+    bootIni:()=>maint.bootIniText(),
     ieFavs:()=>store.data.ieFavs||[],
     deadCount:()=>binDead.length,
     serverDisk:()=>{ if(!MP.on||!MP.disk) return {
@@ -2058,6 +2103,7 @@ function allProgramsMenu(){
       {label:"System Tools",sub:[
         {label:"Disk Cleanup",action:()=>{ closeStart(); openWin("win-explorer"); explorer.go("C:\\"); setTimeout(()=>explorer.driveProperties(),350); }},
         {label:"Disk Defragmenter",action:()=>{ closeStart(); depth.openDefrag(); }},
+        {label:"System Restore",action:()=>{ closeStart(); maint.openRestore(); }},
         {label:"System Information",action:()=>{ closeStart(); $("#sp-user").textContent=playerNameFull(); openWin("win-sysprops"); }},
         {label:"Character Map",action:()=>{ closeStart(); depth.openCharmap(); }}]},
       {label:"Entertainment",sub:[
@@ -2074,6 +2120,7 @@ function allProgramsMenu(){
       {label:"Services",action:go("win-services")},
       {label:"Device Manager",action:go("win-devmgr")},
       {label:"Group Policy",action:go("win-gpedit")},
+      {label:"System Configuration Utility",action:()=>{ closeStart(); maint.openMsconfig(); }},
       {sep:1},
       {label:"Control Panel",action:go("win-control")}]},
     {label:"Games",sub:[
@@ -2140,6 +2187,8 @@ const RUNMAP={
   "devmgmt.msc":"win-devmgr","devmgmt":"win-devmgr","hdwwiz.cpl":"win-devmgr","main.cpl":"win-devmgr",
   "gpedit.msc":"win-gpedit","gpedit":"win-gpedit",
   "mmc":"win-services","taskman":"win-taskmgr","appwiz.cpl":"win-control",
+  "msconfig":"win-msconfig","msconfig.exe":"win-msconfig",
+  "rstrui":"win-restore","rstrui.exe":"win-restore",
 };
 /* one resolver for the Run box, cmd's START and Control Panel's applets */
 function runNamed(k){
@@ -2151,6 +2200,9 @@ function runNamed(k){
   if(k==="wordpad"||k==="wordpad.exe"||k==="write"||k==="write.exe"){ write.openWordpad(null); return true; }
   if(k==="clipbrd"||k==="clipbrd.exe"){ write.openClipbook(); return true; }
   if(k==="sol"||k==="sol.exe"||k==="solitaire"){ solitaireOpen(); return true; }
+  if(k==="msconfig"||k==="msconfig.exe"){ maint.openMsconfig(); return true; }
+  if(k==="rstrui"||k==="rstrui.exe"||k==="system restore"){ maint.openRestore(); return true; }
+  if(k==="control folders"||k==="folders"||k==="folder options"){ maint.openFolderOptions(); return true; }
   if(k==="sndvol32"||k==="sndvol32.exe"||k==="sndvol"){ snd.openMixer(); return true; }
   if(k==="sndrec32"||k==="sndrec32.exe"){ snd.openRecorder(); return true; }
   if(k==="wmplayer"||k==="wmplayer.exe"){ snd.openWmp(); return true; }
@@ -2278,8 +2330,8 @@ function applySaverUI(){
   store.data.saver.wait=clamp(+$("#sv-wait").value||3,1,60);
   store.save();
 }
-$("#dp-apply").addEventListener("click",()=>{ setWallpaper(wpSel); applySaverUI(); sClick(); });
-$("#dp-ok").addEventListener("click",()=>{ setWallpaper(wpSel); applySaverUI(); closeWin("win-dispprops"); });
+$("#dp-apply").addEventListener("click",()=>{ maint.point("Display settings change"); setWallpaper(wpSel); applySaverUI(); sClick(); });
+$("#dp-ok").addEventListener("click",()=>{ maint.point("Display settings change"); setWallpaper(wpSel); applySaverUI(); closeWin("win-dispprops"); });
 $("#dp-cancel").addEventListener("click",()=>{ wpSel=store.data.wallpaper; renderWplist(); closeWin("win-dispprops"); });
 $("#sv-test").addEventListener("click",()=>{ applySaverUI(); if($("#sv-sel").value!=="none") startSaver($("#sv-sel").value); });
 
@@ -2669,7 +2721,7 @@ const msn=initMessenger({
   netLive:()=>MP.on,
 });
 const chatSys=t=>msn.lobbySys(t);
-const botChat=(kind,vars)=>{ if(!MP.on) msn.botChat(kind,vars); };
+const botChat=(kind,vars)=>{ if(!MP.on&&(msnAuto||openApps.has("win-chat"))) msn.botChat(kind,vars); };
 
 /* ================= the XP applications ================= */
 /* cmd.exe, Control Panel, Services, Device Manager, Group Policy. They read
@@ -2760,6 +2812,8 @@ sys=initSysApps({
     userAccounts:()=>openWin("win-logoff"),
     accessibility:()=>openWin("win-dispprops"),
     addRemove:()=>showError("Add or Remove Programs","CURSORS.EXE is installed by the server and cannot be removed from this computer."),
+    folderOptions:()=>maint.openFolderOptions(),
+    systemRestore:()=>maint.openRestore(),
     windowsUpdate:()=>{ openWin("win-ie"); if(ie) ie.go("http://windowsupdate.microsoft.com/"); },
     /* --- services and policies actually do things --- */
     serviceChanged:(ctl,on)=>applyService(ctl,on),
@@ -4607,6 +4661,9 @@ function enterDesktop(){
     const lg=$("#login");
     lg.style.display="none"; lg.style.opacity=""; lg.classList.remove("welcoming");
     showBalloon();
+    /* MSConfig nags every boot until you put startup back to Normal */
+    try{ maint.applyStartup(); }catch(e){}
+    setTimeout(()=>{ try{ maint.maybeNag(); }catch(e){} },2600);
   },520);
 }
 function playStartup(){
@@ -4631,8 +4688,12 @@ function showLogin(skipStartup){
 }
 function showBootThenLogin(){
   $("#boot").style.display="block";
+  /* BOOT.INI is not a prop: /SOS lists the drivers, timeout= is how long this sits here */
+  try{ if(maint.verboseBoot()) document.body.classList.add("verbose-boot"); }catch(e){}
   const toLogin=()=>{ $("#boot").style.display="none"; showLogin(); };
-  const bt=setTimeout(toLogin,4300);
+  let wait=4300;
+  try{ wait=maint.bootWaitMs(); }catch(e){}
+  const bt=setTimeout(toLogin,wait);
   $("#boot").addEventListener("pointerdown",()=>{ clearTimeout(bt); toLogin(); },{once:true});
 }
 /* ---- user identity: picked at the login screen, Phantom wallet later ---- */

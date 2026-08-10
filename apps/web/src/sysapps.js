@@ -921,6 +921,7 @@ export function initSysApps(deps) {
     { n: "Mouse", ico: "@ic-dev", d: "Customize your mouse settings, such as the button configuration, double-click speed, mouse pointers, and motion speed.", open: () => hooks.openMouse ? hooks.openMouse() : openWin("win-devmgr"), cat: "printers" },
     { n: "Printers and Faxes", ico: "printer32", d: "Show installed printers and fax printers and help you add new ones.", open: () => hooks.printers(), cat: "printers" },
     { n: "User Accounts", ico: "user48", d: "Change user account settings and passwords for people who share this computer.", open: () => hooks.userAccounts(), cat: "users" },
+    { n: "Folder Options", ico: "openfolder32", d: "Customize the display of files and folders, change file associations, and make network files available offline.", open: () => hooks.folderOptions(), cat: "appearance" },
     { n: "Accessibility Options", ico: "help32", d: "Adjust your computer settings for vision, hearing, and mobility.", open: () => hooks.accessibility(), cat: "accessibility" },
   ];
   const CATS = [
@@ -1071,6 +1072,15 @@ export function initSysApps(deps) {
     openConsole,
     services: () => SERVICES,
     serviceOn: ctl => { const s = SERVICES.find(x => x.ctl === ctl); return !s || s.state === "Started"; },
+    /* msconfig's Services tab drives the same list this console does */
+    svcSet: (name, on) => {
+      const s = SERVICES.find(x => x.name === name || x.display === name);
+      if (!s) return false;
+      if (!s.local) { svcDenied(s, on ? "start" : "stop"); return false; }
+      svcApply(s, on);
+      try { svcRender(); } catch (e) {}
+      return true;
+    },
     policy: id => polGet(id),
     policyOn: id => polGet(id) === "Enabled",
     init: () => { screen = $("#cmd-screen"); kbd = $("#cmd-kbd"); wireCmd(); },

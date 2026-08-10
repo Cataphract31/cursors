@@ -1042,6 +1042,83 @@ icons/sounds: winXP (MIT)</div>
     </div>
   </div>
 
+  <!-- ===== System Restore (rstrui.exe): the wizard, the calendar, the real revert ===== -->
+  <div class="window" id="win-restore" data-minw="540" data-minh="380" style="left:calc(50% - 315px);top:48px;width:630px;height:452px">
+    <div class="title-bar">
+      <div class="tb-l"><i class="xico tb-ico" data-ico="computer16"></i><div class="title-bar-text">System Restore</div></div>
+      <div class="title-bar-controls"><button aria-label="Minimize"></button><button aria-label="Close"></button></div>
+    </div>
+    <div class="win-body sr-body">
+      <div class="sr-head"><span id="sr-title">Welcome to System Restore</span></div>
+      <div class="sr-split">
+        <div class="sr-side" id="sr-side"></div>
+        <div class="sr-main" id="sr-main"></div>
+      </div>
+      <div class="sr-foot" id="sr-foot"></div>
+    </div>
+  </div>
+
+  <!-- ===== System Configuration Utility (msconfig.exe) ===== -->
+  <div class="window fixed" id="win-msconfig" style="left:calc(50% - 245px);top:52px;width:490px">
+    <div class="title-bar">
+      <div class="tb-l"><i class="xico tb-ico" data-ico="@ic-mmc"></i><div class="title-bar-text">System Configuration Utility</div></div>
+      <div class="title-bar-controls"><button aria-label="Close"></button></div>
+    </div>
+    <div class="win-body pad" style="background:#ECE9D8">
+      <div class="xtabs" style="flex-wrap:wrap">
+        <span class="xtab on" data-pane="mcp-gen">General</span>
+        <span class="xtab" data-pane="mcp-sys">SYSTEM.INI</span>
+        <span class="xtab" data-pane="mcp-win">WIN.INI</span>
+        <span class="xtab" data-pane="mcp-boot">BOOT.INI</span>
+        <span class="xtab" data-pane="mcp-svc">Services</span>
+        <span class="xtab" data-pane="mcp-start">Startup</span>
+      </div>
+      <div class="xpane on" id="mcp-gen"></div>
+      <div class="xpane" id="mcp-sys"></div>
+      <div class="xpane" id="mcp-win"></div>
+      <div class="xpane" id="mcp-boot"></div>
+      <div class="xpane" id="mcp-svc"></div>
+      <div class="xpane" id="mcp-start"></div>
+      <div style="display:flex;gap:7px;justify-content:flex-end;margin-top:8px">
+        <button class="xbtn" id="mc-ok" style="min-width:74px">OK</button>
+        <button class="xbtn" id="mc-cancel" style="min-width:74px">Cancel</button>
+        <button class="xbtn" id="mc-apply" style="min-width:74px">Apply</button>
+        <button class="xbtn" id="mc-help" style="min-width:74px">Help</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Folder Options: the three tabs, and the switches that work, work ===== -->
+  <div class="window fixed" id="win-foldopt" style="left:calc(50% - 195px);top:56px;width:390px">
+    <div class="title-bar">
+      <div class="tb-l"><i class="xico tb-ico" data-ico="openfolder32"></i><div class="title-bar-text">Folder Options</div></div>
+      <div class="title-bar-controls"><button aria-label="Close"></button></div>
+    </div>
+    <div class="win-body pad" style="background:#ECE9D8">
+      <div class="xtabs">
+        <span class="xtab on" data-pane="fo-gen">General</span>
+        <span class="xtab" data-pane="fo-view">View</span>
+        <span class="xtab" data-pane="fo-types">File Types</span>
+      </div>
+      <div class="xpane on" id="fo-gen"></div>
+      <div class="xpane" id="fo-view">
+        <div class="small" style="margin:2px 0 4px">Advanced settings:</div>
+        <div id="fo-adv" style="border:1px solid #7F9DB9;background:#fff;height:206px;overflow:auto;padding:2px 4px"></div>
+        <div id="fo-viewfoot" style="display:flex;gap:6px;margin-top:7px"></div>
+      </div>
+      <div class="xpane" id="fo-types">
+        <div class="small" style="margin:2px 0 4px">Registered file types:</div>
+        <div id="fo-typelist"></div>
+        <div id="fo-typedet" class="fo-det"></div>
+      </div>
+      <div style="display:flex;gap:7px;justify-content:flex-end;margin-top:8px">
+        <button class="xbtn" id="fo-ok" style="min-width:74px">OK</button>
+        <button class="xbtn" id="fo-cancel" style="min-width:74px">Cancel</button>
+        <button class="xbtn" id="fo-apply" style="min-width:74px">Apply</button>
+      </div>
+    </div>
+  </div>
+
   <!-- per-screensaver Settings dialog: content built by main.js -->
   <div class="window fixed" id="win-saveropts" style="left:calc(50% - 160px);top:calc(50% - 90px);width:320px">
     <div class="title-bar">
