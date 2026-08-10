@@ -299,6 +299,8 @@ export function initSoundApps(deps) {
   return {
     openMixer, openRecorder, openWmp,
     mixerMenu, recorderMenu,
+    stopWmp(){ try{ const a=wmpAudio(); a.pause(); a.currentTime=0; cancelAnimationFrame(wmp.raf); }catch(e){} },
+    stopRecorder(){ srStopAll(); },
     factor,                       /* wave/cd scaling for the shell's own sounds */
     mixerChanged() { wmpVol(); if ($("#win-sndvol").style.display !== "none") volRender(); },
   };

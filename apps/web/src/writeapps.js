@@ -261,5 +261,6 @@ export function initWriteApps(deps) {
   }
 
   return { openNotepad, openWordpad, openViewer, openClipbook,
-    notepadMenu: npMenu, wordpadMenu: wpMenu };
+    notepadMenu: npMenu, wordpadMenu: wpMenu,
+    stopViewer() { clearInterval(pv.showT); pv.showT = null; $("#pv-play").classList.remove("on"); } };
 }

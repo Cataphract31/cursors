@@ -359,6 +359,7 @@ let netUp=false;   /* cursor$net dial-up state, published by ie.setNet for ipcon
 let sys=null, toastsOn=true, clockOn=true;
 let readmeText=null;
 function openWin(id,opts){
+  if(id==="win-ie"&&MP.on&&MP.tv&&MP.tv.now) setTimeout(()=>{ try{ mpTvSync(); }catch(e){} },200);
   if(id==="win-amp"){ winampApp.open(); return; }
   if(id==="win-readme"&&write){
     if(readmeText===null) readmeText=$("#win-readme .paper").textContent;
@@ -435,6 +436,16 @@ function closeWin(id,opts){
   const a=openApps.get(id); if(!a) return;
   if(id==="win-mine") mine.pause(); /* the clock does not run while the box is shut */
   if(id==="win-paint") paint.commit(); /* half-finished text/curves/selections land before the lid shuts */
+  /* closing is quitting. A hidden window that keeps making noise is a bug,
+     not a feature — every app that runs something stops it here. */
+  if(id==="win-pinball"||id==="win-solitaire"){
+    const fr=$(id==="win-pinball"?"#pinball-frame":"#solitaire-frame");
+    if(fr){ fr.src="about:blank"; delete fr.dataset.live; }
+  }
+  if(id==="win-wmp"&&snd) snd.stopWmp();
+  if(id==="win-sndrec"&&snd) snd.stopRecorder();   /* also releases the microphone */
+  if(id==="win-pictview"&&write) write.stopViewer();
+  if(id==="win-ie"){ try{ ytPlayer&&ytPlayer.pauseVideo&&ytPlayer.pauseVideo(); }catch(e){} }
   a.el.style.display="none"; a.el.classList.remove("focused");
   openApps.delete(id);
   if(focusedId===id) focusedId=null;
@@ -854,8 +865,12 @@ desktop.addEventListener("pointerdown",e=>{
    world. The 7 MB of wasm+data are not touched until the first open. */
 function pinballOpen(){
   const fr=$("#pinball-frame");
-  if(!fr.src){
-    fr.src="pinball/index.html";
+  if(!fr.dataset.live){
+    fr.dataset.live="1";
+    /* trailing slash on purpose: Vercel redirects "pinball/index.html" to
+       "pinball", which rebases the loader's relative fetches to the site root
+       and the 7 MB of game data 404s. "pinball/" survives every host. */
+    fr.src="pinball/";
     fr.addEventListener("load",()=>{
       try{
         const d=fr.contentDocument;
@@ -884,8 +899,9 @@ function pinballOpen(){
    Same recipe as pinball: lazy iframe, our chrome, their game. */
 function solitaireOpen(){
   const fr=$("#solitaire-frame");
-  if(!fr.src){
-    fr.src="solitaire/index.html";
+  if(!fr.dataset.live){
+    fr.dataset.live="1";
+    fr.src="solitaire/";   /* same trailing-slash rule as pinball */
     fr.addEventListener("load",()=>{
       try{
         const d=fr.contentDocument;
