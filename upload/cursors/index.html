@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <title>CURSORS.EXE</title>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-  <script type="module" crossorigin src="./assets/index-DeDSROXv.js"></script>
-  <link rel="stylesheet" crossorigin href="./assets/index-BoSwH-YR.css">
+  <script type="module" crossorigin src="./assets/index-DUCQgdfD.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-CyegovGr.css">
 </head>
 <body>
 <svg width="0" height="0" style="position:absolute">
@@ -1209,6 +1209,25 @@ icons/sounds: winXP (MIT)</div>
   </div>
 
   <!-- Confirm dialog -->
+  <!-- the file-operation progress dialog: XP's flying paper, a real bar -->
+  <div class="window fixed" id="win-copy" style="left:calc(50% - 190px);top:calc(50% - 90px);width:380px">
+    <div class="title-bar">
+      <div class="tb-l"><div class="title-bar-text" id="copy-title">Copying...</div></div>
+      <div class="title-bar-controls"><button aria-label="Close"></button></div>
+    </div>
+    <div class="win-body">
+      <div class="cpy-anim">
+        <div class="cpy-src"></div>
+        <div class="cpy-dst"></div>
+        <i class="cpy-paper" id="cpy-p1"></i><i class="cpy-paper" id="cpy-p2"></i><i class="cpy-paper" id="cpy-p3"></i>
+      </div>
+      <div class="cpy-line" id="copy-line">&nbsp;</div>
+      <div class="cpy-sub" id="copy-sub">&nbsp;</div>
+      <div class="xprog"><div class="xprog-in" id="copy-bar"></div></div>
+      <div style="text-align:center;margin-top:12px"><button class="xbtn" id="copy-cancel" style="min-width:76px">Cancel</button></div>
+    </div>
+  </div>
+
   <div class="window fixed" id="win-confirm" style="left:calc(50% - 165px);top:calc(50% - 80px);width:330px">
     <div class="title-bar">
       <div class="tb-l"><div class="title-bar-text">Confirm</div></div>

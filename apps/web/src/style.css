@@ -1208,3 +1208,37 @@ body.tray-open .tray-idle{display:inline-block}
 .rv-n{width:40%;overflow:hidden;text-overflow:ellipsis}
 .rv-t{width:20%;color:#555}
 .rv-v{flex:1;overflow:hidden;text-overflow:ellipsis;color:#333}
+
+/* ---------- Phase 8: file-operation dialog, multi-select ---------- */
+/* XP's copy animation: two folders and sheets of paper crossing between them.
+   The folders are the shell's own 32px icons, dropped in from JS. */
+.cpy-anim{position:relative;height:56px;margin:10px 6px 6px;overflow:hidden}
+.cpy-src,.cpy-dst{position:absolute;top:12px;width:32px;height:32px;background-size:32px 32px;background-repeat:no-repeat}
+.cpy-src{left:14px}
+.cpy-dst{right:14px}
+.cpy-paper{position:absolute;top:20px;left:52px;width:11px;height:14px;background:#fff;
+  border:1px solid #9a9a9a;box-shadow:0 0 0 1px rgba(255,255,255,.6);opacity:0;
+  animation:cpyfly 1.05s linear infinite}
+.cpy-anim.done .cpy-paper{animation-play-state:paused;opacity:0}
+#cpy-p2{animation-delay:.35s}
+#cpy-p3{animation-delay:.7s}
+@keyframes cpyfly{
+  0%{opacity:0;transform:translateX(0) rotate(-8deg)}
+  12%{opacity:1}
+  88%{opacity:1}
+  100%{opacity:0;transform:translateX(215px) rotate(8deg)}
+}
+.cpy-line{padding:0 8px;font-weight:700}
+.cpy-sub{padding:2px 8px 10px;color:#3a3a3a}
+/* the sunken trough + the classic segmented blue fill */
+.xprog{height:17px;margin:0 8px;border:1px solid;border-color:#808080 #fff #fff #808080;background:#fff;padding:1px}
+.xprog-in{height:100%;width:0%;
+  background:repeating-linear-gradient(90deg,#1c5fd4 0 8px,transparent 8px 10px);
+  transition:width .12s linear}
+
+/* a selected icon that is part of a multi-drag ghosts with the rest */
+.icon.dragging{opacity:.55}
+
+/* auto-hide: park the bar off the bottom, leave a 2px lip to find it by */
+body.tb-auto #taskbar{transition:transform .18s ease-out;transform:translateY(calc(100% - 2px))}
+body.tb-auto.tb-peek #taskbar{transform:none}

@@ -279,6 +279,24 @@ function tabIconHTML(id){
   const u=el.querySelector("use");
   return u?`<svg><use href="${u.getAttribute("href")}"/></svg>`:"";
 }
+/* Auto-hide: the bar drops off the bottom and comes back when the pointer
+   reaches the edge — or whenever the Start menu is open, which is XP's rule
+   too, otherwise clicking Start would slide the thing out from under you. */
+function syncAutoHide(){
+  document.body.classList.toggle("tb-auto",!!store.data.tbAuto);
+  if(!store.data.tbAuto) document.body.classList.remove("tb-peek");
+}
+let tbPeekT=null;
+addEventListener("pointermove",e=>{
+  if(!store.data.tbAuto) return;
+  const near=e.clientY>=innerHeight-3;
+  const over=e.target.closest&&e.target.closest("#taskbar,#startmenu");
+  clearTimeout(tbPeekT);
+  if(near||over) document.body.classList.add("tb-peek");
+  else tbPeekT=setTimeout(()=>{
+    if(!$("#startmenu")||$("#startmenu").style.display==="none") document.body.classList.remove("tb-peek");
+  },420);
+},{passive:true});
 function renderTaskbar(){
   const host=$("#tabs"); host.innerHTML="";
   for(const [id,a] of openApps){
@@ -612,21 +630,46 @@ function renderIcons(){
   }
 }
 function selectOnly(el){ $$(".icon").forEach(i=>i.classList.remove("sel")); if(el) el.classList.add("sel"); }
+const selIcons=()=>$$(".icon.sel");
+/* Ctrl toggles one out of the group, Shift takes the run between the anchor and
+   here (XP walks the rendered order, which is the order #icons is built in) */
+let selAnchor=null;
+function selectWith(el,e){
+  const all=[...$("#icons").children];
+  if(e.ctrlKey||e.metaKey){ el.classList.toggle("sel"); selAnchor=el; return; }
+  if(e.shiftKey&&selAnchor&&selAnchor!==el){
+    const a=all.indexOf(selAnchor), b=all.indexOf(el);
+    if(a>=0&&b>=0){
+      all.forEach(i=>i.classList.remove("sel"));
+      for(let i=Math.min(a,b);i<=Math.max(a,b);i++) all[i].classList.add("sel");
+      return;
+    }
+  }
+  /* clicking inside an existing multi-selection keeps it, so the group can be
+     dragged — collapsing to one on pointerdown made group drags impossible */
+  if(!el.classList.contains("sel")||selIcons().length<=1) selectOnly(el);
+  selAnchor=el;
+}
 function hookIcon(el,ic){
   el.addEventListener("pointerdown",e=>{
-    if(e.button===2){ selectOnly(el); return; }
+    if(e.button===2){ if(!el.classList.contains("sel")) selectOnly(el); return; }
     e.stopPropagation();
-    selectOnly(el);
+    selectWith(el,e);
     const sx=e.clientX, sy=e.clientY;
     const ox=parseFloat(el.style.left), oy=parseFloat(el.style.top);
+    /* everything selected travels together, each keeping its own offset */
+    const crew=selIcons().filter(o=>o!==el).map(o=>({el:o,id:o.dataset.iid,
+      x:parseFloat(o.style.left),y:parseFloat(o.style.top)}));
     let moved=false;
     const mv=ev=>{
       const dx=ev.clientX-sx, dy=ev.clientY-sy;
       if(!moved&&dx*dx+dy*dy<25) return;
+      if(!moved){ crew.forEach(o=>{ o.el.classList.add("dragging"); o.el.style.zIndex="89"; }); }
       moved=true; el.style.opacity=".6"; el.style.zIndex="90";
       el.style.left=(ox+dx)+"px"; el.style.top=(oy+dy)+"px";
+      for(const o of crew){ o.el.style.left=(o.x+dx)+"px"; o.el.style.top=(o.y+dy)+"px"; }
     };
-    const up=()=>{
+    const up=ev0=>{
       removeEventListener("pointermove",mv); removeEventListener("pointerup",up);
       el.style.opacity=""; el.style.zIndex="";
       if(!moved){
@@ -635,6 +678,9 @@ function hookIcon(el,ic){
         if(MOBILE&&e.pointerType==="touch"&&performance.now()-lpFiredAt>600) openIcon(ic);
         return;
       }
+      crew.forEach(o=>{ o.el.classList.remove("dragging"); o.el.style.zIndex=""; });
+      /* a folder window under the pointer takes the drop instead of the desktop */
+      if(dropIntoFolder(ev0,[ic].concat(crew.map(o=>iconById(o.id))).filter(Boolean))) return;
       if(store.data.autoArr){ arrangeIcons(store.data.iconSort); return; }   /* Auto Arrange wins: the grid re-packs itself */
       if(!store.data.alignGrid){
         /* Align to Grid off: the icon stays exactly where you dropped it, XP's one concession to chaos */
@@ -648,6 +694,14 @@ function hookIcon(el,ic){
       let guard=0;
       while(!cellFree(c,r,ic.id)&&guard++<300){ r++; if(r>maxR){ r=0; c=c+1>maxC?0:c+1; } }
       store.data.icons[ic.id]={c,r}; store.save();
+      for(const o of crew){
+        let cc=clamp(Math.round((parseFloat(o.el.style.left)-GX)/CELLW),0,maxC);
+        let rr=clamp(Math.round((parseFloat(o.el.style.top)-GY)/CELLH),0,maxR);
+        let g2=0;
+        while(!cellFree(cc,rr,o.id)&&g2++<300){ rr++; if(rr>maxR){ rr=0; cc=cc+1>maxC?0:cc+1; } }
+        store.data.icons[o.id]={c:cc,r:rr};
+      }
+      store.save();
       renderIcons();
     };
     addEventListener("pointermove",mv); addEventListener("pointerup",up);
@@ -754,7 +808,9 @@ function refreshDesktop(){
 const marquee=$("#marquee");
 desktop.addEventListener("pointerdown",e=>{
   if(e.target.closest(".icon,.window,#taskbar,#startmenu,#balloon,#ctx")) return;
-  selectOnly(null);
+  /* Ctrl+band adds to the selection instead of replacing it */
+  const keep=(e.ctrlKey||e.metaKey)?selIcons():[];
+  if(!keep.length) selectOnly(null);
   closeStart();
   if(e.pointerType==="touch") return;
   if(e.button===2) return;
@@ -768,12 +824,82 @@ desktop.addEventListener("pointerdown",e=>{
     for(const el of $("#icons").children){
       const r=el.getBoundingClientRect();
       const hit=r.left<l+w&&r.right>l&&r.top<t+h&&r.bottom>t;
-      el.classList.toggle("sel",hit);
+      el.classList.toggle("sel",hit||keep.includes(el));
     }
   };
   const up=()=>{marquee.style.display="none";removeEventListener("pointermove",move);removeEventListener("pointerup",up);};
   addEventListener("pointermove",move); addEventListener("pointerup",up);
 });
+
+/* ================= file operations ================= */
+/* XP never moved a file without showing you it moving. Every multi-item shell
+   operation runs through here: the flying-paper animation, the segmented bar,
+   a per-item caption, and a Cancel that stops where it got to and leaves the
+   rest alone — which is what XP's Cancel actually did. Nothing here touches
+   money; it is the desktop's own filing cabinet. */
+let fileOpT=null, fileOpCancel=false;
+function fileOp(opts){
+  const items=opts.items||[];
+  const each=opts.each||(()=>{});
+  const per=Math.max(90,Math.min(420,Math.round(1400/Math.max(1,items.length))));
+  fileOpCancel=false;
+  $("#copy-title").textContent=opts.title||"Copying...";
+  $("#copy-bar").style.width="0%";
+  $("#copy-line").textContent=opts.line||"";
+  $("#copy-sub").textContent="";
+  const anim=$("#win-copy .cpy-anim");
+  anim.classList.remove("done");
+  const ico=u=>u?`url("${u}")`:"";
+  $("#win-copy .cpy-src").style.backgroundImage=ico(opts.fromIcon||IMG.openfolder32);
+  $("#win-copy .cpy-dst").style.backgroundImage=ico(opts.toIcon||IMG.folder32);
+  openWin("win-copy",{silent:true});
+  let i=0;
+  const step=()=>{
+    if(fileOpCancel||i>=items.length){
+      clearTimeout(fileOpT); anim.classList.add("done");
+      const done=i;
+      closeWin("win-copy");
+      if(opts.then) opts.then(done,fileOpCancel);
+      return;
+    }
+    const it=items[i++];
+    try{ each(it,i-1); }catch(e){}
+    $("#copy-bar").style.width=Math.round(100*i/items.length)+"%";
+    $("#copy-sub").textContent=(opts.label?opts.label(it):String(it))+"   ("+i+" of "+items.length+")";
+    fileOpT=setTimeout(step,per);
+  };
+  fileOpT=setTimeout(step,per);
+}
+$("#copy-cancel").addEventListener("click",()=>{ fileOpCancel=true; });
+
+/* dropping desktop icons onto an open folder window files them there */
+function dropIntoFolder(ev,ics){
+  if(!ev||!ics||!ics.length) return false;
+  const el=document.elementFromPoint(ev.clientX,ev.clientY);
+  const win=el&&el.closest&&el.closest("#win-explorer");
+  if(!win||win.style.display==="none") return false;
+  const dest=explorer.path?explorer.path():null;
+  /* My Documents is the one folder with a real receiving list behind it
+     (the same one Send To fills), so it is the one that accepts a drop */
+  if(dest!==explorer.DOCS){ renderIcons(); return true; }
+  const movable=ics.filter(i=>i&&!i.sys);
+  if(!movable.length){
+    showError("Move Items","These are system folders and cannot be moved.");
+    renderIcons(); return true;
+  }
+  store.data.sentDocs=store.data.sentDocs||[];
+  fileOp({title:"Moving...",line:"Moving "+(movable.length===1?"1 item":movable.length+" items")+" to My Documents",
+    fromIcon:IMG.openfolder32,toIcon:IMG.docs32,
+    label:i=>i.label,items:movable,
+    each:ic=>{
+      if(!store.data.sentDocs.some(d=>d.label===ic.label))
+        store.data.sentDocs.push({label:ic.label,ico:ic.ico,kind:ic.kind||"txt"});
+      store.data.userIcons=store.data.userIcons.filter(u=>u!==ic);
+      delete store.data.icons[ic.id];
+    },
+    then:()=>{ store.save(); renderIcons(); explorer.render(); sysSnd("nav",.4); }});
+  return true;
+}
 
 /* ================= shared dialogs ================= */
 let confirmCb=null;
@@ -806,8 +932,13 @@ function emptyBin(){
   const worth=binDead.reduce((s,d)=>s+d.lost,0);
   showConfirm("Confirm Multiple File Delete",
     `Are you sure you want to delete these ${n} items?`+
-    (binDead.length?`\n\n${binDead.length} of them are cursors worth ${fmtS(worth)} SOL when they died. Deleting the file does not give it back.`:""),
-    ()=>{ binDead=[]; binFiles=[]; renderBin(); syncBinIcon(diskPct().f); sCrunch(); });
+    (binDead.length?`\n\n${binDead.length} of them are dead cursors worth ${fmtS(worth)} SOL. Deleting the file does not refund them.`:""),
+    ()=>{
+      const all=binFiles.map(f=>f.label).concat(binDead.map(d=>d.name+"_"+String(d.id).padStart(4,"0")+".cur"));
+      fileOp({title:"Deleting...",line:"Deleting "+all.length+" items",
+        fromIcon:IMG.bin32,toIcon:IMG.bin32,items:all,label:x=>x,
+        then:()=>{ binDead=[]; binFiles=[]; renderBin(); syncBinIcon(diskPct().f); sCrunch(); }});
+    });
 }
 
 /* ---- Run As ---- */
@@ -1183,6 +1314,7 @@ function taskbarMenu(){
     {label:"Task Manager",action:()=>openWin("win-taskmgr")},
     {sep:1},
     {label:"Lock the Taskbar",check:!!store.data.lockTb,action(){ store.data.lockTb=store.data.lockTb?0:1; store.save(); }},
+    {label:"Auto-hide the taskbar",check:!!store.data.tbAuto,action(){ store.data.tbAuto=store.data.tbAuto?0:1; store.save(); syncAutoHide(); }},
     {label:"Properties",disabled:1}
   ];
 }
@@ -1876,7 +2008,7 @@ function runCommand(){
   const k=v.toLowerCase();
   if(runNamed(k)) return;
   if(k==="regedit"||k==="regedit.exe"){ depth.openRegedit(); return; }
-  if(k==="format c:"||k==="format c"){ showError("Format Local Disk (C:)","The disk is in use by CURSORS.EXE. Your losses are load-bearing and cannot be erased."); return; }
+  if(k==="format c:"||k==="format c"){ showError("Format Local Disk (C:)","The disk is in use by CURSORS.EXE and cannot be formatted."); return; }
   /* Run took URLs in 2003, and so does this one */
   if(!/\.(exe|msc|cpl|dll|bat|com|ini|sys|txt|log)$/i.test(k)&&
      (/^(https?:\/\/|www\.)/i.test(k)||/^[a-z0-9-]+(\.[a-z0-9-]+)+(\/|$)/i.test(k))){
@@ -3420,18 +3552,18 @@ function restoreOne(ic){
 function restoreAll(){
   if(!binFiles.length){
     showError("Restore Items",binDead.length
-      ? "Cursors cannot be restored.\n\nEach one was resolved by a fair draw and the draw is final. That is the same rule that pays you when it goes the other way."
+      ? "Cursors cannot be restored. The draw that killed them is final."
       : "The Recycle Bin is empty.");
     return;
   }
-  const n=binFiles.length;
-  for(const ic of binFiles.splice(0)){
-    store.data.userIcons.push(ic);
-    store.data.icons[ic.id]=firstFreeCell();
-  }
-  store.save(); renderIcons(); renderBin(); sysSnd("hwin",.5);
-  showError("Restore Items",`${n} item${n===1?"":"s"} put back on the Desktop.`+
-    (binDead.length?"\n\nThe cursors stay. They are not files, they are outcomes.":""),true);
+  const list=binFiles.splice(0);
+  fileOp({title:"Restoring...",line:"Restoring "+list.length+" item"+(list.length===1?"":"s"),
+    fromIcon:IMG.bin32,toIcon:IMG.openfolder32,items:list,label:ic=>ic.label,
+    each:ic=>{ store.data.userIcons.push(ic); store.data.icons[ic.id]=firstFreeCell(); },
+    then:n=>{
+      store.save(); renderIcons(); renderBin(); sysSnd("hwin",.5);
+      showError("Restore Items",`${n} item${n===1?"":"s"} put back on the Desktop.`,true);
+    }});
 }
 /* the Hall of Pain is the bin sorted by how much it hurt */
 function hallOfPain(){
@@ -4222,6 +4354,7 @@ function frame(t){
 /* ================= boot ================= */
 syncArena();
 renderIcons();
+syncAutoHide();
 if(store.data.vol){ masterVol=clamp(+store.data.vol.v||0,0,1); muted=!!store.data.vol.m; }
 volSync();
 setWallpaper(store.data.wallpaper);
@@ -4511,6 +4644,12 @@ if(location.hash.indexOf("#desktop-sys")===0) setTimeout(()=>{ /* dev: the XP ap
   if(p==="-gpprops"){ openWin("win-gpedit"); setTimeout(()=>$$("#pol-list .mmc-row")[1].dispatchEvent(new MouseEvent("dblclick",{bubbles:true})),300); }
 },900);
 if(location.hash==="#desktop-mouse") setTimeout(()=>mouse.open(),300); /* dev: Mouse Properties */
+if(location.hash==="#desktop-fileop") setTimeout(()=>{ /* dev: the copy dialog mid-flight */
+  fileOp({title:"Copying...",line:"Copying 6 items to My Documents",
+    fromIcon:IMG.openfolder32,toIcon:IMG.docs32,
+    items:["Budget.doc","Holiday.bmp","notes.txt","tracks.wav","Backup.zip","readme.rtf"],
+    label:x=>x});
+},400);
 if(location.hash==="#desktop-depth") setTimeout(()=>{ /* dev: the four depth apps at once */
   depth.openDefrag(); depth.openRegedit(); depth.openCalc(); depth.openCharmap();
 },400);

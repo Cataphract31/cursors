@@ -315,6 +315,25 @@ texture people touch constantly without noticing:
 - **Error-string sweep** — every remaining showError reworded to XP's exact phrasing
   where XP had phrasing. Flat, terse, no editorial.
 
+### Phase 8 status (2026-08-10)
+
+Shipped: Ctrl/Shift multi-select + group drag + Ctrl-marquee; drag desktop icons
+into My Documents; the file-operation dialog (flying paper, segmented bar, real
+Cancel) wired to Empty Recycle Bin, Restore and folder drops; taskbar auto-hide;
+another copy sweep.
+
+Already existed, plan was wrong: minimize/restore zoom animation, XP tooltips
+with the 500ms delay, the marquee rectangle itself, Toolbars/Cascade/Tile/Lock
+the Taskbar, and the silent-by-default sounds (XP really does leave menu popup,
+open program and close program unassigned — that part was already correct).
+
+Deliberately skipped: **taskbar grouping**. XP groups multiple windows of one
+application, and this shell opens exactly one window per app, so the feature
+would never trigger. Revisit only if Explorer gets multiple windows.
+
+Still open in Phase 8: dragging an image out of an IE page onto the desktop,
+All Programs filled out, and the last pass over showError wording.
+
 ## Phase 9 — the writing apps (things people open daily)
 
 - **Notepad, for real** — Format ▸ Word Wrap and Font (and the font actually changes),
