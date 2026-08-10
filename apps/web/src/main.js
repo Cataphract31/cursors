@@ -13,6 +13,7 @@ import { initNet } from "./net.js";
 import { initMouse } from "./mouse.js";
 import { initSavers } from "./savers.js";
 import { initDepthApps } from "./depthapps.js";
+import { initWriteApps } from "./writeapps.js";
 const Webamp = (WebampImport && WebampImport.default) ? WebampImport.default : WebampImport;
 
 "use strict";
@@ -352,8 +353,14 @@ let netUp=false;   /* cursor$net dial-up state, published by ie.setNet for ipcon
 /* declared here because boot-time code reads them: `sys` is the XP applications
    module (assigned further down) and these two are local service switches */
 let sys=null, toastsOn=true, clockOn=true;
+let readmeText=null;
 function openWin(id,opts){
   if(id==="win-amp"){ winampApp.open(); return; }
+  if(id==="win-readme"&&write){
+    if(readmeText===null) readmeText=$("#win-readme .paper").textContent;
+    write.openNotepad({title:"README.txt",get:()=>readmeText,set:null});
+    return;
+  }
   opts=opts||{};
   const el=document.getElementById(id);
   const was=openApps.has(id);
@@ -723,7 +730,8 @@ function openIcon(ic){
   }else if(ic.app==="folder"){
     openFolderWin(ic.label);
   }else if(ic.app==="paintdoc"){
-    openWin("win-paint");
+    /* double-click views; the viewer's pencil hands it to Paint — XP's split */
+    write.openViewer(viewerList(),0);
   }else if(ic.app==="wavdoc"){
     showError("Windows Media Player","Windows Media Player cannot play the file. The file is either corrupt or the Player does not support the format you are trying to play.");
   }else if(ic.app==="run"){
@@ -735,10 +743,9 @@ function openIcon(ic){
 
 Do you want to delete this shortcut?`);
   }else if(ic.app==="usertxt"){
-    curTxtIcon=ic;
-    $("#win-usertxt .title-bar-text").textContent=ic.label+" - Notepad";
-    $("#usertxtarea").value=store.data.texts[ic.id]||"";
-    openWin("win-usertxt");
+    /* .txt opens the real Notepad; .doc/.rtf open WordPad, like the OS says */
+    if(/\.(doc|rtf)$/i.test(ic.label)) write.openWordpad(docForIcon(ic));
+    else write.openNotepad(docForIcon(ic));
   }else openWin(ic.app);
 }
 $("#usertxtarea").addEventListener("input",()=>{
@@ -1436,6 +1443,9 @@ $$(".menubar span").forEach(m=>m.addEventListener("click",e=>{
     return;
   }
   if(win.id==="win-paint"){ paint.menu(m.textContent,r.left,r.bottom+2); return; }
+  if(win.id==="win-notepad"){ write.notepadMenu(m.textContent,r.left,r.bottom+2); return; }
+  if(win.id==="win-wordpad"){ write.wordpadMenu(m.textContent,r.left,r.bottom+2); return; }
+  if(win.id==="win-clipbook"){ showMenu([{label:"Exit",action:()=>closeWin("win-clipbook")}],r.left,r.bottom+2); return; }
   if(win.id==="win-explorer"){ explorer.menu(m.textContent,r.left,r.bottom+2); return; }
   if(win.id==="win-ie"){ ie.menu(m.textContent,r.left,r.bottom+2); return; }
   showMenu(menubarMenu(m.textContent,win.id),r.left,r.bottom+2);
@@ -1535,6 +1545,48 @@ const depth=initDepthApps({$,store,sysSnd,showMenu,showError,openWin,closeWin,ho
     epoch:roundNo, uptime:fmtUp(upT) }),
   schemeLabel:()=>mouse.labelOf(mouse.current()),
 }});
+/* Notepad, WordPad, Picture and Fax Viewer, Clipboard Viewer */
+const write=initWriteApps({$,store,sysSnd,showMenu,showError,openWin,closeWin,hooks:{
+  browseTexts(open){
+    /* Open... lists every text on the machine, which is the desktop's */
+    const texts=store.data.userIcons.filter(i=>i.app==="usertxt");
+    if(!texts.length){ showError("Open","There are no text documents on the Desktop."); return; }
+    showMenu(texts.map(ic=>({label:ic.label,action:()=>open(docForIcon(ic))})),innerWidth/2-80,140);
+  },
+  saveTextToDesktop(title,text,then){
+    const base=title.replace(/\.txt$/i,"");
+    let name=base+".txt", n=2;
+    while(store.data.userIcons.some(i=>i.label===name)) name=base+" ("+(n++)+").txt";
+    const ic={id:"user_"+userN++,label:name,ico:"note32",app:"usertxt",kind:"txt"};
+    store.data.userIcons.push(ic);
+    store.data.icons[ic.id]=firstFreeCell();
+    store.data.texts[ic.id]=text;
+    store.save(); renderIcons(); sysSnd("nav",.4);
+    if(then) then(ic);
+  },
+  docForIcon,
+  bliss:()=>IMG.bliss,
+  editInPaint(it){ openWin("win-paint"); paint.loadDataURL(it.data,true); },
+  shellClip(){
+    if(!clip) return null;
+    return { label:clip.ic.label, kind:(clip.mode==="cut"?"Move":"Copy")+" — 1 object", icoHTML:"" };
+  },
+}});
+function docForIcon(ic){
+  return { title:ic.label,
+    get:()=>store.data.texts[ic.id]||"",
+    set:t=>{ store.data.texts[ic.id]=t; store.save(); } };
+}
+function viewerList(){
+  /* every picture the machine actually has, in one strip */
+  const out=[];
+  (store.data.pictures||[]).forEach((p,i)=>out.push({name:p.name,data:p.data,
+    del:()=>{ store.data.pictures.splice(i,1); store.save(); }}));
+  if(store.data.wallpaperData) out.push({name:"wallpaper.bmp",data:store.data.wallpaperData});
+  try{ for(const g of (mpGalleryData()||[])) out.push({name:g.by+".png",data:g.png}); }catch(e){}
+  out.push({name:"Bliss.bmp",data:IMG.bliss});
+  return out;
+}
 const explorer=initExplorer({
   IMG,
   els:{
@@ -1574,7 +1626,10 @@ const explorer=initExplorer({
     logSize:()=>logpaper.textContent.length||1024,
     tracks:()=>TRACKS,
     openText:openTextWindow,
-    openPicture:p=>{ openWin("win-paint"); paint.loadDataURL(p.data,true); },
+    openPicture:p=>{
+      const list=viewerList(), i=list.findIndex(x=>x.name===p.name);
+      write.openViewer(list,Math.max(0,i));
+    },
     systemProperties:()=>{ $("#sp-user").textContent=playerNameFull(); openWin("win-sysprops"); },
     openDriveProps:info=>{
       $("#dv-used").textContent=info.usedStr;
@@ -1917,7 +1972,8 @@ function allProgramsMenu(){
         {label:"System Information",action:()=>{ closeStart(); $("#sp-user").textContent=playerNameFull(); openWin("win-sysprops"); }},
         {label:"Character Map",action:()=>{ closeStart(); depth.openCharmap(); }}]},
       {sep:1},
-      {label:"Notepad",action:go("win-readme")},
+      {label:"Notepad",action:()=>{ closeStart(); write.openNotepad(null); }},
+      {label:"WordPad",action:()=>{ closeStart(); write.openWordpad(null); }},
       {label:"Paint",action:go("win-paint")},
       {label:"Calculator",action:()=>{ closeStart(); depth.openCalc(); }},
       {label:"Command Prompt",action:go("win-cmd")}]},
@@ -1998,6 +2054,9 @@ function runNamed(k){
   if(k==="control"){ openWin("win-control"); return true; }
   if(k==="dfrg.msc"||k==="defrag"||k==="defrag.exe"){ depth.openDefrag(); return true; }
   if(k==="main.cpl"){ mouse.open(); return true; }
+  if(k==="notepad"||k==="notepad.exe"){ write.openNotepad(null); return true; }
+  if(k==="wordpad"||k==="wordpad.exe"||k==="write"||k==="write.exe"){ write.openWordpad(null); return true; }
+  if(k==="clipbrd"||k==="clipbrd.exe"){ write.openClipbook(); return true; }
   if(RUNMAP[k]){ sysSnd("nav",.5); openWin(RUNMAP[k]); return true; }
   return false;
 }
@@ -4644,6 +4703,12 @@ if(location.hash.indexOf("#desktop-sys")===0) setTimeout(()=>{ /* dev: the XP ap
   if(p==="-gpprops"){ openWin("win-gpedit"); setTimeout(()=>$$("#pol-list .mmc-row")[1].dispatchEvent(new MouseEvent("dblclick",{bubbles:true})),300); }
 },900);
 if(location.hash==="#desktop-mouse") setTimeout(()=>mouse.open(),300); /* dev: Mouse Properties */
+if(location.hash==="#desktop-write") setTimeout(()=>{ /* dev: all four writing apps */
+  write.openNotepad({title:"session.LOG",get:()=>".LOG\nfirst entry",set:null});
+  write.openWordpad(null);
+  write.openViewer(viewerList(),0);
+  write.openClipbook();
+},400);
 if(location.hash==="#desktop-fileop") setTimeout(()=>{ /* dev: the copy dialog mid-flight */
   fileOp({title:"Copying...",line:"Copying 6 items to My Documents",
     fromIcon:IMG.openfolder32,toIcon:IMG.docs32,

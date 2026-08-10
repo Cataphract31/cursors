@@ -348,6 +348,22 @@ All Programs filled out, and the last pass over showError wording.
 - **Clipboard Viewer** — shows whatever the shell clipboard actually holds. Tiny, and
   exactly the kind of thing a delver checks.
 
+### Phase 9 status (2026-08-10)
+
+Shipped: Notepad (Word Wrap + Font genuinely apply, Go To with XP's
+disabled-while-wrapping rule, F5 time/date, the .LOG trick, status bar only
+when unwrapped; .txt desktop files, README and system32's notepad.exe open in
+it, and read-only sources Save As a desktop copy). WordPad (format bar, ruler,
+page chrome; owns .doc/.rtf). Picture and Fax Viewer (prev/next across every
+picture on the machine, zoom, rotate, slideshow, delete where deletable, and
+the pencil hands the image to Paint — double-click views, Edit paints, XP's
+split). Clipboard Viewer reads the shell clipboard. fights.log deliberately
+stays the live-tail window: Notepad would freeze it mid-fight.
+
+Watch-out found: the shell binds every `.menubar span` globally with
+stopPropagation, so per-window menubar listeners never fire — new windows with
+menus must be routed inside that handler like Paint/IE/Explorer are.
+
 ## Phase 10 — the noise apps
 
 - **sndvol32** — the full mixer: Volume Control / Wave / SW Synth / CD Audio / Line In

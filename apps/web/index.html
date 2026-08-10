@@ -1208,6 +1208,117 @@ icons/sounds: winXP (MIT)</div>
 
   <!-- Confirm dialog -->
   <!-- the file-operation progress dialog: XP's flying paper, a real bar -->
+  <!-- ===== the writing apps ===== -->
+  <div class="window" id="win-notepad" data-minw="300" data-minh="220" style="left:250px;top:80px;width:470px;height:360px">
+    <div class="title-bar">
+      <div class="tb-l"><i class="xico tb-ico" data-ico="note16"></i><div class="title-bar-text">Untitled - Notepad</div></div>
+      <div class="title-bar-controls"><button aria-label="Minimize"></button><button aria-label="Maximize"></button><button aria-label="Close"></button></div>
+    </div>
+    <div class="win-body pad">
+      <div class="menubar"><span>File</span><span>Edit</span><span>Format</span><span>View</span><span>Help</span></div>
+      <textarea id="np-text" class="np-text" spellcheck="false" wrap="soft"></textarea>
+      <div class="np-status" id="np-status" style="display:none"><span></span><span id="np-lncol">Ln 1, Col 1</span></div>
+    </div>
+  </div>
+
+  <div class="window fixed" id="win-goto" style="left:calc(50% - 130px);top:200px;width:260px">
+    <div class="title-bar"><div class="tb-l"><div class="title-bar-text">Go To Line</div></div>
+      <div class="title-bar-controls"><button aria-label="Close"></button></div></div>
+    <div class="win-body pad" style="background:#ECE9D8;padding:10px">
+      <label style="display:block;margin-bottom:4px">Line number:</label>
+      <input id="goto-ln" type="number" min="1" style="width:100%">
+      <div style="text-align:right;margin-top:10px;display:flex;gap:6px;justify-content:flex-end">
+        <button class="xbtn" id="goto-ok" style="min-width:70px">Go To</button>
+        <button class="xbtn" id="goto-cancel" style="min-width:70px">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="window fixed" id="win-font" style="left:calc(50% - 185px);top:120px;width:370px">
+    <div class="title-bar"><div class="tb-l"><div class="title-bar-text">Font</div></div>
+      <div class="title-bar-controls"><button aria-label="Close"></button></div></div>
+    <div class="win-body pad" style="background:#ECE9D8;padding:10px">
+      <div class="fd-grid">
+        <div><label>Font:</label><select id="fd-face" size="5"></select></div>
+        <div><label>Font style:</label><select id="fd-style" size="5">
+          <option value="regular">Regular</option><option value="italic">Italic</option>
+          <option value="bold">Bold</option><option value="bolditalic">Bold Italic</option></select></div>
+        <div><label>Size:</label><select id="fd-size" size="5">
+          <option>10</option><option>11</option><option>12</option><option selected>13</option>
+          <option>14</option><option>16</option><option>18</option><option>20</option><option>24</option></select></div>
+      </div>
+      <fieldset class="fd-sample"><legend>Sample</legend><div id="fd-prev">AaBbYyZz</div></fieldset>
+      <div style="text-align:right;margin-top:8px;display:flex;gap:6px;justify-content:flex-end">
+        <button class="xbtn" id="fd-ok" style="min-width:70px">OK</button>
+        <button class="xbtn" id="fd-cancel" style="min-width:70px">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="window" id="win-wordpad" data-minw="380" data-minh="260" style="left:180px;top:60px;width:560px;height:420px">
+    <div class="title-bar">
+      <div class="tb-l"><i class="xico tb-ico" data-ico="writedoc16"></i><div class="title-bar-text">Document - WordPad</div></div>
+      <div class="title-bar-controls"><button aria-label="Minimize"></button><button aria-label="Maximize"></button><button aria-label="Close"></button></div>
+    </div>
+    <div class="win-body pad">
+      <div class="menubar"><span>File</span><span>Edit</span><span>View</span><span>Insert</span><span>Format</span><span>Help</span></div>
+      <div class="wp-bar" id="wp-bar">
+        <select id="wp-font"><option>Arial</option><option>Times New Roman</option><option>Courier New</option><option>Tahoma</option><option>Comic Sans MS</option><option>Verdana</option></select>
+        <select id="wp-size"><option value="1">8</option><option value="2">10</option><option value="3" selected>12</option><option value="4">14</option><option value="5">18</option><option value="6">24</option><option value="7">36</option></select>
+        <span class="wp-sep"></span>
+        <button data-cmd="bold"><b>B</b></button>
+        <button data-cmd="italic"><i>I</i></button>
+        <button data-cmd="underline"><u>U</u></button>
+        <input type="color" id="wp-color" value="#000000" title="Color">
+        <span class="wp-sep"></span>
+        <button data-cmd="justifyLeft" title="Align Left">⫷</button>
+        <button data-cmd="justifyCenter" title="Center">☰</button>
+        <button data-cmd="justifyRight" title="Align Right">⫸</button>
+        <button data-cmd="insertUnorderedList" title="Bullets">•—</button>
+      </div>
+      <div class="wp-ruler"></div>
+      <div class="wp-page"><div id="wp-edit" class="wp-edit" contenteditable="true" spellcheck="false"></div></div>
+    </div>
+  </div>
+
+  <div class="window" id="win-pictview" data-minw="340" data-minh="260" style="left:240px;top:70px;width:520px;height:430px">
+    <div class="title-bar">
+      <div class="tb-l"><i class="xico tb-ico" data-ico="pics32"></i><div class="title-bar-text">Windows Picture and Fax Viewer</div></div>
+      <div class="title-bar-controls"><button aria-label="Minimize"></button><button aria-label="Maximize"></button><button aria-label="Close"></button></div>
+    </div>
+    <div class="win-body pad">
+      <div class="pv-stage"><img id="pv-img" class="fit" alt=""></div>
+      <div class="pv-bar">
+        <button id="pv-prev" title="Previous Image">◀</button>
+        <button id="pv-next" title="Next Image">▶</button>
+        <span class="pv-count" id="pv-count"></span>
+        <span class="wp-sep"></span>
+        <button id="pv-fit" title="Best Fit">▣</button>
+        <button id="pv-full" title="Actual Size">1:1</button>
+        <button id="pv-zin" title="Zoom In">🔍+</button>
+        <button id="pv-zout" title="Zoom Out">🔍−</button>
+        <span class="wp-sep"></span>
+        <button id="pv-play" title="Start Slide Show">▶▶</button>
+        <button id="pv-rotl" title="Rotate Counterclockwise">↺</button>
+        <button id="pv-rotr" title="Rotate Clockwise">↻</button>
+        <span class="wp-sep"></span>
+        <button id="pv-del" title="Delete">✕</button>
+        <button id="pv-edit" title="Closes this program and opens the image for editing">✎</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="window" id="win-clipbook" data-minw="240" data-minh="160" style="left:340px;top:180px;width:330px;height:220px">
+    <div class="title-bar">
+      <div class="tb-l"><i class="xico tb-ico" data-ico="note16"></i><div class="title-bar-text">Clipboard Viewer</div></div>
+      <div class="title-bar-controls"><button aria-label="Minimize"></button><button aria-label="Close"></button></div>
+    </div>
+    <div class="win-body pad">
+      <div class="menubar"><span>File</span><span>Edit</span><span>Display</span><span>Help</span></div>
+      <div id="cb-body" class="cb-body"></div>
+    </div>
+  </div>
+
   <div class="window fixed" id="win-copy" style="left:calc(50% - 190px);top:calc(50% - 90px);width:380px">
     <div class="title-bar">
       <div class="tb-l"><div class="title-bar-text" id="copy-title">Copying...</div></div>

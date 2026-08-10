@@ -1242,3 +1242,40 @@ body.tray-open .tray-idle{display:inline-block}
 /* auto-hide: park the bar off the bottom, leave a 2px lip to find it by */
 body.tb-auto #taskbar{transition:transform .18s ease-out;transform:translateY(calc(100% - 2px))}
 body.tb-auto.tb-peek #taskbar{transform:none}
+
+/* ---------- Phase 9: the writing apps ---------- */
+.np-text{flex:1;min-height:0;resize:none;border:0;outline:0;background:#fff;color:#000;
+  font:13px "Lucida Console",monospace;padding:2px 4px;white-space:pre;overflow:auto}
+.np-text[wrap="soft"]{white-space:pre-wrap}
+.np-status{flex:none;display:flex;justify-content:space-between;background:#ECE9D8;
+  border-top:1px solid #ACA899;padding:2px 8px;font-size:11px}
+.fd-grid{display:grid;grid-template-columns:1fr 96px 64px;gap:8px}
+.fd-grid label{display:block;margin-bottom:3px}
+.fd-grid select{width:100%}
+.fd-sample{margin-top:8px;border:1px groove #fff;padding:4px}
+#fd-prev{height:44px;display:flex;align-items:center;justify-content:center;background:#fff;
+  border:1px solid #ACA899;overflow:hidden}
+.wp-bar{flex:none;display:flex;align-items:center;gap:3px;background:#ECE9D8;
+  border-bottom:1px solid #ACA899;padding:3px 5px}
+.wp-bar button{min-width:24px;height:22px;border:1px solid transparent;background:transparent;cursor:pointer}
+.wp-bar button:hover{border-color:#fff #716F64 #716F64 #fff;background:#F6F5F1}
+.wp-bar select{height:20px}
+.wp-sep{width:1px;height:18px;background:#ACA899;margin:0 3px}
+.wp-ruler{flex:none;height:17px;background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='17'%3E%3Crect width='48' height='17' fill='white'/%3E%3Cpath d='M0 12v5M12 14v3M24 12v5M36 14v3' stroke='%23444'/%3E%3C/svg%3E") repeat-x;
+  border-bottom:1px solid #ACA899}
+.wp-page{flex:1;min-height:0;overflow:auto;background:#808080;padding:8px 14px}
+.wp-edit{background:#fff;min-height:100%;padding:14px 18px;outline:0;
+  font:12pt Arial,sans-serif;box-shadow:2px 2px 3px rgba(0,0,0,.4)}
+.pv-stage{flex:1;min-height:0;background:#6B6F73;display:flex;align-items:center;
+  justify-content:center;overflow:auto;position:relative}
+#pv-img{transition:transform .12s ease-out;background:#fff;box-shadow:0 0 0 1px #444,2px 3px 8px rgba(0,0,0,.5)}
+#pv-img.fit{max-width:94%;max-height:94%}
+.pv-bar{flex:none;display:flex;align-items:center;justify-content:center;gap:2px;
+  background:#ECE9D8;border-top:1px solid #ACA899;padding:3px}
+.pv-bar button{min-width:26px;height:24px;border:1px solid transparent;background:transparent;cursor:pointer;font-size:12px}
+.pv-bar button:hover{border-color:#fff #716F64 #716F64 #fff;background:#F6F5F1}
+.pv-bar button.on{background:#E1E6F6;border-color:#316AC5}
+.pv-count{font-size:10px;color:#555;min-width:38px;text-align:center}
+.cb-body{flex:1;background:#fff;border:1px solid #ACA899;margin:2px;padding:10px;overflow:auto}
+.cb-empty{color:#666;text-align:center;padding-top:30px}
+.cb-item{display:flex;gap:10px;align-items:center}
