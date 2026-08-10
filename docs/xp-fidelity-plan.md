@@ -676,6 +676,44 @@ browser is judged as a television, not as a browser.
   that exist. Windows Update in IE's Tools menu did the same thing from a third
   place; all three entry points now answer the question instead.
 
+### Phase 14 status, pass 2 (2026-08-11) — shipped and deployed
+
+Titles (oEmbed at queue time, cached in the queue entry, id fallback), timed
+auto-advance (first able screen reports the duration; the server's timer ends
+the video even with zero players open), error auto-skip (2/100/101/150 cast
+their own vote), a watching count that means "page open and visible", theater
+mode kept inside IE's window (owner's call: people park IE beside MSN), and the
+duel-duck removed — the TV rides the mixer (master x Wave) like every program.
+The beta box runs the new server; `tv.srv`/`tv.w` verified on the live wire.
+
+### The audit (2026-08-11) — six agents over the whole tree
+
+Every module, the CSS, and the server were read end-to-end by six parallel
+auditors; ~60 verified findings, all P1/P2 and most P3s fixed same day
+(commit 58acca0). Highlights: a reconnect inside the 7s grace bricked the
+session (hello never re-sent); a pre-hello `null` frame crashed the server
+process; stored XSS via the gallery png field; hidden-tab autoplay overshot
+"keep live N" and never banked at xN; Messenger conversation menubars were
+dead; Paint's curve tool drew loops; a double-click on Record orphaned a hot
+mic; the desktop disk-critical pulse was killed by a duplicate keyframes name.
+Server got hello/guest/gallery rate limits, a pre-hello reaper, persistent
+gallery credits, and duration-gated tvEnded.
+
+**Still open from the audit** (real, deferred): the Group Policy "Always show
+duel odds" switch is a no-op (needs an odds render or a relabel); sim.players
+never prunes offline visitors (fine at beta scale, wrong at production scale);
+no WS origin allowlist (needs the prod domain decided first); crash-time
+persistence runs synchronously per player inside the tick (batch it in one
+transaction); renderIcons can destroy an in-progress icon rename.
+
+### The intro (2026-08-11)
+
+Start > How to Play / HUD Help > Quick Tour / Run > tour: five slides, real
+captures of this build (live duel at 50:50, HUD, autoplay block, the BSOD,
+theater-mode TV with the arena flying over it), three bullets each. Auto-opens
+once on first logon in place of the old tray balloon; any close marks it seen.
+Captures live in `apps/web/public/tour/` — recapture when the HUD changes.
+
 ### Still owed in 14
 
 - **Titles, not ids.** The decks list `dQw4w9WgXcQ`. YouTube's oEmbed endpoint is
