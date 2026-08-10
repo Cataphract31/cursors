@@ -2722,8 +2722,14 @@ function updateTag(c){
   c.s=Math.min(2.6,1+.35*Math.log2(Math.max(1,m)));
   c.r=10*c.s;                       /* collision radius stays in logical units */
   const v=c.s*CMAG;                 /* magnification is purely visual */
-  const sv=c.el.querySelector("svg");
-  sv.style.width=(17*v)+"px"; sv.style.height=(26*v)+"px";
+  /* the sprite is an <svg> until the owner picks a pointer scheme, at which
+     point skinCurEl swaps it for an <img class="curskin"> of the real .cur
+     file. Asking for "svg" alone returned null for every skinned cursor and
+     threw right here — on makeCur's last line, after the element was already
+     in the layer but before the caller could take ownership of it. The result
+     was an untracked arrow parked at the layer origin forever. */
+  const sv=c.el.querySelector("svg,.curskin");
+  if(sv){ sv.style.width=(17*v)+"px"; sv.style.height=(26*v)+"px"; }
   const tag=c.el.querySelector(".tag");
   /* rotated view: the tag's anchor maps (screenX,screenY)=(−top,+left), so
      these offsets land it just under the counter-rotated sprite */
@@ -2893,6 +2899,7 @@ function deploy(silent){
   updatePanel();
 }
 function botDeploy(name){
+  if(MP.on) return;   /* the server owns the population; a local bot here would never be drawn */
   if(!canDeploy()) return;
   if(curs.filter(c=>c.owner===name).length>=3) return;
   const c=makeCur(name,false);
@@ -3635,6 +3642,7 @@ function mpFrame(dt,now){
 function mpWelcome(m){
   if(mpGraceT){ clearTimeout(mpGraceT); mpGraceT=null; log("reconnected"); }
   MP.on=true; MP.name=m.name;
+  roundId++;   /* strands the sandbox's pending bot timers, which check it */
   store.data.mpToken=m.token; store.save();
   if(PLAYER!==m.name){ PLAYER=m.name; store.data.userName=m.name; store.save(); syncIdentity(); try{ msn.renderMe(); }catch(e){} }
   mpPurge();
