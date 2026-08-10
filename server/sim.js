@@ -445,7 +445,8 @@ export function createSim(opts) {
   }
   function welcomeState() {
     return {
-      no: epochNo, commit, phase, up: Math.round(upT), pot: R ? R.pot : 0,
+      no: epochNo, commit, phase, up: Math.round(upT), eup: Math.round(upT - epochStart),
+      pot: R ? R.pot : 0,
       deploys: R ? R.deploys : 0, deaths: R ? R.deaths : 0,
       fill: +(epochDeaths / CORPSES).toFixed(4), corpses: CORPSES,
       rush: rushAt ? Math.max(0, RUSH_MS - (now() - rushAt)) / 1000 : null,

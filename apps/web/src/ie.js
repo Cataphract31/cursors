@@ -67,8 +67,8 @@ ${board}
 alive right now <b>${h.alive}</b> &#183;
 dead so far <b>${h.dead}</b> &#183;
 your biggest bank <b>${esc(h.bigBank)}</b></font></p>
-<p><font size="1">every cursor that dies gets a certificate with its odds at the
-moment it lost. the ones that died as favourites are filed in the
+<p><font size="1">every dead cursor gets a certificate with its odds at the
+moment it lost. the favourites that lost are in the
 <a data-act="hall">Hall of Pain</a>, in the Recycle Bin.</font></p>
 </center>`;
     },

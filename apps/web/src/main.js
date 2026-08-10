@@ -556,6 +556,11 @@ const SYSICONS=[
   {id:"amp",label:"Winamp",ico:"amp16",app:"win-amp",sys:1},
   {id:"log",label:"fights.log",ico:"note32",app:"win-log",sys:1},
   {id:"readme",label:"README.txt",ico:"note32",app:"win-readme",sys:1},
+  /* Control Panel on the desktop is a real XP option (Desktop Items -> General),
+     and the two applets nobody finds by accident get their own shortcuts. */
+  {id:"cpl",label:"Control Panel",ico:"@ic-cpl",app:"win-control",sys:1,lnk:1},
+  {id:"mouse",label:"Mouse Properties",ico:"@ic-dev",app:"run",cmd:"main.cpl",sys:1,lnk:1},
+  {id:"calc",label:"Calculator",ico:"calc32",app:"run",cmd:"calc",sys:1,lnk:1},
 ];
 const CELLW=MOBILE?68:84, CELLH=MOBILE?72:86, GX=12, GY=8;
 /* rotating a phone changes how many icons fit in a column, so the default grid
@@ -667,6 +672,8 @@ function openIcon(ic){
     openWin("win-paint");
   }else if(ic.app==="wavdoc"){
     showError("Windows Media Player","Windows Media Player cannot play the file. The file is either corrupt or the Player does not support the format you are trying to play.");
+  }else if(ic.app==="run"){
+    runNamed(ic.cmd);
   }else if(ic.app==="applnk"){
     openWin(ic.target);
   }else if(ic.app==="deadlnk"){
@@ -2803,7 +2810,12 @@ function phaseTick(dt){
   }
   renderPhase();
 }
-function fmtUp(s){ const t=Math.floor(s); return `${Math.floor(t/60)}:${String(t%60).padStart(2,"0")}`; }
+function fmtUp(s){
+  const t=Math.max(0,Math.floor(s)), h=Math.floor(t/3600), m=Math.floor(t/60)%60;
+  /* past an hour "860:23" reads as minutes and confuses everyone; roll it up */
+  return h?`${h}:${String(m).padStart(2,"0")}:${String(t%60).padStart(2,"0")}`
+          :`${m}:${String(t%60).padStart(2,"0")}`;
+}
 /* The disk is the round clock now, so it gets a real gauge instead of a
    percentage buried in a status line. Offline there is no epoch budget, so the
    sandbox counts its own dead against the same nominal 64. */
@@ -2844,16 +2856,19 @@ function renderPhase(){
   const mm="0:"+String(Math.max(0,Math.ceil(phaseT))).padStart(2,"0");
   const live=curs.reduce((s,c)=>s+c.bounty,0);
   const txt=phase==="battle"
-    ?(shutFired?`⚠ SHUTDOWN ${mm} — BANKING ALL`:`UPTIME ${fmtUp(upT)} · ${fmtS(live)} LIVE`)
+    ?(shutFired?`⚠ SHUTDOWN ${mm} — BANKING ALL`:`EPOCH ${roundNo} · UP ${fmtUp(upT-epochStart)} · ${fmtS(live)} LIVE`)
     :phase==="crash"?"☠ CRASHED · RESTARTING…":"BOOT";
   if(txt===lastPhaseText) return;
   lastPhaseText=txt;
   const urgent=shutFired||phase==="crash";
   const pl=$("#phaseline");
   pl.textContent=txt;
+  pl.title=`Epoch ${roundNo}. Every death writes a corpse to C:. When the disk fills, `
+    +`CURSORS.EXE stops and a new epoch starts — banked money carries over, live cursors do not. `
+    +`UP is this epoch's age; the machine's own uptime is in System Properties.`;
   pl.classList.toggle("battle",urgent);
-  const chip=phase==="crash"?`R${roundNo} · CRASHED`:shutFired?`R${roundNo} · SHUTDOWN ${mm}`
-    :`R${roundNo} · C: ${diskPct().pct}%`;
+  const chip=phase==="crash"?`EPOCH ${roundNo} · CRASHED`:shutFired?`EPOCH ${roundNo} · SHUTDOWN ${mm}`
+    :`EPOCH ${roundNo} · C: ${diskPct().pct}%`;
   $("#phasechip").textContent=chip;
   const mp=$("#mh-phase");
   mp.textContent=chip;
@@ -3045,20 +3060,37 @@ function setAuto(on){
   b.textContent=on?"ON":"OFF";
   b.classList.toggle("on",on);
 }
-/* dead-man's switch: autoplay is a session convenience, not a standing order.
-   Wall clock, not performance.now() — a laptop-sleep gap must count as away,
-   and performance.now() can stop ticking through suspend. The check runs on
-   the first gesture back as well as in the deploy loop, so a returning mouse
-   can't re-arm a stale session before the loop notices the gap. */
-const AUTO_IDLE_MS=10*60*1000;
-let lastGesture=Date.now();
-function autoIdleCheck(){
-  if(auto.on&&Date.now()-lastGesture>AUTO_IDLE_MS){
-    setAuto(false);
-    showBalloon("Autoplay switched off","You were away, so automatic deploys were stopped. Turn Autoplay back on when you want it.");
-  }
+/* Autoplay exists precisely so you can be away from the keyboard, so gating it
+   on mouse activity would defeat the whole point — a tab left farming in the
+   background is a legitimate way to play. What ends it is the machine going
+   AWAY: the lid closes, the tab is frozen, the network drops. Past
+   AUTO_AWAY_MS of that the switch is off when you get back, so a session that
+   survived the night can never deploy on the first frame after it wakes.
+
+   Two independent detectors, because neither one catches both cases:
+
+     frozen  - the deploy loop below is a 1.8s interval, so if the wall clock
+               has moved far more than that since it last ran, this tab was
+               suspended (slept laptop, frozen background tab). Wall clock, not
+               performance.now(), which stops ticking through a suspend.
+     offline - the socket has been down continuously. Covers losing the network
+               while the machine itself stays awake.
+
+   A throttled background tab still fires its interval about once a minute, so
+   merely being hidden never trips either one. Closing the page needs no
+   detector at all: autoplay lives in this tab and dies with it. */
+const AUTO_AWAY_MS=10*60*1000;
+let lastTick=Date.now(), downSince=0;
+function autoAwayCheck(){
+  if(!auto.on) return;
+  const t=Date.now();
+  const gap=Math.max(t-lastTick, downSince?t-downSince:0);
+  if(gap<=AUTO_AWAY_MS) return;
+  setAuto(false);
+  showBalloon("Autoplay is off",
+    `This machine was away for ${Math.round(gap/60000)} minutes, so automatic deploys stopped. `
+    +`Switch Autoplay back on when you want it running again.`);
 }
-["pointermove","pointerdown","keydown","wheel"].forEach(ev=>addEventListener(ev,()=>{ autoIdleCheck(); lastGesture=Date.now(); },{passive:true,capture:true}));
 $("#ap-toggle").addEventListener("click",()=>{
   setAuto(!auto.on); sClick();
 });
@@ -3068,7 +3100,11 @@ $$(".apb").forEach(b=>b.addEventListener("click",()=>{ sClick(); auto.bankAt=+b.
    The target wobbles per epoch so the field breathes; play-money only — the
    real-money bot policy is a disclosed design still owed (see HANDOFF). */
 setInterval(()=>{
-  autoIdleCheck();   /* disarm a stale session before it can spend */
+  /* check against the previous stamps, then refresh: the run that discovers a
+     two-hour gap must see it before it erases it */
+  if(!MPURL||(net&&net.up())) downSince=0; else if(!downSince) downSince=Date.now();
+  autoAwayCheck();
+  lastTick=Date.now();
   if(!canDeploy()) return;
   if(auto.on&&myCurs().length<auto.count&&wallet>=STAKE) deploy(true);
   if(MP.on) return;   /* the server runs the bots */
@@ -3404,7 +3440,7 @@ function hallOfPain(){
     ? `<div><b>${binDead.length}</b> cursors terminated · <b>${fmtS(total)} SOL</b> stopped existing</div>`+
       `<div>yours: <b>${mine.length}</b> · <b>${fmtS(myTotal)} SOL</b></div>`+
       (top?`<div>biggest earner: <b>${esc(top[0])}</b> (${fmtS(top[1])} SOL taken)</div>`:"")+
-      (worstOdds?`<div class="hall-bad">worst beat: <b>${esc(worstOdds.name)}</b> was ${worstOdds.odds}% to win and lost anyway</div>`:"")
+      (worstOdds?`<div class="hall-bad">worst beat: <b>${esc(worstOdds.name)}</b> — ${worstOdds.odds}% to win, dead</div>`:"")
     : "<div>Nothing has died yet. Give it a round.</div>";
   const body=$("#hall-rows");
   body.innerHTML="";
@@ -3413,7 +3449,7 @@ function hallOfPain(){
     if(d.mine) tr.className="me";
     tr.innerHTML=`<td>${i+1}</td><td>${esc(d.name)}_${String(d.id).padStart(4,"0")}.cur</td>`+
       `<td class="n">${fmtS(d.lost)}</td><td class="n">×${d.mult.toFixed(1)}</td>`+
-      /* red is not decoration here: these are the ones that were favourite and lost */
+      /* red marks a favourite that lost — the column people actually scan for */
       `<td class="n${d.odds>=50?" bad":""}">${d.odds}%</td><td>${esc(d.killer)}</td><td class="n">${d.round}</td>`;
     tr.addEventListener("click",()=>deathCert(d));
     body.appendChild(tr);
@@ -3437,10 +3473,10 @@ function deathCert(d){
     row("survived",`${d.lived} second${d.lived===1?"":"s"}`)+
     row("time of death",`${d.at} · round ${d.round}`);
   $("#cert-note").textContent=d.odds>=50
-    ? `It was favourite at ${d.odds}% and lost anyway. Nothing went wrong. ${d.odds}% is not a promise, it is a rate, and this is the ${100-d.odds}% you were told about.`
+    ? `Was ${d.odds}% to win. Lost. This is the other ${100-d.odds}%.`
     : d.odds<=15
-      ? `It was ${d.odds}% to win, so it was ${100-d.odds}% to end exactly like this. The draw was fair and it went the likely way.`
-      : `Odds ${d.odds}:${100-d.odds}, drawn once, weighted by bounty. No fee was taken from this collision — the house edge is the 1% entry fee and nothing else.`;
+      ? `Was ${d.odds}% to win. Lost. Went the way it was always going to go.`
+      : `Odds ${d.odds}:${100-d.odds}, drawn once, weighted by bounty. No fee on the collision.`;
   openWin("win-cert");
 }
 function updatePanel(){
@@ -3540,7 +3576,14 @@ function mpMakeCur(id,owner,x,y,bounty,graceSecs,skin){
   return c;
 }
 function mpRemove(c){ if(!c) return; mpCurs.delete(c.id); removeCur(c); }
-function mpPurge(){ for(const c of [...curs]) removeCur(c); mpCurs.clear(); }
+const mpBlind=()=>document.visibilityState!=="visible";
+function mpPurge(){
+  for(const c of [...curs]) removeCur(c);
+  mpCurs.clear();
+  /* belt and braces: anything still in the layer is an orphan by definition,
+     and an orphan is a cursor that can never be told to move or to die */
+  for(const el of [...curlayer.querySelectorAll(".cur")]) el.remove();
+}
 const MPMODE={r:"roam",c:"recall",d:"duel"};
 
 /* Snapshot interpolation. Positions arrive at 15Hz; we render the arena
@@ -3597,7 +3640,7 @@ function mpWelcome(m){
   mpPurge();
   roundNo=m.epoch.no; R=newRoundRecord();
   R.pot=m.epoch.pot; R.deploys=m.epoch.deploys; R.deaths=m.epoch.deaths;
-  upT=m.epoch.up; epochStart=upT;
+  upT=m.epoch.up; epochStart=upT-(m.epoch.eup||0);   /* the epoch is older than our connection */
   phase=m.epoch.phase; shutFired=m.epoch.rush!=null; phaseT=shutFired?m.epoch.rush:999;
   commitHex=m.epoch.commit; seedHex=null;
   MP.fill=m.epoch.fill; MP.disk=m.epoch.disk; MP.corpses=m.epoch.corpses||64;
@@ -3647,7 +3690,7 @@ function mpResync(e){
   roundNo=e.no; commitHex=e.commit;
   R=R||newRoundRecord();
   R.pot=e.pot; R.deploys=e.deploys; R.deaths=e.deaths;
-  upT=e.up; phase=e.phase; shutFired=e.rush!=null; phaseT=shutFired?e.rush:999;
+  upT=e.up; epochStart=upT-(e.eup||0); phase=e.phase; shutFired=e.rush!=null; phaseT=shutFired?e.rush:999;
   MP.fill=e.fill; MP.disk=e.disk; MP.corpses=e.corpses||MP.corpses;
   for(const sc of e.curs){
     const c=mpMakeCur(sc.id,sc.owner,sc.x,sc.y,sc.bounty,sc.grace,sc.skin);
@@ -3801,8 +3844,11 @@ function mpMsg(m){
   switch(m.t){
     case "welcome": mpWelcome(m); break;
     case "snap": if(MP.on) mpSnap(m); break;
-    case "spawn": if(MP.on) mpSpawn(m); break;
-    case "duel": if(MP.on) mpDuel(m); break;
+    /* Blind means the server has stopped sending us positions, so a cursor
+       built now would stand still on the edge it spawned at until the resync.
+       Skip it: becoming visible asks for the whole world back anyway. */
+    case "spawn": if(MP.on&&!mpBlind()) mpSpawn(m); break;
+    case "duel": if(MP.on&&!mpBlind()) mpDuel(m); break;
     case "kill": if(MP.on) mpKill(m); break;
     case "bank": if(MP.on) mpBank(m); break;
     case "refund": if(MP.on){ const c=mpCurs.get(m.id); if(c&&c.isMine){ R.myIn-=STAKE; stats.deploys--; stats.tIn-=STAKE; log("undeployed in grace — refunded in full"); } mpRemove(c); updatePanel(); } break;
@@ -3958,16 +4004,16 @@ const HELP={
       <li><b>RECALL</b> — bank everything. Takes three seconds, during which
       your cursors can still be caught.</li>
     </ul>
-    <p>A cursor that has just been deployed is in <b>spawn grace</b> for a
-    moment and cannot fight. Recalling during grace is a full refund — it is a
-    misclick window, not a strategy.</p>`},
+    <p>A freshly deployed cursor is in <b>spawn grace</b> for a moment and
+    cannot fight. Recall during grace and you get everything back — it is there
+    for misclicks.</p>`},
 
   odds:{t:"The odds, stated plainly",group:"Start here",body:()=>`
     <h1>The odds, stated plainly</h1>
     <p>When cursor A (carrying <i>a</i>) meets cursor B (carrying <i>b</i>), A
-    wins with probability <b>a / (a + b)</b>. The bigger pile is more likely to
-    win, in exact proportion to how much bigger it is. The house does not take a
-    cut of that collision, does not tilt it, and cannot see it coming.</p>
+    wins with probability <b>a / (a + b)</b>. Bigger pile, better odds, in exact
+    proportion. The house takes nothing from the collision and does not tilt
+    it.</p>
     <p>Because every fight pays exactly what it risks, chaining fights cannot
     bend the average. The chance a cursor ever reaches <b>×N</b> its entry is
     <b>1/N</b> — exactly.</p>
@@ -4064,18 +4110,17 @@ const HELP={
 
   bin:{t:"The Recycle Bin and death certificates",group:"The desktop",body:()=>`
     <h1>The Recycle Bin and death certificates</h1>
-    <p>Every dead cursor files a certificate recording what it was carrying, its
-    peak value, how long it lived, who killed it, and — the number that matters —
-    <b>its own chance of winning that exact collision</b>.</p>
-    <p>A cursor that died holding 92% odds gets a piece of paper saying it was
-    92% and lost anyway, and that nothing went wrong. 92% is a rate, not a
-    promise, and the certificate is where the other 8% lives.</p>
-    <p><b>Hall of Pain</b> (in the bin's task pane) sorts the whole graveyard by
-    damage and reddens the ones that died as favourites.</p>`},
+    <p>Every dead cursor files a certificate: what it was carrying, its peak
+    value, how long it lived, who killed it, and <b>its odds in the collision
+    that killed it</b>.</p>
+    <p>So when a 92% favourite dies you get the receipt proving it was 92%.
+    Cold comfort, but it is on paper.</p>
+    <p><b>Hall of Pain</b> (in the bin's task pane) sorts the graveyard by
+    damage and reddens the favourites that lost.</p>`},
 
   apps:{t:"The rest of the desktop",group:"The desktop",body:()=>`
     <h1>The rest of the desktop</h1>
-    <p>It is a real desktop, not a backdrop. Everything on it works.</p>
+    <p>Everything on the desktop actually works. Go poke at it.</p>
     <ul>
       <li><b>Internet Explorer</b> — a small handmade web, including cursorTV,
       where the whole lobby watches one video together with a shared queue.</li>
