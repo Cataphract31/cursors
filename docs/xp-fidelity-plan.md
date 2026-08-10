@@ -281,3 +281,118 @@ once → **Phase 7**.
 Phases 0–3 are the ones that change how the whole thing *feels* on first contact. 6.3 is
 the sleeper — a dozen small shell behaviours that together are worth more than any single
 application.
+
+---
+
+# Round 2 — after the first eight shipped (2026-08-10)
+
+Everything above through Phase 6.1 is live. What follows is the remainder, re-cut into
+phases the same way: ordered by fidelity-per-hour, with the detail-sweep work first
+because that is what made the difference last round.
+
+## Phase 8 — the second shell sweep (the rest of 6.3)
+
+The highest-value phase in this round. None of these is an app; all of them are the
+texture people touch constantly without noticing:
+
+- **Rubber-band select** on the desktop and in Explorer — the translucent blue rectangle,
+  multi-select, drag the group, Ctrl-click add/remove. Today only single icons select.
+- **Drag and drop that works** — icons into open folder windows and back out, a file onto
+  Paint's window to open it, an image dragged off an IE page onto the desktop.
+- **The copy dialog** — flying-paper animation, the real progress bar, Cancel that leaves
+  a partial job. Shown for any multi-file operation the shell fakes (Send To, paste of a
+  folder, Recycle Bin restore).
+- **Taskbar grouping** when the bar fills ("3 Internet Explorer ▸" with the stack menu),
+  plus Lock the Taskbar, auto-hide, and Toolbars ▸ Quick Launch / Address / Desktop.
+- **Minimize animation** — restore already zooms out of the tab; minimize still just
+  disappears. Both directions, same wireframe.
+- **Tooltips and balloons** — XP's 1px-border yellow tooltip with the real 500ms delay,
+  balloon tips with the tail anchored to the tray icon.
+- **The rest of the sound scheme** — menu popup, maximize, restore-down, empty recycle
+  bin, start-navigation are loaded but unmapped. Map every event XP mapped.
+- **All Programs, finished** — every app that exists (and will exist below) in its true
+  XP location: Accessories, System Tools, Entertainment, Games, Startup.
+- **Error-string sweep** — every remaining showError reworded to XP's exact phrasing
+  where XP had phrasing. Flat, terse, no editorial.
+
+## Phase 9 — the writing apps (things people open daily)
+
+- **Notepad, for real** — Format ▸ Word Wrap and Font (and the font actually changes),
+  Edit ▸ Go To with line numbers, F5 timestamp, and the genuine `.LOG` trick: a file
+  whose first line is `.LOG` appends a timestamp on every open. fights.log and
+  README.txt reopen inside it instead of the static viewers they are now.
+- **WordPad** — the ruler, the formatting bar, RTF-ish bold/italic/size/color, opens the
+  `.doc`/`.rtf` files the New menu already creates.
+- **Windows Picture and Fax Viewer** — the real toolbar (zoom, rotate, slideshow, print,
+  delete), and it becomes what double-clicking any image opens: Paint saves, gallery
+  pictures, the wallpaper.
+- **Clipboard Viewer** — shows whatever the shell clipboard actually holds. Tiny, and
+  exactly the kind of thing a delver checks.
+
+## Phase 10 — the noise apps
+
+- **sndvol32** — the full mixer: Volume Control / Wave / SW Synth / CD Audio / Line In
+  columns with working sliders (Wave genuinely scales game sounds, Volume Control is the
+  master), Mute checkboxes, Options ▸ Properties with the device dropdown.
+- **Sound Recorder** — the green oscilloscope, record from the mic (local only, nothing
+  uploads), play back, the Effects menu (Add Echo, Reverse, half/double speed — all real
+  DSP on the buffer), save as `.wav` onto the desktop.
+- **WMP9** — the real skin around the music that already plays through Winamp: the blue
+  chrome, the visualization pane (Ambience/Bars and Waves), the playlist drawer. Winamp
+  stays; XP shipped both.
+
+## Phase 11 — the games (the shock phase)
+
+- **Solitaire** — the real deal: draw-three, timed scoring, right-click auto-move, and
+  the win cascade. Real card faces from the classic deck, not drawn ones.
+- **3D Pinball: Space Cadet** — the actual game. The original was decompiled
+  (k4zmu2a/SpaceCadetPinball) and has working WebAssembly ports with the original
+  tables and sounds. Vendor a wasm build behind its own window; lazy-load so first
+  paint never pays for it. This is the single biggest "no way this is real" moment
+  available to us.
+- **Spider / FreeCell** — same deck, much smaller lift than Solitaire once it exists.
+
+## Phase 12 — the maintenance apps (delver bait, round two)
+
+- **Task Manager's other tabs** — Applications (with the window list and End Task),
+  Performance (the real CPU/PF history graphs, live), Networking, Users. The tray CPU
+  graph icon while it is open.
+- **MSConfig** — Startup tab with plausible entries and checkboxes that persist,
+  BOOT.INI tab, Services tab cross-linked to the Services console that already exists.
+- **System Restore** — the calendar picker, restore points created at real moments
+  (first boot, scheme change, wallpaper change), and restoring genuinely reverts the
+  cosmetic state: wallpaper, theme, pointer scheme, saver. Nothing money-adjacent.
+- **Scheduled Tasks**, the **Fonts folder** (every font actually shipped, with the
+  preview window), **Folder Options** (all three tabs incl. the Advanced checkbox
+  tree, and the ones that can work, work), **Recycle Bin Properties** (per-drive
+  slider), **Add or Remove Programs** with sizes and the usage-frequency bars,
+  **ClearType tuner**, **Accessibility** (Magnifier and On-Screen Keyboard genuinely
+  running; the OSK types into the focused window).
+
+## Phase 13 — the mobile pass (unchanged, still last)
+
+Real-device pass on iPhone: the `--kb` path, long-press timing on every Round-2 menu,
+and per-app calls on phone layout vs "rotate to landscape". Everything above must not
+regress the phone shell it already has.
+
+## Ordering
+
+**8** (the sweep — compounding value, lands on every window at once) → **9** (daily-touch
+apps, cheap) → **11** (games; Pinball is the flagship shock) → **10** (noise) → **12**
+(maintenance) → **13** (mobile, always last).
+
+## Standing constraints (unchanged)
+
+Real assets only, never drawn. System apps stay cosmetic — nothing touches money,
+rakeback, or another player. Copy stays flat and terse. Every phase ships with
+`upload/cursors/` rebuilt, and anything that grows first paint gets routed to `media/`.
+
+## Game-side items parked for the owner's call
+
+Not scheduled — these change gameplay, not fidelity, so they are decisions before they
+are tasks:
+- **Server-side autoplay** using the DB's `lastSeen` (deploys continue while the page is
+  closed, THIN ICE-style). Changes the meaning of "online"; needs a design pass.
+- The shortcut-arrow overlay icon: needs the real asset found, or it ships without.
+- The guestbook and Hall of Pain in IE: still standing from Round 1 — keep (real player
+  content) or demolish with the rest of the fiction. Owner has not ruled.
