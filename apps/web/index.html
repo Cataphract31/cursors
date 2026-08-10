@@ -1119,6 +1119,88 @@ icons/sounds: winXP (MIT)</div>
     </div>
   </div>
 
+  <!-- ===== Recycle Bin Properties ===== -->
+  <div class="window fixed" id="win-binprops" style="left:calc(50% - 180px);top:70px;width:360px">
+    <div class="title-bar">
+      <div class="tb-l"><i class="xico tb-ico" data-ico="bin32"></i><div class="title-bar-text">Recycle Bin Properties</div></div>
+      <div class="title-bar-controls"><button aria-label="Close"></button></div>
+    </div>
+    <div class="win-body pad" style="background:#ECE9D8">
+      <div class="xtabs"><span class="xtab on" data-pane="bp-glob">Global</span></div>
+      <div class="xpane on" id="bp-glob">
+        <div id="bp-body"></div>
+      </div>
+      <div style="display:flex;gap:7px;justify-content:flex-end;margin-top:8px">
+        <button class="xbtn" id="bp-ok" style="min-width:74px">OK</button>
+        <button class="xbtn" id="bp-cancel" style="min-width:74px">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Add or Remove Programs ===== -->
+  <div class="window" id="win-appwiz" data-minw="520" data-minh="360" style="left:100px;top:52px;width:660px;height:470px">
+    <div class="title-bar">
+      <div class="tb-l"><i class="xico tb-ico" data-ico="@ic-cpl"></i><div class="title-bar-text">Add or Remove Programs</div></div>
+      <div class="title-bar-controls"><button aria-label="Minimize"></button><button aria-label="Close"></button></div>
+    </div>
+    <div class="win-body aw-body">
+      <div class="aw-side" id="aw-side"></div>
+      <div class="aw-main" id="aw-main"></div>
+    </div>
+  </div>
+
+  <!-- the install/remove progress both pages share -->
+  <div class="window fixed" id="win-awprog" style="left:calc(50% - 170px);top:calc(50% - 60px);width:340px">
+    <div class="title-bar">
+      <div class="tb-l"><div class="title-bar-text">Add or Remove Programs</div></div>
+      <div class="title-bar-controls"></div>
+    </div>
+    <div class="win-body pad" style="background:#ECE9D8">
+      <div class="small" id="awp-text" style="margin-bottom:8px">Working...</div>
+      <div class="xprog"><div class="xprog-in" id="awp-bar"></div></div>
+    </div>
+  </div>
+
+  <!-- ===== the Fonts folder and its preview window ===== -->
+  <div class="window" id="win-fonts" data-minw="420" data-minh="300" style="left:150px;top:70px;width:560px;height:420px">
+    <div class="title-bar">
+      <div class="tb-l"><i class="xico tb-ico" data-ico="folder16"></i><div class="title-bar-text">Fonts</div></div>
+      <div class="title-bar-controls"><button aria-label="Minimize"></button><button aria-label="Close"></button></div>
+    </div>
+    <div class="win-body pad">
+      <div class="menubar"><span>File</span><span>Edit</span><span>View</span><span>Favorites</span><span>Tools</span><span>Help</span></div>
+      <div class="fnt-list" id="fnt-list"></div>
+      <div class="ex-status" style="margin-top:4px"><span id="fnt-status"></span></div>
+    </div>
+  </div>
+  <div class="window" id="win-fontview" data-minw="420" data-minh="300" style="left:210px;top:90px;width:600px;height:440px">
+    <div class="title-bar">
+      <div class="tb-l"><i class="xico tb-ico" data-ico="note16"></i><div class="title-bar-text">Font</div></div>
+      <div class="title-bar-controls"><button aria-label="Minimize"></button><button aria-label="Close"></button></div>
+    </div>
+    <div class="win-body pad" style="background:#fff">
+      <div style="display:flex;gap:6px;justify-content:flex-end;margin-bottom:6px">
+        <button class="xbtn" id="fv-print" style="min-width:64px">Print</button>
+        <button class="xbtn" id="fv-done" style="min-width:64px">Done</button>
+      </div>
+      <div class="fv-body" id="fv-body"></div>
+    </div>
+  </div>
+
+  <!-- ===== ClearType tuner ===== -->
+  <div class="window fixed" id="win-cleartype" style="left:calc(50% - 200px);top:80px;width:400px">
+    <div class="title-bar">
+      <div class="tb-l"><i class="xico tb-ico" data-ico="cpanel16"></i><div class="title-bar-text">ClearType Tuner</div></div>
+      <div class="title-bar-controls"><button aria-label="Close"></button></div>
+    </div>
+    <div class="win-body pad" style="background:#ECE9D8">
+      <div id="ct-body"></div>
+      <div style="display:flex;gap:7px;justify-content:flex-end;margin-top:8px">
+        <button class="xbtn" id="ct-ok" style="min-width:74px">OK</button>
+      </div>
+    </div>
+  </div>
+
   <!-- per-screensaver Settings dialog: content built by main.js -->
   <div class="window fixed" id="win-saveropts" style="left:calc(50% - 160px);top:calc(50% - 90px);width:320px">
     <div class="title-bar">

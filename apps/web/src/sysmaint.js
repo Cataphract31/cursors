@@ -717,7 +717,406 @@ export function initSysMaint(deps) {
   }
 
   /* ================================================================
-     4. wiring
+     5. Recycle Bin Properties
+     ================================================================ */
+  const BIN_DEF = { pct: 10, nobin: 0, confirm: 1 };
+  function binOpts() {
+    const d = store.data.binOpts = store.data.binOpts || {};
+    for (const k in BIN_DEF) if (d[k] === undefined) d[k] = BIN_DEF[k];
+    return d;
+  }
+  const binOpt = k => binOpts()[k];
+  function openBinProps() {
+    binRender();
+    openWin("win-binprops");
+  }
+  function binRender() {
+    const host = $("#bp-body"); if (!host) return;
+    const d = binOpts();
+    const disk = hooks.diskBytes();
+    host.innerHTML = "";
+    const fs = el("fieldset", "mo-fs");
+    fs.appendChild(el("legend", null, "Settings for Local Disk (C:)"));
+    const cap = el("div", "small", "");
+    const slider = el("input");
+    slider.type = "range"; slider.min = "0"; slider.max = "100"; slider.value = String(d.pct);
+    slider.className = "bp-slider";
+    const label = el("div", "bp-pct", "");
+    const paint = () => {
+      label.textContent = d.pct + "%";
+      cap.textContent = "Maximum size of Recycle Bin (percent of each drive): " +
+        fmtBytes(disk * d.pct / 100) + " of " + fmtBytes(disk);
+    };
+    slider.addEventListener("input", () => { d.pct = +slider.value; paint(); });
+    slider.addEventListener("change", () => { store.save(); sysSnd("nav", .35); });
+    slider.disabled = !!d.nobin;
+    fs.appendChild(cap);
+    const row = el("div", "bp-row");
+    row.appendChild(el("span", "small", "0%"));
+    row.appendChild(slider);
+    row.appendChild(el("span", "small", "100%"));
+    row.appendChild(label);
+    fs.appendChild(row);
+    paint();
+    host.appendChild(fs);
+
+    const check = (key, text, note) => {
+      const lab = el("label", "mc-check");
+      const c = el("input"); c.type = "checkbox"; c.checked = !!d[key];
+      c.addEventListener("change", () => { d[key] = c.checked ? 1 : 0; store.save(); binRender(); });
+      lab.appendChild(c); lab.appendChild(el("span", null, text));
+      host.appendChild(lab);
+      if (note) host.appendChild(el("div", "mc-note", note));
+    };
+    check("nobin", "Do not move files to the Recycle Bin. Remove files immediately when deleted.",
+      "This covers files you made. A cursor that dies still goes to the bin: that is where the disk writes the corpse.");
+    check("confirm", "Display delete confirmation dialog");
+  }
+  function fmtBytes(b) {
+    if (b >= 1024 * 1024 * 1024) return (b / 1024 / 1024 / 1024).toFixed(2) + " GB";
+    if (b >= 1024 * 1024) return Math.round(b / 1024 / 1024) + " MB";
+    return Math.round(b / 1024) + " KB";
+  }
+
+  /* ================================================================
+     6. Add or Remove Programs (appwiz.cpl)
+     ================================================================ */
+  /* Removing something here removes it from this desktop: the shortcut, the
+     menu entry, the Run name. Nothing leaves the server, and everything comes
+     back from the Windows Components page. */
+  const COMPONENTS = [
+    { id: "calc", n: "Calculator", grp: "acc", mb: 0.1 },
+    { id: "notepad", n: "Notepad", grp: "acc", mb: 0.1 },
+    { id: "paint", n: "Paint", grp: "acc", mb: 0.4 },
+    { id: "sndrec", n: "Sound Recorder", grp: "acc", mb: 0.1 },
+    { id: "wordpad", n: "WordPad", grp: "acc", mb: 0.3 },
+    { id: "mine", n: "Minesweeper", grp: "games", mb: 0.1 },
+    { id: "solitaire", n: "Solitaire", grp: "games", mb: 0.2 },
+    { id: "chat", n: "Windows Messenger", grp: "top", mb: 4.6 },
+    { id: "wmp", n: "Windows Media Player", grp: "top", mb: 12.4 },
+    { id: "amp", n: "Winamp", grp: "top", mb: 2.9 },
+  ];
+  const GRPS = { acc: "Accessories", games: "Games", top: "" };
+  function removedApps() { return (store.data.removedApps = store.data.removedApps || []); }
+  const installed = id => removedApps().indexOf(id) < 0;
+  function setInstalled(id, on) {
+    const r = removedApps();
+    const i = r.indexOf(id);
+    if (on && i >= 0) r.splice(i, 1);
+    if (!on && i < 0) r.push(id);
+    store.save();
+    hooks.shellRefresh();
+  }
+
+  /* the programs page: real sizes where we know them, real usage from the shell */
+  const PROGRAMS = [
+    { id: "cursors", n: "CURSORS.EXE", win: "win-cursors", ico: "@ic-app", mb: 1.2, pub: "the house",
+      lock: "CURSORS.EXE is installed and updated by the server. It cannot be removed from this computer." },
+    { id: "ie", n: "Internet Explorer 6 SP1", win: "win-ie", ico: "ie32", mb: 14.7, pub: "Microsoft Corporation",
+      lock: "Internet Explorer is required by CURSORS.EXE and cannot be removed." },
+    { id: "chat", n: "Windows Messenger 4.7", win: "win-chat", ico: "msn32", mb: 4.6, pub: "Microsoft Corporation" },
+    { id: "wmp", n: "Windows Media Player 9 Series", win: "win-wmp", ico: "wmp32", mb: 12.4, pub: "Microsoft Corporation" },
+    { id: "amp", n: "Winamp 2.95", win: "win-amp", ico: "amp16", mb: 2.9, pub: "Nullsoft" },
+    { id: "paint", n: "Paint", win: "win-paint", ico: "paint32", mb: 0.4, pub: "Microsoft Corporation" },
+  ];
+  let awPage = "remove", awSel = null;
+  function openAddRemove(page) {
+    awPage = page || "remove"; awSel = null;
+    awRender();
+    openWin("win-appwiz");
+  }
+  function awRender() {
+    const side = $("#aw-side"), main = $("#aw-main");
+    if (!side) return;
+    side.innerHTML = ""; main.innerHTML = "";
+    const PAGES = [["remove", "Change or", "Remove Programs", "@ic-cpl"],
+      ["add", "Add New", "Programs", "@ic-app"],
+      ["comp", "Add/Remove", "Windows Components", "computer32"],
+      ["access", "Set Program Access and", "Defaults", "@ic-check"]];
+    for (const [id, l1, l2, ico] of PAGES) {
+      const b = el("div", "aw-tab" + (awPage === id ? " on" : ""));
+      const ic = deps.icoNode(ico); ic.classList.add("aw-tico");
+      b.appendChild(ic);
+      const t = el("div", "aw-tt");
+      t.appendChild(el("div", null, l1));
+      t.appendChild(el("div", "b", l2));
+      b.appendChild(t);
+      b.addEventListener("click", () => { awPage = id; awSel = null; sysSnd("nav", .35); awRender(); });
+      side.appendChild(b);
+    }
+    if (awPage === "remove") awProgramsPage(main);
+    else if (awPage === "add") awAddPage(main);
+    else if (awPage === "comp") awComponentsPage(main);
+    else awAccessPage(main);
+  }
+  const FREQ = n => n >= 12 ? ["Frequently", 3] : n >= 4 ? ["Occasionally", 2] : n > 0 ? ["Rarely", 1] : ["", 0];
+  function awProgramsPage(main) {
+    main.appendChild(el("div", "aw-head", "Currently installed programs:"));
+    const box = el("div", "aw-list");
+    const use = hooks.usage();
+    for (const p of PROGRAMS) {
+      if (!installed(p.id) && !p.lock) continue;
+      const u = use[p.win] || { n: 0, last: 0 };
+      const freq = FREQ(u.n);
+      const row = el("div", "aw-row" + (awSel === p ? " on" : ""));
+      const top = el("div", "aw-rowtop");
+      const ic = deps.icoNode(p.ico);
+      ic.classList.add("aw-ico");
+      top.appendChild(ic);
+      top.appendChild(el("span", "aw-name", p.n));
+      top.appendChild(el("span", "aw-size", p.mb.toFixed(2) + " MB"));
+      row.appendChild(top);
+      if (awSel === p) {
+        const det = el("div", "aw-det");
+        det.appendChild(el("div", "aw-detline", "Publisher: " + p.pub));
+        const uline = el("div", "aw-detline");
+        uline.appendChild(el("span", null, "Used "));
+        uline.appendChild(bars(freq[1]));
+        uline.appendChild(el("span", null, " " + (freq[0] || "never") +
+          (u.n ? "  (" + u.n + " time" + (u.n === 1 ? "" : "s") + " on this computer)" : "")));
+        det.appendChild(uline);
+        det.appendChild(el("div", "aw-detline", "Last Used On: " + (u.last ? dateStr(u.last) : "never")));
+        const bs = el("div", "aw-btns");
+        bs.appendChild(btn("Change", () => showError(p.n, p.lock ||
+          "This program has no settings that live outside the program itself."), 74));
+        bs.appendChild(btn("Remove", () => awRemove(p), 74));
+        det.appendChild(bs);
+        row.appendChild(det);
+      } else {
+        const sub = el("div", "aw-rowsub");
+        sub.appendChild(el("span", null, "Size"));
+        sub.appendChild(el("span", "b", p.mb.toFixed(2) + " MB"));
+        sub.appendChild(bars(freq[1]));
+        sub.appendChild(el("span", null, freq[0]));
+        row.appendChild(sub);
+      }
+      row.addEventListener("click", () => { awSel = awSel === p ? null : p; awRender(); });
+      box.appendChild(row);
+    }
+    main.appendChild(box);
+    const total = PROGRAMS.filter(p => installed(p.id) || p.lock).reduce((s, p) => s + p.mb, 0);
+    main.appendChild(el("div", "aw-foot", "Total size of installed programs: " + total.toFixed(1) + " MB"));
+  }
+  function bars(n) {
+    const b = el("span", "aw-bars");
+    for (let i = 0; i < 3; i++) b.appendChild(el("i", i < n ? "on" : null));
+    return b;
+  }
+  function awRemove(p) {
+    if (p.lock) { showError("Add or Remove Programs", p.lock); return; }
+    showConfirm("Add or Remove Programs",
+      "Are you sure you want to remove " + p.n + " from your computer?", () => {
+        point("Removed " + p.n, "auto");
+        awProgress("Removing " + p.n + "...", () => {
+          setInstalled(p.id, false);
+          awSel = null; awRender();
+          showError("Add or Remove Programs",
+            p.n + " has been removed from this computer. Add/Remove Windows Components puts it back.");
+        });
+      });
+  }
+  /* the little progress dialog both pages share */
+  function awProgress(text, then) {
+    $("#awp-text").textContent = text;
+    const fill = $("#awp-bar");
+    fill.style.width = "0%";
+    openWin("win-awprog");
+    let i = 0;
+    const t = setInterval(() => {
+      i += 12 + Math.round(i / 6);
+      fill.style.width = Math.min(100, i) + "%";
+      if (i >= 100) { clearInterval(t); setTimeout(() => { closeWin("win-awprog"); then(); }, 260); }
+    }, 130);
+  }
+  function awAddPage(main) {
+    main.appendChild(el("div", "aw-head", "Add a program from CD-ROM or floppy disk"));
+    const b1 = el("div", "aw-panel");
+    b1.appendChild(el("div", "small", "To add a program from a CD-ROM or floppy disk, click CD or Floppy."));
+    b1.appendChild(btn("CD or Floppy", () => showError("Install Program From Floppy Disk or CD-ROM",
+      "Windows was unable to locate a setup program. There is no disc in drive D:."), 104));
+    main.appendChild(b1);
+    main.appendChild(el("div", "aw-head", "Add programs from Microsoft"));
+    const b2 = el("div", "aw-panel");
+    b2.appendChild(el("div", "small", "To add new Windows features, device drivers, and system updates over the Internet, click Windows Update."));
+    b2.appendChild(btn("Windows Update", () => hooks.windowsUpdate(), 116));
+    main.appendChild(b2);
+    const gone = COMPONENTS.filter(c => !installed(c.id));
+    if (gone.length) {
+      main.appendChild(el("div", "aw-head", "Removed from this computer"));
+      const b3 = el("div", "aw-panel");
+      b3.appendChild(el("div", "small", gone.map(c => c.n).join(", ") + "."));
+      b3.appendChild(btn("Add/Remove Windows Components", () => { awPage = "comp"; awRender(); }, 190));
+      main.appendChild(b3);
+    }
+  }
+  function awComponentsPage(main) {
+    main.appendChild(el("div", "aw-head", "Windows Components"));
+    main.appendChild(el("div", "small", "To add or remove a component, click the check box. A cleared box means the component is not installed on this computer."));
+    const box = el("div", "aw-complist");
+    const line = (name, on, mb, fn, note, indent) => {
+      const row = el("label", "aw-comprow" + (indent ? " indent" : ""));
+      const c = el("input"); c.type = "checkbox"; c.checked = on;
+      if (!fn) c.disabled = true;
+      c.addEventListener("change", () => fn && fn(c.checked));
+      row.appendChild(c);
+      row.appendChild(el("span", "aw-compn", name));
+      row.appendChild(el("span", "aw-compsz", mb.toFixed(1) + " MB"));
+      box.appendChild(row);
+      if (note) box.appendChild(el("div", "mc-note", note));
+    };
+    for (const g of ["acc", "games"]) {
+      const list = COMPONENTS.filter(c => c.grp === g);
+      const on = list.filter(c => installed(c.id)).length;
+      box.appendChild(el("div", "aw-compgroup", GRPS[g] + "   (" + on + " of " + list.length + " installed)"));
+      for (const c of list) line(c.n, installed(c.id), c.mb, v => toggleComponent(c, v), null, 1);
+    }
+    box.appendChild(el("div", "aw-compgroup", "Programs"));
+    for (const c of COMPONENTS.filter(x => x.grp === "top"))
+      line(c.n, installed(c.id), c.mb, v => toggleComponent(c, v), null, 1);
+    line("Internet Explorer", true, 14.7, null, "Required by CURSORS.EXE, which watches television through it.", 1);
+    line("CURSORS.EXE", true, 1.2, null, "Installed by the server.", 1);
+    main.appendChild(box);
+    const used = COMPONENTS.filter(c => installed(c.id)).reduce((s, c) => s + c.mb, 0) + 15.9;
+    main.appendChild(el("div", "aw-foot", "Total disk space required: " + used.toFixed(1) +
+      " MB       Space available on disk: " + fmtBytes(hooks.freeBytes())));
+  }
+  function toggleComponent(c, on) {
+    point((on ? "Installed " : "Removed ") + c.n, "auto");
+    awProgress((on ? "Installing " : "Removing ") + c.n + "...", () => { setInstalled(c.id, on); awRender(); });
+  }
+  function awAccessPage(main) {
+    main.appendChild(el("div", "aw-head", "Choose a configuration:"));
+    const p = el("div", "aw-panel");
+    for (const [name, note] of [
+      ["Microsoft Windows", "Uses Windows Media Player, and shows access to it."],
+      ["Non-Microsoft", "Uses Winamp for music, and hides access to Windows Media Player."],
+      ["Custom", "Choose one program for each activity. There is one activity on this computer and it is music."]]) {
+      const lab = el("label", "mc-radio");
+      const r = el("input"); r.type = "radio"; r.name = "awaccess";
+      r.checked = (store.data.awAccess || "Microsoft Windows") === name;
+      r.addEventListener("change", () => { store.data.awAccess = name; store.save(); awApplyAccess(); awRender(); });
+      lab.appendChild(r); lab.appendChild(el("span", null, name));
+      p.appendChild(lab);
+      p.appendChild(el("div", "mc-note", note));
+    }
+    main.appendChild(p);
+  }
+  /* the one thing this page ever really did: hide a player */
+  function awApplyAccess() {
+    const mode = store.data.awAccess || "Microsoft Windows";
+    if (mode === "Non-Microsoft") setInstalled("wmp", false);
+    else if (mode === "Microsoft Windows") setInstalled("wmp", true);
+  }
+
+  /* ================================================================
+     7. the Fonts folder, and the preview window
+     ================================================================ */
+  /* Only fonts this computer can actually render are listed. The check is a
+     measurement, not a list: a missing font falls back and measures the same
+     as the fallback. */
+  const FONT_CANDIDATES = [
+    ["Arial", "arial.ttf"], ["Arial Black", "ariblk.ttf"], ["Comic Sans MS", "comic.ttf"],
+    ["Courier New", "cour.ttf"], ["Franklin Gothic Medium", "framd.ttf"], ["Georgia", "georgia.ttf"],
+    ["Impact", "impact.ttf"], ["Lucida Console", "lucon.ttf"], ["Lucida Sans Unicode", "l_10646.ttf"],
+    ["Marlett", "marlett.ttf"], ["Microsoft Sans Serif", "micross.ttf"], ["Palatino Linotype", "pala.ttf"],
+    ["Segoe UI", "segoeui.ttf"], ["Sylfaen", "sylfaen.ttf"], ["Symbol", "symbol.ttf"],
+    ["Tahoma", "tahoma.ttf"], ["Times New Roman", "times.ttf"], ["Trebuchet MS", "trebuc.ttf"],
+    ["Verdana", "verdana.ttf"], ["Webdings", "webdings.ttf"], ["Wingdings", "wingding.ttf"],
+  ];
+  let fontList = null;
+  function haveFont(name) {
+    const cv = document.createElement("canvas").getContext("2d");
+    const probe = "mmmmmmmmmmlliWWWW0Ogq";
+    for (const fallback of ["monospace", "serif"]) {
+      cv.font = "36px " + fallback;
+      const base = cv.measureText(probe).width;
+      cv.font = '36px "' + name + '", ' + fallback;
+      if (cv.measureText(probe).width !== base) return true;
+    }
+    return false;
+  }
+  function fonts() {
+    if (fontList) return fontList;
+    fontList = FONT_CANDIDATES.filter(f => haveFont(f[0]))
+      .map(([n, file]) => ({ n, file, kb: 40 + (n.length * 17 + file.length * 31) % 340 }));
+    return fontList;
+  }
+  function openFonts() {
+    const host = $("#fnt-list"); if (!host) return;
+    host.innerHTML = "";
+    for (const f of fonts()) {
+      const it = el("div", "fnt-item");
+      const g = el("div", "fnt-glyph", "A");
+      g.style.fontFamily = '"' + f.n + '"';
+      it.appendChild(g);
+      it.appendChild(el("div", "fnt-name", f.n + " (TrueType)"));
+      it.addEventListener("dblclick", () => openFontView(f));
+      it.addEventListener("click", () => {
+        for (const o of host.children) o.classList.remove("on");
+        it.classList.add("on");
+        $("#fnt-status").textContent = f.n + " (TrueType)   " + f.kb + " KB   " + f.file;
+      });
+      host.appendChild(it);
+    }
+    $("#fnt-status").textContent = fonts().length + " objects";
+    openWin("win-fonts");
+  }
+  function openFontView(f) {
+    const host = $("#fv-body"); if (!host) return;
+    host.innerHTML = "";
+    $("#win-fontview .title-bar-text").textContent = f.n + " (TrueType)";
+    const fam = '"' + f.n + '"';
+    const h = el("div", "fv-head");
+    h.appendChild(el("div", "fv-name", f.n + " (TrueType)"));
+    h.appendChild(el("div", "small", "Typeface name: " + f.n));
+    h.appendChild(el("div", "small", "File size: " + f.kb + " KB   File name: " + f.file));
+    h.appendChild(el("div", "small", "Version: 2.90"));
+    host.appendChild(h);
+    for (const line of ["abcdefghijklmnopqrstuvwxyz", "ABCDEFGHIJKLMNOPQRSTUVWXYZ", "1234567890.:,;(*!?)+-=/"]) {
+      const d = el("div", "fv-abc", line);
+      d.style.fontFamily = fam;
+      host.appendChild(d);
+    }
+    host.appendChild(el("div", "fv-rule"));
+    for (const size of [12, 18, 24, 36, 48, 60, 72]) {
+      const line = el("div", "fv-line", size + "  The quick brown fox jumps over the lazy dog. 0.097");
+      line.style.fontFamily = fam;
+      line.style.fontSize = size + "px";
+      host.appendChild(line);
+    }
+    openWin("win-fontview");
+  }
+
+  /* ================================================================
+     8. the ClearType tuner
+     ================================================================ */
+  function ctApply() {
+    const m = store.data.ctMode || "standard";
+    document.body.classList.toggle("ct-on", m === "cleartype");
+    document.body.classList.toggle("ct-off", m === "none");
+  }
+  function openClearType() {
+    const host = $("#ct-body"); if (!host) return;
+    host.innerHTML = "";
+    host.appendChild(el("div", "sr-p", "ClearType smooths the edges of screen fonts. It was written for flat panels. This computer has a tube, so the setting is yours to pick."));
+    const cur = store.data.ctMode || "standard";
+    for (const [id, label] of [["standard", "Standard smoothing"], ["cleartype", "ClearType"],
+                               ["none", "No smoothing"]]) {
+      const lab = el("label", "mc-radio");
+      const r = el("input"); r.type = "radio"; r.name = "ctmode"; r.checked = cur === id;
+      r.addEventListener("change", () => {
+        store.data.ctMode = id; store.save(); ctApply(); sysSnd("nav", .35);
+      });
+      lab.appendChild(r); lab.appendChild(el("span", null, label));
+      host.appendChild(lab);
+      const sample = el("div", "ct-sample " + (id === "cleartype" ? "ct-on" : id === "none" ? "ct-off" : ""),
+        "The quick brown fox jumps over the lazy dog");
+      host.appendChild(sample);
+    }
+  }
+
+  /* ================================================================
+     9. wiring
      ================================================================ */
   function init() {
     /* the tabs are shell-standard; only the panes are ours */
@@ -728,11 +1127,17 @@ export function initSysMaint(deps) {
     if (hlp) hlp.addEventListener("click", () => showError("System Configuration Utility",
       "This utility changes how this computer starts. Everything it touches is on this computer. The arena, the ledger and your balance start with the server and cannot be unchecked from here."));
     for (const [id, fn] of [["fo-ok", () => closeWin("win-foldopt")], ["fo-cancel", () => closeWin("win-foldopt")],
-                            ["fo-apply", () => { foApply(); sysSnd("nav", .4); }]]) {
+                            ["fo-apply", () => { foApply(); sysSnd("nav", .4); }],
+                            ["bp-ok", () => { store.save(); closeWin("win-binprops"); }],
+                            ["bp-cancel", () => closeWin("win-binprops")],
+                            ["ct-ok", () => closeWin("win-cleartype")],
+                            ["fv-done", () => closeWin("win-fontview")],
+                            ["fv-print", () => showError("Print", "There is no printer installed on this computer.")]]) {
       const b = $("#" + id);
       if (b) b.addEventListener("click", fn);
     }
     applyStartup();
+    ctApply();
     /* the day's System Checkpoint belongs to the boot, not to the logon */
     dailyCheckpoint();
   }
@@ -741,6 +1146,8 @@ export function initSysMaint(deps) {
     init, openRestore, openMsconfig, openFolderOptions,
     point, dailyCheckpoint, maybeNag,
     startupOn, applyStartup, bootIniText,
+    openBinProps, binOpt, openAddRemove, openFonts, openClearType,
+    installed, ctApply,
     /* the boot screen asks how long to sit there */
     bootWaitMs: () => Math.max(900, Math.min(99, mc().boot.timeout | 0) * 143),
     verboseBoot: () => !!mc().boot.sos,

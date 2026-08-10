@@ -494,9 +494,36 @@ Verified by CDP probe on the built dist: a manual point taken, the wallpaper set
 point recorded; the startup list unchecked, restarted, and the tray icons gone on the
 other side; the nag on the boot after that.
 
-**Still open in Phase 12**: Task Manager's menubar (File/Options/View/Shut Down),
-Scheduled Tasks, the Fonts folder, Recycle Bin Properties, Add or Remove Programs,
-ClearType tuner, Accessibility (Magnifier and On-Screen Keyboard).
+**Second pass** — Add or Remove Programs, the Fonts folder, Recycle Bin Properties,
+the ClearType tuner, and Task Manager's menubar. Also in `src/sysmaint.js`.
+
+- **Add or Remove Programs** (`appwiz.cpl`, or the Control Panel): all four pages.
+  Change or Remove Programs lists what is installed with real sizes, and the usage
+  column is real — the shell counts every window it opens, so "Frequently / Occasionally
+  / Rarely" and "Last Used On" come off this computer's own history. Removing a program
+  really removes it: the desktop shortcut, the All Programs entry, the Quick Launch
+  button and the Run name all go, and the Run box gives XP's "Windows cannot find" for
+  it afterwards. Add/Remove Windows Components puts any of it back. CURSORS.EXE and
+  Internet Explorer refuse, and say why. Every install and removal takes a restore point
+  first, so System Restore can undo a spree.
+- **The Fonts folder** (`fonts`, Control Panel, or `C:\WINDOWS\Fonts` in Explorer):
+  lists only fonts this computer can actually render — the check is a text measurement
+  against two fallbacks, not a hardcoded list — and double-clicking one opens XP's
+  preview window with the alphabets and the pangram at 12 through 72.
+- **Recycle Bin Properties** (right-click the bin): the per-drive slider reads the real
+  disk size, and both switches work. "Do not move files to the Recycle Bin" deletes
+  immediately; "Display delete confirmation dialog" is XP's default and now really
+  guards a delete. A dead cursor still goes to the bin either way: that is the disk
+  writing a corpse, not a file operation.
+- **ClearType tuner** (`cttune`): Standard / ClearType / No smoothing, applied to the
+  whole shell. No smoothing is the aliased 1998 look and it is worth seeing once.
+- **Task Manager's menubar** is no longer five dead words: File > New Task runs the Run
+  box, Options > Always On Top and Minimize On Use work, View > Update Speed really is
+  the refresh interval (Paused pauses it, and the tray meter stops lying), and Shut Down
+  routes to the real stand-by, restart, turn-off and log-off flows.
+
+**Still open in Phase 12**: Scheduled Tasks, and Accessibility (Magnifier and the
+On-Screen Keyboard, which should type into the focused window).
 
 ## Phase 13 — the mobile pass (unchanged, still last)
 

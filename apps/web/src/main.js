@@ -374,6 +374,10 @@ function openWin(id,opts){
   el.style.display="flex";
   if(!was){
     openApps.set(id,{el,min:false,notab:NOTAB.has(id),icon:tabIconHTML(id)});
+    /* Add or Remove Programs reports what you actually used, so count it */
+    const uc=store.data.useCount=store.data.useCount||{};
+    const ul=store.data.useLast=store.data.useLast||{};
+    uc[id]=(uc[id]||0)+1; ul[id]=Date.now(); store.save();
     if(id==="win-chat"&&!opts.silent) sysSnd("msnOnline",.5);
   }
   else if(openApps.get(id).min){ restoreWin(id); return; }
@@ -625,6 +629,8 @@ function allIcons(){
   let a=SYSICONS.concat(store.data.userIcons);
   /* Group Policy, applied where the icons are built rather than after */
   if(sys&&sys.policyOn("nobin")) a=a.filter(i=>i.id!=="recycle");
+  /* Add or Remove Programs really removes the shortcut */
+  try{ a=a.filter(i=>!i.sys||maint.installed(i.id)); }catch(e){}
   return a;
 }
 function iconById(id){ return allIcons().find(i=>i.id===id); }
@@ -815,9 +821,22 @@ function startRename(ic){
   inp.addEventListener("pointerdown",e=>e.stopPropagation());
 }
 function deleteIcon(ic){
+  /* Recycle Bin Properties decides whether this asks first and whether the
+     bin is even involved — both switches are that dialog's, and both are real */
+  const nobin=maint.binOpt("nobin"), ask=maint.binOpt("confirm");
+  if(ask){
+    showConfirm(nobin?"Confirm File Delete":"Confirm File Delete",
+      nobin?`Are you sure you want to permanently delete '${ic.label}'?`
+           :`Are you sure you want to send '${ic.label}' to the Recycle Bin?`,
+      ()=>reallyDelete(ic,nobin));
+    return;
+  }
+  reallyDelete(ic,nobin);
+}
+function reallyDelete(ic,nobin){
   /* the whole icon goes in the bin, not just its name — otherwise Restore
      has nothing to put back, and a Recycle Bin that cannot restore is a joke */
-  binFiles.unshift(Object.assign({},ic));
+  if(!nobin) binFiles.unshift(Object.assign({},ic));
   store.data.userIcons=store.data.userIcons.filter(u=>u.id!==ic.id);
   delete store.data.icons[ic.id];
   store.save(); renderBin(); renderIcons(); sCrunch();
@@ -1319,7 +1338,7 @@ function iconMenu(ic){
     items.push({label:"Delete",action:()=>deleteIcon(ic)});
     items.push({label:"Rename",action:()=>startRename(ic)});
   }
-  items.push({sep:1},{label:"Properties",action:()=>showProps(ic)});
+  items.push({sep:1},{label:"Properties",action:()=>ic.id==="recycle"?maint.openBinProps():showProps(ic)});
   return items;
 }
 /* Move and Size drive the window with the arrow keys, exactly like Alt+Space M did */
@@ -1522,6 +1541,7 @@ $$(".menubar span").forEach(m=>m.addEventListener("click",e=>{
   if(win.id==="win-sndvol"){ snd.mixerMenu(m.textContent,r.left,r.bottom+2); return; }
   if(win.id==="win-sndrec"){ snd.recorderMenu(m.textContent,r.left,r.bottom+2); return; }
   if(win.id==="win-explorer"){ explorer.menu(m.textContent,r.left,r.bottom+2); return; }
+  if(win.id==="win-taskmgr"){ tmMenu(m.textContent,r.left,r.bottom+2); return; }
   if(win.id==="win-ie"){ ie.menu(m.textContent,r.left,r.bottom+2); return; }
   showMenu(menubarMenu(m.textContent,win.id),r.left,r.bottom+2);
 }));
@@ -1687,6 +1707,17 @@ const maint=initSysMaint({$,store,sysSnd,showError,showConfirm,openWin,closeWin,
     cosmeticApplying=false;
   },
   applyStartup:on=>applyStartupItems(on),
+  diskBytes:()=>diskPct().total,
+  freeBytes:()=>{ const d=diskPct(); return Math.max(0,d.total-Math.round(d.total*d.pct/100)); },
+  usage(){
+    const c=store.data.useCount||{}, l=store.data.useLast||{}, out={};
+    for(const k in c) out[k]={n:c[k],last:l[k]||0};
+    return out;
+  },
+  /* a program that was just installed or removed changes the desktop, the
+     menus and the quick launch bar all at once */
+  shellRefresh(){ renderIcons(); syncQuickLaunch(); renderMru(); },
+  windowsUpdate(){ openWin("win-ie"); if(ie) ie.go("http://windowsupdate.microsoft.com/"); },
   services:()=>sys.services(),
   setService:(name,on)=>sys.svcSet(name,on),
   folderOptions(){ try{ explorer.render(); }catch(e){} },
@@ -1698,9 +1729,17 @@ const maint=initSysMaint({$,store,sysSnd,showError,showConfirm,openWin,closeWin,
 }});
 maint.init();
 /* the Startup tab is not decoration: unchecking one of these really stops it */
+/* Quick Launch shows only what is installed and what startup left running */
+function syncQuickLaunch(){
+  const amp=$('#ql [data-app="win-amp"]'), chat=$('#ql [data-app="win-chat"]');
+  try{
+    if(amp) amp.style.display=(maint.installed("amp")&&maint.startupOn("winampa"))?"":"none";
+    if(chat) chat.style.display=maint.installed("chat")?"":"none";
+  }catch(e){}
+}
 function applyStartupItems(on){
   msnAuto=on("msmsgs");
-  const amp=$('#ql [data-app="win-amp"]'); if(amp) amp.style.display=on("winampa")?"":"none";
+  syncQuickLaunch();
   $("#sndico").style.display=on("soundman")?"":"none";
   $("#phasechip").style.display=on("cursors")?"":"none";
 }
@@ -1742,6 +1781,7 @@ const explorer=initExplorer({
     openRegedit:()=>depth.openRegedit(),
     folderOptions:()=>maint.openFolderOptions(),
     bootIni:()=>maint.bootIniText(),
+    openFonts:()=>maint.openFonts(),
     ieFavs:()=>store.data.ieFavs||[],
     deadCount:()=>binDead.length,
     serverDisk:()=>{ if(!MP.on||!MP.disk) return {
@@ -2087,13 +2127,16 @@ addEventListener("keydown",e=>{
 });
 function allProgramsMenu(){
   const go=id=>()=>{ closeStart(); sysSnd("nav",.5); openWin(id); };
+  /* Add or Remove Programs took it off the disk, so it is off the menu too */
+  const has=id=>{ try{ return maint.installed(id); }catch(e){ return true; } };
+  const only=(id,item)=>has(id)?[item]:[];
   return [
     {label:"CURSORS.EXE",bold:1,action:go("win-cursors")},
     {label:"Internet Explorer",action:go("win-ie")},
-    {label:"Windows Messenger",action:go("win-chat")},
-    {label:"Winamp",action:go("win-amp")},
+    ...only("chat",{label:"Windows Messenger",action:go("win-chat")}),
+    ...only("amp",{label:"Winamp",action:go("win-amp")}),
     {sep:1},
-    {label:"Windows Media Player",action:()=>{ closeStart(); smAction("wmp"); }},
+    ...only("wmp",{label:"Windows Media Player",action:()=>{ closeStart(); smAction("wmp"); }}),
     {sep:1},
     {label:"Accessories",sub:[
       {label:"Accessibility",sub:[
@@ -2105,27 +2148,29 @@ function allProgramsMenu(){
         {label:"Disk Defragmenter",action:()=>{ closeStart(); depth.openDefrag(); }},
         {label:"System Restore",action:()=>{ closeStart(); maint.openRestore(); }},
         {label:"System Information",action:()=>{ closeStart(); $("#sp-user").textContent=playerNameFull(); openWin("win-sysprops"); }},
-        {label:"Character Map",action:()=>{ closeStart(); depth.openCharmap(); }}]},
+        {label:"Character Map",action:()=>{ closeStart(); depth.openCharmap(); }},
+        {label:"Fonts",action:()=>{ closeStart(); maint.openFonts(); }}]},
       {label:"Entertainment",sub:[
-        {label:"Sound Recorder",action:()=>{ closeStart(); snd.openRecorder(); }},
+        ...only("sndrec",{label:"Sound Recorder",action:()=>{ closeStart(); snd.openRecorder(); }}),
         {label:"Volume Control",action:()=>{ closeStart(); snd.openMixer(); }},
-        {label:"Windows Media Player",action:()=>{ closeStart(); snd.openWmp(); }}]},
+        ...only("wmp",{label:"Windows Media Player",action:()=>{ closeStart(); snd.openWmp(); }})]},
       {sep:1},
-      {label:"Notepad",action:()=>{ closeStart(); write.openNotepad(null); }},
-      {label:"WordPad",action:()=>{ closeStart(); write.openWordpad(null); }},
-      {label:"Paint",action:go("win-paint")},
-      {label:"Calculator",action:()=>{ closeStart(); depth.openCalc(); }},
+      ...only("notepad",{label:"Notepad",action:()=>{ closeStart(); write.openNotepad(null); }}),
+      ...only("wordpad",{label:"WordPad",action:()=>{ closeStart(); write.openWordpad(null); }}),
+      ...only("paint",{label:"Paint",action:go("win-paint")}),
+      ...only("calc",{label:"Calculator",action:()=>{ closeStart(); depth.openCalc(); }}),
       {label:"Command Prompt",action:go("win-cmd")}]},
     {label:"Administrative Tools",sub:[
       {label:"Services",action:go("win-services")},
       {label:"Device Manager",action:go("win-devmgr")},
       {label:"Group Policy",action:go("win-gpedit")},
       {label:"System Configuration Utility",action:()=>{ closeStart(); maint.openMsconfig(); }},
+      {label:"Add or Remove Programs",action:()=>{ closeStart(); maint.openAddRemove(); }},
       {sep:1},
       {label:"Control Panel",action:go("win-control")}]},
     {label:"Games",sub:[
-      {label:"Minesweeper",action:go("win-mine")},
-      {label:"Solitaire",action:()=>{ closeStart(); solitaireOpen(); }},
+      ...only("mine",{label:"Minesweeper",action:go("win-mine")}),
+      ...only("solitaire",{label:"Solitaire",action:()=>{ closeStart(); solitaireOpen(); }}),
       {label:"FreeCell",disabled:1},
       {label:"Hearts",disabled:1},
       {label:"Pinball",disabled:1}]},
@@ -2191,8 +2236,20 @@ const RUNMAP={
   "rstrui":"win-restore","rstrui.exe":"win-restore",
 };
 /* one resolver for the Run box, cmd's START and Control Panel's applets */
+/* one table maps a Run name to the component that owns it */
+const RUNOWNER={ "calc":"calc","calc.exe":"calc","notepad":"notepad","notepad.exe":"notepad",
+  "mspaint":"paint","mspaint.exe":"paint","paint":"paint","pbrush":"paint",
+  "sndrec32":"sndrec","sndrec32.exe":"sndrec","wordpad":"wordpad","wordpad.exe":"wordpad",
+  "write":"wordpad","write.exe":"wordpad","winmine":"mine","winmine.exe":"mine",
+  "sol":"solitaire","sol.exe":"solitaire","solitaire":"solitaire",
+  "msnmsgr":"chat","msmsgs":"chat","wmplayer":"wmp","wmplayer.exe":"wmp",
+  "winamp":"amp","winamp.exe":"amp" };
 function runNamed(k){
   k=String(k||"").trim().toLowerCase().replace(/^"|"$/g,"");
+  if(RUNOWNER[k]&&!maint.installed(RUNOWNER[k])){
+    showError("Run","Windows cannot find '"+k+"'. Make sure you typed the name correctly, and then try again."+"\n\n"+"It was removed with Add or Remove Programs.");
+    return true;
+  }
   if(k==="control"){ openWin("win-control"); return true; }
   if(k==="dfrg.msc"||k==="defrag"||k==="defrag.exe"){ depth.openDefrag(); return true; }
   if(k==="main.cpl"){ mouse.open(); return true; }
@@ -2201,6 +2258,9 @@ function runNamed(k){
   if(k==="clipbrd"||k==="clipbrd.exe"){ write.openClipbook(); return true; }
   if(k==="sol"||k==="sol.exe"||k==="solitaire"){ solitaireOpen(); return true; }
   if(k==="msconfig"||k==="msconfig.exe"){ maint.openMsconfig(); return true; }
+  if(k==="appwiz.cpl"||k==="add or remove programs"){ maint.openAddRemove(); return true; }
+  if(k==="fonts"||k==="control fonts"){ maint.openFonts(); return true; }
+  if(k==="cttune"||k==="cttune.exe"||k==="cleartype"){ maint.openClearType(); return true; }
   if(k==="rstrui"||k==="rstrui.exe"||k==="system restore"){ maint.openRestore(); return true; }
   if(k==="control folders"||k==="folders"||k==="folder options"){ maint.openFolderOptions(); return true; }
   if(k==="sndvol32"||k==="sndvol32.exe"||k==="sndvol"){ snd.openMixer(); return true; }
@@ -2618,7 +2678,15 @@ function tmGraph(cv,hist,color){
   });
   g.stroke();
 }
-setInterval(()=>{
+/* View > Update Speed is real: it is this interval. Paused means paused. */
+const TM_SPEED={high:350,normal:700,low:2800,paused:0};
+let tmSpeed=store.data.tmSpeed||"normal", tmTimer=null;
+function tmSetSpeed(k){
+  tmSpeed=k; store.data.tmSpeed=k; store.save();
+  clearInterval(tmTimer); tmTimer=null;
+  if(TM_SPEED[k]) tmTimer=setInterval(tmTick,TM_SPEED[k]);
+}
+function tmTick(){
   duelPulse=Math.max(0,duelPulse-.34);
   const open=$("#win-taskmgr").style.display==="flex";
   $("#tray-cpu").style.display=open?"flex":"none";
@@ -2680,7 +2748,68 @@ setInterval(()=>{
   }
   if($("#tm-users").classList.contains("on")) $("#tm-user1").textContent=playerNameFull();
   $("#tmfoot").textContent=`Processes: ${TMPROCS.length} · CPU Usage: ${cpu}% · Commit Charge: ${tmHeapMB()}M`;
-},700);
+}
+tmSetSpeed(tmSpeed);
+/* the tray meter follows the window, not the update speed — View > Paused
+   pauses the numbers, it does not leave a dead meter in the notification area */
+setInterval(()=>{
+  const open=$("#win-taskmgr").style.display==="flex";
+  $("#tray-cpu").style.display=open?"flex":"none";
+},1200);
+/* the menubar Task Manager has carried, unread, since 2001 */
+function tmOpt(k){ return !!(store.data.tmOpts||{})[k]; }
+function tmSetOpt(k,v){
+  const o=store.data.tmOpts=store.data.tmOpts||{};
+  o[k]=v?1:0; store.save();
+  if(k==="ontop") $("#win-taskmgr").classList.toggle("always-on-top",!!v);
+}
+function tmMenu(label,x,y){
+  if(label==="File") return showMenu([
+    {label:"New Task (Run...)",action:()=>{ openWin("win-run"); setTimeout(()=>$("#run-in").focus(),60); }},
+    {sep:1},
+    {label:"Exit Task Manager",action:()=>closeWin("win-taskmgr")},
+  ],x,y);
+  if(label==="Options") return showMenu([
+    {label:"Always On Top",check:tmOpt("ontop"),action:()=>tmSetOpt("ontop",!tmOpt("ontop"))},
+    {label:"Minimize On Use",check:tmOpt("minuse"),action:()=>tmSetOpt("minuse",!tmOpt("minuse"))},
+    {label:"Hide When Minimized",check:tmOpt("hidemin"),action:()=>tmSetOpt("hidemin",!tmOpt("hidemin"))},
+    {label:"Show 16-bit tasks",check:1,disabled:1},
+  ],x,y);
+  if(label==="View") return showMenu([
+    {label:"Refresh Now",accel:"F5",action:()=>{ tmTick(); sysSnd("nav",.35); }},
+    {label:"Update Speed",sub:[
+      {label:"High",check:tmSpeed==="high",action:()=>tmSetSpeed("high")},
+      {label:"Normal",check:tmSpeed==="normal",action:()=>tmSetSpeed("normal")},
+      {label:"Low",check:tmSpeed==="low",action:()=>tmSetSpeed("low")},
+      {label:"Paused",check:tmSpeed==="paused",action:()=>tmSetSpeed("paused")},
+    ]},
+    {sep:1},
+    {label:"Select Columns...",action:()=>showError("Select Columns",
+      "The columns on this computer are the columns it has. There is one process list and it is already showing all of it.")},
+  ],x,y);
+  if(label==="Shut Down") return showMenu([
+    {label:"Stand by",action:()=>{ startSaver(store.data.saver.t==="none"?"pipes":store.data.saver.t); }},
+    {label:"Hibernate",action:()=>showError("Task Manager","Hibernation is not enabled on this computer. The disk is busy holding corpses.")},
+    {sep:1},
+    {label:"Turn Off",action:()=>{ closeWin("win-taskmgr"); sysSnd("shutdown",.55); $("#shutdown").style.display="grid"; }},
+    {label:"Restart",action:()=>{ closeWin("win-taskmgr"); sysSnd("shutdown",.55);
+      const sd=$("#shutdown"); sd.style.display="grid";
+      setTimeout(()=>{ if(sd.style.display!=="grid") return; sd.style.display="none"; showBootThenLogin(); },1600); }},
+    {sep:1},
+    {label:"Log Off "+playerName(),action:()=>{ closeWin("win-taskmgr"); openWin("win-logoff"); }},
+    {label:"Switch User",action:()=>showError("Task Manager","There is one account on this computer. Guest tried and was refused.")},
+  ],x,y);
+  return showMenu([
+    {label:"Task Manager Help Topics",action:()=>showError("Windows Task Manager",
+      "Applications lists the windows that are open. Processes lists what the shell is running. Performance and Networking are measured on this machine, not invented: Commit Charge is real memory and the network graph is real arena traffic.")},
+    {sep:1},
+    {label:"About Windows Task Manager",action:()=>showError("About Windows Task Manager",
+      "Windows Task Manager\nVersion 5.1 (Build 2600.xpsp2)\n\nIt watches this computer. It has no opinion about the arena.")},
+  ],x,y);
+}
+/* Minimize On Use: opening something from Applications drops Task Manager out of the way */
+function tmMinOnUse(){ if(tmOpt("minuse")&&openApps.has("win-taskmgr")) minWin("win-taskmgr"); }
+
 $("#tm-endproc").addEventListener("click",()=>{
   if(!tmProcSel) return;
   showConfirm("Task Manager Warning",
@@ -2706,6 +2835,7 @@ $("#tm-switch").addEventListener("click",()=>{
   const a=openApps.get(tmSel);
   if(a.kind==="webamp"){ if(a.min) tabClick(tmSel); }
   else focusWin(tmSel);
+  tmMinOnUse();   /* Options > Minimize On Use */
 });
 
 /* ================= Windows Messenger ================= */
@@ -2811,7 +2941,9 @@ sys=initSysApps({
     printers:()=>showError("Printers and Faxes","There are no printers installed on this computer."),
     userAccounts:()=>openWin("win-logoff"),
     accessibility:()=>openWin("win-dispprops"),
-    addRemove:()=>showError("Add or Remove Programs","CURSORS.EXE is installed by the server and cannot be removed from this computer."),
+    addRemove:()=>maint.openAddRemove(),
+    fonts:()=>maint.openFonts(),
+    clearType:()=>maint.openClearType(),
     folderOptions:()=>maint.openFolderOptions(),
     systemRestore:()=>maint.openRestore(),
     windowsUpdate:()=>{ openWin("win-ie"); if(ie) ie.go("http://windowsupdate.microsoft.com/"); },

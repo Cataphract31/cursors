@@ -144,6 +144,7 @@ export function initExplorer(deps) {
     "C:\\WINDOWS": () => [
       dir("system32", { ico: "winfolder32", go: "C:\\WINDOWS\\system32" }),
       dir("Web", { go: "C:\\WINDOWS\\Web" }),
+      dir("Fonts", { ico: "folder32", tile: "Font Folder", act: () => hooks.openFonts && hooks.openFonts() }),
       f("explorer.exe", { size: 1 * MB, ico: "openfolder32", act: () => hooks.openWin("win-explorer") }),
       f("winmine.exe", { size: 119 * 1024, ico: "mine32", act: () => hooks.openWin("win-mine") }),
       f("win.ini", { size: 512, act: () => txt("win.ini", "[windows]\nrun=\nload=\n\n[colors]\nBackground=58 110 165\n") }),

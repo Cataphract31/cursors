@@ -1416,3 +1416,68 @@ body.tb-auto.tb-peek #taskbar{transform:none}
 .ex-warnlink{display:inline-block;margin-top:10px;color:#00379B;text-decoration:underline;cursor:pointer}
 .ex-list.sc .ex-nm{color:#00379B;text-decoration:underline}
 .ex-list.sc .ex-item:hover .ex-nm{color:#D03030}
+
+/* ---- Recycle Bin Properties ---- */
+.bp-row{display:flex;gap:8px;align-items:center;margin-top:8px}
+.bp-slider{flex:1}
+.bp-pct{width:38px;text-align:right;font-size:11px;font-weight:bold}
+
+/* ---- Add or Remove Programs ---- */
+.aw-body{display:flex;padding:0;background:#fff}
+.aw-side{width:150px;flex:0 0 150px;background:#F1EFE2;border-right:1px solid #ACA899;padding:8px 0}
+.aw-tab{display:flex;gap:6px;align-items:flex-start;padding:8px 8px;cursor:default;font-size:11px}
+.aw-tab.on{background:#fff;border-top:1px solid #ACA899;border-bottom:1px solid #ACA899;font-weight:bold}
+.aw-tab:hover{background:#FFF8E1}
+.aw-tico{width:26px;height:26px;flex:0 0 26px}
+.aw-tt{line-height:1.3}
+.aw-tt .b{font-weight:bold}
+.aw-main{flex:1;min-width:0;padding:10px 12px;overflow:auto;display:flex;flex-direction:column}
+.aw-head{font-size:11px;font-weight:bold;color:#1B3F87;margin:2px 0 5px}
+.aw-list{flex:1;min-height:80px;border:1px solid #ACA899;background:#fff;overflow:auto}
+.aw-row{border-bottom:1px solid #EAE8DE;padding:5px 7px;cursor:default;font-size:11px}
+.aw-row:hover{background:#F6F6F0}
+.aw-row.on{background:#EAF1FB}
+.aw-rowtop{display:flex;gap:7px;align-items:center}
+.aw-ico{width:20px;height:20px;flex:0 0 20px}
+.aw-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:bold}
+.aw-size{color:#444}
+.aw-rowsub{display:flex;gap:8px;align-items:center;justify-content:flex-end;color:#555;margin-top:2px}
+.aw-bars{display:inline-flex;gap:2px;align-items:flex-end;height:9px}
+.aw-bars i{width:4px;height:9px;background:#D6D3C4;border:1px solid #B5B2A4}
+.aw-bars i.on{background:#3A6EA5;border-color:#28527A}
+.aw-det{margin:6px 0 2px 27px}
+.aw-detline{display:flex;gap:5px;align-items:center;color:#333;margin-bottom:2px}
+.aw-btns{display:flex;gap:6px;justify-content:flex-end;margin-top:5px}
+.aw-foot{font-size:11px;color:#444;margin-top:6px}
+.aw-panel{border:1px solid #ACA899;background:#F7F6F1;padding:8px 10px;margin-bottom:10px;
+  display:flex;gap:10px;align-items:center;justify-content:space-between;font-size:11px}
+.aw-complist{flex:1;min-height:80px;border:1px solid #ACA899;background:#fff;overflow:auto;padding:2px 0}
+.aw-compgroup{font-size:11px;font-weight:bold;padding:4px 6px 1px;color:#1B3F87}
+.aw-comprow{display:flex;gap:6px;align-items:center;font-size:11px;padding:2px 6px;cursor:default}
+.aw-comprow.indent{padding-left:20px}
+.aw-comprow:hover{background:#EAF1FB}
+.aw-compn{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.aw-compsz{width:56px;flex:0 0 56px;text-align:right;color:#555}
+
+/* ---- the Fonts folder ---- */
+.fnt-list{flex:1;min-height:0;border:1px solid #ACA899;background:#fff;overflow:auto;
+  display:flex;flex-wrap:wrap;align-content:flex-start;gap:2px;padding:6px}
+.fnt-item{width:96px;padding:5px 3px;text-align:center;cursor:default}
+.fnt-item.on{background:#316AC5;color:#fff}
+.fnt-item:hover{background:#EAF1FB}
+.fnt-item.on:hover{background:#316AC5}
+.fnt-glyph{font-size:30px;line-height:34px;height:36px}
+.fnt-name{font-size:11px;line-height:1.25;word-break:break-word}
+.fv-body{flex:1;min-height:0;overflow:auto;padding:4px 10px 14px}
+.fv-head{border-bottom:1px solid #ACA899;padding-bottom:6px;margin-bottom:8px}
+.fv-name{font-size:13px;font-weight:bold;margin-bottom:3px}
+.fv-abc{font-size:17px;line-height:1.5;word-break:break-all}
+.fv-rule{border-top:1px solid #ACA899;margin:8px 0}
+.fv-line{white-space:nowrap;overflow:hidden;text-overflow:clip;line-height:1.25;margin-bottom:4px}
+
+/* ---- ClearType ---- */
+.ct-sample{border:1px solid #ACA899;background:#fff;padding:6px 8px;margin:2px 0 8px 19px;font-size:15px}
+.ct-on,body.ct-on{-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+.ct-off,body.ct-off{-webkit-font-smoothing:none;text-rendering:optimizeSpeed}
+/* Task Manager, Options > Always On Top */
+.window.always-on-top{z-index:9200 !important}
