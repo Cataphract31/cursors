@@ -16,6 +16,7 @@ import { initDepthApps } from "./depthapps.js";
 import { initWriteApps } from "./writeapps.js";
 import { initSoundApps } from "./soundapps.js";
 import { initSysMaint } from "./sysmaint.js";
+import { initTour } from "./tour.js";
 import { initAccess } from "./access.js";
 const Webamp = (WebampImport && WebampImport.default) ? WebampImport.default : WebampImport;
 
@@ -46,7 +47,11 @@ if(MOBILE) document.body.classList.add("mobile");
 function syncOrient(){ if(MOBILE) document.body.classList.toggle("land",innerWidth>innerHeight); }
 syncOrient();
 let W=desktop.clientWidth, H=desktop.clientHeight;
-addEventListener("resize",()=>{syncOrient();W=desktop.clientWidth;H=desktop.clientHeight;syncArena();reflowIcons();});
+addEventListener("resize",()=>{
+  syncOrient();W=desktop.clientWidth;H=desktop.clientHeight;syncArena();reflowIcons();
+  /* maximized means "as big as the desktop", including after the desktop grew */
+  $$(".window.maxed").forEach(el=>{ el.style.left="0px"; el.style.top="0px"; el.style.width=W+"px"; el.style.height=H+"px"; });
+});
 /* iOS never tells you the keyboard opened — it just shrinks the visual
    viewport out from under a layout that still thinks it owns the screen, and
    the Messenger composer ends up beneath the keys. Measure the gap, publish it
@@ -203,9 +208,12 @@ const store={
     this.data.unusedIcons=this.data.unusedIcons||[];
     this.data.pinned=this.data.pinned||[];
   },
-  save(){ clearTimeout(this._t); this._t=setTimeout(()=>{ try{ localStorage.setItem("cursorsxp",JSON.stringify(this.data)); }catch(e){} },250); }
+  save(){ clearTimeout(this._t); this._t=setTimeout(()=>this.flush(),250); },
+  flush(){ clearTimeout(this._t); try{ localStorage.setItem("cursorsxp",JSON.stringify(this.data)); }catch(e){} }
 };
 store.load();
+/* the debounce must not eat the write that raced a reload */
+addEventListener("pagehide",()=>store.flush());
 /* identity lives up here: the Messenger reads it while it boots */
 let PLAYER=store.data.userName||null;
 
@@ -281,6 +289,32 @@ function showWamp(){ const w=wampWrap(); if(w) w.style.display=""; }
 function hideWamp(){ const w=wampWrap(); if(w) w.style.display="none"; }
 function wampHidden(){ const w=wampWrap(); return !w||w.style.display==="none"; }
 let zTop=100, focusedId=null;
+/* CURSORS.EXE floats over the desktop by default (View > Always on Top):
+   the game must stay watchable while MSN and IE cover the rest. Bands:
+   normal windows ride zTop (100..4500), the pinned HUD sits at 5000,
+   desktop dialogs at 6000+ (a dialog must never hide under the HUD),
+   mobile dialogs at 8500, taskbar 9000, menus 99990. */
+const AOT_Z=4900, FIX_Z=6000; let fixTop=0;   /* 4900: above windows, under the arena's 5000 */
+let hudTop=store.data.hudTop!==false;
+function assertHudTop(){
+  if(MOBILE||!hudTop) return;
+  const a=openApps.get("win-cursors");
+  if(!a||a.min||!a.el) return;
+  a.el.style.zIndex=AOT_Z;
+}
+function setHudTop(on){
+  hudTop=!!on; store.data.hudTop=hudTop; store.save();
+  const el=document.getElementById("win-cursors");
+  if(!hudTop&&el) el.style.zIndex=++zTop; else assertHudTop();
+}
+/* a marathon of clicking can walk zTop into the HUD band; fold it back */
+function renormZ(){
+  if(zTop<4500) return;
+  const ws=[...openApps.values()].filter(a=>a.el&&!a.el.classList.contains("fixed"))
+    .sort((a,b)=>((+a.el.style.zIndex)||0)-((+b.el.style.zIndex)||0));
+  zTop=100; for(const a of ws) a.el.style.zIndex=++zTop;
+  zTop++;   /* the window being focused right now lands above the compacted stack */
+}
 const openApps=new Map();
 const NOTAB=new Set(["win-logoff","win-shutdown","win-error","win-confirm","win-props","win-run","win-cert","win-runas"]);
 function tabTitle(id){ const a=openApps.get(id); if(a&&a.title) return a.title; const t=$("#"+id+" .title-bar-text"); return t?t.textContent:id; }
@@ -375,6 +409,8 @@ function windowsUpdate(){
 }
 function openWin(id,opts){
   if(id==="win-ie"&&MP.on&&MP.tv&&MP.tv.now) setTimeout(()=>{ try{ mpTvSync(); }catch(e){} },200);
+  if(id==="win-mine"){ try{ mine.resume(); }catch(e){} }
+  if(id==="win-tour"&&!$("#tour-img").src){ try{ tour.open(true); return; }catch(e){} }
   if(id==="win-amp"){ winampApp.open(); return; }
   if(id==="win-readme"&&write){
     if(readmeText===null) readmeText=$("#win-readme .paper").textContent;
@@ -435,6 +471,7 @@ function fitWin(el){
 function restoreWin(id){
   const a=openApps.get(id); if(!a) return;
   if(a.kind==="webamp"){ if(a.min) tabClick(id); return; }
+  clearTimeout(a._minT);   /* a minimize still animating must not re-hide us */
   a.min=false;
   a.el.style.display="flex";
   /* the reverse of minimize: the window zooms back OUT of its taskbar tab */
@@ -454,7 +491,13 @@ function restoreWin(id){
 }
 function closeWin(id,opts){
   try{ if(id==="win-magnifier"&&access.magnifying()) access.stopMagnifier(); }catch(e){}
+  if(id==="win-copy") fileOpCancel=true;   /* the X on a progress dialog is Cancel */
   dlgOwner.delete(id);
+  /* dialogs owned by a closing sheet go free (and visible) again */
+  for(const [k,own] of [...dlgOwner]) if(own===id){
+    dlgOwner.delete(k);
+    const d=openApps.get(k); if(d&&d.el&&!d.min) d.el.style.display="flex";
+  }
   if(id==="win-amp"){ winampApp.close(); return; }
   const a=openApps.get(id); if(!a) return;
   if(id==="win-mine") mine.pause(); /* the clock does not run while the box is shut */
@@ -476,6 +519,7 @@ function closeWin(id,opts){
 }
 function minWin(id){
   const a=openApps.get(id); if(!a||a.min) return;
+  clearTimeout(a._minT);
   if(a.kind==="webamp"){ tabClick(id); return; }
   a.min=true;
   if(focusedId===id) focusedId=null;
@@ -488,7 +532,7 @@ function minWin(id){
   el.style.transform=`translate(${tx-r.left}px,${H-r.top}px) scale(.06)`;
   el.style.opacity="0";
   sMini();
-  setTimeout(()=>{ el.style.display="none"; el.style.transition=""; el.style.transform=""; el.style.opacity=""; el.style.transformOrigin=""; },180);
+  a._minT=setTimeout(()=>{ el.style.display="none"; el.style.transition=""; el.style.transform=""; el.style.opacity=""; el.style.transformOrigin=""; },180);
   el.classList.remove("focused"); el.classList.add("inactive");
   tbInactive(el,true);
 }
@@ -560,9 +604,25 @@ function focusWin(id){
     a.el.classList.toggle("inactive",!on);
     tbInactive(a.el,!on);
   }
+  renormZ();
   const el=document.getElementById(id);
-  /* on the phone a dialog is always above the sheets, never among them */
-  if(el) el.style.zIndex=(MOBILE&&el.classList.contains("fixed"))?DLG_Z+(++dlgTop):zTop;
+  if(el){
+    const a0=openApps.get(id);
+    if(a0&&!a0.min&&el.style.display==="none") el.style.display="flex";
+    const fixed=el.classList.contains("fixed");
+    /* dialogs sit above every normal window: on the phone above the sheets,
+       on the desktop above the pinned CURSORS.EXE too */
+    if(MOBILE&&fixed){ if(dlgTop>400) dlgTop=0; el.style.zIndex=DLG_Z+(++dlgTop); }
+    else if(fixed){
+      if(fixTop>2400){
+        fixTop=0;
+        for(const a of openApps.values()) if(a.el&&a.el.classList.contains("fixed")) a.el.style.zIndex=FIX_Z+(++fixTop);
+      }
+      el.style.zIndex=FIX_Z+(++fixTop);
+    }
+    else el.style.zIndex=zTop;
+  }
+  assertHudTop();
   renderTaskbar();
 }
 /* resize cursors route through the scheme vars, so a skinned pointer skins
@@ -580,7 +640,10 @@ function edgeDir(w,e){
 let reszActive=null;
 /* every window — markup or runtime-created (conversations) — gets wired here */
 function wireWindow(w){
-  w.addEventListener("pointerdown",()=>{ if(openApps.has(w.id)) focusWin(w.id); });
+  w.addEventListener("pointerdown",()=>{
+    if(openApps.has(w.id)) focusWin(w.id);
+    $$(".icon.sel").forEach(i=>i.classList.remove("sel"));
+  });
   const tb=w.querySelector(".title-bar");
   const btnMin=w.querySelector('.title-bar-controls button[aria-label="Minimize"]');
   const btnClose=w.querySelector('.title-bar-controls button[aria-label="Close"]');
@@ -607,6 +670,7 @@ function wireWindow(w){
       const minw=+(w.dataset.minw||232), minh=+(w.dataset.minh||130);
       const sx=e.clientX, sy=e.clientY;
       reszActive=true;
+      document.body.classList.add("win-drag");
       const mv=ev=>{
         let left=r.left, top=r.top, width=r.width, height=r.height;
         const dx=ev.clientX-sx, dy=ev.clientY-sy;
@@ -616,7 +680,7 @@ function wireWindow(w){
         if(d.includes("n")){ height=Math.max(minh,r.height-dy); top=r.top+(r.height-height); }
         w.style.left=left+"px"; w.style.top=top+"px"; w.style.width=width+"px"; w.style.height=height+"px";
       };
-      const up=()=>{ reszActive=null; removeEventListener("pointermove",mv); removeEventListener("pointerup",up); saveWinRect(w); };
+      const up=()=>{ reszActive=null; document.body.classList.remove("win-drag"); removeEventListener("pointermove",mv); removeEventListener("pointerup",up); saveWinRect(w); };
       addEventListener("pointermove",mv); addEventListener("pointerup",up);
     },true);
   }
@@ -625,11 +689,12 @@ function wireWindow(w){
     if(w.classList.contains("maxed")) return;
     if(MOBILE&&!w.classList.contains("fixed")) return; /* sheets don't drag */
     const r=w.getBoundingClientRect(), dx=e.clientX-r.left, dy=e.clientY-r.top;
+    document.body.classList.add("win-drag");
     const move=ev=>{
       w.style.left=clamp(ev.clientX-dx,-r.width+80,W-40)+"px";
       w.style.top=clamp(ev.clientY-dy,0,H-30)+"px";
     };
-    const up=()=>{removeEventListener("pointermove",move);removeEventListener("pointerup",up);saveWinRect(w);};
+    const up=()=>{document.body.classList.remove("win-drag");removeEventListener("pointermove",move);removeEventListener("pointerup",up);saveWinRect(w);};
     addEventListener("pointermove",move); addEventListener("pointerup",up);
   });
 }
@@ -993,6 +1058,8 @@ function solitaireFit(fr,d){
     fr.style.transform=sc<1?"scale("+sc+")":"";
   };
   fit();
+  if(solitaireFit._prev) removeEventListener("resize",solitaireFit._prev);
+  solitaireFit._prev=fit;
   addEventListener("resize",fit);
   setTimeout(fit,400);
 }
@@ -1094,6 +1161,16 @@ function showError(title,text,quiet){
   openWin("win-error",{silent:true});
   if(!quiet) sError();
 }
+/* dialogs answer the keyboard: Enter = OK/Yes, Escape = close/No */
+addEventListener("keydown",e=>{
+  if(e.key!=="Enter"&&e.key!=="Escape") return;
+  if(e.target.closest("input,textarea,select")) return;
+  const err=openApps.has("win-error"), conf=openApps.has("win-confirm");
+  if(!err&&!conf) return;
+  e.preventDefault();
+  if(conf){ $(e.key==="Enter"?"#conf-yes":"#conf-no").click(); }
+  else closeWin("win-error");
+});
 function showConfirm(title,text,cb){
   $("#win-confirm .title-bar-text").textContent=title;
   $("#conftext").textContent=text;
@@ -1117,7 +1194,7 @@ function emptyBin(){
   const worth=binDead.reduce((s,d)=>s+d.lost,0);
   showConfirm("Confirm Multiple File Delete",
     `Are you sure you want to delete these ${n} items?`+
-    (binDead.length?`\n\n${binDead.length} of them are dead cursors worth ${fmtS(worth)} SOL. Deleting the file does not refund them.`:""),
+    (binDead.length?`\n\n${binDead.length} dead cursors, ${fmtS(worth)} SOL. No refund.`:""),
     ()=>{
       const all=binFiles.map(f=>f.label).concat(binDead.map(d=>d.name+"_"+String(d.id).padStart(4,"0")+".cur"));
       fileOp({title:"Deleting...",line:"Deleting "+all.length+" items",
@@ -1530,7 +1607,7 @@ function trayMenu(target){
     {label:"Adjust Audio Properties",action:()=>volOpen(true)},
   ];
   if(target&&target.id==="netico") return [
-    {label:"Disable",action:()=>showError("Network Connections","You do not have sufficient privileges to disable this connection.\n\nThe dial-up is the game server. Hanging up is called logging off.")},
+    {label:"Disable",action:()=>showError("Network Connections","You do not have sufficient privileges to disable this connection.")},
     {label:"Status",action:()=>openWin("win-dialup")},
     {label:"Repair",action(){
       showBalloon("Repairing connection...","cursor$net 56.6 Kbps");
@@ -1545,7 +1622,7 @@ function trayMenu(target){
   ];
   if(target&&target.dataset&&target.dataset.ico==="trayRisk") return [
     {label:"Open Security Center",bold:1,action:()=>showError("Windows Security Center",
-      "Your computer might be at risk.\n\nAntivirus software might not be installed.\nThis is a gambling machine. It is not wrong.")},
+      "Your computer might be at risk.\n\nAntivirus software might not be installed.")},
   ];
   return [
     {label:"Adjust Date/Time",action:()=>openWin("win-datetime")},
@@ -1600,8 +1677,10 @@ function menubarMenu(label,id){
       {sep:1},
       {label:"Exit",action:()=>closeWin(id)}];
     if(label==="View") return Object.keys(P).map(n=>({
-      label:n,check:$("#"+P[n]).classList.contains("on"),action:()=>cxShow(P[n])}));
+      label:n,check:$("#"+P[n]).classList.contains("on"),action:()=>cxShow(P[n])}))
+      .concat([{sep:1},{label:"Always on Top",check:hudTop,action:()=>setHudTop(!hudTop)}]);
     if(label==="Help") return [
+      {label:"Quick Tour",action:()=>tour.open(true)},
       {label:"How it works",action:()=>openWin("win-help")},
       {label:"Verify fairness",action:()=>cxShow("cx-verify")},
       {sep:1},
@@ -1633,7 +1712,9 @@ function menubarMenu(label,id){
   }
   return [{label:"(nothing here)",disabled:1}];
 }
-$$(".menubar span").forEach(m=>m.addEventListener("click",e=>{
+/* delegated: windows built after boot (Messenger conversations) route too */
+document.addEventListener("click",e=>{
+  const m=e.target.closest(".menubar span"); if(!m) return;
   e.stopPropagation();
   const win=m.closest(".window"); if(!win) return;
   const r=m.getBoundingClientRect();
@@ -1651,7 +1732,7 @@ $$(".menubar span").forEach(m=>m.addEventListener("click",e=>{
   if(win.id==="win-taskmgr"){ tmMenu(m.textContent,r.left,r.bottom+2); return; }
   if(win.id==="win-ie"){ ie.menu(m.textContent,r.left,r.bottom+2); return; }
   showMenu(menubarMenu(m.textContent,win.id),r.left,r.bottom+2);
-}));
+});
 
 /* ================= Minesweeper ================= */
 const mine=initMinesweeper({
@@ -1783,6 +1864,7 @@ snd=initSoundApps({$,store,sysSnd,showMenu,showError,openWin,closeWin,hooks:{
   /* the mixer reaches Winamp through the app object: wampApplyVol lives
      inside its closure, and the mixer can be touched before it exists */
   ampVolume:bus=>{ try{ winampApp.applyVol(bus); }catch(e){} },
+  tvVolume:bus=>{ try{ tvApplyVol(bus); }catch(e){} },
   getMuted:()=>muted,
   setMaster:v=>{ masterVol=clamp(v,0,1); volSync(); },
   setMuted:m=>{ muted=!!m; volSync(); },
@@ -1799,6 +1881,8 @@ snd=initSoundApps({$,store,sysSnd,showMenu,showError,openWin,closeWin,hooks:{
 }});
 const recWavs=new Map();   /* id -> AudioBuffer, session-lifetime */
 /* System Restore, the System Configuration Utility, Folder Options */
+const tour=initTour({ $, store, openWin, closeWin, sysSnd });
+tour.init();
 const maint=initSysMaint({$,store,sysSnd,showError,showConfirm,openWin,closeWin,icoNode,hooks:{
   /* a restore point puts every one of these back where it was */
   applyCosmetic(){
@@ -1931,9 +2015,8 @@ const explorer=initExplorer({
          browser happened to witness, so the volume reports the epoch's count */
       const d=diskPct();
       $("#dv-note").textContent=d.dead
-        ? `${d.dead} dead cursors are stored on this volume, of the ${d.cap} it takes to fill it. `+
-          `When it fills, CURSORS.EXE crashes and everyone is banked.`
-        : "Nothing has died yet this round. The free space above is the round clock.";
+        ? `${d.dead}/${d.cap} corpses. Full disk = crash, everyone banked.`
+        : "No deaths yet this round.";
       openWin("win-driveprops");
       requestAnimationFrame(()=>info.draw($("#dv-pie")));
     },
@@ -2052,7 +2135,11 @@ function cascadeWins(){
   for(const [id,a] of openApps){
     if(NOTAB.has(id)||a.kind==="webamp") continue;
     if(a.min){ a.min=false; a.el.style.display="flex"; }
-    a.el.classList.remove("maxed");
+    if(a.el.classList.contains("maxed")){
+      a.el.classList.remove("maxed");
+      const p=a.el._prevRect;
+      if(p){ a.el.style.width=p.w; a.el.style.height=p.h; }
+    }
     a.el.style.left=(36+i*26)+"px"; a.el.style.top=(24+i*26)+"px";
     focusWin(id); i++;
   }
@@ -2221,6 +2308,11 @@ addEventListener("keyup",e=>{ if(e.key==="Control"||e.key==="Alt") altTabEnd(tru
 /* ---------- desktop keyboard verbs: F2 rename, Delete, Shift+Delete, F5 ---------- */
 addEventListener("keydown",e=>{
   if(e.target.closest("input,textarea,select")) return;
+  if(e.key==="z"&&(e.ctrlKey||e.metaKey)){
+    /* the desktop menu advertises Undo Delete; the keyboard honours it */
+    if(binFiles.length){ e.preventDefault(); restoreOne(binFiles[0]); }
+    return;
+  }
   const selEl=$(".icon.sel");
   if(e.key==="F2"&&selEl){
     e.preventDefault();
@@ -2304,13 +2396,14 @@ function allProgramsMenu(){
     {label:"Startup",sub:[
       {label:"CURSORS.EXE",action:go("win-cursors")}]},
     {sep:1},
+    {label:"How to Play",action:()=>{ closeStart(); tour.open(true); }},
     {label:"Help and Support",action:go("win-help")},
     {label:"Windows Update",action:()=>{ closeStart(); windowsUpdate(); }},
   ];
 }
 function smAction(act,itemEl){
   switch(act){
-    case "email": showError("Outlook Express","No mail account is configured. Nobody writes anymore. Try the Messenger."); break;
+    case "email": showError("Outlook Express","No mail account is configured. Use Messenger."); break;
     case "wmp": showError("Windows Media Player","Another application (winamp.exe) has exclusive control of the llama."); break;
     case "mydocs": openFolderWin("My Documents"); break;
     case "mypics": openFolderWin("My Pictures"); break;
@@ -2338,6 +2431,7 @@ $("#shutdown").addEventListener("click",()=>{ $("#shutdown").style.display="none
 
 /* ---- Run dialog ---- */
 const RUNMAP={
+  "tour":"win-tour",
   "cursors":"win-cursors","cursors.exe":"win-cursors",
   "taskmgr":"win-taskmgr","taskmgr.exe":"win-taskmgr",
   "winamp":"win-amp","winamp.exe":"win-amp",
@@ -2504,7 +2598,7 @@ function setWallpaperFrom(dataUrl,mode){
   setWallpaper("painted");
   renderWplist();
   log("wallpaper set from Paint ("+store.data.wallpaperMode+")");
-  showBalloon("Your desktop has been redecorated","Right-click the desktop → Properties to put Bliss back.");
+  showBalloon("Desktop redecorated","Right-click the desktop → Properties to undo.");
 }
 function renderWplist(){
   const host=$("#wplist"); host.innerHTML="";
@@ -2625,7 +2719,7 @@ $("#sv-settings").addEventListener("click",()=>{
     $("#win-saveropts .title-bar-text").textContent="3D Pipes Settings";
     const j=document.createElement("select");
     for(const [v,l] of [["elbow","Elbows"],["ball","Ball"],["mixed","Mixed"]]){ const o=document.createElement("option"); o.value=v; o.textContent=l; j.appendChild(o); }
-    j.value=c.joint||"ball"; fields.joint=row("Joint type",j);
+    j.value=c.joint||"elbow"; fields.joint=row("Joint type",j);
     const m=document.createElement("input"); m.type="checkbox"; m.checked=c.multiple!==0;
     const lb=document.createElement("label"); lb.style.cssText="display:flex;gap:6px;align-items:center;padding:2px 0";
     lb.appendChild(m); lb.appendChild(document.createTextNode(" Multiple pipes"));
@@ -2789,7 +2883,13 @@ Contact your computer administrator.`));
 
 /* ================= task manager ================= */
 let duelPulse=0, tmSel=null, tmHist=[];
-const TMPROCS=["cursors.exe","explorer.exe","msnmsgr.exe","winamp.exe","wallet.dll","hopium.sys","rundll32.exe","svchost.exe","svchost.exe","mumu.exe","copium.drv","System Idle Process"];
+const TMPROCS_ALL=["cursors.exe","explorer.exe","msnmsgr.exe","winamp.exe","wallet.dll","hopium.sys","rundll32.exe","svchost.exe","svchost.exe","mumu.exe","copium.drv","System Idle Process"];
+/* MSConfig's Startup boxes are load-bearing here too: clearing wallet or
+   ctfmon really takes the row out of Task Manager */
+function TMPROCS(){
+  return TMPROCS_ALL.filter(n=>!(n==="wallet.dll"&&!maint.startupOn("wallet"))
+    &&!(n==="rundll32.exe"&&!maint.startupOn("ctfmon")));
+}
 function tmCpu(){ return Math.min(99,Math.round(3+duelPulse*24+curs.length*.6+Math.random()*4)); }
 let tmPfHist=[], tmNetHist=[], tmProcSel=null, tmNetLast=0;
 function tmHeapMB(){
@@ -2845,7 +2945,7 @@ function tmTick(){
     const hdr=document.createElement("div"); hdr.className="row hdr";
     hdr.innerHTML="<span>Image Name</span><span>CPU</span>";
     host.appendChild(hdr);
-    for(const name of TMPROCS){
+    for(const name of TMPROCS()){
       const c=name==="System Idle Process"?100-cpu
         :name==="cursors.exe"?Math.max(1,cpu-6)
         :Math.round(Math.random()*2);
@@ -2867,7 +2967,7 @@ function tmTick(){
     $("#tmstats").innerHTML=
       `<span>Handles: <b>${(4200+curs.length*31)%9999}</b></span><span>Commit Charge: <b>${heap} MB</b></span>`+
       `<span>Threads: <b>${390+binDead.length%99}</b></span><span>Physical Memory: <b>523 MB</b></span>`+
-      `<span>Processes: <b>${TMPROCS.length}</b></span><span>Up Time: <b>${fmtUpLong(performance.now()/1000)}</b></span>`;
+      `<span>Processes: <b>${TMPROCS().length}</b></span><span>Up Time: <b>${fmtUpLong(performance.now()/1000)}</b></span>`;
   }
   if($("#tm-net").classList.contains("on")){
     /* real traffic: socket messages per tick, scaled to a 56.6k's idea of busy */
@@ -2878,7 +2978,7 @@ function tmTick(){
     $("#tm-netpct").textContent=(MP.on?pct:0)+"%";
   }
   if($("#tm-users").classList.contains("on")) $("#tm-user1").textContent=playerNameFull();
-  $("#tmfoot").textContent=`Processes: ${TMPROCS.length} · CPU Usage: ${cpu}% · Commit Charge: ${tmHeapMB()}M`;
+  $("#tmfoot").textContent=`Processes: ${TMPROCS().length} · CPU Usage: ${cpu}% · Commit Charge: ${tmHeapMB()}M`;
 }
 tmSetSpeed(tmSpeed);
 /* the tray meter follows the window, not the update speed — View > Paused
@@ -2916,7 +3016,7 @@ function tmMenu(label,x,y){
     ]},
     {sep:1},
     {label:"Select Columns...",action:()=>showError("Select Columns",
-      "The columns on this computer are the columns it has. There is one process list and it is already showing all of it.")},
+      "All columns are already shown.")},
   ],x,y);
   if(label==="Shut Down") return showMenu([
     {label:"Stand by",action:()=>{ startSaver(store.data.saver.t==="none"?"pipes":store.data.saver.t); }},
@@ -2932,7 +3032,7 @@ function tmMenu(label,x,y){
   ],x,y);
   return showMenu([
     {label:"Task Manager Help Topics",action:()=>showError("Windows Task Manager",
-      "Applications lists the windows that are open. Processes lists what the shell is running. Performance and Networking are measured on this machine, not invented: Commit Charge is real memory and the network graph is real arena traffic.")},
+      "The graphs are real: memory is this page, the network graph is arena traffic.")},
     {sep:1},
     {label:"About Windows Task Manager",action:()=>showError("About Windows Task Manager",
       "Windows Task Manager\nVersion 5.1 (Build 2600.xpsp2)\n\nIt watches this computer. It has no opinion about the arena.")},
@@ -3003,6 +3103,8 @@ const PROC_BASE=[
   {name:"explorer.exe",pid:1520,mem:14740,critical:1},
 ];
 let killedProcs=new Set();
+const PROC_WIN={"iexplore.exe":"win-ie","mspaint.exe":"win-paint","winmine.exe":"win-mine",
+  "msmsgs.exe":"win-chat","cmd.exe":"win-cmd"};
 function liveProcesses(){
   const out=PROC_BASE.filter(p=>!killedProcs.has(p.pid)).map(p=>Object.assign({},p));
   out.push({name:"cursors.exe",pid:9001,mem:34200+curs.length*420,critical:1});
@@ -3275,7 +3377,6 @@ ie=initIE({
     netGallery:()=>mpGalleryData(),
     tvMounted:p=>mpTvMounted(p),
     tvFit:()=>tvFit(),
-    maximize:()=>maxWin("win-ie"),
     windowsUpdate:()=>windowsUpdate(),
     galleryMounted:()=>mpGalleryOpen(),
     setWallpaperFrom:(u,mode)=>setWallpaperFrom(u,mode),
@@ -3466,6 +3567,7 @@ function forceRecall(c){
 }
 /* the epoch boundary, dressed as what it is: a crash that banks everyone */
 function crashSystem(){
+  if(phase!=="battle") return;   /* two timers in one batch = one crash */
   for(const c of [...curs]) if(!c.dead) bank(c,true);
   closeWin("win-shutdown",{silent:true});
   const share=myTickets>0?myTickets/(globalTickets+myTickets):0;
@@ -3553,9 +3655,7 @@ function renderPhase(){
   const urgent=shutFired||phase==="crash";
   const pl=$("#phaseline");
   pl.textContent=txt;
-  pl.title=`Epoch ${roundNo}. Every death writes a corpse to C:. When the disk fills, `
-    +`CURSORS.EXE stops and a new epoch starts — banked money carries over, live cursors do not. `
-    +`UP is this epoch's age; the machine's own uptime is in System Properties.`;
+  pl.title=`Epoch ${roundNo} · full disk = crash · banked SOL carries over`;
   pl.classList.toggle("battle",urgent);
   const chip=phase==="crash"?`EPOCH ${roundNo} · CRASHED`:shutFired?`EPOCH ${roundNo} · SHUTDOWN ${mm}`
     :`EPOCH ${roundNo} · C: ${diskPct().pct}%`;
@@ -3669,9 +3769,7 @@ function renderCxStats(){
     cxKV("best multiplier","×"+stats.best.toFixed(1))+
     cxKV("biggest bank",stats.bigBank?fmtS(stats.bigBank)+" SOL":"—")+
     cxKV("live right now",`${myCurs().length} cursor${myCurs().length===1?"":"s"} · ${fmtS(liveVal)} SOL`)+
-    `<div class="cx-note">expected P/L is −1% of everything you stake (the fee). All the rest
-     of this page is variance. If your P/L is better than −1%, you are running hot, not smart.
-     If it is worse, you are running cold, not cursed.</div>`;
+    `<div class="cx-note">expected P/L: −1% (the fee). the rest is variance.</div>`;
 }
 function renderCxRake(){
   const share=myTickets>0?100*myTickets/(globalTickets+myTickets):0;
@@ -3681,10 +3779,8 @@ function renderCxRake(){
     cxKV("your share",share.toFixed(4)+"%")+
     cxKV("accrued",(rakeAccrued/1000).toFixed(4)+" SOL",rakeAccrued>0?"pos":"")+
     `<button class="xbtn big" id="rk-claim" style="margin-top:6px"${rakeAccrued>0?"":" disabled"}>CLAIM ${(rakeAccrued/1000).toFixed(4)} SOL</button>`+
-    `<div class="cx-note">every deploy — yours or anyone's — pays 0.002 SOL into rakeback and
-     mints the deployer 200 tickets. Your share of every future deploy's rakeback equals your
-     share of tickets. Tickets decay with a 45-day half-life, so the payroll always belongs to
-     whoever is playing <i>now</i>. You play, you become the house.</div>`;
+    `<div class="cx-note">every deploy pays 0.002 SOL to the pool + 200 tickets to its owner.
+     your payout = your ticket share. tickets halve every 45 days.</div>`;
 }
 $("#cx-rake").addEventListener("click",e=>{
   if(e.target.id!=="rk-claim"||rakeAccrued<=0) return;
@@ -3703,7 +3799,7 @@ function renderCxHist(){
   $("#cx-hist").innerHTML=
     `<table class="cxh"><thead><tr><th>#</th><th>up</th><th class="n">pot</th><th class="n">curs</th>`+
     `<th class="n">dead</th><th>top bank</th><th class="n">you</th></tr></thead>`+
-    `<tbody>${rows||`<tr><td colspan="7" class="dim">no epochs finished yet — the first crash writes the first row</td></tr>`}</tbody></table>`;
+    `<tbody>${rows||`<tr><td colspan="7" class="dim">no epochs finished yet</td></tr>`}</tbody></table>`;
 }
 /* ---- the fairness ceremony: committed before the epoch, revealed at the crash ---- */
 let seedHex=null, commitHex=null, prevSeed=null, prevCommit=null, prevSeedEpoch=0;
@@ -3734,14 +3830,10 @@ function renderCxVerify(){
         `<div class="cx-seed">seed:   ${prevSeed}\nsha256: ${prevCommit||"…"}</div>`
       : "")+
     (MP.on
-      ? `<div class="cx-note">the contract: a random seed is committed (its hash published) before
-     each epoch and revealed at the crash — hash the seed yourself and it must match. On this
-     beta server every duel and every movement draw comes from that committed seed. Full replay
-     verification (seed + input log) ships with the real-money engine.</div>`
-      : `<div class="cx-note">the contract: a random seed is committed (its hash published) before
-     each epoch and revealed at the crash — hash the seed yourself and it must match. This
-     offline sandbox still draws from the browser RNG; connect to the beta server and the
-     duels draw from the committed seed for real.</div>`);
+      ? `<div class="cx-note">seed committed before the epoch, revealed at the crash.
+     hash it yourself — it must match. every duel draws from it.</div>`
+      : `<div class="cx-note">offline sandbox = browser RNG. connect and every duel
+     draws from a committed, revealed seed.</div>`);
 }
 
 /* ================= autoplay ================= */
@@ -3778,9 +3870,7 @@ function autoAwayCheck(){
   const gap=Math.max(t-lastTick, downSince?t-downSince:0);
   if(gap<=AUTO_AWAY_MS) return;
   setAuto(false);
-  showBalloon("Autoplay is off",
-    `This machine was away for ${Math.round(gap/60000)} minutes, so automatic deploys stopped. `
-    +`Switch Autoplay back on when you want it running again.`);
+  showBalloon("Autoplay is off",`Away ${Math.round(gap/60000)} min — deploys stopped.`);
 }
 $("#ap-toggle").addEventListener("click",()=>{
   setAuto(!auto.on); sClick();
@@ -3796,6 +3886,13 @@ setInterval(()=>{
   if(!MPURL||(net&&net.up())) downSince=0; else if(!downSince) downSince=Date.now();
   autoAwayCheck();
   lastTick=Date.now();
+  /* bank-at must not depend on a painted frame: a hidden tab still banks.
+     A recallOne that got lost in a blip re-arms after 6s. */
+  if(MP.on&&auto.on&&auto.bankAt>0) for(const c of mpCurs.values()){
+    if(!c.isMine||c.mode!=="roam") continue;
+    if(c._bankReq&&c._bankAt&&Date.now()-c._bankAt>6000) c._bankReq=false;
+    if(!c._bankReq&&c.bounty>=auto.bankAt*ENTRY){ c._bankReq=true; c._bankAt=Date.now(); mpSend({t:"recallOne",id:c.id}); }
+  }
   if(!canDeploy()) return;
   if(auto.on&&myCurs().length<auto.count&&wallet>=STAKE) deploy(true);
   if(MP.on) return;   /* the server runs the bots */
@@ -4020,12 +4117,13 @@ function float(text,x,y,small){
    The layout is the real NT stop screen: same paragraphs, same cadence, the
    receipt hiding in the Technical information block where the STOP code goes. */
 const bsodEl=$("#bsod");
+function bsodHide(){ bsodEl.style.display="none"; }
+addEventListener("keydown",()=>{ if(bsodEl.style.display==="block") bsodHide(); });
+bsodEl.addEventListener("click",bsodHide);
 function bsodShow(text,ms){
   bsodEl.textContent=text;
   bsodEl.style.display="block";
-  const hide=()=>{ bsodEl.style.display="none"; removeEventListener("keydown",hide); bsodEl.removeEventListener("click",hide); };
-  addEventListener("keydown",hide); bsodEl.addEventListener("click",hide);
-  if(ms) setTimeout(hide,ms);
+  if(ms) setTimeout(bsodHide,ms);
 }
 function crashBsodText(){
   const net=R.myOut-R.myIn;
@@ -4104,7 +4202,7 @@ function restoreOne(ic){
 function restoreAll(){
   if(!binFiles.length){
     showError("Restore Items",binDead.length
-      ? "Cursors cannot be restored. The draw that killed them is final."
+      ? "Cursors cannot be restored."
       : "The Recycle Bin is empty.");
     return;
   }
@@ -4132,7 +4230,7 @@ function hallOfPain(){
       `<div>yours: <b>${mine.length}</b> · <b>${fmtS(myTotal)} SOL</b></div>`+
       (top?`<div>biggest earner: <b>${esc(top[0])}</b> (${fmtS(top[1])} SOL taken)</div>`:"")+
       (worstOdds?`<div class="hall-bad">worst beat: <b>${esc(worstOdds.name)}</b> — ${worstOdds.odds}% to win, dead</div>`:"")
-    : "<div>Nothing has died yet. Give it a round.</div>";
+    : "<div>Nothing has died yet.</div>";
   const body=$("#hall-rows");
   body.innerHTML="";
   rows.slice(0,40).forEach((d,i)=>{
@@ -4152,22 +4250,14 @@ function hallOfPain(){
 function deathCert(d){
   $("#win-cert .title-bar-text").textContent=`${d.name}_${String(d.id).padStart(4,"0")}.cur Properties`;
   $("#cert-file").textContent=`${d.name}_${String(d.id).padStart(4,"0")}.cur`;
-  $("#cert-sub").textContent=`Cursor Termination Certificate · issued by arena.dll · round ${d.round}`;
+  $("#cert-sub").textContent=`arena.dll · round ${d.round} · ${d.at}`;
   const row=(k,v,cls)=>`<div class="cert-r${cls?" "+cls:""}"><span>${k}</span><b>${v}</b></div>`;
   $("#cert-rows").innerHTML=
-    row("owner",esc(d.name)+(d.mine?" (you)":""))+
-    row("terminated by",esc(d.killer)+(d.killerMine?" (you)":""))+
+    row("killed by",esc(d.killer)+(d.killerMine?" (you)":""))+
     row("carrying",`${fmtS(d.lost)} SOL &nbsp;<span class="dim">×${d.mult.toFixed(1)}</span>`,"big")+
-    row("peak value",`${fmtS(d.peak)} SOL`)+
-    row("its odds",`${d.odds} : ${100-d.odds}`,d.odds>=50?"bad":"")+
-    row("kills made",String(d.kills))+
-    row("survived",`${d.lived} second${d.lived===1?"":"s"}`)+
-    row("time of death",`${d.at} · round ${d.round}`);
-  $("#cert-note").textContent=d.odds>=50
-    ? `Was ${d.odds}% to win. Lost. This is the other ${100-d.odds}%.`
-    : d.odds<=15
-      ? `Was ${d.odds}% to win. Lost. Went the way it was always going to go.`
-      : `Odds ${d.odds}:${100-d.odds}, drawn once, weighted by bounty. No fee on the collision.`;
+    row("peak",`${fmtS(d.peak)} SOL`)+
+    row("odds to win",`${d.odds}%`,d.odds>=50?"bad":"")+
+    row("record",`${d.kills} kill${d.kills===1?"":"s"} · ${d.lived}s`);
   openWin("win-cert");
 }
 function updatePanel(){
@@ -4246,7 +4336,10 @@ function mpUrl(){
 const MPURL=mpUrl();
 function mpSend(o){ if(MP.on) net.send(o); }
 function mpHello(){
-  if(!net||!net.up()||MP.on) return;
+  /* no MP.on guard: a socket that reconnected during the 7s grace still needs
+     a fresh hello (the server dropped everything about us with the old one).
+     welcome purges and rebuilds, so a duplicate hello is harmless. */
+  if(!net||!net.up()) return;
   net.send({t:"hello",token:store.data.mpToken||undefined,name:PLAYER||undefined,skin:store.data.curScheme||""});
 }
 
@@ -4316,10 +4409,13 @@ function mpFrame(dt,now){
     if(c.grace>0){ c.grace-=dt; if(c.grace<=0) c.el.classList.remove("grace"); }
     /* client-side auto-bank: the "bank at ×N" knob rides along in autoplay */
     if(c.isMine&&auto.on&&auto.bankAt>0&&c.mode==="roam"&&!c._bankReq&&c.bounty>=auto.bankAt*ENTRY){
-      c._bankReq=true; mpSend({t:"recallOne",id:c.id});
+      c._bankReq=true; c._bankAt=Date.now(); mpSend({t:"recallOne",id:c.id});
     }
   }
-  if(shutFired&&phaseT>0){ phaseT-=dt; renderPhase(); }
+  if(shutFired&&phaseT>0){
+    phaseT-=dt; renderPhase();
+    $("#shuttimer").textContent="0:"+String(Math.max(0,Math.ceil(phaseT))).padStart(2,"0");
+  }
 }
 
 /* ---- event handlers: each one re-uses the solo game's FX verbatim ---- */
@@ -4355,8 +4451,7 @@ function mpWelcome(m){
   MP.online=m.online;
   msn.setHumans(m.online);
   log(`connected to the beta arena as ${MP.name} — epoch ${roundNo}, ${m.online.length} online`);
-  showBalloon("Connected to the beta arena",
-    `Live multiplayer, play money. You are ${MP.name}. ${m.online.length} player${m.online.length===1?"":"s"} online — everyone starts with 5 SOL.`);
+  showBalloon("Connected",`Play money beta. You are ${MP.name} · ${m.online.length} online.`);
   updatePanel(); renderPhase();
 }
 /* Server clock -> local clock. Timestamping samples with their arrival time
@@ -4415,6 +4510,8 @@ function mpSnap(m){
 }
 function mpSpawn(m){
   if(mpCurs.has(m.id)) return;
+  /* runs even while the tab is hidden: the record must exist so autoplay's
+     "keep live N" counts it — it parks at its spawn point until the resync */
   const c=mpMakeCur(m.id,m.owner,m.x,m.y,m.bounty,m.grace,m.skin);
   if(c.isMine){
     R.myIn+=STAKE; stats.deploys++; stats.tIn+=STAKE;
@@ -4528,8 +4625,9 @@ function mpDown(){
     if(net.up()) return;              /* came back; mpWelcome already rebuilt the world */
     MP.on=false; MP.name=null; MP.chatSeeded=false;
     mpPurge(); msn.setHumans([]);
-    showBalloon("Offline sandbox","The beta server did not come back. You are playing the local sandbox now — the bots are fake and so is the money. It reconnects on its own.");
+    showBalloon("Offline sandbox","Server gone. Fake bots, fake money. Reconnects on its own.");
     log("server unreachable — offline sandbox running");
+    bsodEl.style.display="none";   /* the server died mid-crash-screen */
     startEpoch();
   },7000);
 }
@@ -4542,7 +4640,7 @@ function mpMsg(m){
     /* Blind means the server has stopped sending us positions, so a cursor
        built now would stand still on the edge it spawned at until the resync.
        Skip it: becoming visible asks for the whole world back anyway. */
-    case "spawn": if(MP.on&&!mpBlind()) mpSpawn(m); break;
+    case "spawn": if(MP.on) mpSpawn(m); break;
     case "duel": if(MP.on&&!mpBlind()) mpDuel(m); break;
     case "kill": if(MP.on) mpKill(m); break;
     case "bank": if(MP.on) mpBank(m); break;
@@ -4556,11 +4654,11 @@ function mpMsg(m){
     case "sys": if(MP.on) msn.lobbySys(m.text); break;
     case "join": if(MP.on&&m.online){ MP.online=m.online; msn.setHumans(m.online); mpTvRenderQueue(); } break;   /* the sys line covers the greeting */
     case "part": if(MP.on){ msn.lobbySys(`${m.name} signed out`); if(m.online){ MP.online=m.online; msn.setHumans(m.online); mpTvRenderQueue(); } } break;
-    case "guest": MP.guest=m.list; mpRefreshIe("guest.html"); break;
+    case "guest": MP.guest=m.list; mpRefreshIe("guest."); break;
     case "gallery": MP.gallery=m.list; mpRefreshIe("gallery"); break;
     case "tv":
       if(typeof m.srv==="number") tvSkew=m.srv-Date.now();
-      MP.tv={now:m.now,queue:m.queue,skip:m.skip};
+      MP.tv={now:m.now,queue:m.queue,skip:m.skip,w:m.w};
       mpTvSync();
       break;
     case "err": if(m.msg) showBalloon("beta server",m.msg); break;
@@ -4594,10 +4692,10 @@ function mpGuestOpen(){ if(MP.on) mpSend({t:"guest"}); }
 function mpGalleryData(){ return MP.on?(MP.gallery||[]):null; }
 function mpGalleryOpen(){ if(MP.on) mpSend({t:"gallery"}); }
 function mpPublishPainting(name,png){
-  if(!MP.on){ showError("Gallery","The gallery lives on the beta server. You are offline — nothing to publish to.",true); return; }
-  if(png.length>400000){ showError("Gallery","That painting is over 400 KB. Fewer pixels, more soul.",true); return; }
+  if(!MP.on){ showError("Gallery","Offline — nowhere to publish.",true); return; }
+  if(png.length>400000){ showError("Gallery","Over the 400 KB limit.",true); return; }
   mpSend({t:"galleryPost",name,png});
-  showError("Gallery","Sent to the cursor$land gallery.\nEveryone on the server can see it now, which is either great or a problem.",true);
+  showError("Gallery","Sent to the gallery.",true);
 }
 
 /* ---- cursorTV: the lobby watches one YouTube video together ---- */
@@ -4611,7 +4709,15 @@ let ytApi=0, ytPlayer=null, tvPage=null;
    was wrong, so every tv message carries the server's time and we keep the
    difference. Old servers do not send it; then the skew is zero and this
    behaves exactly as it did before. */
-let tvSkew=0, tvLastSeek=0, tvFitObs=null;
+let tvSkew=0, tvLastSeek=0, tvFitObs=null, tvDurSent=null, tvVoted=null, tvWatchLast=false;
+/* the server cannot see how long a video is; the first screen that can read
+   the duration tells it, and the channel advances on time even if every
+   player is closed when the credits roll */
+function tvReport(vid){
+  if(tvDurSent===vid||!ytPlayer||!ytPlayer.getDuration) return;
+  let d=0; try{ d=ytPlayer.getDuration()||0; }catch(e){}
+  if(d>4){ tvDurSent=vid; mpSend({t:"tvDur",vid,dur:Math.round(d)}); }
+}
 function tvElapsed(){
   if(!MP.tv.now) return 0;
   return Math.max(0,(Date.now()+tvSkew-MP.tv.now.startedAt)/1000);
@@ -4638,8 +4744,14 @@ function mpTvMounted(page){
   const inp=page.querySelector("#tv-in");
   const add=()=>{
     const m=/([\w-]{11})(?:[?&#]|$)/.exec((inp.value||"").trim().replace(/.*(?:v=|youtu\.be\/|shorts\/|embed\/)/,""));
-    if(m){ mpSend({t:"tvQueue",vid:m[1]}); inp.value=""; }
-    else showError("cursorTV","Paste a YouTube link (or the 11-character video id).",true);
+    if(!m){ showError("cursorTV","Paste a YouTube link.",true); return; }
+    const vid=m[1]; inp.value="";
+    /* the title travels with the queue entry so every screen shows words, not
+       ids. oEmbed is CORS-open; when a blocker eats it, the id shows. */
+    const ac=new AbortController(); setTimeout(()=>ac.abort(),2500);
+    fetch("https://www.youtube.com/oembed?url=https%3A%2F%2Fyoutu.be%2F"+vid+"&format=json",{signal:ac.signal})
+      .then(r=>r&&r.ok?r.json():null).catch(()=>null)
+      .then(j=>mpSend({t:"tvQueue",vid,title:j&&j.title?String(j.title).slice(0,80):undefined}));
   };
   page.querySelector("#tv-add").addEventListener("click",add);
   inp.addEventListener("keydown",e=>{ e.stopPropagation(); if(e.key==="Enter") add(); });
@@ -4706,16 +4818,23 @@ function mpTvPlayer(){
     playerVars:{autoplay:1,mute:1,start:Math.floor(elapsed),rel:0,modestbranding:1,
       playsinline:1,origin:location.origin},
     events:{
-      onReady:()=>{ ready=true; },
+      onReady:()=>{ ready=true; tvReport(vid); tvApplyVol(); },
       onStateChange:e=>{
-        ready=true;
+        ready=true; tvReport(vid);
         /* pressing play after a pause rejoins the broadcast rather than
            starting a private screening from where you left off */
         if(e.data===1) tvCatchUp();
         if(e.data===0) mpSend({t:"tvEnded",vid:MP.tv.now&&MP.tv.now.vid});
       },
       /* 2 bad id, 5 html5 error, 100 gone, 101/150 embedding disallowed */
-      onError:e=>tvFallback(vid,e&&e.data),
+      onError:e=>{
+        const code=e&&e.data;
+        /* 2/100/101/150 fail for the whole room, not just this screen — an
+           unplayable video must not park the channel, so an erroring screen
+           casts its own skip vote */
+        if([2,100,101,150].indexOf(code)>=0&&tvVoted!==vid){ tvVoted=vid; mpSend({t:"tvSkip"}); }
+        tvFallback(vid,code);
+      },
     },
   });
   /* the embed can also fail without ever telling us — a blocker or a proxy
@@ -4775,16 +4894,16 @@ if(location.hash.indexOf("#desktop")===0)
     rejoin:()=>tvCatchUp(),
     drift:()=>tvDrift(),
   };
-/* the TV ducks while a duel is on screen: the fight is the main act */
-setInterval(()=>{
+/* No auto-duck: the TV used to drop to 14% whenever any duel was on screen,
+   which with a lobby full of bots meant the volume pumped constantly while
+   you watched and only held still when the tab was hidden (a hidden tab gets
+   no snapshots, so no .dueling class). Volume is the mixer's job:
+   TV = master x Wave, like every other program on this machine. */
+function tvApplyVol(bus){
   if(!ytPlayer||!ytPlayer.setVolume) return;
-  try{
-    const fighting=document.querySelector("#curlayer .cur.dueling");
-    const want=fighting?14:100;
-    if(ytDuck!==want){ ytDuck=want; ytPlayer.setVolume(want); }
-  }catch(e){}
-},400);
-let ytDuck=-1;
+  const wave=bus!=null?bus:(snd&&snd.ampBus?snd.ampBus():1);
+  try{ ytPlayer.setVolume(muted?0:Math.round(100*Math.max(0,Math.min(1,masterVol*wave)))); }catch(e){}
+}
 /* Everyone is watching the same broadcast, so there is one position and the
    server owns it. If this screen drifts — the tab slept, the phone locked, the
    window was shut for ten minutes, somebody hit pause — it rejoins the room at
@@ -4795,11 +4914,14 @@ function tvCatchUp(){
   const live=tvElapsed();
   try{
     const st=ytPlayer.getPlayerState?ytPlayer.getPlayerState():-1;
-    if(Math.abs((ytPlayer.getCurrentTime()||0)-live)>1.5){ ytPlayer.seekTo(live,true); tvLastSeek=Date.now(); }
+    if(Math.abs((ytPlayer.getCurrentTime()||0)-live)>1.5&&Date.now()-tvLastSeek>4000){ ytPlayer.seekTo(live,true); tvLastSeek=Date.now(); }
     if(st===2||st===5) ytPlayer.playVideo();
   }catch(e){}
 }
 function tvDrift(){
+  /* "watching" = the TV page is mounted, the tab visible, IE open */
+  const watching=!!(tvPage&&tvPage.isConnected&&!document.hidden&&openApps.has("win-ie"));
+  if(watching!==tvWatchLast){ tvWatchLast=watching; mpSend({t:"tvWatch",on:watching}); }
   if(!tvPage||!tvPage.isConnected||!ytPlayer||!MP.tv.now) return;
   let st=-1,cur=0;
   try{ st=ytPlayer.getPlayerState?ytPlayer.getPlayerState():-1; cur=ytPlayer.getCurrentTime()||0; }catch(e){ return; }
@@ -4844,15 +4966,15 @@ function mpTvRenderQueue(){
   const nowEl=tvPage.querySelector("#tv-now"), qEl=tvPage.querySelector("#tv-queue");
   const ttl=tvTitle();
   if(nowEl) nowEl.innerHTML=MP.tv.now
-    ? `now playing: <b>${esc(ttl||MP.tv.now.vid)}</b> <font size="1">(queued by ${esc(MP.tv.now.by)})</font>`
+    ? `now playing: <b>${esc(MP.tv.now.title||ttl||MP.tv.now.vid)}</b> <font size="1">(queued by ${esc(MP.tv.now.by)})</font>`
     : `<font size="1">dead air. queue something.</font>`;
   const wEl=tvPage.querySelector("#tv-watch"), skEl=tvPage.querySelector("#tv-skipn");
-  if(wEl) wEl.textContent=(MP.online&&MP.online.length?MP.online.length:1)+" watching";
+  if(wEl) wEl.textContent=(MP.tv&&MP.tv.w!=null?MP.tv.w:(MP.online&&MP.online.length?MP.online.length:1))+" watching";
   if(skEl) skEl.textContent=MP.tv.skip&&MP.tv.skip.n?`· skip votes ${MP.tv.skip.n}/${MP.tv.skip.need}`:"";
   /* the server hands back the order it will ACTUALLY play in — rotated by
      person, not first-come — so the page shows the deck, not the inbox */
   if(qEl) qEl.innerHTML=MP.tv.queue.length
-    ? MP.tv.queue.map((q,i)=>`<div${q.by===MP.name?' style="font-weight:bold"':''}>${i+1}. ${esc(q.vid)} <font size="1" color="#888">&#8212; ${esc(q.by)}${q.by===MP.name?" (you)":""}</font></div>`).join("")
+    ? MP.tv.queue.map((q,i)=>`<div${q.by===MP.name?' style="font-weight:bold"':''}>${i+1}. ${esc(q.title||q.vid)} <font size="1" color="#888">&#8212; ${esc(q.by)}${q.by===MP.name?" (you)":""}</font></div>`).join("")
     : `<font size="1">queue is empty</font>`;
 }
 
@@ -5130,7 +5252,7 @@ function enterDesktop(){
   setTimeout(()=>{
     const lg=$("#login");
     lg.style.display="none"; lg.style.opacity=""; lg.classList.remove("welcoming");
-    showBalloon();
+    if(store.data.tourSeen) showBalloon();   /* first visit gets the How to Play card instead */
     /* MSConfig nags every boot until you put startup back to Normal */
     try{ maint.applyStartup(); }catch(e){}
     setTimeout(()=>{ try{ maint.maybeNag(); }catch(e){} },2600);
@@ -5180,6 +5302,9 @@ function logon(){
   $("#login").classList.add("welcoming");
   chime();
   setTimeout(enterDesktop,1500);
+  /* first session: the card that explains the game, once, after the desktop
+     has settled. Closing it (any way) is "seen it". */
+  if(!store.data.tourSeen) setTimeout(()=>{ try{ tour.open(); }catch(e){} },5200);
 }
 function commitUserName(){
   const raw=$("#lg-user").value.trim().replace(/[^\w .$-]/g,"").slice(0,14);
@@ -5335,7 +5460,7 @@ if(location.hash.indexOf("#desktop-mp")===0) setTimeout(()=>{ /* dev: drive the 
   });
   if(p==="-tv"||p==="-gal"||p==="-guest") when(()=>{
     ie.connectNow(); openWin("win-ie");
-    ie.go(p==="-tv"?"http://tv.cursor.land/":p==="-gal"?"http://gallery.cursor.land/":"http://www.cursor.land/guest.html",{replace:true});
+    ie.go(p==="-tv"?"http://tv.cursor.land/":p==="-gal"?"http://gallery.cursor.land/":"http://guest.cursor.land/",{replace:true});
   });
 },700);
 if(location.hash==="#desktop-crash") setTimeout(()=>{ /* dev: fast-forward to the shutdown rush and crash */

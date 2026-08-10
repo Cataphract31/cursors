@@ -24,11 +24,12 @@ export function initSoundApps(deps) {
     return store.data.mixer;
   }
   const factor = k => { const c = mix()[k]; return c.m ? 0 : c.v / 100; };
-  function applyMix() { try { wmpVol(); } catch (e) {} try { ampVol(); } catch (e) {} }
+  function applyMix() { try { wmpVol(); } catch (e) {} try { ampVol(); } catch (e) {} try { tvVol(); } catch (e) {} }
   /* Winamp is a program on this machine, so it goes through the mixer like
      one: its own slider is the app's volume, Wave is its bus, and Volume
      Control is the master over both. */
   function ampVol() { if (hooks.ampVolume) hooks.ampVolume(factor("wave")); }
+  function tvVol() { if (hooks.tvVolume) hooks.tvVolume(factor("wave")); }
 
   /* ================= sndvol32 ================= */
   function volRender() {
@@ -137,13 +138,19 @@ export function initSoundApps(deps) {
     srDrawFlat(); srLabel();
   }
   async function srRecord() {
+    /* two quick clicks = two getUserMedia awaits = an orphaned hot mic */
+    if (sr.pending) return;
     srStopAll();
+    sr.pending = true;
     let stream;
     try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
     catch (e) {
+      sr.pending = false;
       showError("Sound Recorder", "Another program is using the recording device, or no recording device is installed.");
       return;
     }
+    sr.pending = false;
+    if (sr.recording || sr.stream) { stream.getTracks().forEach(t => t.stop()); return; }
     sr.stream = stream; sr.chunks = [];
     const ac = srAC();
     const src = ac.createMediaStreamSource(stream);
@@ -341,6 +348,7 @@ export function initSoundApps(deps) {
     mixerChanged() {
       wmpVol();
       ampVol();
+      tvVol();
       const win = $("#win-sndvol");
       if (!win || win.style.display === "none") return;
       const col = $("#sv32-cols") && $("#sv32-cols").firstElementChild;

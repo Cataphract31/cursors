@@ -194,24 +194,23 @@ export function initPaint(deps) {
   /* ---------- undo: three levels, exactly like the real thing ---------- */
   let undos = [], redos = [];
   function snapshot() {
-    try { undos.push(ctx.getImageData(0, 0, cw, ch)); } catch (e) { return; }
+    try { undos.push({ img: ctx.getImageData(0, 0, cw, ch), w: cw, h: ch }); } catch (e) { return; }
     if (undos.length > 3) undos.shift();
     redos = [];
   }
-  function undo() {
-    if (!undos.length) return;
+  /* a transform can change the canvas size; restoring pixels without
+     restoring dimensions clips the picture */
+  function unstack(from, to) {
+    if (!from.length) return;
     cancelPending();
-    try { redos.push(ctx.getImageData(0, 0, cw, ch)); } catch (e) {}
-    ctx.putImageData(undos.pop(), 0, 0);
+    try { to.push({ img: ctx.getImageData(0, 0, cw, ch), w: cw, h: ch }); } catch (e) {}
+    const u = from.pop();
+    if (u.w !== cw || u.h !== ch) resize(u.w, u.h, false);
+    ctx.putImageData(u.img, 0, 0);
     dirty();
   }
-  function redo() {
-    if (!redos.length) return;
-    cancelPending();
-    try { undos.push(ctx.getImageData(0, 0, cw, ch)); } catch (e) {}
-    ctx.putImageData(redos.pop(), 0, 0);
-    dirty();
-  }
+  function undo() { unstack(undos, redos); }
+  function redo() { unstack(redos, undos); }
 
   /* ---------- persistence: your art survives a reboot ---------- */
   let saveT = null;
@@ -313,6 +312,9 @@ export function initPaint(deps) {
     syncStatus(p);
     if (!drawing) return;
     const t = TOOLS[tool].id, ink = inkFor(btn);
+    if (t === "curve" && curve && curve.dragging) {
+      curve.b = p; drawCurveOverlay(); return;
+    }
     if (t === "pencil" || t === "brush" || t === "eraser" || t === "airbrush") {
       strokeTo(last, p, ink); last = p;
     } else if (t === "select" || t === "freeselect") {
@@ -331,6 +333,9 @@ export function initPaint(deps) {
     if (!drawing) return;
     drawing = false;
     const p = pos(e), t = TOOLS[tool].id, ink = inkFor(btn);
+    if (t === "curve" && curve && curve.dragging) {
+      curve.b = p; curve.dragging = false; drawCurveOverlay(); return;
+    }
     if (t === "select" || t === "freeselect") {
       if (sel && sel.moving) { sel.moving = false; return; }
       if (sel && Math.abs(sel.x1 - sel.x0) < 2 && Math.abs(sel.y1 - sel.y0) < 2) { sel = null; clearOverlay(); }

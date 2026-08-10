@@ -291,7 +291,7 @@ export function initMessenger(deps) {
   function botSilence(id) {
     if (id === "lobby" || told.has(id)) return;
     told.add(id);
-    setTimeout(() => sys(id, byId(id).name + " is a bot. It plays, it does not reply."), 500);
+    setTimeout(() => sys(id, byId(id).name + " is a bot — no replies."), 500);
   }
   function scheduleLobbyReply() {
     const c = pick(CONTACTS.filter(x => state[x.id] === "online"));
@@ -441,7 +441,7 @@ export function initMessenger(deps) {
       }
       return g;
     };
-    host.appendChild(groupEl(humans.length ? "Bots (they play for real money too)" : "Online", online));
+    host.appendChild(groupEl(humans.length ? "Bots" : "Online", online));
     host.appendChild(groupEl("Offline", offline));
   }
 

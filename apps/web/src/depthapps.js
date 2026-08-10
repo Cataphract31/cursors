@@ -42,6 +42,8 @@ export function initDepthApps(deps) {
     return s.length > 20 ? n.toExponential(8) : s;
   }
   function calcOp(op) {
+    /* 5 + * means "I meant *": replace the pending operator, don't apply it */
+    if (fresh && pendOp != null) { pendOp = op; calcShow(); return; }
     calcApply();
     pendOp = op; fresh = true;
     entry = fmt(acc); calcShow();
@@ -208,6 +210,7 @@ export function initDepthApps(deps) {
     });
   }
   function dfAnalyze() {
+    clearInterval(dfTimer);
     dfState = dfBuild(); dfDraw();
     dfState.analyzed = true;
     const d = hooks.disk();
@@ -221,6 +224,8 @@ export function initDepthApps(deps) {
     $("#df-status").textContent = "Defragmenting... 0%";
     clearInterval(dfTimer);
     dfTimer = setInterval(() => {
+      /* the state can be swapped out under us (Analyze mid-run, reopen) */
+      if (!dfState || !dfState.defragging) { clearInterval(dfTimer); return; }
       /* red cells migrate left and turn blue, a few at a time - watching it
          is the entire product */
       const cells = dfState.cells;
@@ -239,8 +244,9 @@ export function initDepthApps(deps) {
         clearInterval(dfTimer);
         dfState.defragging = false;
         $("#df-status").textContent = "Defragmentation is complete for: (C:)";
-        showError("Disk Defragmenter",
-          "Defragmentation is complete for: (C:)\n\nThe files moved. The dead cursors are still dead, and the disk is exactly as full as it was. Defragmenting is self-care, not accounting.", true);
+        const w = document.getElementById("win-defrag");
+        if (w && w.style.display !== "none")
+          showError("Disk Defragmenter", "Defragmentation is complete for: (C:)", true);
       }
     }, 90);
   }

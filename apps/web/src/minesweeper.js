@@ -254,7 +254,8 @@ export function initMinesweeper(deps) {
       { label: "New", action: () => newGame() },
       { sep: 1 },
       ...Object.keys(LEVELS).map(k => ({
-        label: LEVELS[k].label, check: level === k, action: () => newGame(k),
+        label: LEVELS[k].label, check: level === k,
+        action: () => { store.data.mineLevel = k; store.save(); newGame(k); },
       })),
       { sep: 1 },
       { label: "Marks (?)", check: marks, action: () => { marks = !marks; store.data.mineMarks = marks; store.save(); } },
@@ -284,5 +285,8 @@ export function initMinesweeper(deps) {
     setLevel: lv => { store.data.mineLevel = lv; store.save(); newGame(lv); },
     currentLevel: () => level,
     pause: stopTimer,
+    /* reopening the box restarts the clock of an unfinished game — a paused
+       clock must not turn into a 3-second Expert record */
+    resume: () => { if (started && !over && !timer) startTimer(); },
   };
 }

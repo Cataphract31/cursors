@@ -101,7 +101,7 @@ body.mobile .icon .lbl{font-size:10px}
 #tray{display:flex;align-items:center;gap:7px;padding:0 10px;margin-left:10px;color:#fff;font:11px Tahoma;flex:none;border-left:1px solid #1042af;box-shadow:inset 1px 0 1px #18bbff;background:linear-gradient(to bottom,#0c59b9 1%,#139ee9 6%,#18b5f2 10%,#139beb 14%,#1290e8 19%,#0d8dea 63%,#0d9ff1 81%,#0f9eed 88%,#119be9 91%,#1392e2 94%,#137ed7 97%,#095bc9 100%)}
 .trayico{width:15px;height:15px;cursor:pointer}
 #sndico.muted{filter:grayscale(1) opacity(.55)}
-#phasechip{font-family:"Lucida Console",Consolas,monospace;font-size:10px;white-space:nowrap}
+#phasechip{font-family:"Lucida Console",Consolas,monospace;font-size:11px;white-space:nowrap}
 #clock{margin:0 5px;font-variant-numeric:tabular-nums}
 body.mobile #clock{display:none}
 body.mobile #phasechip{display:none} /* the HUD carries the round clock */
@@ -249,7 +249,7 @@ body.mobile .cx-pane.on{height:auto !important;flex:1;min-height:0}   /* sheets 
 .cx-kv.pos b{color:#0A7A2F}
 .cx-note{font-size:10px;line-height:1.65;color:#4A4636;background:#FFF7DE;border:1px solid #E0C05A;padding:6px 8px;margin-top:8px}
 .cx-seed{font:10px "Lucida Console",Consolas,monospace;word-break:break-all;background:#F6F5EE;border:1px solid #D4D0C8;padding:5px 6px;margin:3px 0 8px;user-select:text;cursor:text}
-table.cxh{border-collapse:collapse;width:100%;font-size:10px}
+table.cxh{border-collapse:collapse;width:100%;font-size:11px}
 table.cxh th{background:#ECE9D8;border-bottom:1px solid #ACA899;text-align:left;font-weight:normal;padding:2px 5px;white-space:nowrap;position:sticky;top:0}
 table.cxh td{padding:2px 5px;border-bottom:1px solid #F0F0F0;white-space:nowrap}
 table.cxh td.n,table.cxh th.n{text-align:right}
@@ -394,7 +394,7 @@ body.mobile .conv-right{display:none}
 .emo-picker img{width:19px;height:19px;display:block}
 
 /* sign-in / message toast */
-.msn-toast{position:fixed;right:12px;bottom:40px;width:222px;transition:opacity .25s,transform .25s,bottom .2s;background:#F2F7FE;border:1px solid #6E93BE;box-shadow:2px 3px 9px rgba(0,0,0,.35);z-index:99700;opacity:0;transform:translateY(14px);transition:opacity .25s,transform .25s;cursor:default}
+.msn-toast{position:fixed;right:12px;bottom:40px;width:222px;transition:opacity .25s,transform .25s,bottom .2s;background:#F2F7FE;border:1px solid #6E93BE;box-shadow:2px 3px 9px rgba(0,0,0,.35);z-index:99700;opacity:0;transform:translateY(14px);cursor:default}
 .msn-toast.in{opacity:1;transform:translateY(0)}
 .mt-head{display:flex;align-items:center;gap:5px;padding:3px 5px;background:linear-gradient(180deg,#3E90E8,#1B5FAE);color:#fff;font-weight:bold}
 .mt-head img{width:14px;height:14px}
@@ -496,56 +496,8 @@ body.mobile .diskbar{margin:0 4px 4px}
 .ie-doc .hit{margin:0 0 13px;text-align:left}
 .ie-doc .hit a{color:#0000CC;font-size:14px}
 
-/* cursor$land, and everything else hosted on a free tripod account */
-.ie-doc.geo{background:#000 radial-gradient(#fff 1px,transparent 1.2px);background-size:70px 70px;color:#0F0;font-family:"Comic Sans MS","Trebuchet MS",cursive;font-size:12px;text-align:center}
-.ie-doc.geo h1{color:#F0F;text-shadow:2px 2px #005;font-size:19px}
-.ie-doc.geo a{color:#5CF}
-.ie-doc.geo a:hover{color:#FF0}
-.ie-doc.geo marquee.marq{background:#001;border:1px solid #0F0;color:#FF0;font-size:12px}
-.ie-doc.geo .sidebox,.ie-doc.geo .ringbox{background:#001;border-color:#0A0;color:#0F0}
-.ie-doc.geo .oddstable{background:#010;border-color:#0A0;margin:8px auto;font-size:11px}
-.ie-doc.geo .oddstable th{background:#030;color:#FF0}
-.ie-doc.geo .oddstable td{border-color:#060}
-.ie-doc.geo .gbentry{background:#010;border-color:#0A0;text-align:left;margin:0 auto}
-.ie-doc.geo b{color:#FF0}
-.ie-doc.geo i,.ie-doc.geo u{color:#9F9}
-
-/* the ring hub: grey, tabular, 1998 */
-.ie-doc.ring{background:#CCCCCC;font-family:Arial,Helvetica,sans-serif;font-size:12px}
-.ie-doc.ring table{background:#FFFFFF}
-.ie-doc.ring th{background:#C0C0C0}
-
-/* mumu's shrine to mumu */
-.ie-doc.mumu{background:#FFFFCC;color:#000080;font-family:"Comic Sans MS","Trebuchet MS",cursive;font-size:12px}
-.ie-doc.mumu h1{color:#FF0000;font-size:22px;text-shadow:1px 1px #FF0}
-.ie-doc.mumu marquee.marq{background:#FFFF00;border:2px solid #F00;color:#F00}
-.ie-doc.mumu a{color:#0000FF}
-.ie-doc.mumu .ascii{background:#000;color:#0F0;padding:6px;display:inline-block;text-align:left}
-
-/* deg404, who has cracked it */
-.ie-doc.hax{background:#000;color:#00CC00;font-family:"Lucida Console",Consolas,monospace;font-size:12px;text-align:left}
-.ie-doc.hax a{color:#00FF00}
-.ie-doc.hax b{color:#FFFFFF}
-.ie-doc.hax i{color:#00AA00}
-.ie-doc.hax .hax-hr{border-top:1px dashed #0A0}
-.ie-doc.hax .haxbox{background:#001100;border-color:#0F0;color:#0F0;margin:12px auto}
-.ie-doc.hax .haxbox a{font-size:14px}
-
-/* bobo has been building this page for twenty-three years */
-.ie-doc.bobo{background:#008080;color:#FFFFFF;font-family:"Times New Roman",Times,serif}
-.ie-doc.bobo h1{color:#FFFF00}
-.ie-doc.bobo a{color:#FFFF88}
-
 /* MSN Search */
 .ie-doc.srch{background:#fff;font-family:Verdana,Arial,sans-serif;font-size:12px}
-
-/* the popup, which is 2003's fault and not ours.
-   named iepop, not pop: .pop is already the death-burst FX, and a collision
-   there dressed this window up as a 34px circle that faded itself out. */
-.ie-doc.iepop{background:#FFFFCC;font-family:"Comic Sans MS","Trebuchet MS",cursive;font-size:12px;padding:8px;overflow:hidden}
-.ie-doc.iepop h1{color:#F00;font-size:18px;margin:4px 0}
-.ie-doc.iepop marquee.marq{background:#F00;color:#FF0;font-size:11px}
-.ie-doc.iepop a{color:#00A}
 
 /* "The page cannot be displayed", carbon copy */
 .ie-doc.err{font-family:"Times New Roman",Times,serif}
@@ -588,7 +540,7 @@ body.mobile.sheeted #arena{opacity:.16}
 #fxlayer{z-index:2}
 .cur{position:absolute;left:0;top:0;will-change:transform}
 .cur svg{width:17px;height:26px;filter:drop-shadow(1px 2px 2px rgba(0,0,0,.55))}
-.cur .tag{position:absolute;left:13px;top:25px;white-space:nowrap;font-weight:bold;font-family:Tahoma,sans-serif;font-size:calc(10px * var(--cmag,1));color:#fff;text-shadow:1px 1px 2px #000,-1px 1px 2px #000,0 0 3px #000}
+.cur .tag{position:absolute;left:13px;top:25px;white-space:nowrap;font-weight:bold;font-family:Tahoma,sans-serif;font-size:calc(11px * var(--cmag,1));color:#fff;text-shadow:1px 1px 2px #000,-1px 1px 2px #000,0 0 3px #000}
 .cur .tag .bt{margin-left:4px}
 .cur .tag .mx{margin-left:4px;color:#FFD24A}
 .cur.me .nm{background:#316AC5;padding:0 4px;border-radius:2px}
@@ -604,8 +556,8 @@ body.mobile.sheeted #arena{opacity:.16}
 @keyframes riseRot{from{transform:rotate(-90deg)}to{transform:rotate(-90deg) translateY(-48px);opacity:0}}
 #arena.rot .cur.dueling svg{animation:shakeRot .13s infinite}
 @keyframes shakeRot{0%{transform:rotate(-90deg) translate(0,0)}25%{transform:rotate(-90deg) translate(-1.5px,1px)}50%{transform:rotate(-90deg) translate(1.5px,-1px)}75%{transform:rotate(-90deg) translate(-1px,-1.5px)}100%{transform:rotate(-90deg) translate(1px,1px)}}
-.duelfx{position:absolute;text-align:center;font:bold 10px "Lucida Console",Consolas,monospace;color:#fff;text-shadow:1px 1px 2px #000,0 0 4px #000}
-.duelfx.big{font-size:13px;color:#FFD24A}
+.duelfx{position:absolute;text-align:center;font:bold calc(10px * var(--cmag,1)) "Lucida Console",Consolas,monospace;color:#fff;text-shadow:1px 1px 2px #000,0 0 4px #000}
+.duelfx.big{font-size:calc(13px * var(--cmag,1));color:#FFD24A}
 .duelfx .hg{display:inline-block;font-size:15px;animation:flip .5s steps(2) infinite}
 .duelfx.big .hg{font-size:21px}
 @keyframes flip{to{transform:rotate(360deg)}}
@@ -614,8 +566,8 @@ body.mobile.sheeted #arena{opacity:.16}
 @keyframes fly{to{transform:translate(var(--dx),var(--dy)) rotate(var(--rot));opacity:0}}
 .pop{position:absolute;width:34px;height:34px;border:3px solid #fff;border-radius:50%;animation:pop .45s forwards}
 @keyframes pop{from{transform:scale(.2);opacity:1}to{transform:scale(1.4);opacity:0}}
-.float{position:absolute;font:bold 13px "Lucida Console",Consolas,monospace;color:#FFD24A;text-shadow:1px 1px 2px #000,0 0 4px #000;animation:rise 1.2s forwards;white-space:nowrap}
-.float.sm{font-size:10px;color:#fff}
+.float{position:absolute;font:bold calc(13px * var(--cmag,1)) "Lucida Console",Consolas,monospace;color:#FFD24A;text-shadow:1px 1px 2px #000,0 0 4px #000;animation:rise 1.2s forwards;white-space:nowrap}
+.float.sm{font-size:calc(11px * var(--cmag,1));color:#fff}
 @keyframes rise{to{transform:translateY(-48px);opacity:0}}
 
 /* ---------- BSOD / power-off screen ---------- */
@@ -746,7 +698,7 @@ body.mobile #bsod{font-size:11px;padding:16px 14px}
 .cit.has-sub:hover>.csub,.csub.open{visibility:visible}
 .csep{border-top:1px solid #ACA899;margin:3px 2px}
 #errtext{white-space:pre-line}
-#xptip{position:fixed;display:none;z-index:100010;background:#FFFFE1;border:1px solid #000;padding:3px 7px;font-size:11px;box-shadow:1px 2px 4px rgba(0,0,0,.3);pointer-events:none;white-space:nowrap}
+#xptip{position:fixed;display:none;z-index:99900;background:#FFFFE1;border:1px solid #000;padding:3px 7px;font-size:11px;box-shadow:1px 2px 4px rgba(0,0,0,.3);pointer-events:none;white-space:nowrap}
 
 /* ---------- xp tabs / dialogs / task manager ---------- */
 .xtabs{display:flex;gap:2px;padding:6px 8px 0;border-bottom:1px solid #919B9C;background:#ECE9D8;flex:none}
@@ -821,7 +773,7 @@ body.mobile #mhud{display:flex}
 .mh-wallet{font-weight:bold;font-size:12px}
 .mh-phase{background:#FFF7DE;color:#000;border:1px solid #E0C05A;border-radius:2px;padding:0 5px;font-size:10px;line-height:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mh-phase.battle{background:#FFE9E0;border-color:#E08A5A}
-.mh-live{color:#CFE0FF;font-size:10px;white-space:nowrap}
+.mh-live{color:#FFFFFF;font-size:11px;white-space:nowrap}
 .mh-btns{display:flex;gap:5px;flex:1;min-height:0}
 .mh-btns .xbtn{min-height:0;min-width:0;height:100%;font-weight:bold;font-size:12px;padding:0 2px}
 #mh-deploy{flex:2.1}
@@ -833,8 +785,8 @@ body.mobile #mhud{display:flex}
 .mh-disk b{display:block;height:100%;width:0;background:linear-gradient(180deg,#7BD160 0,#3E9E27 100%);transition:width .3s linear}
 .mh-disk.warn b{background:linear-gradient(180deg,#F5D14E 0,#D89A1E 100%)}
 .mh-disk.crit b{background:linear-gradient(180deg,#FF7A6B 0,#C22C1B 100%)}
-.mh-disk.crit{animation:diskpulse 1s steps(2,end) infinite}
-@keyframes diskpulse{50%{border-color:#FF9C90}}
+.mh-disk.crit{animation:mhdiskpulse 1s steps(2,end) infinite}
+@keyframes mhdiskpulse{50%{border-color:#FF9C90}}
 
 /* ---- landscape: the thumb bar stands up as a right rail ---- */
 body.mobile.land #mhud{top:0;bottom:calc(var(--tb) + var(--sab));left:auto;right:0;
@@ -843,7 +795,7 @@ body.mobile.land #mhud{top:0;bottom:calc(var(--tb) + var(--sab));left:auto;right
   background:linear-gradient(90deg,#1E4FC4 0,#245DDB 40%,#2E6FE0 100%)}
 body.mobile.land .mh-top{flex-direction:column;align-items:stretch;gap:3px;padding:0 0 6px;text-align:center}
 body.mobile.land .mh-wallet{font-size:13px}
-body.mobile.land .mh-phase{font-size:9px;line-height:15px}
+body.mobile.land .mh-phase{font-size:11px;line-height:16px}
 body.mobile.land .mh-live{font-size:10px}
 body.mobile.land .mh-disk{margin:0 0 6px;order:-1}
 /* buttons sit at the FOOT of the rail — that is where a thumb is when the
@@ -934,7 +886,7 @@ body.mobile .renamer,body.mobile .usertxtarea{font-size:16px}
   width:20px;height:92px;margin:0;accent-color:#316AC5}
 .vf-mute{display:flex;align-items:center;gap:3px;white-space:nowrap;font-size:11px}
 .vf-mute input{margin:0}
-.trayico.muted{opacity:.45}
+
 
 
 /* ================= cmd.exe ================= */
@@ -1179,7 +1131,7 @@ body.typing,body.typing *{cursor:none!important}
 #tray-chev:hover{background:rgba(255,255,255,.28)}
 .tray-idle{display:none}
 body.tray-open .tray-idle{display:inline-block}
-#alttab{position:fixed;left:50%;top:38%;transform:translate(-50%,-50%);display:none;z-index:99950;
+#alttab{position:fixed;left:50%;top:38%;transform:translate(-50%,-50%);display:none;z-index:99996;
   background:#ECE9D8;border:2px solid;border-color:#fff #716F64 #716F64 #fff;box-shadow:3px 3px 8px rgba(0,0,0,.4);
   padding:10px 12px 8px;min-width:220px;text-align:center}
 .at-icons{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;max-width:340px}
@@ -1301,7 +1253,7 @@ body.tb-auto.tb-peek #taskbar{transform:none}
 .sv32-vrow input{writing-mode:vertical-lr;direction:rtl;flex:1;min-height:70px}
 .sv32-mute{display:flex;gap:4px;align-items:center}
 .sv32-dev{flex:none;padding:3px 8px;color:#555;border-top:1px solid #ACA899;font-size:10px}
-.sr-main{padding:8px;display:flex;flex-direction:column;gap:7px}
+.srec-main{padding:8px;display:flex;flex-direction:column;gap:7px}
 .sr-labels{display:flex;justify-content:space-between;align-items:center;gap:8px}
 #sr-scope{border:1px solid;border-color:#808080 #fff #fff #808080;background:#000}
 .sr-btns{display:flex;gap:4px;justify-content:center}
@@ -1618,7 +1570,7 @@ body.mobile #win-taskmgr .xtabs{flex-wrap:wrap}
 body.mobile .tm-statgrid{grid-template-columns:1fr}
 
 /* the On-Screen Keyboard is the one window that must fit the width exactly */
-body.mobile #desktop>#win-osk{left:0 !important;right:0;width:100% !important;
+body.mobile #desktop>#win-osk{left:0 !important;right:0;width:100% !important;bottom:0 !important;
   top:auto !important;bottom:calc(var(--tb) + var(--hud) + var(--sab)) !important;
   height:210px !important}
 body.mobile .osk-key{font-size:12px}
@@ -1692,3 +1644,37 @@ body.mobile .sv32-vrow input{min-height:110px}
 #win-ie.theater .ie-doc.tv>center>*{display:none}
 #win-ie.theater .ie-doc.tv>center>#tv-stage{display:block;margin:0;border:0}
 #win-ie.theater #tv-exit{display:block}
+
+/* ---- audit pass: phone targets and drag ergonomics ---- */
+body.mobile .cx-tab{padding:8px 12px 7px;font-size:12px}
+body.mobile .task-tab{height:30px}
+body.mobile .mmc-row{height:26px}
+body.mobile .mmc-row.mmc-head{height:24px}
+body.mobile #balloon-x{font-size:12px;padding:1px 5px}
+/* while a window drags or resizes, iframes must not eat the pointerup */
+body.win-drag iframe{pointer-events:none}
+
+/* ---------- How to Play: the intro card ---------- */
+/* XP chrome outside, flat and glanceable inside: one picture, three bullets */
+.tour-body{display:flex;min-height:0;padding:0;background:#fff}
+.tour-rail{flex:0 0 148px;background:linear-gradient(180deg,#5A7EDC 0,#3B62C4 40%,#2B51B4 100%);
+  color:#fff;padding:16px 0 10px;display:flex;flex-direction:column;gap:2px}
+.tour-dot{display:flex;align-items:center;gap:8px;padding:7px 12px;font-size:11px;cursor:pointer;opacity:.82}
+.tour-dot i{width:9px;height:9px;border-radius:50%;background:#fff;opacity:.45;flex:none}
+.tour-dot.on{background:rgba(255,255,255,.16);opacity:1;font-weight:bold}
+.tour-dot.on i{opacity:1;box-shadow:0 0 5px #fff}
+.tour-main{flex:1;min-width:0;display:flex;flex-direction:column;padding:12px 14px 10px}
+.tour-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:8px}
+.tour-head b{font-size:15px;color:#0A246A}
+.tour-step{font-size:10px;color:#888}
+#tour-img{width:100%;max-height:280px;object-fit:contain;object-position:center;
+  background:#000;border:1px solid #919B9C;flex:none}
+.tour-pts{margin:9px 0 0;padding:0 0 0 4px;list-style:none;flex:1}
+.tour-pts li{font-size:12px;line-height:1.55;padding-left:14px;position:relative}
+.tour-pts li::before{content:"▸";position:absolute;left:0;color:#2B51B4}
+.tour-foot{display:flex;justify-content:flex-end;gap:6px;padding-top:9px}
+body.mobile .tour-body{flex-direction:column}
+body.mobile .tour-rail{flex:none;flex-direction:row;overflow-x:auto;padding:6px 4px}
+body.mobile .tour-dot{flex:none;padding:6px 9px}
+body.mobile .tour-dot span{display:none}
+body.mobile #tour-img{max-height:44vh}

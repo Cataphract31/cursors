@@ -67,9 +67,7 @@ ${board}
 alive right now <b>${h.alive}</b> &#183;
 dead so far <b>${h.dead}</b> &#183;
 your biggest bank <b>${esc(h.bigBank)}</b></font></p>
-<p><font size="1">every dead cursor gets a certificate with its odds at the
-moment it lost. the favourites that lost are in the
-<a data-act="hall">Hall of Pain</a>, in the Recycle Bin.</font></p>
+<p><font size="1">certificates: the <a data-act="hall">Hall of Pain</a>, in the Recycle Bin.</font></p>
 </center>`;
     },
   });
@@ -134,7 +132,7 @@ ${list}
 </center>` : `<center>
 <h1>cursorTV</h1>
 <hr width="94%">
-<p>the antenna is the beta server, and you are not connected to it.</p>
+<p>offline. connect to watch.</p>
 </center>`,
   });
 
@@ -147,11 +145,11 @@ ${list}
       if (!list) return `<center>
 <h1>the gallery</h1>
 <hr width="88%">
-<p>the gallery hangs on the beta server, and you are offline.</p>
+<p>offline.</p>
 <p><font size="1">connect, open Paint, make something, File &gt; Publish to Gallery.</font></p>
 </center>`;
       const items = list.length ? list.map(g => `<table border="1" cellpadding="6" cellspacing="0" class="gbentry" style="display:inline-table;margin:6px" width="260"><tr><td>
-  <img src="${g.png}" style="max-width:240px;max-height:170px;background:#fff"><br>
+  <img src="${/^data:image\//.test(g.png)?g.png:""}" style="max-width:240px;max-height:170px;background:#fff"><br>
   <b>${esc(g.name)}</b> <font size="1" color="#888">by ${esc(g.by)}</font>
 </td></tr></table>`).join("") : `<p><font size="1">nothing hangs here yet. open Paint. File &gt; Publish to Gallery.</font></p>`;
       return `<center>
@@ -284,8 +282,8 @@ Internet Explorer</p>
   function go(u, opts) {
     opts = opts || {};
     if (!u) return;
-    if (!online) { pending = u; dialup(); return; }
     if (offline) { render({ url: u, title: "Web page unavailable while offline", cls: "err", html: pageOffline(u) }, true); return; }
+    if (!online) { pending = u; dialup(); return; }
 
     const r = resolve(u);
     if (!opts.replace && url) { past.push(url); future.length = 0; }
@@ -395,7 +393,7 @@ Internet Explorer</p>
       online = true; offline = false;
       hooks.setNet(true);
       sysSnd("hwin", .5);
-      hooks.balloon("Connected at 56.6 Kbps", "cursor$net is connected.\nThis is as fast as it is ever going to get.");
+      hooks.balloon("Connected at 56.6 Kbps", "cursor$net is connected.");
       const u = pending || HOME; pending = null;
       go(u, { replace: !url });
     }, 8100);
@@ -445,7 +443,7 @@ Internet Explorer</p>
       });
       store.save();
       sysSnd("ding", .5);
-      go("http://www.cursor.land/guest.html", { replace: true });
+      go("http://guest.cursor.land/", { replace: true });
     },
   };
   els.page.addEventListener("click", e => {
@@ -538,19 +536,15 @@ Internet Explorer</p>
      mode drops all of it and gives the window to the screen. F11, like it
      always was. It only blanks the page chrome on the TV page (cls "tv"),
      because on any other page that would leave an empty white window. */
-  let theater = false, theaterMaxed = false;
+  let theater = false;
   function setTheater(on) {
     on = !!on;
     if (on === theater) return;
     theater = on;
+    /* the picture takes the window, not the screen: people park IE beside
+       MSN and the HUD and watch from there. Maximize is its own button. */
     const w = document.getElementById("win-ie");
-    if (w) {
-      w.classList.toggle("theater", theater);
-      if (hooks.maximize) {
-        if (theater && !w.classList.contains("maxed")) { hooks.maximize(); theaterMaxed = true; }
-        else if (!theater && theaterMaxed) { hooks.maximize(); theaterMaxed = false; }
-      }
-    }
+    if (w) w.classList.toggle("theater", theater);
     if (hooks.tvFit) hooks.tvFit();
   }
 
@@ -761,6 +755,7 @@ ${srcHTML}
   /* ---------- Add to Favorites / Organize Favorites ---------- */
   function addFavDialog() {
     if (!url || url === "about:blank") return;
+    delete els.afName.dataset.renaming;   /* a dismissed Rename must not leak in */
     els.afName.value = pageTitle || url;
     els.afUrl.textContent = url;
     hooks.openWin("win-addfav");

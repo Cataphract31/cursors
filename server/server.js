@@ -61,7 +61,8 @@ function schedSave(key) {
 function persistPlayer(key) {
   const p = sim.players.get(key); if (!p || p.bot) return;
   db.savePlayer({ token: key, name: p.name, balance: p.balance, tickets: p.tickets,
-    ticketsAt: p.ticketsAt, rake: p.rake, totIn: p.totIn, totOut: p.totOut, created: p.created });
+    ticketsAt: p.ticketsAt, rake: p.rake, totIn: p.totIn, totOut: p.totOut,
+    published: p.published, created: p.created });
 }
 
 /* ---------- the sim ---------- */
@@ -141,11 +142,24 @@ function tvOrder() {
 function tvMsg() {
   const need = conns.size <= 2 ? 1 : Math.ceil(conns.size / 3);
   /* srv is this box's clock. Clients do not trust their own for playback
-     position: a phone two minutes fast would seek two minutes past the room. */
-  return { t: "tv", now: tv.now, queue: tvOrder(), skip: { n: skipVotes.size, need }, srv: Date.now() };
+     position: a phone two minutes fast would seek two minutes past the room.
+     w counts screens that actually have the TV page open and visible. */
+  return { t: "tv", now: tv.now, queue: tvOrder(), skip: { n: skipVotes.size, need },
+    srv: Date.now(), w: [...conns].filter(x => x.tvWatch).length };
 }
 let skipVotes = new Set();
+/* the channel advances on the clock even when no player is open to report the
+   end: the first screen that can read the duration phones it in (tvDur) */
+let tvTimer = null;
+function scheduleTvEnd() {
+  clearTimeout(tvTimer);
+  if (!tv.now || !tv.now.dur) return;
+  const vid = tv.now.vid;
+  const ms = tv.now.startedAt + (tv.now.dur + 4) * 1000 - Date.now();
+  tvTimer = setTimeout(() => { if (tv.now && tv.now.vid === vid) tvAdvance(); }, Math.max(1000, ms));
+}
 function tvAdvance() {
+  clearTimeout(tvTimer);
   const order = tvOrder();
   const next = order[0];
   if (next) {
@@ -175,6 +189,11 @@ function handle(c, m) {
   const now = Date.now();
   switch (m.t) {
     case "hello": {
+      /* each hello can mint a fresh identity (sim record + DB row + join
+         broadcast); a loop of them is a memory/egress attack, not a login */
+      if (c.helloAt && now - c.helloAt < 2000) return;
+      c.helloAt = now; c.hellos = (c.hellos || 0) + 1;
+      if (c.hellos > 5) { c.ws.close(); return; }
       const token = /^[0-9a-f]{32}$/.test(m.token || "") ? m.token : randomBytes(16).toString("hex");
       c.key = token;
       const persisted = db.loadPlayer(token);
@@ -182,6 +201,7 @@ function handle(c, m) {
       const p = sim.registerPlayer(token, name, false, persisted ? {
         balance: persisted.balance, tickets: persisted.tickets, ticketsAt: persisted.ticketsAt,
         rake: persisted.rake, totIn: persisted.totIn, totOut: persisted.totOut, created: persisted.created,
+        published: persisted.published,
       } : null);
       p.name = name;
       if (SKIN_IDS.has(String(m.skin || ""))) p.skin = String(m.skin || "");
@@ -197,7 +217,8 @@ function handle(c, m) {
         balance: b.balance, tickets: b.tickets, glob: b.glob, rake: b.rake,
         epoch: sim.welcomeState(), chat: chatLog.slice(-25),
         online: onlineNames(),
-        tv: { now: tv.now, queue: tvOrder(), srv: Date.now() },
+        tv: { now: tv.now, queue: tvOrder(), srv: Date.now(),
+          w: [...conns].filter(x => x.tvWatch).length },
       });
       broadcast({ t: "join", name, online: onlineNames() });
       sys(`${name} signed in — ${conns.size} player${conns.size === 1 ? "" : "s"} online`);
@@ -229,7 +250,11 @@ function handle(c, m) {
       broadcast({ t: "chat", who, text });
       break;
     }
-    case "guest": send(c, { t: "guest", list: db.guestList() }); break;
+    case "guest":
+      if (now - (c.lastGuestGet || 0) < 3000) return;
+      c.lastGuestGet = now;
+      send(c, { t: "guest", list: db.guestList() });
+      break;
     case "guestPost": {
       /* the guestbook is cheaper than the gallery but still not free: one
          deploy proves you are a player and not a fresh tab */
@@ -243,7 +268,12 @@ function handle(c, m) {
       broadcast({ t: "guest", list: db.guestList() });
       break;
     }
-    case "gallery": send(c, { t: "gallery", list: db.galleryList() }); break;
+    case "gallery":
+      /* up to 16 base64 PNGs — the most expensive reply on the wire */
+      if (now - (c.lastGalleryGet || 0) < 5000) return;
+      c.lastGalleryGet = now;
+      send(c, { t: "gallery", list: db.galleryList() });
+      break;
     case "galleryPost": {
       /* A 60-second cooldown is not a spam gate, it is a rate limit — five
          tabs beat it and every tab gets a free 5 SOL. The wall has to cost
@@ -274,12 +304,29 @@ function handle(c, m) {
       if (!/^[\w-]{11}$/.test(vid)) return send(c, { t: "err", msg: "that is not a youtube video id" });
       const who = sim.players.get(c.key)?.name || "?";
       if (tv.queue.filter(q => q.by === who).length >= 3) return send(c, { t: "err", msg: "3 queued max — let it rotate" });
-      tv.queue.push({ vid, by: who });
+      const title = String(m.title || "").replace(/[^\S ]+/g, " ").trim().slice(0, 80);
+      tv.queue.push(title ? { vid, by: who, title } : { vid, by: who });
       if (!tv.now) tvAdvance(); else broadcast(tvMsg());
       break;
     }
-    case "tvEnded":
-      if (tv.now && tv.now.vid === m.vid && now - tv.now.startedAt > 20000) tvAdvance();
+    case "tvEnded": {
+      if (!tv.now || tv.now.vid !== m.vid) break;
+      /* with a reported duration, "ended" must agree with the clock;
+         without one, the legacy 20s floor stands */
+      const min = tv.now.dur ? Math.max(20000, (tv.now.dur - 8) * 1000) : 20000;
+      if (now - tv.now.startedAt > min) tvAdvance();
+      break;
+    }
+    case "tvDur": {
+      const d = +m.dur;
+      if (tv.now && tv.now.vid === m.vid && !tv.now.dur && d > 4 && d < 4 * 3600) {
+        tv.now.dur = Math.round(d);
+        scheduleTvEnd();
+      }
+      break;
+    }
+    case "tvWatch":
+      if (c.tvWatch !== !!m.on) { c.tvWatch = !!m.on; broadcast(tvMsg()); }
       break;
     case "tvSkip": {
       if (!tv.now) return;
@@ -328,14 +375,23 @@ const wss = new WebSocketServer({
 
 wss.on("connection", ws => {
   const c = { ws, key: null, hello: false, lastChat: 0, lastGuest: 0, lastGallery: 0, alive: true, visible: true };
+  /* a socket that never says hello is not in conns, so the reaper below
+     never pings it — it would hold its zlib context forever */
+  c.preT = setTimeout(() => { if (!c.hello) ws.terminate(); }, 15000);
   ws.on("pong", () => { c.alive = true; });
   ws.on("message", data => {
     let m; try { m = JSON.parse(data); } catch { return; }
+    /* JSON.parse("null") is null, and null.t below the try would take the
+       whole process down — from an unauthenticated socket */
+    if (!m || typeof m !== "object" || typeof m.t !== "string") return;
     if (!c.hello && m.t !== "hello") return;
     try { handle(c, m); } catch (e) { console.error("handle failed:", m.t, e); }
   });
   ws.on("close", () => {
+    clearTimeout(c.preT);
     conns.delete(c);
+    if (c.key) skipVotes.delete(c.key);
+    if (c.tvWatch) broadcast(tvMsg());
     if (c.key) {
       persistPlayer(c.key);
       if (byKey.get(c.key) === c) {

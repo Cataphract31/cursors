@@ -41,6 +41,7 @@ export function initSysMaint(deps) {
     s.saver = Object.assign({}, store.data.saver);
     s.folderOpts = Object.assign({}, fo());
     s.msconfig = JSON.parse(JSON.stringify(mc()));
+    s.removedApps = (store.data.removedApps || []).slice();
     return s;
   }
   function applySnapshot(s) {
@@ -48,9 +49,11 @@ export function initSysMaint(deps) {
     if (s.saver) store.data.saver = Object.assign({}, s.saver);
     if (s.folderOpts) store.data.folderOpts = Object.assign({}, s.folderOpts);
     if (s.msconfig) store.data.msconfig = JSON.parse(JSON.stringify(s.msconfig));
+    if (s.removedApps) store.data.removedApps = s.removedApps.slice();
     store.save();
     hooks.applyCosmetic();
     applyStartup();
+    if (hooks.shellRefresh) hooks.shellRefresh();
   }
 
   /* ================================================================
@@ -337,6 +340,7 @@ export function initSysMaint(deps) {
      the Startup tab's checkboxes can never disagree */
   function startupOn(id) {
     const d = mc();
+    if (d.mode === "normal") return true;      /* Normal = load everything */
     if (d.mode === "diagnostic") return false;
     if (d.mode === "selective" && !d.sel.startup) return false;
     return !!d.start[id];
@@ -537,9 +541,9 @@ export function initSysMaint(deps) {
 
   function mcApply(close) {
     store.save();
-    point("System Configuration Utility", "auto");
     if (close) closeWin("win-msconfig");
     if (!mcDirty) return;
+    point("System Configuration Utility", "auto");
     mcDirty = false;
     store.data.msNag = 1; store.save();
     showConfirm("System Configuration",
@@ -908,6 +912,7 @@ export function initSysMaint(deps) {
       "Are you sure you want to remove " + p.n + " from your computer?", () => {
         point("Removed " + p.n, "auto");
         awProgress("Removing " + p.n + "...", () => {
+          if (p.win) try { closeWin(p.win); } catch (e) {}
           setInstalled(p.id, false);
           awSel = null; awRender();
           showError("Add or Remove Programs",
@@ -1138,7 +1143,7 @@ export function initSysMaint(deps) {
         note: "Analyses the drive. The red stripes are the dead." },
       { id: "autoplay", n: "Autoplay watchdog", sched: "Every 10 minutes",
         next: "Running now", run: () => showError("Autoplay watchdog",
-          "This task disarms autoplay when this machine has been away for ten minutes. It runs whether this folder is open or not, and it cannot be stopped from here."),
+          "Disarms autoplay after 10 idle minutes. Cannot be stopped from here."),
         note: "Disarms autoplay after the machine goes away." },
     ];
   }

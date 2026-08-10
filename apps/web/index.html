@@ -91,7 +91,7 @@
       <div class="phaseline" id="phaseline">BOOTING…</div>
       <!-- the disk IS the round clock now: every death is a 12 MB corpse, and
            when C: fills the system crashes and banks everyone -->
-      <div class="diskbar" id="diskbar" title="Local Disk (C:) — dead cursors fill it, and a full disk crashes CURSORS.EXE">
+      <div class="diskbar" id="diskbar" title="Local Disk (C:) — full disk = crash, everyone banked">
         <i id="diskfill"></i>
         <span id="disktext">C: —</span>
       </div>
@@ -106,7 +106,7 @@
         <div class="walletrow"><span>WALLET</span><span class="amt" id="walletamt">5.000 SOL</span></div>
         <div class="hr"></div>
         <button class="xbtn big" id="btn-deploy">▸ DEPLOY 0.1 SOL</button>
-        <div class="small dim" style="margin-top:4px">0.100 = 0.097 arena + 0.001 fee + 0.002 rakeback · deploys always open · a crash banks everyone in full</div>
+        <div class="small dim" style="margin-top:4px">0.097 arena · 0.001 fee · 0.002 rakeback</div>
         <div class="small" style="margin-top:4px">live <b id="livecount">0</b>/5 · in play <b class="mono" id="liveval">0.000</b></div>
         <div class="chiprow" style="margin-top:6px">
           <button class="xbtn chip on" id="st-attack">⚔ ATTACK</button>
@@ -233,8 +233,6 @@ icons/sounds: winXP (MIT)</div>
       </div>
       <div class="hr"></div>
       <div id="cert-rows"></div>
-      <div class="hr"></div>
-      <div class="cert-note" id="cert-note"></div>
       <div class="dlg-foot">
         <button class="xbtn" id="cert-hall" style="min-width:92px">Hall of Pain</button>
         <button class="xbtn" id="cert-ok" style="min-width:74px">OK</button>
@@ -260,7 +258,7 @@ icons/sounds: winXP (MIT)</div>
           <tbody id="hall-rows"></tbody>
         </table>
       </div>
-      <div class="hall-foot small dim">click a row for the certificate · every one of these was a fair draw</div>
+      <div class="hall-foot small dim">click a row for the certificate</div>
     </div>
   </div>
 
@@ -416,6 +414,26 @@ icons/sounds: winXP (MIT)</div>
     </div>
   </div>
 
+  <!-- How to Play: five slides, real screenshots -->
+  <div class="window" id="win-tour" data-minw="420" data-minh="300" style="left:calc(50% - 292px);top:52px;width:584px">
+    <div class="title-bar">
+      <div class="tb-l"><i class="xico tb-ico" data-ico="@ic-app"></i><div class="title-bar-text">How to Play CURSORS.EXE</div></div>
+      <div class="title-bar-controls"><button aria-label="Close"></button></div>
+    </div>
+    <div class="win-body tour-body">
+      <div class="tour-rail" id="tour-rail"></div>
+      <div class="tour-main">
+        <div class="tour-head"><b id="tour-title"></b><span class="tour-step" id="tour-step"></span></div>
+        <img id="tour-img" alt="" draggable="false">
+        <ul class="tour-pts" id="tour-pts"></ul>
+        <div class="tour-foot">
+          <button class="xbtn" id="tour-back" style="min-width:74px">&lt; Back</button>
+          <button class="xbtn" id="tour-next" style="min-width:96px">Next &gt;</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Connect cursor$net: the dial-up dialog -->
   <div class="window fixed" id="win-dialup" style="left:calc(50% - 172px);top:96px;width:344px">
     <div class="title-bar">
@@ -429,8 +447,7 @@ icons/sounds: winXP (MIT)</div>
         <span></span><label class="dl-chk"><input type="checkbox" checked> Save this user name and password</label>
         <label>Dial:</label><select id="dl-num"><option>555-0134</option><option>555-0135 (busy)</option></select>
       </div>
-      <div class="small dim" style="margin:9px 2px 0">Standard 56000 bps Modem. Your telephone line will be
-        occupied for the duration of the session, which is the deal everyone agreed to in 2003.</div>
+      <div class="small dim" style="margin:9px 2px 0">Standard 56000 bps Modem.</div>
       <div class="dlg-foot">
         <button class="xbtn" id="dl-connect" style="min-width:70px">Dial</button>
         <button class="xbtn" id="dl-offline" style="min-width:82px">Work Offline</button>
@@ -1494,7 +1511,7 @@ icons/sounds: winXP (MIT)</div>
     </div>
     <div class="win-body pad" style="background:#ECE9D8">
       <div class="menubar"><span>File</span><span>Edit</span><span>Effects</span><span>Help</span></div>
-      <div class="sr-main">
+      <div class="srec-main">
         <div class="sr-labels"><div>Position:<br><b id="sr-pos">0.00 sec.</b></div>
           <canvas id="sr-scope" width="120" height="60"></canvas>
           <div style="text-align:right">Length:<br><b id="sr-len">0.00 sec.</b></div></div>
@@ -1819,6 +1836,7 @@ icons/sounds: winXP (MIT)</div>
       <div class="sm-item" data-act="printers"><i class="xico" data-ico="printer32"></i><div class="sm-texts"><div class="sm-text">Printers and Faxes</div></div></div>
       <div class="sm-item" data-app="win-services"><i class="xico" data-ico="@ic-mmc"></i><div class="sm-texts"><div class="sm-text">Administrative Tools</div></div></div>
       <div class="sm-sep"></div>
+      <div class="sm-item" data-app="win-tour"><i class="xico" data-ico="@ic-app"></i><div class="sm-texts"><div class="sm-text">How to Play</div></div></div>
       <div class="sm-item" data-app="win-help"><i class="xico" data-ico="help32"></i><div class="sm-texts"><div class="sm-text">Help and Support</div></div></div>
       <div class="sm-item" data-act="search"><i class="xico" data-ico="search32"></i><div class="sm-texts"><div class="sm-text">Search</div></div></div>
       <div class="sm-item" data-app="win-run"><i class="xico" data-ico="run32"></i><div class="sm-texts"><div class="sm-text">Run...</div></div></div>

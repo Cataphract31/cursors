@@ -31,7 +31,7 @@ export function initAccess(deps) {
      pointer, blown up. This one clones the node under the pointer into the
      strip and scales it, which magnifies the real thing rather than a picture
      of it: the clock in the strip keeps ticking. */
-  let magOn = false, magNode = null, magRaf = 0, magX = 0, magY = 0;
+  let magOn = false, magNode = null, magRaf = 0, magX = 0, magY = 0, magT = 0;
   function magStrip() { return $("#magnifier"); }
   function openMagnifier() {
     if (magOn) { magFlash(); return; }
@@ -39,6 +39,9 @@ export function initAccess(deps) {
     document.body.classList.add("mag-on");
     magStrip().style.display = "block";
     addEventListener("pointermove", magMove, { passive: true });
+    /* the strip claims to be the live desktop: a parked pointer still gets a
+       ticking clock and typed text, so re-clone once a second */
+    magT = setInterval(() => { magNode = null; magPaint(); }, 1000);
     magPaint();
     openWin("win-magnifier");
   }
@@ -48,6 +51,7 @@ export function initAccess(deps) {
     magStrip().style.display = "none";
     magStrip().querySelector(".mag-view").innerHTML = "";
     magNode = null;
+    clearInterval(magT);
     removeEventListener("pointermove", magMove);
     closeWin("win-magnifier");
   }
@@ -212,7 +216,10 @@ export function initAccess(deps) {
     const key = lo === " " ? " " : OSK_SPECIAL[lo] || (lo.length > 1 ? lo : oskFace(lo, hi));
     if (t) {
       t.focus();
-      if (key === "Backspace") oskEdit(t, "");
+      if (t.id === "cmd-kbd") {
+        /* the prompt reads keydown and wipes value on input — send the key */
+        t.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true }));
+      } else if (key === "Backspace") oskEdit(t, "");
       else if (key === "Enter") {
         t.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
         if (t.tagName === "TEXTAREA") oskEdit(t, "\n", 1);
