@@ -415,6 +415,15 @@ every 404 into index.html — test against `python -m http.server`. A plain
 `.win-body` is not a flex column; iframe children collapse to the 300x150
 default unless the body has the `pad` class.
 
+**3D Pinball: scrapped (2026-08-10), owner's call.** It ran — after a redirect
+fix, a host-page rewrite, a compositor bypass and a canvas-sizing race fix —
+but on the owner's real hardware the input latency was bad and it fought the
+shell for focus (plunger charge lagging, clicks landing in the arena). Wasm
+via iframe inside a busy multiplayer page is a bad marriage; the 7 MB is gone
+from the repo. Games keeps Solitaire and Minesweeper; Pinball sits disabled
+in the menu like it is simply not installed. The four fixes it forced were
+all real and stay (trailing-slash iframes, quit-on-close, focus discipline).
+
 Also shipped: **Solitaire** — rjanjic/js-solitaire (MIT), which already wears
 the classic Windows deck and felt. Same recipe: vendored under
 `public/solitaire/` (44 KB), lazy iframe, our chrome over its game, its

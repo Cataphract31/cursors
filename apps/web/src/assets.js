@@ -76,7 +76,6 @@ import cmd16 from "./assets/xp/icons/56(16x16).png";
 import calc16 from "./assets/xp/icons/74(16x16).png";
 import calc32 from "./assets/xp/icons/74(32x32).png";
 
-import pinball16 from "./assets/xp/icons/pinball.png";
 import paintTools from "./assets/xp/paint/tools.png";
 import paintTrans from "./assets/xp/paint/options-transparency.png";
 import paintAir from "./assets/xp/paint/options-airbrush-size.png";
@@ -114,7 +113,7 @@ export const IMG = {
   bmpdoc32, wavdoc16, writedoc16, volmix16, cmd16, calc16, calc32,
   navBack, navFwd, navUp, navFolders, navSearch, navDrop,
   navStop, navRefresh, navHome, navFav, navHistory, navMail, navLinks, navMedia,
-  earth16, connect16, pinball16,
+  earth16, connect16,
 };
 
 /* Microsoft Agent characters, vendored out of clippyjs (MIT wrapper around the

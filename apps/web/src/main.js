@@ -438,10 +438,9 @@ function closeWin(id,opts){
   if(id==="win-paint") paint.commit(); /* half-finished text/curves/selections land before the lid shuts */
   /* closing is quitting. A hidden window that keeps making noise is a bug,
      not a feature — every app that runs something stops it here. */
-  if(id==="win-pinball"||id==="win-solitaire"){
-    const fr=$(id==="win-pinball"?"#pinball-frame":"#solitaire-frame");
+  if(id==="win-solitaire"){
+    const fr=$("#solitaire-frame");
     if(fr){ fr.src="about:blank"; delete fr.dataset.live; }
-    if(id==="win-pinball") pbPaused=false;
   }
   if(id==="win-wmp"&&snd) snd.stopWmp();
   if(id==="win-sndrec"&&snd) snd.stopRecorder();   /* also releases the microphone */
@@ -454,7 +453,6 @@ function closeWin(id,opts){
 }
 function minWin(id){
   const a=openApps.get(id); if(!a||a.min) return;
-  if(id==="win-pinball") pinballActive(false);
   if(a.kind==="webamp"){ tabClick(id); return; }
   a.min=true;
   if(focusedId===id) focusedId=null;
@@ -494,7 +492,6 @@ function isSheet(id){
   return !!el&&!el.classList.contains("fixed")&&!NOTAB.has(id);
 }
 function focusWin(id){
-  if(openApps.has("win-pinball")) pinballActive(id==="win-pinball");
   if(MOBILE&&isSheet(id)){
     /* one sheet at a time: focusing a sheet sends every other sheet home.
        Webamp just hides (its audio keeps playing behind the sheet). */
@@ -606,7 +603,6 @@ const SYSICONS=[
   {id:"calc",label:"Calculator",ico:"calc32",app:"run",cmd:"calc",sys:1,lnk:1},
   /* the crowded-desktop look: everything from the last four phases, pinned
      the way a 2003 family PC accreted shortcuts nobody ever cleaned up */
-  {id:"pinball",label:"3D Pinball",ico:"pinball16",app:"run",cmd:"pinball",sys:1,lnk:1},
   {id:"solitaire",label:"Solitaire",ico:"@ic-cards",app:"run",cmd:"sol",sys:1,lnk:1},
   {id:"wmp",label:"Windows Media Player",ico:"wmp32",app:"run",cmd:"wmplayer",sys:1,lnk:1},
   {id:"sndrec",label:"Sound Recorder",ico:"wavdoc16",app:"run",cmd:"sndrec32",sys:1,lnk:1},
@@ -871,46 +867,6 @@ desktop.addEventListener("pointerdown",e=>{
   addEventListener("pointermove",move); addEventListener("pointerup",up);
 });
 
-/* ================= 3D Pinball ================= */
-/* The actual decompiled game, in an iframe so its runtime stays in its own
-   world. The 7 MB of wasm+data are not touched until the first open. */
-function pinballOpen(){
-  const fr=$("#pinball-frame");
-  if(!fr.dataset.live){
-    fr.dataset.live="1";
-    /* play.html is OUR host page around the game engine: black room, centred
-       canvas, no upstream layout left to collapse (the port's fake-window CSS
-       crushed itself to a white sliver on at least one real machine while the
-       game played on underneath). Named file, not index.html — Vercel
-       redirects "dir/index.html" to "dir", rebasing every relative fetch. */
-    fr.src="pinball/play.html";
-  }
-  openWin("win-pinball");
-  setTimeout(()=>{ try{ fr.contentWindow.focus(); }catch(e){} },300);
-}
-let pbPaused=false;
-function pinballKey(code,key){
-  try{
-    const w=$("#pinball-frame").contentWindow;
-    for(const t of ["keydown","keyup"]){
-      const ev=new KeyboardEvent(t,{key,code:key,bubbles:true});
-      /* SDL's emscripten backend reads keyCode, which synthetic events lack */
-      Object.defineProperty(ev,"keyCode",{get:()=>code});
-      Object.defineProperty(ev,"which",{get:()=>code});
-      w.dispatchEvent(ev);
-    }
-  }catch(e){}
-}
-/* deactivating the window pauses the table (F3, the game's own pause key),
-   exactly like the original — which also ends the "pinball keeps clattering
-   behind other apps" noise */
-function pinballActive(on){
-  const fr=$("#pinball-frame");
-  if(!fr||!fr.dataset.live) return;
-  if(on===!pbPaused) return;
-  pinballKey(114,"F3");
-  pbPaused=!on;
-}
 /* ================= Solitaire ================= */
 /* rjanjic's MIT js-solitaire, which already wears the classic Windows deck.
    Same recipe as pinball: lazy iframe, our chrome, their game. */
@@ -2125,7 +2081,7 @@ function allProgramsMenu(){
       {label:"Solitaire",action:()=>{ closeStart(); solitaireOpen(); }},
       {label:"FreeCell",disabled:1},
       {label:"Hearts",disabled:1},
-      {label:"Pinball",action:()=>{ closeStart(); pinballOpen(); }}]},
+      {label:"Pinball",disabled:1}]},
     {label:"Startup",sub:[
       {label:"CURSORS.EXE",action:go("win-cursors")}]},
     {sep:1},
@@ -2194,7 +2150,6 @@ function runNamed(k){
   if(k==="notepad"||k==="notepad.exe"){ write.openNotepad(null); return true; }
   if(k==="wordpad"||k==="wordpad.exe"||k==="write"||k==="write.exe"){ write.openWordpad(null); return true; }
   if(k==="clipbrd"||k==="clipbrd.exe"){ write.openClipbook(); return true; }
-  if(k==="pinball"||k==="pinball.exe"){ pinballOpen(); return true; }
   if(k==="sol"||k==="sol.exe"||k==="solitaire"){ solitaireOpen(); return true; }
   if(k==="sndvol32"||k==="sndvol32.exe"||k==="sndvol"){ snd.openMixer(); return true; }
   if(k==="sndrec32"||k==="sndrec32.exe"){ snd.openRecorder(); return true; }
@@ -4845,7 +4800,6 @@ if(location.hash.indexOf("#desktop-sys")===0) setTimeout(()=>{ /* dev: the XP ap
   if(p==="-gpprops"){ openWin("win-gpedit"); setTimeout(()=>$$("#pol-list .mmc-row")[1].dispatchEvent(new MouseEvent("dblclick",{bubbles:true})),300); }
 },900);
 if(location.hash==="#desktop-mouse") setTimeout(()=>mouse.open(),300); /* dev: Mouse Properties */
-if(location.hash==="#desktop-pinball") setTimeout(()=>pinballOpen(),400); /* dev: the actual game */
 if(location.hash==="#desktop-solitaire") setTimeout(()=>solitaireOpen(),400); /* dev: the classic deck */
 if(location.hash==="#desktop-sound") setTimeout(()=>{ /* dev: mixer + recorder + WMP */
   snd.openMixer(); snd.openRecorder(); snd.openWmp();

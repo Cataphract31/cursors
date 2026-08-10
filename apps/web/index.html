@@ -1214,20 +1214,6 @@ icons/sounds: winXP (MIT)</div>
 
   <!-- Confirm dialog -->
   <!-- the file-operation progress dialog: XP's flying paper, a real bar -->
-  <!-- 3D Pinball: the real decompiled game (alula's emscripten port of
-       k4zmu2a/SpaceCadetPinball), vendored under public/pinball and loaded
-       only when this window opens. -->
-  <div class="window" id="win-pinball" data-minw="480" data-minh="380" style="left:220px;top:36px;width:620px;height:520px">
-    <div class="title-bar">
-      <div class="tb-l"><i class="xico tb-ico" data-ico="pinball16"></i><div class="title-bar-text">3D Pinball for Windows - Space Cadet</div></div>
-      <div class="title-bar-controls"><button aria-label="Minimize"></button><button aria-label="Maximize"></button><button aria-label="Close"></button></div>
-    </div>
-    <div class="win-body pad" style="background:#000;align-items:center;justify-content:center">
-      <!-- fixed at the game's natural size; the body letterboxes around it -->
-      <iframe id="pinball-frame" style="flex:none;border:0;width:606px;height:470px;max-width:100%;max-height:100%" title="3D Pinball"></iframe>
-    </div>
-  </div>
-
   <!-- Solitaire: rjanjic/js-solitaire (MIT), already styled as the classic
        Windows game. Vendored under public/solitaire, lazy like pinball. -->
   <div class="window" id="win-solitaire" data-minw="420" data-minh="320" style="left:170px;top:56px;width:660px;height:520px">
