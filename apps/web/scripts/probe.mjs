@@ -25,7 +25,7 @@ const port = 9500 + Math.floor(Math.random() * 500);
 const profile = join(tmpdir(), "edge-cdp-" + port + "-" + Date.now());
 
 const edge = spawn(EDGE, [
-  "--headless=new", "--disable-gpu", "--hide-scrollbars", "--mute-audio",
+  "--headless=new", ...(process.env.REAL_GPU?[]:["--disable-gpu"]), "--hide-scrollbars", "--mute-audio",
   "--remote-debugging-port=" + port, "--user-data-dir=" + profile, "about:blank",
 ], { stdio: "ignore" });
 const bail = (msg, code) => { console.error(msg); try { edge.kill(); } catch {} process.exit(code); };

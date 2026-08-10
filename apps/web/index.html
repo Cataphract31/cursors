@@ -1222,8 +1222,9 @@ icons/sounds: winXP (MIT)</div>
       <div class="tb-l"><i class="xico tb-ico" data-ico="pinball16"></i><div class="title-bar-text">3D Pinball for Windows - Space Cadet</div></div>
       <div class="title-bar-controls"><button aria-label="Minimize"></button><button aria-label="Maximize"></button><button aria-label="Close"></button></div>
     </div>
-    <div class="win-body pad" style="background:#000">
-      <iframe id="pinball-frame" style="flex:1;border:0;min-height:0" title="3D Pinball"></iframe>
+    <div class="win-body pad" style="background:#000;align-items:center;justify-content:center">
+      <!-- fixed at the game's natural size; the body letterboxes around it -->
+      <iframe id="pinball-frame" style="flex:none;border:0;width:606px;height:470px;max-width:100%;max-height:100%" title="3D Pinball"></iframe>
     </div>
   </div>
 
@@ -1235,7 +1236,7 @@ icons/sounds: winXP (MIT)</div>
       <div class="title-bar-controls"><button aria-label="Minimize"></button><button aria-label="Maximize"></button><button aria-label="Close"></button></div>
     </div>
     <div class="win-body pad" style="background:#008000">
-      <iframe id="solitaire-frame" style="flex:1;border:0;min-height:0" title="Solitaire"></iframe>
+      <iframe id="solitaire-frame" style="flex:1 1 auto;border:0;min-height:0;width:100%" title="Solitaire"></iframe>
     </div>
   </div>
 

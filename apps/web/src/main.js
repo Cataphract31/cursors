@@ -886,11 +886,12 @@ function pinballOpen(){
         /* our XP window already provides the chrome; hide the port's own */
         /* keep the port's real Game/Options/Help menu; lose only its fake
            title bar. Its own layout knows how to size the table — leave it. */
-        /* only the fake chrome goes; the game's native 600x440 sits centred
-           in a window sized to fit it exactly */
+        /* touch as little of the foreign page as possible: hide its fake
+           title bar, black behind it, done. Centring is OUR iframe's job —
+           repositioning their .window collapsed it on at least one engine
+           (the black-window-with-a-white-sliver report). */
         st.textContent=".titlebar{display:none!important}"+
-          "body{background:#000!important;margin:0!important;overflow:hidden!important}"+
-          ".window{border:0!important;margin:0!important;position:absolute!important;left:50%!important;top:50%!important;transform:translate(-50%,-50%)!important}";
+          "body{background:#000!important;margin:0!important;overflow:hidden!important}";
         d.head.appendChild(st);
         /* the port computed its layout before our CSS landed; a resize makes
            SDL re-measure the canvas and draw at the new size */
