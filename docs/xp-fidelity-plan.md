@@ -387,6 +387,23 @@ menus must be routed inside that handler like Paint/IE/Explorer are.
   available to us.
 - **Spider / FreeCell** — same deck, much smaller lift than Solitaire once it exists.
 
+### Phase 11 status (2026-08-10)
+
+Shipped: **3D Pinball: Space Cadet — the real one.** alula's emscripten build
+of the k4zmu2a decompilation, vendored under `public/pinball/` (7 MB: wasm +
+data + glue), loaded in an iframe only when the window opens, so first paint
+never pays for it. Our window provides the XP chrome; injected CSS removes the
+port's own fake title bar and centres the native 600x440 table. Games ▸
+Pinball and Run ▸ pinball. First paint unchanged.
+
+Watch-outs recorded: `npx serve` squats ports with SPA fallback that turns
+every 404 into index.html — test against `python -m http.server`. A plain
+`.win-body` is not a flex column; iframe children collapse to the 300x150
+default unless the body has the `pad` class.
+
+Still owed from Phase 11: Solitaire (real deck, win cascade), then
+Spider/FreeCell off the same deck.
+
 ## Phase 12 — the maintenance apps (delver bait, round two)
 
 - **Task Manager's other tabs** — Applications (with the window list and End Task),

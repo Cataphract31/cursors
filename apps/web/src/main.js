@@ -838,6 +838,36 @@ desktop.addEventListener("pointerdown",e=>{
   addEventListener("pointermove",move); addEventListener("pointerup",up);
 });
 
+/* ================= 3D Pinball ================= */
+/* The actual decompiled game, in an iframe so its runtime stays in its own
+   world. The 7 MB of wasm+data are not touched until the first open. */
+function pinballOpen(){
+  const fr=$("#pinball-frame");
+  if(!fr.src){
+    fr.src="pinball/index.html";
+    fr.addEventListener("load",()=>{
+      try{
+        const d=fr.contentDocument;
+        const st=d.createElement("style");
+        /* our XP window already provides the chrome; hide the port's own */
+        /* keep the port's real Game/Options/Help menu; lose only its fake
+           title bar. Its own layout knows how to size the table — leave it. */
+        /* only the fake chrome goes; the game's native 600x440 sits centred
+           in a window sized to fit it exactly */
+        st.textContent=".titlebar{display:none!important}"+
+          "body{background:#000!important;margin:0!important;overflow:hidden!important}"+
+          ".window{border:0!important;margin:0!important;position:absolute!important;left:50%!important;top:50%!important;transform:translate(-50%,-50%)!important}";
+        d.head.appendChild(st);
+        /* the port computed its layout before our CSS landed; a resize makes
+           SDL re-measure the canvas and draw at the new size */
+        setTimeout(()=>{ try{ fr.contentWindow.dispatchEvent(new Event("resize")); }catch(e){} },250);
+        setTimeout(()=>{ try{ fr.contentWindow.dispatchEvent(new Event("resize")); }catch(e){} },2500);
+      }catch(e){}
+    },{once:true});
+  }
+  openWin("win-pinball");
+  setTimeout(()=>{ try{ fr.contentWindow.focus(); fr.contentWindow.dispatchEvent(new Event("resize")); }catch(e){} },300);
+}
 /* ================= file operations ================= */
 /* XP never moved a file without showing you it moving. Every multi-item shell
    operation runs through here: the flying-paper animation, the segmented bar,
@@ -1988,7 +2018,7 @@ function allProgramsMenu(){
       {label:"Solitaire",action:()=>{ closeStart(); showError("Solitaire","You are already gambling."); }},
       {label:"FreeCell",disabled:1},
       {label:"Hearts",disabled:1},
-      {label:"Pinball",disabled:1}]},
+      {label:"Pinball",action:()=>{ closeStart(); pinballOpen(); }}]},
     {label:"Startup",sub:[
       {label:"CURSORS.EXE",action:go("win-cursors")}]},
     {sep:1},
@@ -2057,6 +2087,7 @@ function runNamed(k){
   if(k==="notepad"||k==="notepad.exe"){ write.openNotepad(null); return true; }
   if(k==="wordpad"||k==="wordpad.exe"||k==="write"||k==="write.exe"){ write.openWordpad(null); return true; }
   if(k==="clipbrd"||k==="clipbrd.exe"){ write.openClipbook(); return true; }
+  if(k==="pinball"||k==="pinball.exe"){ pinballOpen(); return true; }
   if(RUNMAP[k]){ sysSnd("nav",.5); openWin(RUNMAP[k]); return true; }
   return false;
 }
@@ -4703,6 +4734,7 @@ if(location.hash.indexOf("#desktop-sys")===0) setTimeout(()=>{ /* dev: the XP ap
   if(p==="-gpprops"){ openWin("win-gpedit"); setTimeout(()=>$$("#pol-list .mmc-row")[1].dispatchEvent(new MouseEvent("dblclick",{bubbles:true})),300); }
 },900);
 if(location.hash==="#desktop-mouse") setTimeout(()=>mouse.open(),300); /* dev: Mouse Properties */
+if(location.hash==="#desktop-pinball") setTimeout(()=>pinballOpen(),400); /* dev: the actual game */
 if(location.hash==="#desktop-write") setTimeout(()=>{ /* dev: all four writing apps */
   write.openNotepad({title:"session.LOG",get:()=>".LOG\nfirst entry",set:null});
   write.openWordpad(null);

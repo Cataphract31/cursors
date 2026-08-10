@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <title>CURSORS.EXE</title>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-  <script type="module" crossorigin src="./assets/index-O4tqg6jW.js"></script>
+  <script type="module" crossorigin src="./assets/index-BqOFWa9G.js"></script>
   <link rel="stylesheet" crossorigin href="./assets/index-C7sFfBuE.css">
 </head>
 <body>
@@ -1210,6 +1210,19 @@ icons/sounds: winXP (MIT)</div>
 
   <!-- Confirm dialog -->
   <!-- the file-operation progress dialog: XP's flying paper, a real bar -->
+  <!-- 3D Pinball: the real decompiled game (alula's emscripten port of
+       k4zmu2a/SpaceCadetPinball), vendored under public/pinball and loaded
+       only when this window opens. -->
+  <div class="window" id="win-pinball" data-minw="480" data-minh="380" style="left:220px;top:36px;width:620px;height:520px">
+    <div class="title-bar">
+      <div class="tb-l"><i class="xico tb-ico" data-ico="pinball16"></i><div class="title-bar-text">3D Pinball for Windows - Space Cadet</div></div>
+      <div class="title-bar-controls"><button aria-label="Minimize"></button><button aria-label="Maximize"></button><button aria-label="Close"></button></div>
+    </div>
+    <div class="win-body pad" style="background:#000">
+      <iframe id="pinball-frame" style="flex:1;border:0;min-height:0" title="3D Pinball"></iframe>
+    </div>
+  </div>
+
   <!-- ===== the writing apps ===== -->
   <div class="window" id="win-notepad" data-minw="300" data-minh="220" style="left:250px;top:80px;width:470px;height:360px">
     <div class="title-bar">
