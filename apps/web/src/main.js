@@ -303,19 +303,55 @@ for(const u of store.data.userIcons) if(!u.ico) u.ico=u.kind==="folder"?"folder3
    is a normal entry (kind:"webamp"), so zombie tabs are impossible. */
 let webamp=null;
 function wampWrap(){ return document.getElementById("webamp-wrap"); }
-function showWamp(){ const w=wampWrap(); if(w){ w.style.display=""; wampFit(); } }
+/* Webamp does NOT render into the node you hand it — renderWhenReady() only
+   reads that node's rect for centering, then appends its own #webamp div to
+   <body>. Every hide/show/scale we did on the wrap was therefore a no-op on
+   the actual player: it ignored minimize, floated over full-screen sheets,
+   and never rescaled on rotation. Adopt the div into OUR wrap once it exists;
+   #desktop sits at (0,0), so the windows' absolute coords survive the move. */
+function adoptWamp(){
+  const el=document.getElementById("webamp"), w=wampWrap();
+  if(el&&w&&!w.contains(el)) w.appendChild(el);
+}
+/* on the phone Winamp lives on the desktop: showing it sends every sheet home
+   first. Left up, a sheet either hides Winamp completely (CURSORS.EXE holds
+   the 4900 band) or gets a music player floating over its controls. */
+function wampHome(){
+  if(!MOBILE) return;
+  let sent=false;
+  for(const [k,a] of openApps){
+    if(!isSheet(k)||a.min||!a.el) continue;
+    a.min=true; a.el.style.display="none"; a.el.classList.remove("focused");
+    if(focusedId===k) focusedId=null;
+    sent=true;
+  }
+  if(sent) renderTaskbar();
+}
+function showWamp(){ const w=wampWrap(); if(w){ wampHome(); w.style.display=""; wampFit(); } }
 /* Webamp draws at a fixed 275px-wide stack that is taller than a phone lying
-   down. Scale the whole rig to whatever room the desktop actually has. */
+   down. #webamp itself is a 0x0 anchor, so measure the union of its windows
+   and translate+scale the rig into whatever room the desktop actually has —
+   translate too, because after a rotation the stack is parked at coordinates
+   that belonged to the previous orientation. */
 function wampFit(){
   const w=wampWrap(); if(!w||!MOBILE) return;
+  adoptWamp();
   w.style.transform=""; w.style.transformOrigin="0 0";
-  const inner=w.querySelector("#webamp")||w.firstElementChild;
-  if(!inner) return;
-  const r=inner.getBoundingClientRect();
-  if(!r.width||!r.height) return;
-  const availW=Math.max(160,desktop.clientWidth-8), availH=Math.max(160,desktop.clientHeight-8);
-  const s=Math.min(1,availW/r.width,availH/r.height);
-  if(s<1) w.style.transform="scale("+s.toFixed(3)+")";
+  let u=null;
+  for(const el of w.querySelectorAll("#webamp .window")){
+    const r=el.getBoundingClientRect();
+    if(!r.width||!r.height) continue;
+    u=u?{l:Math.min(u.l,r.left),t:Math.min(u.t,r.top),r:Math.max(u.r,r.right),b:Math.max(u.b,r.bottom)}
+       :{l:r.left,t:r.top,r:r.right,b:r.bottom};
+  }
+  if(!u) return;
+  const d=desktop.getBoundingClientRect();
+  const availW=Math.max(160,d.width-8), availH=Math.max(160,d.height-8);
+  const uw=u.r-u.l, uh=u.b-u.t;
+  const s=Math.min(1,availW/uw,availH/uh);
+  const tx=d.left+4+(availW-uw*s)/2-u.l*s;
+  const ty=d.top+4+(availH-uh*s)/2-u.t*s;
+  w.style.transform="translate("+Math.round(tx)+"px,"+Math.round(ty)+"px) scale("+s.toFixed(3)+")";
 }
 function hideWamp(){ const w=wampWrap(); if(w) w.style.display="none"; }
 function wampHidden(){ const w=wampWrap(); return !w||w.style.display==="none"; }
@@ -327,8 +363,10 @@ let zTop=100, focusedId=null;
    mobile dialogs at 8500, taskbar 9000, menus 99990. */
 const AOT_Z=4900, FIX_Z=6000; let fixTop=0;   /* 4900: above windows, under the arena's 5000 */
 let hudTop=store.data.hudTop!==false;
+/* mobile included: a full-screen CURSORS.EXE sheet must beat Winamp's 4800 —
+   real money is managed in there, so it outranks every accessory */
 function assertHudTop(){
-  if(MOBILE||!hudTop) return;
+  if(!hudTop) return;
   const a=openApps.get("win-cursors");
   if(!a||a.min||!a.el) return;
   a.el.style.zIndex=AOT_Z;
@@ -953,8 +991,9 @@ function hookIcon(el,ic){
       el.style.opacity=""; el.style.zIndex="";
       if(!moved){
         /* on the phone the desktop is a launcher: one tap opens (unless this
-           release is the tail end of a long-press that already opened a menu) */
-        if(MOBILE&&e.pointerType==="touch"&&performance.now()-lpFiredAt>600&&performance.now()-menuDismissAt>500) openIcon(ic);
+           release is the tail end of a long-press that already opened a menu —
+           lpConsumed covers holds of any length, the clock covers odd orders) */
+        if(MOBILE&&e.pointerType==="touch"&&!lpConsumed&&performance.now()-lpFiredAt>600&&performance.now()-menuDismissAt>500) openIcon(ic);
         /* Folder Options, "single-click to open an item" — it means the desktop too */
         else if(!MOBILE&&e.button===0&&!e.ctrlKey&&!e.shiftKey&&maint.fo().click==="single") openIcon(ic);
         return;
@@ -2237,6 +2276,13 @@ $("#ex-searchi").src=IMG.navSearch; $("#ex-foldersi").src=IMG.navFolders; $("#ex
 
 document.addEventListener("contextmenu",e=>{
   e.preventDefault();
+  /* Android fires its own contextmenu on a long-press at its own timeout —
+     which can land AFTER ours already opened a menu at the finger, targeting
+     the menu itself. Treating that echo as a fresh right-click closed the
+     menu the instant it appeared. Swallow anything aimed at the open menu or
+     arriving on its heels. */
+  if(e.target.closest("#ctx")) return;
+  if(ctx.style.display==="block"&&performance.now()-menuShownAt<400) return;
   hideMenu();
   if(e.target.closest("#pt-box,.pt-sw")) return;  /* Paint uses the right button to draw */
   if(e.target.closest("#webamp,#webamp-slot")) return; /* Winamp draws its own menus */
@@ -2277,17 +2323,26 @@ document.addEventListener("contextmenu",e=>{
 /* Capture phase, because icons stopPropagation their pointerdowns. Android
    fires a native contextmenu on long-press (sawNative) — then we stand down. */
 let lpFiredAt=0;
+let lpConsumed=false; /* this touch WAS a long-press (ours or Android's) — its release must not act */
 addEventListener("pointerdown",e=>{
   if(e.pointerType!=="touch") return;
+  lpConsumed=false;   /* a new finger starts clean (pointercancel can strand the flag) */
   if(e.target.closest&&e.target.closest("[data-nolongpress]")) return; /* drawing surfaces keep the finger */
   const sx=e.clientX, sy=e.clientY, target=e.target;
   let sawNative=false;
-  const onNative=()=>{ sawNative=true; };
+  /* Android's own long-press contextmenu makes IT the menu opener and we
+     stand down — but the release guards (icon taps, taskbar tabs, compat
+     clicks) still need to know a long-press happened, so stamp the clock. */
+  const onNative=()=>{ sawNative=true; lpFiredAt=performance.now(); lpConsumed=true; };
   addEventListener("contextmenu",onNative,true);
+  const dropNative=()=>removeEventListener("contextmenu",onNative,true);
   const t=setTimeout(()=>{
-    cleanup();
+    stopTrack();
+    /* the native echo can also arrive AFTER our 550ms (slow long-press
+       delays): keep listening a beat so it still stamps the clock */
+    setTimeout(dropNative,1500);
     if(sawNative) return;
-    lpFiredAt=performance.now();
+    lpFiredAt=performance.now(); lpConsumed=true;
     if(navigator.vibrate) navigator.vibrate(12);
     const live=target.isConnected?target:(document.elementFromPoint(sx,sy)||document.body);
     const cell=live.closest&&live.closest(".ms-c");
@@ -2298,33 +2353,31 @@ addEventListener("pointerdown",e=>{
       live.dispatchEvent(new MouseEvent("contextmenu",{bubbles:true,cancelable:true,clientX:sx,clientY:sy}));
     }
   },550);
-  const cleanup=()=>{
+  const stopTrack=()=>{
     removeEventListener("pointermove",onMove,true);
     removeEventListener("pointerup",onEnd,true);
     removeEventListener("pointercancel",onCancel,true);
-    removeEventListener("contextmenu",onNative,true);
   };
   const onMove=ev=>{
     const dx=ev.clientX-sx, dy=ev.clientY-sy;
-    if(dx*dx+dy*dy>196){ clearTimeout(t); cleanup(); } /* moved: it's a drag/scroll */
+    if(dx*dx+dy*dy>196){ clearTimeout(t); stopTrack(); dropNative(); } /* moved: it's a drag/scroll */
   };
-  const onEnd=()=>{ clearTimeout(t); cleanup(); };
+  const onEnd=()=>{ clearTimeout(t); stopTrack(); dropNative(); };
   /* pointercancel is NOT a release. iOS raises it the moment it decides the
      press belongs to its own callout/selection gesture — which is precisely
      the gesture we are trying to answer. Let the timer run; a real scroll is
      already caught by onMove. */
-  const onCancel=()=>{
-    removeEventListener("pointermove",onMove,true);
-    removeEventListener("pointerup",onEnd,true);
-    removeEventListener("pointercancel",onCancel,true);
-  };
+  const onCancel=()=>{ stopTrack(); };
   addEventListener("pointermove",onMove,true);
   addEventListener("pointerup",onEnd,true);
   addEventListener("pointercancel",onCancel,true);
 },true);
-/* the release of a long-press must not ALSO left-click (compat mouse events) */
+/* the release of a long-press must not ALSO left-click (compat mouse events),
+   no matter how long the finger lingered before letting go — a compat click
+   is what was instantly closing Winamp's own context menus */
 addEventListener("touchend",e=>{
-  if(performance.now()-lpFiredAt<700||(ctx.style.display==="block"&&!ctxArmed)) e.preventDefault();
+  const lp=lpConsumed; lpConsumed=false;
+  if(lp||performance.now()-lpFiredAt<700||(ctx.style.display==="block"&&!ctxArmed)) e.preventDefault();
 },{capture:true,passive:false});
 
 /* taskbar tabs activate on pointerup, delegated: renderTaskbar rebuilds the
@@ -2332,7 +2385,7 @@ addEventListener("touchend",e=>{
 let tabPtrAt=0;
 $("#tabs").addEventListener("pointerup",e=>{
   const t=e.target.closest(".task-tab"); if(!t) return;
-  if(performance.now()-lpFiredAt<700||performance.now()-menuDismissAt<500) return;
+  if(lpConsumed||performance.now()-lpFiredAt<700||performance.now()-menuDismissAt<500) return;
   tabPtrAt=performance.now(); tabClick(t.dataset.win);
 });
 $("#tabs").addEventListener("click",e=>{   /* keyboard activation only */
@@ -3621,7 +3674,7 @@ function openWinamp(){
       hideWamp(); sMini(); renderTaskbar();
     });
     showWamp(); /* wrapper must be visible BEFORE render: webamp centers its stack on the slot's rect */
-    webamp.renderWhenReady(document.getElementById("webamp-slot")).then(()=>{ showWamp(); setTimeout(wampFit,120); });
+    webamp.renderWhenReady(document.getElementById("webamp-slot")).then(()=>{ adoptWamp(); showWamp(); setTimeout(wampFit,120); });
   }else{
     showWamp();
     try{ webamp.reopen(); }catch(e){}

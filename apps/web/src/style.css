@@ -1860,7 +1860,10 @@ body.mobile .dx-k{width:110px}
 .solb-canvas{position:absolute;z-index:40;cursor:default}
 
 /* Winamp on a phone: the stack scales into whatever the desktop has left */
-body.mobile #webamp-wrap{position:fixed;left:0;top:0;transform-origin:0 0}
+/* the wrap owns the adopted #webamp; once scaled it becomes a stacking
+   context, so it must carry Winamp's z-band itself (4800: over normal
+   windows, under the always-on-top CURSORS.EXE at 4900) */
+body.mobile #webamp-wrap{position:fixed;left:0;top:0;transform-origin:0 0;z-index:4800}
 body.mobile.land #tour-img{max-height:26vh}
 body.mobile.land .tour-pts li{line-height:1.35}
 
