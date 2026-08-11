@@ -1,6 +1,5 @@
 import "xp.css";
 import "./style.css";
-import WebampImport from "webamp";
 import { IMG, SNDF, TRACKS, MINE, EMO, PAINT, AGENT_PNG, AGENT_DEF, CURFILES } from "./assets.js";
 import { initMinesweeper } from "./minesweeper.js";
 import { initMessenger, CONTACTS as MSN_CONTACTS } from "./messenger.js";
@@ -25,7 +24,14 @@ import { initSysMaint } from "./sysmaint.js";
 import { initTour } from "./tour.js";
 import { initTourXP } from "./tourxp.js";
 import { initAccess } from "./access.js";
-const Webamp = (WebampImport && WebampImport.default) ? WebampImport.default : WebampImport;
+/* Webamp is ~870 KB — a third of the first-paint budget, paid by every phone
+   whether or not its owner ever opens Winamp. It loads on first launch now. */
+let Webamp = null;
+function pickWebamp(m){ Webamp=(m&&m.default)?m.default:m; return Webamp; }
+function loadWebamp(){
+  if(Webamp) return Promise.resolve(Webamp);
+  return import("webamp").then(pickWebamp);
+}
 
 "use strict";
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
@@ -58,7 +64,21 @@ if(MOBILE){
 /* landscape is a different shell, not a wider one: lying down, height is the
    scarce axis, so the HUD stands up as a right rail and the taskbar keeps the
    floor. One class; the CSS variables do the rest. */
-function syncOrient(){ if(MOBILE) document.body.classList.toggle("land",innerWidth>innerHeight); }
+let wasLand=null;
+function syncOrient(){
+  if(!MOBILE) return;
+  /* a soft keyboard shrinks the layout viewport, and on a small phone that
+     alone made innerWidth exceed innerHeight — flipping the entire shell into
+     the landscape rail mid-sentence. A keyboard is not a rotation. */
+  if(document.body.classList.contains("kb")) return;
+  const land=innerWidth>innerHeight;
+  document.body.classList.toggle("land",land);
+  /* menus and flyouts hold absolute coordinates from the orientation they were
+     opened in: left up, they land off-screen or over the money rail and eat
+     the next tap. Only on a real flip — iOS fires resize on every URL-bar nudge. */
+  if(wasLand!==null&&wasLand!==land){ hideMenu(); closeStart(); }
+  wasLand=land;
+}
 syncOrient();
 let W=desktop.clientWidth, H=desktop.clientHeight;
 addEventListener("resize",()=>{
@@ -3768,39 +3788,49 @@ function openWinamp(){
     try{ webamp.reopen(); }catch(e){ console.error("[winamp] reopen failed:",e); }
     renderTaskbar(); return;
   }
-  if(!webamp){
-    try{
-      webamp=new Webamp({
-        initialTracks:initialAmpTracks(),
-        zIndex:4800,
-        enableHotkeys:true /* the real Winamp hotkeys, incl. Ctrl+D double-size */
-      });
-    }catch(e){
-      console.error("[winamp] boot failed:",e); webamp=null;
-      showError("winamp.exe","WINAMP caused a General Protection Fault in module LOADER.DLL. Reboot (F5) and try again.");
-      return;
-    }
-    /* the tray master and the mixer's Wave fader really move Winamp: its own
-       slider stays where the user left it and we scale the output gain under
-       it, re-applied after every store change because webamp resets that gain
-       from its own state on a track change and on a seek */
-    try{ webamp.store.subscribe(()=>wampApplyVol()); }catch(e){}
-    wampApplyVol();
-    webamp.onClose(()=>closeWinamp());
-    webamp.onMinimize(()=>{
-      const a=openApps.get("win-amp");
-      if(a){ a.min=true; if(focusedId==="win-amp") focusedId=null; }
-      hideWamp(); sMini(); renderTaskbar();
-    });
-    showWamp(); /* wrapper must be visible BEFORE render: webamp centers its stack on the slot's rect */
-    webamp.renderWhenReady(document.getElementById("webamp-slot")).then(()=>{ adoptWamp(); showWamp(); setTimeout(wampFit,120); });
-  }else{
-    showWamp();
-    try{ webamp.reopen(); }catch(e){}
-  }
+  /* the taskbar entry goes in first: the library is a network fetch on first
+     launch, and a tap that shows nothing for a second reads as a dead button */
   openApps.set("win-amp",wampEntry());
   focusedId="win-amp";
   renderTaskbar();
+  if(!webamp){
+    loadWebamp().then(W=>{
+      if(!openApps.has("win-amp")) return;   /* closed again while it loaded */
+      try{
+        webamp=new W({
+          initialTracks:initialAmpTracks(),
+          zIndex:4800,
+          enableHotkeys:true /* the real Winamp hotkeys, incl. Ctrl+D double-size */
+        });
+      }catch(e){
+        console.error("[winamp] boot failed:",e); webamp=null;
+        closeWinamp();
+        showError("winamp.exe","WINAMP caused a General Protection Fault in module LOADER.DLL. Reboot (F5) and try again.");
+        return;
+      }
+      /* the tray master and the mixer's Wave fader really move Winamp: its own
+         slider stays where the user left it and we scale the output gain under
+         it, re-applied after every store change because webamp resets that gain
+         from its own state on a track change and on a seek */
+      try{ webamp.store.subscribe(()=>wampApplyVol()); }catch(e){}
+      wampApplyVol();
+      webamp.onClose(()=>closeWinamp());
+      webamp.onMinimize(()=>{
+        const a=openApps.get("win-amp");
+        if(a){ a.min=true; if(focusedId==="win-amp") focusedId=null; }
+        hideWamp(); sMini(); renderTaskbar();
+      });
+      showWamp(); /* wrapper must be visible BEFORE render: webamp centers its stack on the slot's rect */
+      webamp.renderWhenReady(document.getElementById("webamp-slot")).then(()=>{ adoptWamp(); showWamp(); setTimeout(wampFit,120); });
+    }).catch(e=>{
+      console.error("[winamp] load failed:",e);
+      closeWinamp();
+      showError("winamp.exe","WINAMP.EXE could not be loaded. Check your connection and try again.");
+    });
+    return;
+  }
+  showWamp();
+  try{ webamp.reopen(); }catch(e){}
 }
 /* volume = Winamp's own slider x the Wave fader x the master; muted is silent */
 function wampApplyVol(bus){
@@ -3907,6 +3937,8 @@ $('#win-dialing .title-bar-controls button[aria-label="Close"]').addEventListene
 /* ================= game state ================= */
 const BOTS=["mumu","bobo","clippy","bonk","solja","xp_chad","deg404"].map(n=>({name:n}));
 let wallet=5000, walletShown=5000;
+/* the balance this session opened with — the baseline "Session P/L" is against */
+let plBase=5000, plBaseSet=false;
 let stats={kills:0,deaths:0,best:0,deploys:0,banks:0,bigBank:0,tIn:0,tOut:0};
 let curs=[], binDead=[];
 let myTickets=0, globalTickets=1437200, rakeAccrued=0;
@@ -4295,7 +4327,7 @@ function renderCx(){
 const cxKV=(k,v,cls)=>`<div class="cx-kv${cls?" "+cls:""}"><span>${k}</span><b>${v}</b></div>`;
 function renderCxStats(){
   const liveVal=myCurs().reduce((s,c)=>s+c.bounty,0);
-  const pl=wallet+liveVal-5000;
+  const pl=wallet+liveVal-plBase;
   const dead=binDead.filter(d=>d.mine);
   const lostToDeaths=dead.reduce((s,d)=>s+d.lost,0);
   $("#cx-stats").innerHTML=
@@ -4984,7 +5016,7 @@ function updatePanel(){
   $("#liveval").textContent=fmtS(liveVal);
   const share=myTickets>0?100*myTickets/(globalTickets+myTickets):0;
   $("#rakeline").textContent=`rakeback: ${myTickets.toLocaleString()} tk · ${share.toFixed(2)}% · +${(rakeAccrued/1000).toFixed(4)} SOL`;
-  const pl=wallet+liveVal-5000;
+  const pl=wallet+liveVal-plBase;
   $("#statline").textContent=`kills ${stats.kills} · deaths ${stats.deaths} · best ×${stats.best.toFixed(1)} · P/L ${fmtSign(pl)}`;
   /* the thumb bar shows the same state in fewer letters */
   /* nothing that moves money stays lit while the server cannot hear us */
@@ -4997,7 +5029,9 @@ function updatePanel(){
   hrc.textContent=graced?"◂ UNDO":recalling?"◂ CANCEL":"◂ RECALL";
   $("#mh-attack").classList.toggle("on",stance==="attack");
   $("#mh-defend").classList.toggle("on",stance==="defend");
-  $("#mh-live").textContent=`${mine.length}/5 · ${fmtS(liveVal)}`;
+  /* autoplay had no state anywhere on the phone: the only place it was visible
+     was a pane the player usually is not looking at */
+  $("#mh-live").textContent=`${mine.length}/5 · ${fmtS(liveVal)}`+(auto.on?" · AUTO":"");
   renderCx();   /* whatever pane is open stays live */
 }
 
@@ -5167,6 +5201,9 @@ function mpWelcome(m){
     if(c.mode==="duel") c.el.classList.add("dueling");
   }
   wallet=m.balance; walletShown=wallet;
+  /* "Session P/L" measured against a hardcoded 5000, so for anyone whose real
+     balance was not 5.000 it was lifetime P/L wearing the wrong label */
+  if(!plBaseSet){ plBase=wallet; plBaseSet=true; }
   $("#walletamt").textContent=fmtS(Math.round(wallet))+" SOL";
   $("#mh-wallet").textContent=fmtS(Math.round(wallet))+" SOL";
   myTickets=m.tickets; globalTickets=m.glob; rakeAccrued=m.rake;
@@ -5441,9 +5478,17 @@ setInterval(()=>{
 /* a backgrounded tab cannot draw snapshots, so it asks not to be sent any —
    the single cheapest thing we can do for a free tier's egress budget */
 document.addEventListener("visibilitychange",()=>{
+  if(document.visibilityState==="visible"){
+    /* a tab that was away has no idea how stale it is: restart the snapshot
+       clock and, if the socket died while backgrounded, retry immediately
+       rather than waiting out a backoff that may be up at 30s */
+    lastSnapAt=performance.now();
+    if(net&&!net.up()) try{ net.poke(); }catch(e){}
+  }
   if(!MP.on) return;
   mpSend({t:"vis",on:document.visibilityState==="visible"});
 });
+addEventListener("online",()=>{ if(net&&!net.up()) try{ net.poke(); }catch(e){} });
 
 /* ---- IE integration: the online guestbook, the gallery, cursorTV ---- */
 function mpRefreshIe(urlPart){

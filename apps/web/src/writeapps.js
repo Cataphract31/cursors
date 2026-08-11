@@ -69,7 +69,10 @@ export function initWriteApps(deps) {
     if (np.doc.get && ta.value === "Bush hid the facts") ta.value = "畂桳栠摩琠敨映捡獴";
     npTitle(); npApply();
     openWin("win-notepad");
-    ta.focus();
+    /* not on a phone: focusing inside the opening tap raises the keyboard,
+       which covers the document AND the money bar — on a file you tapped to
+       read. Tapping the text still opens the keyboard when you mean to edit. */
+    if (!document.body.classList.contains("mobile")) ta.focus();
   }
   /* Go To — its own tiny dialog, and the real rule: not while wrapping */
   function npGoTo() {

@@ -1068,13 +1068,26 @@ export function initPaint(deps) {
   const MENUS = { File: fileMenu, Edit: editMenu, View: viewMenu, Image: imageMenu, Colors: colorsMenu, Help: helpMenu };
 
   /* ---------- wiring ---------- */
+  /* One finger draws. A second one used to call begin() again, overwriting the
+     shared start point mid-stroke — so pinching to zoom slashed a line between
+     the two fingers. And a stroke the browser cancels (a system gesture, a
+     call) never reached end(), which left the airbrush spraying at its last
+     point until you touched something else. */
+  let drawPid = null;
   els.box.addEventListener("pointerdown", e => {
     if (e.target.classList && e.target.classList.contains("pt-text")) return;
+    if (drawPid !== null && e.pointerId !== drawPid) return;
     e.preventDefault();
+    drawPid = e.pointerId;
     begin(e);
   });
-  els.box.addEventListener("pointermove", move);
-  addEventListener("pointerup", e => { if (drawing) end(e); });
+  els.box.addEventListener("pointermove", e => { if (drawPid === null || e.pointerId === drawPid) move(e); });
+  addEventListener("pointerup", e => { if (e.pointerId === drawPid) drawPid = null; if (drawing) end(e); });
+  addEventListener("pointercancel", e => {
+    if (e.pointerId !== drawPid) return;
+    drawPid = null;
+    if (drawing) end(e);
+  });
   els.box.addEventListener("dblclick", e => { e.preventDefault(); if (poly) closePoly(); });
   els.box.addEventListener("contextmenu", e => { e.preventDefault(); e.stopPropagation(); });
   els.wrap.addEventListener("pointerleave", () => { if (els.st2) els.st2.textContent = ""; });

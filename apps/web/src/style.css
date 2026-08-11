@@ -26,7 +26,7 @@ input{user-select:text}
    opening an app, and at 64 they were 28px tall — 64% of the 44px touch floor,
    at the bottom edge where a thumb is least accurate. The landscape rail was
    already giving them 44. */
-body.mobile{--hud:84px;--sab:env(safe-area-inset-bottom,0px);--sal:env(safe-area-inset-left,0px);--sar:env(safe-area-inset-right,0px)}
+body.mobile{--hud:84px;--sat:env(safe-area-inset-top,0px);--sab:env(safe-area-inset-bottom,0px);--sal:env(safe-area-inset-left,0px);--sar:env(safe-area-inset-right,0px)}
 /* phone lying down: height is the scarce axis, so the HUD leaves the bottom
    and becomes a right-hand rail. Everything below reads --hud/--rail, so the
    two orientations are the same layout with one variable moved. */
@@ -35,7 +35,13 @@ body.mobile.land{--hud:0px;--rail:112px}
 #desktop{position:absolute;inset:0 calc(var(--rail) + var(--sar)) calc(var(--tb) + var(--hud) + var(--sab)) 0;overflow:hidden}
 /* the notch eats into the desktop only where icons live — the arena is
    letterboxed and centred anyway, so shifting it would only make it lopsided */
-#icons{position:absolute;inset:0 0 0 var(--sal)}
+#icons{position:absolute;inset:var(--sat) 0 0 var(--sal)}
+/* the page declares viewport-fit=cover, so with no top inset the status bar
+   and the notch sat on the first row of icons and on every sheet's title bar
+   — the one row carrying the close button */
+body.mobile #desktop>.window:not(.fixed){padding-top:var(--sat)}
+body.mobile #desktop>.window.fixed{margin-top:var(--sat)}
+body.mobile #startmenu{padding-top:var(--sat)}
 #wallpaper{position:absolute;inset:0;background:#3A6EA5;background-position:center;background-size:cover;background-repeat:no-repeat}
 
 /* ---------- desktop icons ---------- */
@@ -878,6 +884,9 @@ body.mobile .title-bar-controls button{min-width:26px;min-height:26px}
    the bottom of the screen with its buttons on it */
 body.mobile #desktop>.window.fixed{max-height:calc(100% - 12px)}
 body.mobile #desktop>.window.fixed>.win-body{overflow:auto;-webkit-overflow-scrolling:touch}
+/* sheets need it too: several app bodies lay out as plain blocks, so content
+   past the fold was simply clipped with no way to reach it */
+body.mobile #desktop>.window:not(.fixed)>.win-body{min-height:0;overflow:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
 body.mobile .ms-body{overflow:auto}
 
 /* the Start menu becomes a full-screen launcher (HUD stays visible) */
@@ -1520,6 +1529,9 @@ body.tb-auto.tb-peek #taskbar{transform:none}
 #magnifier .mag-clone{position:absolute;pointer-events:none}
 body.mag-on #desktop,body.mag-on #icons{margin-top:0}
 body.mag-on #taskbar{z-index:9400}
+/* the strip spans the raw viewport, so lying down it covered the wallet and the
+   round clock at the head of the money rail */
+body.mobile.land #magnifier{right:calc(var(--rail) + var(--sar))}
 
 /* ---- On-Screen Keyboard ---- */
 .osk-keys{flex:1;min-height:0;display:flex;flex-direction:column;gap:3px;padding:4px 2px}

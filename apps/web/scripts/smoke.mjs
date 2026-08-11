@@ -14,7 +14,6 @@ let src = readFileSync(join(root, "src", "main.js"), "utf8");
 // which is why the temp file is written into src/ rather than a temp dir.
 src = src
   .replace(/^import\s+"[^"]*";\s*$/gm, "")
-  .replace('import WebampImport from "webamp";', "")
   .replace(
     /^import\s*\{([^}]*)\}\s*from\s*"\.\/assets\.js";\s*$/m,
     (_, names) =>
@@ -23,10 +22,14 @@ src = src
         .map((n) => `const ${n.trim()} = globalThis.__AssetStub;`)
         .join(" ")
   )
-  .replace(
-    "const Webamp = (WebampImport && WebampImport.default) ? WebampImport.default : WebampImport;",
-    "const Webamp = globalThis.__WebampStub;"
-  );
+  // Webamp is loaded on demand now (a dynamic import inside openWinamp), so
+  // there is no top-level import to strip — only the loader to neutralise, or
+  // node would try to resolve the real package at first launch.
+  .replace('import("webamp")', "Promise.resolve(globalThis.__WebampStub)");
+if (src.includes('import("webamp")')) {
+  console.error("SMOKE FAILED — the webamp dynamic import was not stubbed; update this replacer");
+  process.exit(1);
+}
 
 // universal stub: callable, constructible, iterable, coercible
 const stub = new Proxy(function () {}, {

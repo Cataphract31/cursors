@@ -1220,7 +1220,18 @@ export function initSysApps(deps) {
     /* the real keyboard path is a hidden input, so a phone raises its on-screen
        keyboard and the shell's --kb handling lifts the window clear of it */
     kbd.addEventListener("keydown", e => { e.stopPropagation(); if (cmdKey(e)) e.preventDefault(); });
-    kbd.addEventListener("input", () => { kbd.value = ""; });
+    /* An Android IME does not send a usable keydown — it reports keyCode 229
+       with key "Unidentified" and delivers the real text on `input`. Throwing
+       that away is why the prompt stayed empty while you typed on a phone.
+       Take the characters from here and let keydown keep the control keys.
+       (The on-screen-keyboard applet dispatches synthetic keydowns at this
+       same field, so both paths have to keep working.) */
+    kbd.addEventListener("input", () => {
+      const txt = kbd.value;
+      kbd.value = "";
+      if (!txt) return;
+      for (const ch of txt) cmdKey({ key: ch });
+    });
     document.getElementById("win-cmd").addEventListener("pointerdown", () => setTimeout(focusKbd, 0));
   }
 }

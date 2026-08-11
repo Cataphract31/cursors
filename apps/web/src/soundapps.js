@@ -309,6 +309,11 @@ export function initSoundApps(deps) {
     const data = new Uint8Array(wmp.analyser.frequencyBinCount);
     cancelAnimationFrame(wmp.raf);
     const loop = () => {
+      /* the loop re-armed itself forever: Stop left a 60fps canvas drawing a
+         flat line and minting 24 gradients a frame for the rest of the
+         session, which on a phone nothing ever came along to cancel */
+      const a = wmpAudio();
+      if (!a || a.paused || a.ended) { wmp.raf = 0; return; }
       wmp.analyser.getByteFrequencyData(data);
       g.fillStyle = "#000"; g.fillRect(0, 0, cv.width, cv.height);
       const n = 24, bw = cv.width / n;

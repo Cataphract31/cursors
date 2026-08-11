@@ -5,17 +5,18 @@
 
 export function initNet(deps) {
   const { url, onMsg, onUp, onDown } = deps;
-  let ws = null, up = false, tries = 0, stopped = false;
+  let ws = null, up = false, tries = 0, stopped = false, connecting = false;
 
   function connect() {
-    if (stopped || typeof WebSocket === "undefined") return;
-    try { ws = new WebSocket(url); } catch (e) { retry(); return; }
-    ws.onopen = () => { up = true; tries = 0; onUp && onUp(); };
+    if (stopped || connecting || typeof WebSocket === "undefined") return;
+    connecting = true;
+    try { ws = new WebSocket(url); } catch (e) { connecting = false; retry(); return; }
+    ws.onopen = () => { connecting = false; up = true; tries = 0; onUp && onUp(); };
     ws.onmessage = e => {
       let m; try { m = JSON.parse(e.data); } catch (err) { return; }
       try { onMsg(m); } catch (err) { console.error("net onMsg failed:", m && m.t, err); }
     };
-    ws.onclose = () => { const was = up; up = false; ws = null; if (was && onDown) onDown(); retry(); };
+    ws.onclose = () => { connecting = false; const was = up; up = false; ws = null; if (was && onDown) onDown(); retry(); };
     ws.onerror = () => {};   /* close fires next; retry lives there */
   }
   function retry() {
@@ -34,6 +35,10 @@ export function initNet(deps) {
        fires. The caller notices the silence; this drops the corpse so the
        normal close/retry path can build a live one. */
     kick: () => { if (ws) { try { ws.close(); } catch (e) {} } },
+    /* Backoff reaches 30s, so a phone that was in a tunnel could sit in the
+       sandbox for half a minute after signal came back. Coming to the
+       foreground, or the network returning, is new information — try now. */
+    poke: () => { if (!up && !stopped && !connecting) { tries = 0; connect(); } },
     up: () => up,
   };
 }
