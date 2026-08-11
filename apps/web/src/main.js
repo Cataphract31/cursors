@@ -163,6 +163,9 @@ const sRes   =()=>{tone(700,.08,"square",.05);tone(500,.1,"square",.05,.1);};
 /* -- OS sounds: the real 2001 scheme (see assets.js) -- */
 function sysSnd(name,v){
   if(muted) return;
+  /* a backgrounded tab is a pocket: kills and banks were still chiming out of
+     it. Winamp and Media Player are separate paths and keep playing. */
+  if(document.hidden) return;
   try{
     const a=new Audio(SNDF[name]);
     a.volume=Math.min(1,vol(v));
@@ -427,6 +430,9 @@ function tabIconHTML(id){
    reaches the edge — or whenever the Start menu is open, which is XP's rule
    too, otherwise clicking Start would slide the thing out from under you. */
 function syncAutoHide(){
+  /* a phone that arrives with the setting already on (set on a desktop, same
+     store) would boot with no taskbar and no way to raise one */
+  if(MOBILE&&store.data.tbAuto){ store.data.tbAuto=0; store.save(); }
   document.body.classList.toggle("tb-auto",!!store.data.tbAuto);
   if(!store.data.tbAuto) document.body.classList.remove("tb-peek");
 }
@@ -721,11 +727,26 @@ function maxWin(id){
 const DLG_Z = 8500;
 let dlgTop = 0;
 const dlgOwner = new Map();
+/* the topmost sheet actually on screen — the one a new dialog belongs to */
+function topSheet(){
+  let best=null,bz=-1;
+  for(const [k,a] of openApps){
+    if(!isSheet(k)||a.min||!a.el||a.el.style.display==="none") continue;
+    const z=+a.el.style.zIndex||0;
+    if(z>=bz){ bz=z; best=k; }
+  }
+  return best;
+}
 function noteDialog(id, owner){
   if(!MOBILE) return;
   const el=document.getElementById(id);
   if(!el||!el.classList.contains("fixed")) return;
-  if(owner&&owner!==id&&isSheet(owner)) dlgOwner.set(id,owner);
+  let own=(owner&&owner!==id&&isSheet(owner))?owner:null;
+  /* a dialog opened from ANOTHER dialog got no owner at all, and an ownerless
+     dialog is never hidden by syncDialogs — so it rode over every sheet
+     afterwards, CURSORS.EXE included. Fall back to the sheet underneath. */
+  if(!own) own=topSheet();
+  if(own&&own!==id) dlgOwner.set(id,own);
 }
 /* focusing a sheet hides the dialogs that belong to other sheets and brings
    back the ones that belong to this one */
@@ -1088,7 +1109,9 @@ function hookIcon(el,ic){
     };
     addEventListener("pointermove",mv); addEventListener("pointerup",up); addEventListener("pointercancel",cancel);
   });
-  el.addEventListener("dblclick",()=>{ sClick(); openIcon(ic); });
+  /* on a phone one tap already opens (see the pointerup path above), so the
+     desktop's double-click handler fired openIcon a THIRD time on a double tap */
+  el.addEventListener("dblclick",()=>{ if(MOBILE) return; sClick(); openIcon(ic); });
 }
 /* every folder in the shell now opens the real Explorer at a real path */
 function openFolderWin(name){
@@ -1615,23 +1638,32 @@ function placeSub(item,sub){
     if(r2.right>innerWidth-4){ sub.style.left="auto"; sub.style.right="100%"; }
     return;
   }
+  const vh=viewH();   /* not innerHeight: a keyboard is covering the bottom rows */
   sub.style.position="fixed"; sub.style.left="0px"; sub.style.top="0px";
   let r=sub.getBoundingClientRect();
-  if(r.height>innerHeight-8){
-    sub.style.maxHeight=(innerHeight-8)+"px"; sub.style.overflowY="auto";
+  if(r.height>vh-8){
+    sub.style.maxHeight=(vh-8)+"px"; sub.style.overflowY="auto";
     r=sub.getBoundingClientRect();
   }
   const ir=item.getBoundingClientRect();
   let x=ir.right-8;
   if(x+r.width>innerWidth-4) x=ir.left-r.width+8;
   sub.style.left=Math.round(clamp(x,4,Math.max(4,innerWidth-r.width-4)))+"px";
-  sub.style.top=Math.round(clamp(ir.top-4,4,Math.max(4,innerHeight-r.height-4)))+"px";
+  sub.style.top=Math.round(clamp(ir.top-4,4,Math.max(4,vh-r.height-4)))+"px";
+}
+/* the screen a menu actually has: with a soft keyboard up, innerHeight still
+   counts the rows the keys are covering, so a menu clamped against it opened
+   inside the keyboard — which is where Cut/Copy/Paste kept landing */
+function viewH(){
+  const kb=parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--kb"))||0;
+  return Math.max(160,innerHeight-kb);
 }
 function showMenu(items,x,y){
   menuShownAt=performance.now(); ctxArmed=false;
   ctx.innerHTML=""; buildMenu(ctx,items);
   ctx.style.display="block"; ctx.style.left="0px"; ctx.style.top="0px";
   ctx.style.maxHeight=""; ctx.style.overflowY="";
+  const innerHeight=viewH();   /* shadows the global for the clamps below */
   let r=ctx.getBoundingClientRect();
   if(r.height>innerHeight-8){
     /* submenus inside a scrolling root would clip, but a menu nobody can
@@ -1888,7 +1920,10 @@ function taskbarMenu(){
     {label:"Task Manager",action:()=>openWin("win-taskmgr")},
     {sep:1},
     {label:"Lock the Taskbar",check:!!store.data.lockTb,action(){ store.data.lockTb=store.data.lockTb?0:1; store.save(); }},
-    {label:"Auto-hide the taskbar",check:!!store.data.tbAuto,action(){ store.data.tbAuto=store.data.tbAuto?0:1; store.save(); syncAutoHide(); }},
+    /* not offered on a phone: the peek trigger is pointermove along the bottom
+       edge, which a thumb never produces, so switching it on hid the taskbar
+       for good — and with it the only route back to some windows */
+    ...(MOBILE?[]:[{label:"Auto-hide the taskbar",check:!!store.data.tbAuto,action(){ store.data.tbAuto=store.data.tbAuto?0:1; store.save(); syncAutoHide(); }}]),
     {label:"Properties",disabled:1}
   ];
 }
@@ -4616,6 +4651,9 @@ function resolveDuel(a,b){
   updatePanel();
 }
 function explode(c){
+  /* nobody is watching a hidden tab, and on a phone that tab is usually a
+     locked screen: building and animating shards there is pure battery */
+  if(document.hidden) return;
   /* a fat cursor dies bigger: more shards, further, and a wider ring */
   const n=Math.min(26,Math.round(10+8*c.s));
   for(let i=0;i<n;i++){
@@ -4676,6 +4714,7 @@ function goldBurst(x,y){
   }
 }
 function float(text,x,y,small){
+  if(document.hidden) return;
   const f=document.createElement("div");
   f.className="float"+(small?" sm":"");
   f.textContent=text;

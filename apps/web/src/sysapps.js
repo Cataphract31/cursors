@@ -1185,7 +1185,12 @@ export function initSysApps(deps) {
     if (kind === "services") svcRender();
     else if (kind === "devmgr") devRender();
     else polRender();
-    openWin(id);
+    /* openWin() calls US for these three ids, so calling it back unconditionally
+       recursed until the stack blew — the tab froze for about half a second on
+       every open. By this point openWin has already made the window visible,
+       so only a direct call (from Run, say) still needs to open it. */
+    const el = document.getElementById(id);
+    if (!el || el.style.display !== "flex") openWin(id);
   }
 
   /* Device Manager is a live view of the field: refresh it while it is open */

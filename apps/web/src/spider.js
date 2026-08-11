@@ -32,6 +32,69 @@ export function initSpider(deps) {
     host.classList.remove("sp-nosheet");
   }).catch(() => {});      /* text corners stand in if the sheet never comes */
 
+  /* ---- the phone fit ---- */
+  /* Ten columns plus the stock need 780px of felt; a phone hands over 390, so
+     five columns, the stock and the score used to hang off the glass. The
+     board is a fixed pixel layout, so it gets scaled to the sheet rather than
+     clipped — the same trick main.js plays on the vendored Solitaire. The
+     layout box is set to the SCALED size too, so nothing overflows the pane,
+     the felt stays centred, and a tap still hits the card drawn under the
+     finger (a transform scales hit-testing with the paint). */
+  const phone = () => !!(document.body && document.body.classList.contains("mobile"));
+  let scale = 1;
+  function fit() {
+    const pane = host.parentElement;
+    if (!pane) return;
+    if (!phone()) {          /* the desktop board is already the right size */
+      scale = 1;
+      host.style.width = host.style.height = host.style.marginTop = host.style.transform = "";
+      fitScore();
+      return;
+    }
+    const w = pane.clientWidth, h = pane.clientHeight;
+    /* a hidden sheet measures 0. Keep the last good fit and wait to be shown
+       again rather than painting the felt at scale(0), which is how Solitaire
+       once came back from a minimise as an empty green rectangle. */
+    if (w < 40 || h < 40) return;
+    scale = Math.min((w - 2) / BW, (h - 2) / BH, 1);
+    host.style.width = Math.ceil(BW * scale) + "px";
+    host.style.height = Math.ceil(BH * scale) + "px";
+    host.style.transformOrigin = "0 0";
+    host.style.transform = "scale(" + scale + ")";
+    host.style.marginTop = Math.max(0, Math.floor((h - BH * scale) / 2)) + "px";
+    fitScore();
+  }
+  /* The cards are placed in board pixels and ride the scale happily. The score
+     is not: the stylesheet spans it left:0;right:0;bottom:48px against the host
+     BOX, which is now the scaled size, so it would print at half width halfway
+     up the tableau in 5px type. Pin it in board coordinates instead, and ask
+     for a size that lands on the glass at the 12px a thumb can read. */
+  function fitScore() {
+    /* An empty column is one hairline of #060 on green felt: scaled, it lands
+       on half a device pixel and the slot you are aiming at fades off the
+       board. Two board pixels come back as one crisp line. */
+    const bw = scale < 1 ? "2px" : "";
+    for (const s of host.querySelectorAll(".sp-slot")) s.style.borderWidth = bw;
+    const st = host.querySelector(".sp-score");
+    if (!st) return;
+    if (scale >= 1) { st.style.left = st.style.width = st.style.top = st.style.bottom = st.style.fontSize = ""; return; }
+    st.style.left = "0px";
+    st.style.width = BW + "px";
+    st.style.bottom = "auto";
+    st.style.top = (BH - 61) + "px";      /* where bottom:48px puts it at 1:1 */
+    st.style.fontSize = Math.round(12 / scale) + "px";
+  }
+  /* one listener per module, replaced not stacked, so rotating a phone a dozen
+     times does not leave a dozen fits running */
+  if (initSpider._fit) removeEventListener("resize", initSpider._fit);
+  initSpider._fit = fit;
+  addEventListener("resize", fit);
+  /* the pane reports a size again the instant the sheet is shown, which is the
+     only reliable signal that a display:none board is back */
+  if (typeof ResizeObserver === "function")
+    try { new ResizeObserver(fit).observe(host.parentElement); } catch (e) {}
+  fit();
+
   /* ---- the deal: 104 cards, 8 runs of a suit set sized by difficulty ---- */
   function newGame(d) {
     if (d) { diff = d; store.data.spDiff = d; store.save(); }
@@ -100,6 +163,7 @@ export function initSpider(deps) {
     st.className = "sp-score";
     st.textContent = "Score: " + score + "   Moves: " + movesN;
     host.appendChild(st);
+    fitScore();
   }
 
   /* ---- rules ---- */

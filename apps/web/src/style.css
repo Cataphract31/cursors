@@ -939,9 +939,15 @@ body.mobile.kb #balloon{bottom:calc(var(--kb) + var(--hud) + 18px)}
 body.mobile.kb .msn-toast{bottom:calc(var(--kb) + var(--hud) + 10px)}
 /* and 16px stops iOS zooming the page in the moment you tap a text field —
    the one place XP's 11px type has to give way to the hardware */
-body.mobile #ie-addr,body.mobile #ex-addr,body.mobile #hlp-search,
-body.mobile #run-in,body.mobile #lg-user,body.mobile .conv-input textarea,
-body.mobile .renamer,body.mobile .usertxtarea{font-size:16px}
+/* every text control, not the eight that got named: anything under 16px makes
+   iOS zoom the page on focus, and the shell cannot zoom back out */
+body.mobile input[type=text],body.mobile input[type=search],body.mobile input[type=number],
+body.mobile input[type=password],body.mobile input[type=url],body.mobile input:not([type]),
+body.mobile textarea{font-size:16px}
+/* a menu bar wider than the phone was simply cut off below about 330px */
+body.mobile .menubar{overflow-x:auto;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+body.mobile .menubar::-webkit-scrollbar{display:none}
+body.mobile .menubar span{flex:none}
 
 /* ---------- the arena is a place, so it has edges ---------- */
 /* The field is a fixed 1280x800 for fairness, letterboxed into whatever room

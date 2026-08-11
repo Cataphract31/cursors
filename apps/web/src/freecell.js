@@ -34,6 +34,56 @@ export function initFreeCell(deps) {
     host.classList.remove("fc-nosheet");
   }).catch(() => {});      /* text corners stand in if the sheet never comes */
 
+  /* ---- the phone fit ---- */
+  /* Eight columns and four home cells need 633px of felt; a phone hands over
+     390, so half the tableau and every foundation used to sit off the glass.
+     The board is a fixed pixel layout, so it gets scaled to the sheet rather
+     than clipped — the same trick main.js plays on the vendored Solitaire.
+     The layout box is set to the SCALED size as well, so nothing overflows the
+     pane, the felt stays centred, and a tap still hits the card drawn under
+     the finger (a transform scales hit-testing with the paint). */
+  const phone = () => !!(document.body && document.body.classList.contains("mobile"));
+  let scale = 1;
+  function fit() {
+    const pane = host.parentElement;
+    if (!pane) return;
+    if (!phone()) {          /* the desktop board is already the right size */
+      scale = 1;
+      host.style.width = host.style.height = host.style.marginTop = host.style.transform = "";
+      outlines();
+      return;
+    }
+    const w = pane.clientWidth, h = pane.clientHeight;
+    /* a hidden sheet measures 0. Keep the last good fit and wait to be shown
+       again rather than painting the felt at scale(0), which is how Solitaire
+       once came back from a minimise as an empty green rectangle. */
+    if (w < 40 || h < 40) return;
+    scale = Math.min((w - 2) / BW, (h - 2) / BH, 1);
+    host.style.width = Math.ceil(BW * scale) + "px";
+    host.style.height = Math.ceil(BH * scale) + "px";
+    host.style.transformOrigin = "0 0";
+    host.style.transform = "scale(" + scale + ")";
+    host.style.marginTop = Math.max(0, Math.floor((h - BH * scale) / 2)) + "px";
+    outlines();
+  }
+  /* An empty cell is one hairline of #060 on green felt: scaled, it lands on
+     half a device pixel and the home cells — the things you are playing at —
+     fade off the board. Two board pixels come back as one crisp line. */
+  function outlines() {
+    const w = scale < 1 ? "2px" : "";
+    for (const s of host.querySelectorAll(".fc-slot")) s.style.borderWidth = w;
+  }
+  /* one listener per module, replaced not stacked, so rotating a phone a dozen
+     times does not leave a dozen fits running */
+  if (initFreeCell._fit) removeEventListener("resize", initFreeCell._fit);
+  initFreeCell._fit = fit;
+  addEventListener("resize", fit);
+  /* the pane reports a size again the instant the sheet is shown, which is the
+     only reliable signal that a display:none board is back */
+  if (typeof ResizeObserver === "function")
+    try { new ResizeObserver(fit).observe(host.parentElement); } catch (e) {}
+  fit();
+
   /* ---- the deal ---- */
   /* Microsoft's own shuffle — seed*214013+2531011, high bits — so the numbered
      games are THE numbered games: #11982 still cannot be won */
@@ -107,6 +157,7 @@ export function initFreeCell(deps) {
       });
     }
     if (keep) host.appendChild(keep);
+    outlines();
   }
 
   /* ---- rules ---- */
@@ -243,15 +294,32 @@ export function initFreeCell(deps) {
   }
   function restart() { newGame(game); }
   function selectGame() {
-    if (host.querySelector(".fc-modal")) return;
+    if (document.querySelector(".fc-modal")) return;
     const m = document.createElement("div");
     m.className = "fc-modal";
     m.innerHTML = '<b>Select Game</b>' +
       '<div class="fc-modal-x">Select a game number from 1 to 32000.</div>' +
       '<input type="number" min="1" max="32000" value="' + game + '">' +
       '<div class="fc-modal-btns"><button data-ok="1">OK</button><button>Cancel</button></div>';
-    host.appendChild(m);
+    /* On a phone the dialog belongs to the window, not to the board: inside the
+       board it rides the board's scale down to unreadable and slides off with
+       any scroll of the felt. It still dies with the window, being its child. */
+    const win = phone() ? host.closest(".window") : null;
+    (win || host).appendChild(m);
     const inp = m.querySelector("input");
+    if (win) {
+      m.style.zIndex = "60";
+      m.style.padding = "12px 14px";
+      m.style.minWidth = "210px";
+      /* under 16px iOS zooms the whole sheet the moment the box takes focus,
+         and it never zooms back out */
+      inp.style.fontSize = "16px";
+      inp.style.width = "5em";
+      inp.style.padding = "3px 5px";
+      for (const b of m.querySelectorAll("button")) {
+        b.style.minHeight = "30px"; b.style.minWidth = "76px"; b.style.fontSize = "12px";
+      }
+    }
     const go = () => { const n = Math.max(1, Math.min(32000, Math.floor(+inp.value || 0))); m.remove(); newGame(n); };
     m.addEventListener("click", e => {
       const b = e.target.closest("button");
