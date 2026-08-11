@@ -993,7 +993,7 @@ function hookIcon(el,ic){
         /* on the phone the desktop is a launcher: one tap opens (unless this
            release is the tail end of a long-press that already opened a menu —
            lpConsumed covers holds of any length, the clock covers odd orders) */
-        if(MOBILE&&e.pointerType==="touch"&&!lpConsumed&&performance.now()-lpFiredAt>600&&performance.now()-menuDismissAt>500) openIcon(ic);
+        if(MOBILE&&e.pointerType==="touch"&&!lpConsumed&&!menuTouch&&performance.now()-menuDismissAt>500) openIcon(ic);
         /* Folder Options, "single-click to open an item" — it means the desktop too */
         else if(!MOBILE&&e.button===0&&!e.ctrlKey&&!e.shiftKey&&maint.fo().click==="single") openIcon(ic);
         return;
@@ -1497,6 +1497,7 @@ const ctx=$("#ctx");
 let menuShownAt=0; /* a long-press opens the menu under the finger — the release must not pick an item */
 let ctxArmed=false;   /* touch may only pick an item with a tap that STARTED on the open menu */
 let menuDismissAt=0;  /* the tap that dismissed a menu must not also click what was under it */
+let menuTouch=false;  /* this touch began with a menu open — see the compat-click guard */
 function buildMenu(host,items){
   for(const it of items){
     if(!it) continue;   /* menus may hold conditional entries */
@@ -1569,6 +1570,12 @@ addEventListener("keydown",e=>{
   else if(e.key==="Enter"&&cur>=0){ its[cur].dispatchEvent(new PointerEvent("pointerup",{bubbles:true})); e.preventDefault(); }
 },true);
 addEventListener("pointerdown",e=>{
+  /* latch BEFORE anything closes: by touchend the menu is gone and the compat
+     click would look like an innocent tap on the thumb bar underneath */
+  if(e.pointerType==="touch"){
+    const sm=document.getElementById("startmenu");
+    menuTouch=ctx.style.display==="block"||!!(sm&&sm.classList.contains("open"));
+  }
   if(!e.target.closest("#ctx")){ if(ctx.style.display==="block") menuDismissAt=performance.now(); hideMenu(); }
   else ctxArmed=true;
 },true);
@@ -2323,35 +2330,48 @@ document.addEventListener("contextmenu",e=>{
 /* Capture phase, because icons stopPropagation their pointerdowns. Android
    fires a native contextmenu on long-press (sawNative) — then we stand down. */
 let lpFiredAt=0;
-let lpConsumed=false; /* this touch WAS a long-press (ours or Android's) — its release must not act */
+/* This touch produced a right-click EFFECT (a menu opened, or a Minesweeper
+   flag was planted) — so its release must not also left-click. A long press
+   that produced NOTHING must NOT set this: the money buttons live outside
+   #desktop and offer no menu, and eating their click made a slow thumb on
+   DEPLOY do nothing at all while still buzzing like it had worked. */
+let lpConsumed=false;
 addEventListener("pointerdown",e=>{
   if(e.pointerType!=="touch") return;
   lpConsumed=false;   /* a new finger starts clean (pointercancel can strand the flag) */
   if(e.target.closest&&e.target.closest("[data-nolongpress]")) return; /* drawing surfaces keep the finger */
   const sx=e.clientX, sy=e.clientY, target=e.target;
   let sawNative=false;
-  /* Android's own long-press contextmenu makes IT the menu opener and we
-     stand down — but the release guards (icon taps, taskbar tabs, compat
-     clicks) still need to know a long-press happened, so stamp the clock. */
-  const onNative=()=>{ sawNative=true; lpFiredAt=performance.now(); lpConsumed=true; };
+  /* Android's own long-press contextmenu makes IT the menu opener and we stand
+     down. Our document handler runs later in the same dispatch, so whether a
+     menu actually appeared can only be read after it — hence the 0ms defer. */
+  const onNative=()=>{
+    sawNative=true;
+    setTimeout(()=>{ if(ctx.style.display==="block"){ lpFiredAt=performance.now(); lpConsumed=true; } },0);
+  };
   addEventListener("contextmenu",onNative,true);
   const dropNative=()=>removeEventListener("contextmenu",onNative,true);
   const t=setTimeout(()=>{
     stopTrack();
     /* the native echo can also arrive AFTER our 550ms (slow long-press
-       delays): keep listening a beat so it still stamps the clock */
+       delays): keep listening a beat so it still gets its say */
     setTimeout(dropNative,1500);
     if(sawNative) return;
-    lpFiredAt=performance.now(); lpConsumed=true;
-    if(navigator.vibrate) navigator.vibrate(12);
     const live=target.isConnected?target:(document.elementFromPoint(sx,sy)||document.body);
     const cell=live.closest&&live.closest(".ms-c");
     if(cell){ /* Minesweeper: long-press plants a flag (its cells speak mousedown) */
+      lpFiredAt=performance.now(); lpConsumed=true;
+      if(navigator.vibrate) navigator.vibrate(12);
       cell.dispatchEvent(new MouseEvent("mousedown",{bubbles:true,button:2,buttons:2,clientX:sx,clientY:sy}));
       cell.dispatchEvent(new MouseEvent("mouseup",{bubbles:true,button:2,clientX:sx,clientY:sy}));
-    }else{
-      live.dispatchEvent(new MouseEvent("contextmenu",{bubbles:true,cancelable:true,clientX:sx,clientY:sy}));
+      return;
     }
+    live.dispatchEvent(new MouseEvent("contextmenu",{bubbles:true,cancelable:true,clientX:sx,clientY:sy}));
+    /* no menu came up: this surface has no right-click. Leave the tap alone
+       and stay silent — a buzz with no menu reads as "it worked". */
+    if(ctx.style.display!=="block") return;
+    lpFiredAt=performance.now(); lpConsumed=true;
+    if(navigator.vibrate) navigator.vibrate(12);
   },550);
   const stopTrack=()=>{
     removeEventListener("pointermove",onMove,true);
@@ -2360,7 +2380,10 @@ addEventListener("pointerdown",e=>{
   };
   const onMove=ev=>{
     const dx=ev.clientX-sx, dy=ev.clientY-sy;
-    if(dx*dx+dy*dy>196){ clearTimeout(t); stopTrack(); dropNative(); } /* moved: it's a drag/scroll */
+    /* 6px, under the browser's own pan slop: a flick that starts a scroll must
+       cancel the press BEFORE the browser steals the gesture, or a scrolling
+       finger pops a menu under itself half a second in */
+    if(dx*dx+dy*dy>36){ clearTimeout(t); stopTrack(); dropNative(); }
   };
   const onEnd=()=>{ clearTimeout(t); stopTrack(); dropNative(); };
   /* pointercancel is NOT a release. iOS raises it the moment it decides the
@@ -2372,12 +2395,17 @@ addEventListener("pointerdown",e=>{
   addEventListener("pointerup",onEnd,true);
   addEventListener("pointercancel",onCancel,true);
 },true);
-/* the release of a long-press must not ALSO left-click (compat mouse events),
-   no matter how long the finger lingered before letting go — a compat click
-   is what was instantly closing Winamp's own context menus */
+/* THE COMPAT-CLICK GUARD. After touchend the browser re-hit-tests the point and
+   synthesises mousedown/mouseup/click. Three ways that spends real money:
+   a long-press release left-clicking what the menu covers; the tap that PICKS a
+   menu item landing on the thumb bar once hideMenu() has run; and the tap that
+   DISMISSES a menu doing the same. All three are one question — did this touch
+   have anything to do with a menu — so they get one latch, set at pointerdown
+   before any of it is torn down. */
 addEventListener("touchend",e=>{
-  const lp=lpConsumed; lpConsumed=false;
-  if(lp||performance.now()-lpFiredAt<700||(ctx.style.display==="block"&&!ctxArmed)) e.preventDefault();
+  const lp=lpConsumed, mt=menuTouch;
+  lpConsumed=false; menuTouch=false;
+  if(lp||mt||(ctx.style.display==="block"&&!ctxArmed)) e.preventDefault();
 },{capture:true,passive:false});
 
 /* taskbar tabs activate on pointerup, delegated: renderTaskbar rebuilds the
@@ -2385,7 +2413,9 @@ addEventListener("touchend",e=>{
 let tabPtrAt=0;
 $("#tabs").addEventListener("pointerup",e=>{
   const t=e.target.closest(".task-tab"); if(!t) return;
-  if(lpConsumed||performance.now()-lpFiredAt<700||performance.now()-menuDismissAt<500) return;
+  /* lpConsumed and menuTouch are per-gesture and still set at pointerup (they
+     clear on touchend), so no wall-clock dead zone punishes the NEXT finger */
+  if(lpConsumed||menuTouch||performance.now()-menuDismissAt<500) return;
   tabPtrAt=performance.now(); tabClick(t.dataset.win);
 });
 $("#tabs").addEventListener("click",e=>{   /* keyboard activation only */
