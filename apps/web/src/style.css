@@ -1990,6 +1990,10 @@ body.mobile .tb-bar{display:none !important}
    two felts apart at a glance in the taskbar preview */
 .win-body.ht-body{background:#008080;padding:0;display:flex;flex-direction:column;overflow:hidden}
 .ht-scroll{flex:1;min-height:0;overflow:auto}
+/* the board is scaled to fit on a phone (hearts.js fit()), and Chrome does not
+   shrink a parent's scrollable overflow for a scaled-DOWN child — without this
+   the felt can still be panned off the side of the screen */
+body.mobile .ht-scroll{overflow:hidden}
 .ht-board{position:relative;width:700px;height:500px;margin:0 auto;flex:none;font:11px Tahoma,"Segoe UI",sans-serif;color:#fff}
 .ht-card{position:absolute;width:71px;height:96px;box-sizing:border-box;border:1px solid #000;border-radius:4px;background-color:#fff;background-repeat:no-repeat}
 .ht-card.up{background-image:var(--ht-sheet)}

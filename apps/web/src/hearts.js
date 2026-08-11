@@ -112,6 +112,121 @@ export function initHearts(deps) {
     firstTrick = true; broken = false; qGone = false;
   }
 
+  /* ---- fitting the felt to a phone ----
+     The board is a fixed 700x500. A phone is 390 across standing up and 390
+     tall lying down, so on a phone something is always off the edge — and it
+     is always the thing you need: the Pass button in portrait, your own
+     thirteen cards in landscape. Scrolling to it loses the trick you are
+     following suit against. So the whole board is scaled into the sheet with
+     one transform, the same move Solitaire makes with its frame. A transform
+     scales hit-testing along with the paint, so a card is still exactly where
+     you touched it. Phones only: the desktop window has the room for 700x500
+     and keeps it pixel for pixel. */
+  let fitScale = 1, fitPend = null, fitTries = 0, refitting = false;
+  const onPhone = () => !!(document.body && document.body.classList &&
+    document.body.classList.contains("mobile"));
+  function fitLater(ms) {
+    if (fitPend || fitTries > 14) return;
+    fitPend = setTimeout(() => { fitPend = null; fit(); }, ms);
+  }
+  function fit() {
+    const box = host.parentElement;
+    if (!box) return;
+    if (!onPhone()) {
+      if (fitScale !== 1) {
+        fitScale = 1;
+        host.style.transform = "";
+        host.style.transformOrigin = "";
+        host.style.margin = "";
+      }
+      dress();
+      return;
+    }
+    const w = box.clientWidth, h = box.clientHeight;
+    /* a shut, minimised or still-opening sheet measures zero, and scaling to
+       zero is how a board comes back one pixel wide. Keep the last good fit
+       and look again in a moment — this is the bug that bit Solitaire. */
+    if (w < 40 || h < 40) { fitTries++; fitLater(160); return; }
+    fitTries = 0;
+    const sc = Math.min(1, w / BW, h / BH);
+    /* centre the shrunken board in whatever is left over */
+    const dx = Math.max(0, (w - BW * sc) / 2), dy = Math.max(0, (h - BH * sc) / 2);
+    host.style.transformOrigin = "0 0";
+    host.style.transform = "translate(" + dx.toFixed(2) + "px," + dy.toFixed(2) +
+      "px) scale(" + sc.toFixed(4) + ")";
+    /* Shrinking a box with a transform does not shrink what its parent thinks
+       it has to scroll — the browser keeps the untransformed 700x500 and the
+       felt can still be dragged sideways off the screen. Negative end margins
+       pull the layout footprint down to the size the board actually paints at,
+       which is what finally stops the pan. Left margin is pinned because the
+       stylesheet centres the board with auto margins, and an auto margin would
+       fight the translate for the same slack. */
+    host.style.marginLeft = "0";
+    host.style.marginRight = Math.min(0, Math.round(w - BW)) + "px";
+    host.style.marginBottom = Math.min(0, Math.round(h - BH)) + "px";
+    const moved = Math.abs(sc - fitScale) > .002;
+    fitScale = sc;
+    /* the scoreboard's wording depends on the scale, so a new scale wants a
+       new paint; the flag keeps render()'s own fit() from bouncing back */
+    if (moved && !refitting) {
+      refitting = true;
+      try { render(); } finally { refitting = false; }
+      return;
+    }
+    dress();
+  }
+  /* The felt shrinks and 11px type would land at six. Type does not survive
+     that, so the words and the one button you have to hit are drawn oversized
+     in board pixels and the scale brings them back to a readable size on
+     glass. Cards are pictures, and pictures survive. */
+  function px(n) { return Math.round(n / (fitScale || 1)) + "px"; }
+  function dress() {
+    const big = fitScale < .98;
+    const m = host.querySelector(".ht-msg");
+    if (m) {
+      m.style.fontSize = big ? px(12) : "";
+      m.style.lineHeight = big ? px(15) : "";
+      m.style.bottom = big ? px(4) : "";
+      m.style.left = big ? px(8) : "";
+      m.style.right = big ? px(8) : "";
+    }
+    /* the Pass button leaves the bottom-right corner, where at this size it
+       would be a 42x13 target sitting under the last three cards, and stands
+       in the empty middle of the table just above your hand */
+    const b = host.querySelector(".ht-pass");
+    if (b) {
+      const pw = Math.min(BW - 40, 150 / (fitScale || 1));   /* 150 real pixels of thumb */
+      b.style.fontSize = big ? px(13) : "";
+      b.style.minWidth = big ? Math.round(pw) + "px" : "";
+      b.style.height = big ? px(32) : "";
+      b.style.padding = big ? "0" : "";
+      b.style.right = big ? "auto" : "";
+      /* clear of the hand, and of the 16px lift a chosen card takes */
+      b.style.bottom = big ? (BH - HANDY + 26) + "px" : "";
+      b.style.left = big ? Math.round((BW - pw) / 2) + "px" : "";
+    }
+    const d = host.querySelector(".ht-modal");
+    if (d) {
+      d.style.fontSize = big ? px(12) : "";
+      d.style.minWidth = big ? px(200) : "";
+      d.style.padding = big ? px(10) + " " + px(12) : "";
+      for (const t of d.querySelectorAll("table")) t.style.fontSize = big ? px(12) : "";
+      for (const t of d.querySelectorAll("button")) {
+        t.style.fontSize = big ? px(12) : "";
+        t.style.minWidth = big ? px(70) : "";
+        t.style.height = big ? px(26) : "";
+      }
+    }
+    /* the score box cannot get wider — north's cards start at 182 — and it
+       cannot get taller either, west's start at 92. So the type grows and the
+       lines tighten to keep the five rows inside the corner it has. */
+    const t = host.querySelector(".ht-score table");
+    if (t) {
+      t.style.fontSize = big ? px(10) : "";
+      t.style.lineHeight = big ? px(8.8) : "";
+    }
+  }
+
   /* ---- rendering ---- */
   function faceEl(cls, c, x, y) {
     const d = document.createElement("div");
@@ -139,7 +254,11 @@ export function initHearts(deps) {
   function scoreboard() {
     const d = document.createElement("div");
     d.className = "ht-score";
-    let h = '<table><tr><th></th><th>Hand</th><th>Total</th></tr>';
+    /* the corner is 166px wide whatever the screen is; at phone type sizes
+       "Hand" and "Total" no longer fit over their own columns */
+    const wide = fitScale > .98;
+    let h = '<table><tr><th></th><th>' + (wide ? "Hand" : "Pts") +
+      "</th><th>" + (wide ? "Total" : "Tot") + "</th></tr>";
     for (let i = 0; i < 4; i++) {
       const hp = handPts(i);
       h += '<tr' + (phase === "play" && turn === i ? ' class="ht-now"' : "") + '><td>' +
@@ -222,6 +341,7 @@ export function initHearts(deps) {
       }));
     }
     if (keep) host.appendChild(keep);
+    fit();     /* every paint lands on a board that is the size of the sheet */
   }
 
   /* ---- the rules ---- */
@@ -495,6 +615,7 @@ export function initHearts(deps) {
       startPass();
     });
     host.appendChild(d);
+    dress();   /* it arrives after the paint, so it asks for its own type size */
   }
 
   /* ---- input ---- */
@@ -525,6 +646,18 @@ export function initHearts(deps) {
     e.preventDefault();
     newGame();
   });
+  /* A rotation is a resize, and a phone fires several of them while the bars
+     slide about, so the fit is repeated a beat later as well. The old handler
+     is dropped before a new one goes on: turning the phone over and over must
+     not leave a pile of listeners behind (Solitaire's rule). */
+  const onFit = () => { fitTries = 0; fit(); fitLater(260); };
+  if (initHearts._fit) {
+    removeEventListener("resize", initHearts._fit);
+    removeEventListener("orientationchange", initHearts._fit);
+  }
+  initHearts._fit = onFit;
+  addEventListener("resize", onFit);
+  addEventListener("orientationchange", onFit);
 
   /* ---- games ---- */
   function newGame() {
@@ -548,6 +681,12 @@ export function initHearts(deps) {
   /* a shut window plays no cards; the hand is exactly where it was on reopen */
   function pause() { cancelAll(); paused = true; }
   function resume() {
+    /* re-opening or restoring the window is the other moment the board can
+       find itself the wrong size: it was measured while it was hidden, or the
+       phone was turned over while it was shut */
+    fitTries = 0;
+    fit();
+    fitLater(300);
     if (!paused) return;
     paused = false;
     render();

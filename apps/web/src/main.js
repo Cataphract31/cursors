@@ -3977,8 +3977,22 @@ let plBase=5000, plBaseSet=false;
 let stats={kills:0,deaths:0,best:0,deploys:0,banks:0,bigBank:0,tIn:0,tOut:0};
 let curs=[], binDead=[];
 let myTickets=0, globalTickets=1437200, rakeAccrued=0;
-let stance="attack";
-const auto={on:false,count:3,bankAt:2};
+/* Stance and the autoplay dials were module state, so a reload — which on a
+   phone is a background tab being evicted, not a deliberate act — silently
+   reset them. Stance was the dangerous one: the server kept the old value
+   while the panel drew the default. They persist now, and mpHello sends the
+   stance so both ends agree. Autoplay itself deliberately does NOT persist:
+   coming back to a page that is already spending money would be worse. */
+let stance=(store.data.stance==="defend")?"defend":"attack";
+const auto={on:false,
+  count:clamp(+(store.data.autoCount||3),1,MAXCUR),
+  bankAt:+(store.data.autoBankAt!=null?store.data.autoBankAt:2)};
+function saveAutoPrefs(){
+  store.data.stance=stance;
+  store.data.autoCount=auto.count;
+  store.data.autoBankAt=auto.bankAt;
+  store.save();
+}
 
 /* The arena is a FIXED logical playfield (not "however big your window is"),
    scaled to fit the screen. Two reasons, one of them load-bearing for real
@@ -4316,13 +4330,13 @@ function recallAll(){
 }
 $("#btn-deploy").addEventListener("click",()=>deploy(false));
 $("#btn-recall").addEventListener("click",recallAll);
-$("#st-attack").addEventListener("click",()=>{ stance="attack"; sClick(); mpSend({t:"stance",s:"attack"}); updatePanel(); });
-$("#st-defend").addEventListener("click",()=>{ stance="defend"; sClick(); mpSend({t:"stance",s:"defend"}); updatePanel(); });
+$("#st-attack").addEventListener("click",()=>{ stance="attack"; sClick(); mpSend({t:"stance",s:"attack"}); saveAutoPrefs(); updatePanel(); });
+$("#st-defend").addEventListener("click",()=>{ stance="defend"; sClick(); mpSend({t:"stance",s:"defend"}); saveAutoPrefs(); updatePanel(); });
 /* the mobile thumb bar mirrors the dashboard verbs; the info row opens the full app */
 $("#mh-deploy").addEventListener("click",()=>deploy(false));
 $("#mh-recall").addEventListener("click",recallAll);
-$("#mh-attack").addEventListener("click",()=>{ stance="attack"; sClick(); mpSend({t:"stance",s:"attack"}); updatePanel(); });
-$("#mh-defend").addEventListener("click",()=>{ stance="defend"; sClick(); mpSend({t:"stance",s:"defend"}); updatePanel(); });
+$("#mh-attack").addEventListener("click",()=>{ stance="attack"; sClick(); mpSend({t:"stance",s:"attack"}); saveAutoPrefs(); updatePanel(); });
+$("#mh-defend").addEventListener("click",()=>{ stance="defend"; sClick(); mpSend({t:"stance",s:"defend"}); saveAutoPrefs(); updatePanel(); });
 $("#mh-info").addEventListener("click",()=>openWin("win-cursors"));
 function bank(c,atShutdown){
   const m=(c.bounty/ENTRY).toFixed(1);
@@ -4480,8 +4494,12 @@ function autoAwayCheck(){
 $("#ap-toggle").addEventListener("click",()=>{
   setAuto(!auto.on); sClick();
 });
-$$(".apc").forEach(b=>b.addEventListener("click",()=>{ sClick(); auto.count=+b.dataset.c; $$(".apc").forEach(x=>x.classList.toggle("on",x===b)); }));
-$$(".apb").forEach(b=>b.addEventListener("click",()=>{ sClick(); auto.bankAt=+b.dataset.b; $$(".apb").forEach(x=>x.classList.toggle("on",x===b)); }));
+$$(".apc").forEach(b=>b.addEventListener("click",()=>{ sClick(); auto.count=+b.dataset.c; saveAutoPrefs(); $$(".apc").forEach(x=>x.classList.toggle("on",x===b)); }));
+$$(".apb").forEach(b=>b.addEventListener("click",()=>{ sClick(); auto.bankAt=+b.dataset.b; saveAutoPrefs(); $$(".apb").forEach(x=>x.classList.toggle("on",x===b)); }));
+/* the highlighted dial is written in the markup, so after restoring saved
+   values the panel has to be told which one is actually selected */
+$$(".apc").forEach(x=>x.classList.toggle("on",+x.dataset.c===auto.count));
+$$(".apb").forEach(x=>x.classList.toggle("on",+x.dataset.b===auto.bankAt));
 /* liquidity: the arena keeps a live bot population instead of coin-flipping.
    The target wobbles per epoch so the field breathes; play-money only — the
    real-money bot policy is a disclosed design still owed (see HANDOFF). */
