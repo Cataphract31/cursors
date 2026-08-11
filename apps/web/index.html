@@ -430,6 +430,124 @@ icons/sounds: winXP (MIT)</div>
     </div>
   </div>
 
+  <!-- regedit's Edit String -->
+  <div class="window fixed" id="win-regstr" style="left:calc(50% - 165px);top:170px;width:330px">
+    <div class="title-bar"><div class="tb-l"><div class="title-bar-text">Edit String</div></div>
+      <div class="title-bar-controls"><button aria-label="Close"></button></div></div>
+    <div class="win-body pad" style="background:#ECE9D8">
+      <div style="font-size:11px">Value name:</div>
+      <input type="text" id="rs-name" readonly style="width:100%;margin:2px 0 8px;background:#ECE9D8">
+      <div style="font-size:11px">Value data:</div>
+      <input type="text" id="rs-data" style="width:100%;margin:2px 0 10px" maxlength="60">
+      <div style="text-align:right;display:flex;gap:6px;justify-content:flex-end">
+        <button class="xbtn" id="rs-ok" style="min-width:74px">OK</button>
+        <button class="xbtn" id="rs-cancel" style="min-width:74px">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Narrator -->
+  <div class="window fixed" id="win-narrator" style="left:calc(50% - 170px);top:120px;width:340px">
+    <div class="title-bar"><div class="tb-l"><div class="title-bar-text">Narrator</div></div>
+      <div class="title-bar-controls"><button aria-label="Close"></button></div></div>
+    <div class="win-body pad" style="background:#ECE9D8;font-size:11px">
+      <div style="margin-bottom:8px">Narrator can read aloud what is on the screen.</div>
+      <label style="display:block;margin:4px 0"><input type="checkbox" id="nr-events" checked> Announce events on screen</label>
+      <label style="display:block;margin:4px 0"><input type="checkbox" id="nr-typed"> Read typed characters</label>
+      <div style="text-align:right;margin-top:10px"><button class="xbtn" id="nr-ok" style="min-width:74px">Exit</button></div>
+    </div>
+  </div>
+
+  <!-- Volume Control: Advanced Controls -->
+  <div class="window fixed" id="win-svadv" style="left:calc(50% - 150px);top:160px;width:300px">
+    <div class="title-bar"><div class="tb-l"><div class="title-bar-text">Advanced Controls for Volume Control</div></div>
+      <div class="title-bar-controls"><button aria-label="Close"></button></div></div>
+    <div class="win-body pad" style="background:#ECE9D8;font-size:11px">
+      <div>These settings control tone quality.</div>
+      <div style="margin:10px 0 2px">Bass:</div>
+      <div style="display:flex;gap:6px;align-items:center"><span>Low</span><input type="range" id="sv-bass" min="0" max="100" style="flex:1"><span>High</span></div>
+      <div style="margin:10px 0 2px">Treble:</div>
+      <div style="display:flex;gap:6px;align-items:center"><span>Low</span><input type="range" id="sv-treble" min="0" max="100" style="flex:1"><span>High</span></div>
+      <div style="text-align:right;margin-top:12px"><button class="xbtn" id="svadv-ok" style="min-width:74px">Close</button></div>
+    </div>
+  </div>
+
+  <!-- Minesweeper: Custom Field -->
+  <div class="window fixed" id="win-minecustom" style="left:calc(50% - 130px);top:170px;width:260px">
+    <div class="title-bar"><div class="tb-l"><div class="title-bar-text">Custom Field</div></div>
+      <div class="title-bar-controls"><button aria-label="Close"></button></div></div>
+    <div class="win-body pad" style="background:#ECE9D8;font-size:11px">
+      <div style="display:grid;grid-template-columns:auto 1fr;gap:6px 10px;align-items:center">
+        <span>Height:</span><input type="number" id="mc-h" value="16" min="9" max="24">
+        <span>Width:</span><input type="number" id="mc-w" value="30" min="9" max="30">
+        <span>Mines:</span><input type="number" id="mc-m" value="45" min="10" max="667">
+      </div>
+      <div style="text-align:right;margin-top:12px;display:flex;gap:6px;justify-content:flex-end">
+        <button class="xbtn" id="mc-ok" style="min-width:64px">OK</button>
+        <button class="xbtn" id="mc-cancel" style="min-width:64px">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- About Windows -->
+  <div class="window fixed" id="win-winver" style="left:calc(50% - 205px);top:120px;width:410px">
+    <div class="title-bar"><div class="tb-l"><div class="title-bar-text">About Windows</div></div>
+      <div class="title-bar-controls"><button aria-label="Close"></button></div></div>
+    <div class="win-body pad" style="background:#ECE9D8">
+      <div class="wv-banner"><img id="wv-flag" alt=""><div><b>Microsoft Windows XP</b><br>Professional</div></div>
+      <hr class="wv-hr">
+      <div class="wv-body">Version 5.1 (Build 2600.xpsp_sp2_rtm : Service Pack 2)<br><br>
+        This product is licensed under the terms of the End-User License Agreement to:<br>
+        <span id="wv-user" style="padding-left:16px;display:inline-block"></span><br><br>
+        Physical memory available to Windows: <span id="wv-mem">523,764</span> KB</div>
+      <div style="text-align:right;margin-top:10px"><button class="xbtn" id="wv-ok" style="min-width:74px">OK</button></div>
+    </div>
+  </div>
+
+  <!-- the recovered-from-a-serious-error dialog -->
+  <div class="window fixed" id="win-errrep" style="left:calc(50% - 200px);top:150px;width:400px">
+    <div class="title-bar"><div class="tb-l"><div class="title-bar-text">CURSORS.EXE</div></div>
+      <div class="title-bar-controls"><button aria-label="Close"></button></div></div>
+    <div class="win-body pad" style="background:#ECE9D8">
+      <div style="display:flex;gap:10px;align-items:flex-start">
+        <i class="xico" data-ico="@ic-warn" style="width:32px;height:32px;flex:none"></i>
+        <div style="font-size:11px;line-height:1.5">The system has recovered from a serious error.<br><br>
+          A log of this error has been created.<br><br>
+          Please tell Microsoft about this problem.</div>
+      </div>
+      <div style="text-align:right;margin-top:12px;display:flex;gap:6px;justify-content:flex-end">
+        <button class="xbtn" id="er-send" style="min-width:110px">Send Error Report</button>
+        <button class="xbtn" id="er-dont" style="min-width:84px">Don't Send</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- shutdown.exe's countdown box: no buttons, exactly like the worm summer -->
+  <div class="window fixed" id="win-sysshut" style="left:calc(50% - 180px);top:140px;width:360px">
+    <div class="title-bar"><div class="tb-l"><div class="title-bar-text">System Shutdown</div></div>
+      <div class="title-bar-controls"></div></div>
+    <div class="win-body pad" style="background:#ECE9D8">
+      <div style="display:flex;gap:10px;align-items:flex-start">
+        <i class="xico" data-ico="@ic-warn" style="width:32px;height:32px;flex:none"></i>
+        <div style="font-size:11px;line-height:1.5">This system is shutting down. Please save all
+          work in progress and log off. Any unsaved changes will be lost. This shutdown was
+          initiated by <span id="ss-who"></span>.<br><br>
+          Time before shutdown: <b id="ss-timer">00:00:30</b><br><br>
+          Message:<br>Windows must now restart.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Utility Manager -->
+  <div class="window fixed" id="win-utilman" style="left:calc(50% - 175px);top:130px;width:350px">
+    <div class="title-bar"><div class="tb-l"><div class="title-bar-text">Utility Manager</div></div>
+      <div class="title-bar-controls"><button aria-label="Close"></button></div></div>
+    <div class="win-body pad" style="background:#ECE9D8">
+      <div class="um-list" id="um-list"></div>
+      <div style="text-align:right;margin-top:10px"><button class="xbtn" id="um-ok" style="min-width:74px">OK</button></div>
+    </div>
+  </div>
+
   <!-- How to Play: five slides, real screenshots -->
   <div class="window" id="win-tour" data-minw="420" data-minh="300" style="left:calc(50% - 292px);top:52px;width:584px">
     <div class="title-bar">
@@ -618,7 +736,7 @@ icons/sounds: winXP (MIT)</div>
       </div>
       <div class="xpane" id="dp-app">
         <div class="aprow"><span class="lb">Scheme</span>
-          <select style="flex:1"><option>Luna (Blue)</option><option disabled>Olive Green — ships in a later update</option><option disabled>Silver — ships in a later update</option></select>
+          <select style="flex:1" id="ds-style"><option>Windows XP style (Luna Blue)</option><option>Windows Classic style</option><option disabled>Olive Green</option><option disabled>Silver</option></select>
         </div>
         <div class="aprow" style="margin-top:8px"><span class="lb">Monitor</span>
           <label class="small" style="display:flex;align-items:center;gap:6px;flex:1"><input type="checkbox" id="crt-chk" checked> CRT glass — scanlines, glare, the tube</label>

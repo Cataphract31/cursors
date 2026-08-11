@@ -1682,3 +1682,27 @@ body.mobile .trayico{width:26px;height:26px}
 body.mobile #tray-chev{padding:4px 6px}
 body.mobile .msn-row{min-height:30px}
 body.mobile .wp-bar button{min-height:26px}
+
+/* ---- winver / utilman / system shutdown ---- */
+.wv-banner{display:flex;align-items:center;gap:12px;font-size:15px}
+.wv-banner img{width:44px;height:44px;object-fit:contain}
+.wv-hr{border:0;border-top:1px solid #ACA899;margin:8px 0}
+.wv-body{font-size:11px;line-height:1.55}
+.um-list{background:#fff;border:1px solid #7F9DB9;padding:2px;max-height:150px;overflow:auto}
+.um-row{display:flex;justify-content:space-between;align-items:center;padding:4px 6px;font-size:11px}
+.um-row span i{color:#666;font-style:normal}
+
+/* ---- Windows Update, 2003 green ---- */
+.ie-doc.wu{background:#FFFFFF;font-family:Verdana,Arial,sans-serif;font-size:11px;text-align:left;padding:0}
+.ie-doc.wu .wu-head{background:#316AC5;color:#fff;font-size:17px;padding:8px 14px}
+.ie-doc.wu .wu-head b{font-weight:bold}
+.ie-doc.wu .wu-cols{display:flex;min-height:300px}
+.ie-doc.wu .wu-side{flex:0 0 168px;background:#EBF3E2;border-right:1px solid #B8CCA0;padding:8px 0}
+.ie-doc.wu .wu-nav{padding:5px 12px;color:#2A5D0C;cursor:pointer}
+.ie-doc.wu .wu-nav:hover{text-decoration:underline}
+.ie-doc.wu .wu-nav.dim{color:#7A8A6A;margin-top:8px;cursor:default}
+.ie-doc.wu .wu-nav.dim:hover{text-decoration:none}
+.ie-doc.wu .wu-main{flex:1;padding:12px 18px}
+.ie-doc.wu h2{color:#2A5D0C;font-size:14px;margin:4px 0 10px}
+.ie-doc.wu p{margin:7px 0;line-height:1.5}
+.ie-doc.wu .wu-note{color:#666;font-size:10px}

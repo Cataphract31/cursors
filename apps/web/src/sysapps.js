@@ -139,6 +139,7 @@ export function initSysApps(deps) {
   const HELPROWS = [
     ["ARENA", "Reports the state of the arena. ARENA /? for options."],
     ["CD", "Displays the name of or changes the current directory."],
+    ["CHKDSK", "Checks a disk and displays a status report."],
     ["CLS", "Clears the screen."],
     ["COLOR", "Sets the default console foreground and background colors."],
     ["CURSOR", "Deploys, lists and recalls cursors. CURSOR /? for options."],
@@ -152,11 +153,15 @@ export function initSysApps(deps) {
     ["NET", "Manages network resources. Try NET START."],
     ["PING", "Tests connectivity to another host."],
     ["SC", "Communicates with the Service Controller. Try SC QUERY."],
+    ["SHUTDOWN", "Allows proper local shutdown of machine. Try SHUTDOWN -s -t 60."],
     ["START", "Starts a separate window to run a specified program."],
     ["SYSTEMINFO", "Displays machine configuration."],
     ["TASKKILL", "Terminates a running process."],
     ["TASKLIST", "Displays all currently running tasks."],
+    ["TELNET", "Connects to a host on a given port."],
     ["TIME", "Displays the current time."],
+    ["TITLE", "Sets the window title for a CMD.EXE session."],
+    ["TRACERT", "Traces the route taken to a destination."],
     ["TREE", "Graphically displays the directory structure of a path."],
     ["TYPE", "Displays the contents of a text file."],
     ["VER", "Displays the Windows version."],
@@ -239,6 +244,97 @@ export function initSysApps(deps) {
       cmdWrite("Approximate round trip times in milli-seconds:");
       cmdWrite(`    Minimum = ${lo}ms, Maximum = ${hi}ms, Average = ${Math.round(tot / 4)}ms`);
     },
+    chkdsk() {
+      cmdWrite("The type of the file system is NTFS.");
+      cmdWrite("Volume label is CURSORS.");
+      cmdWrite("");
+      const stages = ["Verifying files...", "Verifying indexes...", "Verifying security descriptors..."];
+      let i = 0;
+      const step = () => {
+        if (i < stages.length) { cmdWrite(stages[i++]); setTimeout(step, 500); return; }
+        const free = hooks.diskFree ? hooks.diskFree() : 9 * 1024 * 1024 * 1024;
+        const totKB = Math.round(20 * 1024 * 1024), freeKB = Math.round(free / 1024);
+        cmdWrite("Windows has checked the file system and found no problems.");
+        cmdWrite("");
+        cmdWrite("  " + totKB.toLocaleString("en-US") + " KB total disk space.");
+        cmdWrite("  " + (totKB - freeKB).toLocaleString("en-US") + " KB in use.");
+        cmdWrite("  " + freeKB.toLocaleString("en-US") + " KB available on disk.");
+      };
+      step();
+    },
+    shutdown(a) {
+      const s = (a || "").trim();
+      if (!s || /[-\/]\?/.test(s)) {
+        cmdWrite("Usage: shutdown [-s | -r | -a] [-t xx]");
+        cmdWrite("       -s: Shutdown the computer");
+        cmdWrite("       -r: Shutdown and restart the computer");
+        cmdWrite("       -a: Abort a system shutdown");
+        cmdWrite("       -t xx: Set timeout for shutdown to xx seconds");
+        return;
+      }
+      if (/(^|\s)-a(\s|$)/.test(s)) {
+        if (!hooks.shutdownAbort || !hooks.shutdownAbort())
+          cmdWrite("Unable to abort the system shutdown because no shutdown was in progress.");
+        return;
+      }
+      if (/(^|\s)-[sr](\s|$)/.test(s)) {
+        const m = /-t\s+(\d+)/.exec(s);
+        hooks.shutdownBox(Math.min(600, m ? +m[1] : 30));
+      }
+    },
+    title(a) {
+      const t = document.querySelector("#win-cmd .title-bar-text");
+      if (t) t.textContent = a || "C:\\WINDOWS\\system32\\cmd.exe";
+    },
+    tracert(a) {
+      const host = (a || "").trim().split(/\s+/)[0];
+      if (!host) { cmdWrite("Usage: tracert target_name"); return; }
+      const n = hooks.netInfo();
+      if (!n.up) { cmdWrite("Unable to resolve target system name " + host + "."); return; }
+      cmdWrite("");
+      cmdWrite("Tracing route to " + host + " [" + n.gw + "]");
+      cmdWrite("over a maximum of 30 hops:");
+      cmdWrite("");
+      const hops = [["192.168.0.1", 1], ["10.64.0.1", Math.round(n.rtt * .4)], [n.gw, n.rtt]];
+      let i = 0;
+      const step = () => {
+        if (i >= hops.length) { cmdWrite(""); cmdWrite("Trace complete."); return; }
+        const [ip, base] = hops[i]; i++;
+        const t = () => Math.max(1, Math.round(base * (0.8 + Math.random() * 0.5))) + " ms";
+        cmdWrite("  " + i + "    " + padR(t(), 8) + padR(t(), 8) + padR(t(), 8) + ip);
+        setTimeout(step, 350);
+      };
+      step();
+    },
+    telnet(a) {
+      const host = (a || "").trim().split(/\s+/)[0];
+      if (!host) { cmdWrite("Usage: telnet host [port]"); return; }
+      const n = hooks.netInfo();
+      cmdWrite("Connecting To " + host + "...");
+      if (!n.up || host !== "arena.cursor.land") {
+        setTimeout(() => cmdWrite("Could not open connection to the host, on port 23: Connect failed"), 1400);
+        return;
+      }
+      /* the arena, over telnet: two cursors walk in and one walks out */
+      const el = document.createElement("div");
+      el.style.whiteSpace = "pre"; el.style.minHeight = "13px";
+      screen.appendChild(el); screen.scrollTop = screen.scrollHeight;
+      const W2 = 34; let f = 0;
+      const anim = setInterval(() => {
+        f++;
+        const gap = Math.max(0, W2 - f * 2);
+        const l = Math.floor((W2 - gap) / 2);
+        if (gap > 0) el.textContent = " ".repeat(l) + "\u25b6" + " ".repeat(gap) + "\u25c0";
+        else if (f < W2 / 2 + 4) el.textContent = " ".repeat(Math.floor(W2 / 2)) + (f % 2 ? "\u2739" : "\u2716");
+        else {
+          clearInterval(anim);
+          el.textContent = " ".repeat(Math.floor(W2 / 2)) + "\u25b6";
+          cmdWrite("");
+          cmdWrite("Connection to host lost.");
+        }
+        screen.scrollTop = screen.scrollHeight;
+      }, 130);
+    },
     tasklist() {
       cmdWrite("");
       cmdWrite(padR("Image Name", 26) + padR("PID", 8) + padR("Session Name", 16) + padL("Mem Usage", 12));
@@ -278,6 +374,20 @@ export function initSysApps(deps) {
       for (const [k, v] of rows) cmdWrite(padR(k + ":", 28) + v);
     },
     net(a) {
+      const parts = (a || "").trim().split(/\s+/);
+      if ((parts[0] || "").toLowerCase() === "send") {
+        const to = parts[1], text = parts.slice(2).join(" ");
+        if (!to || !text) { cmdWrite("The syntax of this command is:"); cmdWrite(""); cmdWrite("NET SEND {name | *} message"); return; }
+        if (!hooks.toastsOn || !hooks.toastsOn()) {
+          cmdWrite("An error occurred while sending a message to " + to + ".");
+          cmdWrite("");
+          cmdWrite("The Messenger service has not been started.");
+          return;
+        }
+        hooks.msgPopup(hooks.sysInfo().host, to, text);
+        cmdWrite("The message was successfully sent to " + to + ".");
+        return;
+      }
       if ((a || "").trim().split(/\s+/)[0].toLowerCase() === "start") {
         cmdWrite("These Windows services are started:");
         cmdWrite("");

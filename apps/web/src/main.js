@@ -412,7 +412,21 @@ let readmeText=null;
    dead address here and answered with "page cannot be displayed" from three
    different menus. It answers the question instead. */
 function windowsUpdate(){
-  showError("Windows Update","0 critical updates available.");
+  openWin("win-ie");
+  try{ ie.connectNow&&ie.connectNow(); }catch(e){}
+  try{ ie.go("http://windowsupdate.microsoft.com/"); }catch(e){}
+}
+/* Windows Classic style, straight from the Appearance tab */
+{
+  const sel=document.getElementById("ds-style");
+  if(sel){
+    if(store.data.classicStyle){ sel.selectedIndex=1; document.body.classList.add("classic-theme"); }
+    sel.addEventListener("change",()=>{
+      const classic=sel.selectedIndex===1;
+      document.body.classList.toggle("classic-theme",classic);
+      store.data.classicStyle=classic?1:0; store.save();
+    });
+  }
 }
 function openWin(id,opts){
   if(id==="win-ie"&&MP.on&&MP.tv&&MP.tv.now) setTimeout(()=>{ try{ mpTvSync(); }catch(e){} },200);
@@ -446,6 +460,8 @@ function openWin(id,opts){
   if(id==="win-ie"&&ie) ie.boot();   /* an empty browser dials out on its own */
   if(id==="win-cmd"){ if(sys.policyOn("nocmd")){ closeWin("win-cmd"); showError("Command Prompt","The command prompt has been disabled by your administrator.\n\nPress any key to continue . . ."); return; } sys.cmdOpen(); }
   if(id==="win-control") sys.cplRender();
+  if(id==="win-winver") fillWinver();
+  if(id==="win-utilman") fillUtilman();
   if(id==="win-services") sys.openConsole("services");
   if(id==="win-devmgr") sys.openConsole("devmgr");
   if(id==="win-gpedit") sys.openConsole("gpedit");
@@ -1183,6 +1199,7 @@ function dropIntoFolder(ev,ics){
 /* ================= shared dialogs ================= */
 let confirmCb=null;
 function showError(title,text,quiet){
+  try{ access.narrate&&access.narrate(String(title)+". "+String(text)); }catch(e){}
   $("#win-error .title-bar-text").textContent=title;
   $("#errtext").textContent=text;
   openWin("win-error",{silent:true});
@@ -1701,6 +1718,8 @@ function editMenu(t){
 
 /* ---- menu bars actually drop menus ---- */
 function menubarMenu(label,id){
+  if(id==="win-regedit"&&depth.regMenus){ const m=depth.regMenus(label); if(m) return m; }
+  if((id==="win-chat"||id.indexOf("win-conv")===0)&&msn.menus){ const m=msn.menus(label,id); if(m) return m; }
   if(id==="win-cursors"){
     const P={Play:"cx-play",Stats:"cx-stats",Rakeback:"cx-rake",History:"cx-hist",Verify:"cx-verify"};
     if(label==="Game") return [
@@ -1770,6 +1789,16 @@ document.addEventListener("click",e=>{
 
 /* ================= Minesweeper ================= */
 const mine=initMinesweeper({
+  customDialog:cb=>{
+    openWin("win-minecustom");
+    $("#mc-ok").onclick=()=>{
+      const h=Math.max(9,Math.min(24,+$("#mc-h").value||16));
+      const w=Math.max(9,Math.min(30,+$("#mc-w").value||30));
+      const m=Math.max(10,Math.min((h-1)*(w-1),+$("#mc-m").value||45));
+      closeWin("win-minecustom"); cb({h,w,m});
+    };
+    $("#mc-cancel").onclick=()=>closeWin("win-minecustom");
+  },
   MINE,
   host:$("#ms-grid"),
   headEls:{counter:$("#ms-counter"),timer:$("#ms-timer"),face:$("#ms-face")},
@@ -1860,6 +1889,7 @@ const mouse=initMouse({$,store,sysSnd,CURFILES,openWin,closeWin,icoNode,
 });
 /* Calculator, Character Map, Disk Defragmenter, Registry Editor */
 const depth=initDepthApps({$,store,sysSnd,showMenu,showError,openWin,closeWin,hooks:{
+  setPsm:v=>{ store.data.msnPsm=String(v||"").slice(0,60); store.save(); try{ msn.renderMe(); }catch(e){} },
   disk:()=>{ const d=diskPct(); return {pct:d.pct,corpses:(binDead&&binDead.length)||0}; },
   regGame:()=>({ name:playerNameFull(), wallet:fmtS(Math.round(wallet))+" SOL",
     kills:stats.kills, deaths:stats.deaths, scheme:mouse.labelOf(mouse.current()),
@@ -2310,6 +2340,7 @@ addEventListener("keydown",e=>{
   if(e.key==="Escape"&&ie&&ie.isTheater()){ ie.theater(false); return; }
   if(e.key==="Escape"){ closeStart(); hideMenu(); }
   if(e.ctrlKey&&e.shiftKey&&e.key==="Escape"){ openWin("win-taskmgr"); }
+  else if(e.ctrlKey&&e.key==="Escape"){ e.preventDefault(); sClick(); startmenu.classList.toggle("open"); }
 });
 /* ---------- the Alt+Tab box ---------- */
 /* the OS eats real Alt+Tab in a browser, so Ctrl+Tab drives the same box —
@@ -2411,7 +2442,7 @@ function allProgramsMenu(){
       {label:"Accessibility",sub:[
         {label:"Accessibility Wizard",action:()=>{ closeStart(); access.openAccessOptions(); }},
         {label:"Magnifier",action:()=>{ closeStart(); access.openMagnifier(); }},
-        {label:"Narrator",disabled:1},
+        {label:"Narrator",action:()=>openWin("win-narrator")},
         {label:"On-Screen Keyboard",action:()=>{ closeStart(); access.openOSK(); }}]},
       {label:"System Tools",sub:[
         {label:"Disk Cleanup",action:()=>{ closeStart(); openWin("win-explorer"); explorer.go("C:\\"); setTimeout(()=>explorer.driveProperties(),350); }},
@@ -2507,6 +2538,9 @@ const RUNMAP={
   "mmc":"win-services","taskman":"win-taskmgr","appwiz.cpl":"win-control",
   "msconfig":"win-msconfig","msconfig.exe":"win-msconfig",
   "rstrui":"win-restore","rstrui.exe":"win-restore",
+  "winver":"win-winver","winver.exe":"win-winver",
+  "utilman":"win-utilman","utilman.exe":"win-utilman",
+  "narrator":"win-narrator","narrator.exe":"win-narrator",
 };
 /* one resolver for the Run box, cmd's START and Control Panel's applets */
 /* one table maps a Run name to the component that owns it */
@@ -2570,6 +2604,7 @@ function tickClock(){ if(!clockOn) return; $("#clock").textContent=new Date().to
 tickClock(); setInterval(tickClock,10000);
 let balloonT=null;
 function showBalloon(head,text){
+  try{ access.narrate&&access.narrate(String(head)+". "+String(text)); }catch(e){}
   if(!toastsOn||(sys&&sys.policyOn("nobal"))) return;   /* Messenger service / policy */
   $("#balloon-h").textContent=head||"Take a tour of CURSORS.EXE";
   $("#balloon-t").textContent=text||"auto-battler. deploy any time. attack or defend from the dashboard. bank before shutdown.";
@@ -3005,6 +3040,20 @@ function tmTick(){
       row.innerHTML=`<span>${name}</span><span>${String(c).padStart(2,"0")}</span>`;
       row.addEventListener("click",()=>{ tmProcSel=name;
         [...host.children].forEach(r=>r.classList.remove("on")); row.classList.add("on"); });
+      row.addEventListener("contextmenu",e=>{
+        e.preventDefault(); e.stopPropagation();
+        tmProcSel=name;
+        [...host.children].forEach(r=>r.classList.remove("on")); row.classList.add("on");
+        showMenu([
+          {label:"End Process",action:()=>$("#tm-endproc").click()},
+          {label:"End Process Tree",action:()=>$("#tm-endproc").click()},
+          {sep:1},
+          {label:"Set Priority",sub:[
+            {label:"Realtime",disabled:1},{label:"High",disabled:1},{label:"AboveNormal",disabled:1},
+            {label:"Normal",check:1,disabled:1},{label:"BelowNormal",disabled:1},{label:"Low",disabled:1},
+          ]},
+        ],e.clientX,e.clientY);
+      });
       host.appendChild(row);
     }
   }
@@ -3198,6 +3247,11 @@ sys=initSysApps({
     /* only your own decorative processes can be killed; cursors.exe is marked
        critical and taskkill refuses it, because the arena is not local */
     killProcess:p=>{ killedProcs.add(p.pid); },
+    shutdownBox:secs=>sysShutdown(secs),
+    shutdownAbort:()=>sysShutdownAbort(),
+    msgPopup:(from,to,text)=>showError("Messenger Service",
+      "Message from "+from+" to "+to+" on "+new Date().toLocaleString()+String.fromCharCode(10,10)+text,true),
+    toastsOn:()=>toastsOn,
     /* --- the arena, as data --- */
     arenaState:()=>({
       epoch:roundNo, phase:phase.toUpperCase(), uptime:fmtUp(upT), net:MP.on,
@@ -3649,6 +3703,7 @@ function phaseTick(dt){
   }
   else if(phase==="crash"&&phaseT<=0){
     bsodEl.style.display="none";
+    errorReport();
     /* the playfield hiccups back to life; nothing about the money does */
     $("#arena").classList.add("crashed");
     setTimeout(()=>$("#arena").classList.remove("crashed"),900);
@@ -4190,6 +4245,69 @@ const bsodEl=$("#bsod");
 function bsodHide(){ bsodEl.style.display="none"; }
 addEventListener("keydown",()=>{ if(bsodEl.style.display==="block") bsodHide(); });
 bsodEl.addEventListener("click",bsodHide);
+function fillWinver(){
+  $("#wv-user").textContent=playerNameFull();
+  $("#wv-mem").textContent=(500000+Math.round(Math.random()*40000)).toLocaleString("en-US");
+  const f=document.querySelector("img.lg-flag")||document.querySelector(".lg-flag img")||document.querySelector("#boot img");
+  if(f&&f.src) $("#wv-flag").src=f.src;
+}
+$("#wv-ok").addEventListener("click",()=>closeWin("win-winver"));
+function fillUtilman(){
+  const host=$("#um-list"); host.innerHTML="";
+  const rows=[["Magnifier",()=>openWin("win-magnifier")],["Narrator",()=>openWin("win-narrator")],
+    ["On-Screen Keyboard",()=>openWin("win-osk")]];
+  for(const [name,go] of rows){
+    const r=document.createElement("div"); r.className="um-row";
+    const on=openApps.has(name==="Magnifier"?"win-magnifier":name==="Narrator"?"win-narrator":"win-osk");
+    r.innerHTML=`<span>${name} <i>is ${on?"running":"not running"}</i></span>`;
+    const b=document.createElement("button"); b.className="xbtn"; b.textContent="Start";
+    b.addEventListener("click",()=>{ go(); fillUtilman(); });
+    r.appendChild(b); host.appendChild(r);
+  }
+}
+$("#um-ok").addEventListener("click",()=>closeWin("win-utilman"));
+/* the recovered-from-a-serious-error box: fires once per crash, after reboot */
+function errorReport(){
+  if(!store.data.tourSeen) return;   /* not on top of a first-timer's card */
+  openWin("win-errrep",{silent:true});
+}
+$("#er-send").addEventListener("click",()=>{ closeWin("win-errrep"); showBalloon("Error Reporting","The error report has been sent. Thank you."); });
+$("#er-dont").addEventListener("click",()=>closeWin("win-errrep"));
+/* shutdown.exe: the countdown box with no buttons. Only -a saves you. */
+let ssT=null, ssLeft=0;
+function sysShutdown(secs){
+  ssLeft=Math.max(1,secs|0);
+  $("#ss-who").textContent="CURSORLAND\\"+playerNameFull();
+  openWin("win-sysshut",{silent:true}); sysSnd("balloon",.5);
+  clearInterval(ssT);
+  const tick=()=>{
+    const h=String(Math.floor(ssLeft/3600)).padStart(2,"0"),
+      mn=String(Math.floor(ssLeft/60)%60).padStart(2,"0"),
+      sc=String(ssLeft%60).padStart(2,"0");
+    $("#ss-timer").textContent=h+":"+mn+":"+sc;
+    if(ssLeft--<=0){
+      clearInterval(ssT); ssT=null; closeWin("win-sysshut");
+      sysSnd("shutdown",.55); $("#shutdown").style.display="grid";
+    }
+  };
+  tick(); ssT=setInterval(tick,1000);
+}
+function sysShutdownAbort(){
+  if(!ssT) return false;
+  clearInterval(ssT); ssT=null; closeWin("win-sysshut");
+  return true;
+}
+/* CrashOnCtrlScroll, exactly as the registry documents it */
+let cocsAt=0;
+addEventListener("keydown",e=>{
+  if(e.key==="ScrollLock"&&e.ctrlKey){
+    const n=performance.now();
+    if(n-cocsAt<3000){
+      cocsAt=0;
+      bsodShow("A problem has been detected and Windows has been shut down to prevent damage\nto your computer.\n\nMANUALLY_INITIATED_CRASH\n\nTechnical information:\n\n*** STOP: 0x000000E2 (0x00000000,0x00000000,0x00000000,0x00000000)\n\nThe end-user manually generated the crashdump.\n\nPress any key to continue");
+    } else cocsAt=n;
+  }
+});
 function bsodShow(text,ms){
   bsodEl.textContent=text;
   bsodEl.style.display="block";
@@ -4691,6 +4809,7 @@ function mpCrash(m){
 }
 function mpEpoch(m){
   bsodEl.style.display="none";
+  if(phase==="crash") errorReport();
   roundNo=m.no; R=newRoundRecord();
   commitHex=m.commit; seedHex=null;
   phase="battle"; shutFired=false; phaseT=999;

@@ -509,7 +509,43 @@ export function initMessenger(deps) {
   renderList();
   setInterval(drift, 26000);
 
+  function menus(label, winId) {
+    if (label === "File") return [
+      { label: "Sign Out", disabled: 1 },
+      { sep: 1 },
+      { label: "Close", action: () => closeWin(winId) },
+    ];
+    if (label === "Contacts") return [
+      { label: "Add a Contact...", action: () => showError(".NET Messenger Service", "The service is temporarily unavailable. Please try again later.", true) },
+      { sep: 1 },
+      { label: "Sort Contacts By", disabled: 1 },
+    ];
+    if (label === "Actions") return [
+      { label: "Send an Instant Message...", action: () => openConv("lobby") },
+      { label: "Send a Nudge", action: () => nudge(winId && winId.indexOf("win-conv") === 0 ? convIdFromWin(winId) : "lobby") },
+      { sep: 1 },
+      { label: "Start a Video Conversation", disabled: 1 },
+      { label: "Send a File or Photo...", disabled: 1 },
+    ];
+    if (label === "Tools") return [
+      { label: "Change Personal Message...", action: () => {
+        const v = prompt("Personal message:", store.data.msnPsm || "");
+        if (v != null) { store.data.msnPsm = v.slice(0, 60); store.save(); renderMe(); }
+      } },
+      { sep: 1 },
+      { label: "Options...", disabled: 1 },
+    ];
+    if (label === "Help") return [
+      { label: "About Messenger", action: () => showError("About Messenger", "MSN Messenger\nVersion 7.0 (7.0.0813)", true) },
+    ];
+    return null;
+  }
+  function convIdFromWin(winId) {
+    for (const id of Object.keys(convs)) if (convs[id].el && convs[id].el.id === winId) return id;
+    return "lobby";
+  }
   return {
+    menus,
     openList: () => openWin("win-chat"),
     /* a contact messages you out of the blue — toasts if the window is shut */
     incoming: (id, text) => say(id, byId(id).name, text, false),

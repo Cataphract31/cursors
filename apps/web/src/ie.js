@@ -38,6 +38,59 @@ export function initIE(deps) {
   const SITES = {};
   const site = (u, o) => { SITES[key(u)] = Object.assign({ url: u }, o); };
 
+  /* v4 Windows Update: scan theater, honest verdict */
+  site("windowsupdate.microsoft.com", {
+    title: "Microsoft Windows Update",
+    cls: "wu",
+    body: () => `
+      <div class="wu-head"><b>Windows</b> Update</div>
+      <div class="wu-cols">
+        <div class="wu-side">
+          <div class="wu-nav"><b>Windows Update</b></div>
+          <div class="wu-nav">Welcome</div>
+          <div class="wu-nav">Pick updates to install</div>
+          <div class="wu-nav">Review and install updates</div>
+          <div class="wu-nav dim">Other Options</div>
+          <div class="wu-nav">View installation history</div>
+          <div class="wu-nav">Personalize Windows Update</div>
+        </div>
+        <div class="wu-main" id="wu-main">
+          <h2>Welcome to Windows Update</h2>
+          <p>Get the latest updates available for your computer's operating system, software, and hardware.</p>
+          <p>Windows Update scans your computer and provides you with a selection of updates tailored just for you.</p>
+          <div style="margin:14px 0"><button class="xbtn" id="wu-scan" style="min-width:120px;font-weight:bold">Scan for updates</button></div>
+          <p class="wu-note">Note: Windows Update does not collect any form of personally identifiable information from your computer.</p>
+        </div>
+      </div>`,
+    mounted: page => {
+      const b = page.querySelector("#wu-scan");
+      if (!b) return;
+      b.addEventListener("click", () => {
+        const m = page.querySelector("#wu-main");
+        m.innerHTML = `<h2>Scanning for available updates...</h2>
+          <div class="xprog" style="max-width:280px;margin:16px 0"><div class="xprog-in" id="wu-prog" style="width:0%"></div></div>
+          <p id="wu-stat">Checking for the latest updates for your computer.</p>`;
+        let p = 0;
+        const t = setInterval(() => {
+          p += 4 + Math.random() * 9;
+          const bar = m.querySelector("#wu-prog");
+          if (!bar) { clearInterval(t); return; }
+          bar.style.width = Math.min(100, p) + "%";
+          if (p >= 100) {
+            clearInterval(t);
+            m.innerHTML = `<h2>Pick updates to install</h2>
+              <p><b>0</b> critical updates and Service Packs</p>
+              <p><b>0</b> Windows XP updates</p>
+              <p><b>0</b> driver updates</p>
+              <hr style="border:0;border-top:1px solid #ccc">
+              <p>Windows Update has scanned this computer. No updates are available at this time.</p>
+              <p class="wu-note">CURSORS.EXE is up to date.</p>`;
+          }
+        }, 260);
+      });
+    },
+  });
+
   /* ---------- the real pages: live systems, player content, plain chrome ----------
      The 2003 fiction sites (cursor$land, the webring, mumu, deg404, bobo) are
      gone by owner decree: no authored joke copy. What remains is only what

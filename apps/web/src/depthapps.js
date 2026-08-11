@@ -135,7 +135,8 @@ export function initDepthApps(deps) {
   }
   function cmStatus() {
     const ch = String.fromCharCode(cmSel);
-    $("#cm-status").textContent = `U+${cmSel.toString(16).toUpperCase().padStart(4, "0")}: ${ch}`;
+    $("#cm-status").textContent = `U+${cmSel.toString(16).toUpperCase().padStart(4, "0")}: ${ch}`
+      + (cmSel < 256 ? `   Keystroke: Alt+0${cmSel}` : "");
   }
   function cmRender() {
     const host = $("#cm-grid"); if (!host) return;
@@ -287,6 +288,7 @@ export function initDepthApps(deps) {
         "Software": {
           "CURSORS.EXE": {
             "PlayerName": g.name, "Wallet": g.wallet, "Kills": String(g.kills), "Deaths": String(g.deaths),
+            "PersonalMessage": store.data.msnPsm || "",
             "PointerScheme": g.scheme || "(default)",
             "RTP": "0.99", "Edge": "0.001 (the platform fee)",
           },
@@ -301,7 +303,9 @@ export function initDepthApps(deps) {
         "SYSTEM": { "CurrentControlSet": { "Services": { "cursors": {
           "DisplayName": "CURSORS.EXE Arena", "Start": "0x00000002", "ImagePath": "\\SystemRoot\\..\\cursors.exe",
           "Epoch": String(g.epoch), "Uptime": g.uptime,
-        } } } },
+        }, "i8042prt": { "Parameters": {
+          "CrashOnCtrlScroll": "0x00000001",
+        } } } } },
       },
       "HKEY_USERS": { ".DEFAULT": { "Control Panel": { "Desktop": {} } } },
       "HKEY_CURRENT_CONFIG": { "System": { "CurrentControlSet": {} } },
@@ -352,12 +356,50 @@ export function initDepthApps(deps) {
       row.innerHTML = `<span class="reg-vn">\u{1F4C4} </span><span class="rv-n"></span><span class="rv-t">${type}</span><span class="rv-v"></span>`;
       row.querySelector(".rv-n").textContent = k;
       row.querySelector(".rv-v").textContent = v === undefined ? "(value not set)" : String(v);
-      row.addEventListener("dblclick", () => showError("Error Editing Value",
-        `Cannot edit ${k}: Error writing the value's new contents.`));
+      row.addEventListener("dblclick", () => {
+        if (k === "PersonalMessage" && hooks.setPsm) {
+          $("#rs-name").value = k;
+          $("#rs-data").value = String(v || "");
+          openWin("win-regstr");
+          $("#rs-ok").onclick = () => { hooks.setPsm($("#rs-data").value); closeWin("win-regstr"); regRenderVals(); };
+          $("#rs-cancel").onclick = () => closeWin("win-regstr");
+          return;
+        }
+        showError("Error Editing Value",
+          `Cannot edit ${k}: Error writing the value's new contents.`);
+      });
       host.appendChild(row);
     }
   }
   function regOpen() { regRenderTree(); regRenderVals(); openWin("win-regedit"); }
+  function regMenus(label) {
+    if (label === "File") return [
+      { label: "Import...", disabled: 1 }, { label: "Export...", disabled: 1 },
+      { sep: 1 },
+      { label: "Print...", disabled: 1 },
+      { sep: 1 },
+      { label: "Exit", action: () => closeWin("win-regedit") },
+    ];
+    if (label === "Edit") return [
+      { label: "Modify...", disabled: 1 },
+      { sep: 1 },
+      { label: "Copy Key Name", action: () => { try { navigator.clipboard.writeText("My Computer\\" + regPath.join("\\")).catch(() => {}); } catch (e) {} } },
+      { label: "Find...", accel: "Ctrl+F", disabled: 1 },
+    ];
+    if (label === "View") return [
+      { label: "Status Bar", check: 1, disabled: 1 },
+      { sep: 1 },
+      { label: "Refresh", accel: "F5", action: () => { regRenderTree(); regRenderVals(); } },
+    ];
+    if (label === "Favorites") return [
+      { label: "Add to Favorites...", disabled: 1 },
+      { label: "Remove Favorite", disabled: 1 },
+    ];
+    if (label === "Help") return [
+      { label: "About Registry Editor", action: () => showError("About Registry Editor", "Registry Editor\nVersion 5.1 (Build 2600)", true) },
+    ];
+    return null;
+  }
 
   /* ---------- boot (regedit renders on open: its values are live game state) ---------- */
   calcInit(); cmInit(); dfInit();
@@ -367,5 +409,6 @@ export function initDepthApps(deps) {
     openCharmap: () => openWin("win-charmap"),
     openDefrag: dfOpen,
     openRegedit: regOpen,
+    regMenus,
   };
 }
