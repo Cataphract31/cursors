@@ -21,6 +21,7 @@ export function initDepthApps(deps) {
      1. Calculator - Standard mode, with the real key bindings
      ================================================================ */
   let acc = null, pendOp = null, entry = "0", fresh = true, mem = 0;
+  let calcSci = !!store.data.calcSci, calcDeg = true;
   function calcShow() { $("#calc-display").textContent = entry; }
   function calcDigit(d) {
     if (fresh) { entry = d === "." ? "0." : d; fresh = false; }
@@ -35,6 +36,8 @@ export function initDepthApps(deps) {
     else if (pendOp === "-") acc -= b;
     else if (pendOp === "*") acc *= b;
     else if (pendOp === "/") acc = b === 0 ? NaN : acc / b;
+    else if (pendOp === "^") acc = Math.pow(acc, b);
+    else if (pendOp === "mod") acc = b === 0 ? NaN : acc % b;
   }
   function fmt(n) {
     if (!isFinite(n)) return "Cannot divide by zero.";
@@ -61,6 +64,20 @@ export function initDepthApps(deps) {
     else if (c === "1/x") { entry = fmt(1 / parseFloat(entry)); fresh = true; }
     else if (c === "%") { entry = fmt((acc == null ? 0 : acc) * parseFloat(entry) / 100); }
     else if (c === "+/-") { entry = entry.startsWith("-") ? entry.slice(1) : "-" + entry; }
+    else if (c === "sin") { const x = parseFloat(entry); entry = fmt(Math.sin(calcDeg ? x * Math.PI / 180 : x)); fresh = true; }
+    else if (c === "cos") { const x = parseFloat(entry); entry = fmt(Math.cos(calcDeg ? x * Math.PI / 180 : x)); fresh = true; }
+    else if (c === "tan") { const x = parseFloat(entry); entry = fmt(Math.tan(calcDeg ? x * Math.PI / 180 : x)); fresh = true; }
+    else if (c === "log") { entry = fmt(Math.log10(parseFloat(entry))); fresh = true; }
+    else if (c === "ln") { entry = fmt(Math.log(parseFloat(entry))); fresh = true; }
+    else if (c === "x^2") { const x = parseFloat(entry); entry = fmt(x * x); fresh = true; }
+    else if (c === "x^3") { const x = parseFloat(entry); entry = fmt(x * x * x); fresh = true; }
+    else if (c === "n!") {
+      const x = parseFloat(entry);
+      if (x < 0 || x > 170 || x !== Math.floor(x)) entry = "Invalid input for function.";
+      else { let f = 1; for (let i = 2; i <= x; i++) f *= i; entry = fmt(f); }
+      fresh = true;
+    }
+    else if (c === "pi") { entry = fmt(Math.PI); fresh = true; }
     else if (c === "MC") mem = 0;
     else if (c === "MR") { entry = fmt(mem); fresh = true; }
     else if (c === "MS") mem = parseFloat(entry) || 0;
@@ -68,14 +85,22 @@ export function initDepthApps(deps) {
     calcShow();
   }
   function calcInit() {
-    /* the real layout, four memory keys down the side */
-    const rows = [
+    /* the real layouts: Standard, and View > Scientific's longer rows */
+    const rows = calcSci ? [
+      ["deg:Degrees", "rad:Radians", "back:Backspace", "CE:CE", "C:C"],
+      ["MC", "7", "8", "9", "/", "sqrt", "sin", "log", "x^y"],
+      ["MR", "4", "5", "6", "*", "%", "cos", "ln", "x^2"],
+      ["MS", "1", "2", "3", "-", "1/x", "tan", "mod", "x^3"],
+      ["M+", "0", "+/-", ".", "+", "=", "pi", "n!", "Exp:exp"],
+    ] : [
       ["back:Backspace", "CE:CE", "C:C"],
       ["MC", "7", "8", "9", "/", "sqrt"],
       ["MR", "4", "5", "6", "*", "%"],
       ["MS", "1", "2", "3", "-", "1/x"],
       ["M+", "0", "+/-", ".", "+", "="],
     ];
+    const wc = $("#win-calc");
+    if (wc) wc.style.width = calcSci ? "428px" : "264px";
     const host = $("#calc-keys"); if (!host) return;
     host.innerHTML = "";
     for (const row of rows) {
@@ -86,18 +111,26 @@ export function initDepthApps(deps) {
         if ("0123456789.".includes(k) && k.length === 1) b.classList.add("num");
         if ("=+-*/".includes(k) && k.length === 1) b.classList.add("op");
         if (/^M/.test(k) || k === "C" || k === "CE" || k === "back") b.classList.add("mem");
+        if (k === "deg" || k === "rad") b.classList.toggle("on", calcDeg === (k === "deg"));
         b.addEventListener("click", () => {
           sysSnd("nav", .2);
           if ("0123456789.".includes(k) && k.length === 1) calcDigit(k);
           else if ("+-*/".includes(k) && k.length === 1) calcOp(k);
           else if (k === "=") calcEq();
+          else if (k === "x^y") calcOp("^");
+          else if (k === "mod") calcOp("mod");
+          else if (k === "deg" || k === "rad") { calcDeg = k === "deg"; calcInit(); }
+          else if (k === "Exp") { /* the real key: entry to scientific notation */ entry = fmt(parseFloat(entry)); calcShow(); }
           else calcCmd(k);
         });
         r.appendChild(b);
       }
       host.appendChild(r);
     }
-    /* the keyboard drives it, exactly like the real one */
+    /* the keyboard drives it, exactly like the real one (wired once; View
+       toggles rebuild the keys but must not stack listeners) */
+    if ($("#win-calc").dataset.kbd) { calcShow(); return; }
+    $("#win-calc").dataset.kbd = "1";
     $("#win-calc").addEventListener("keydown", e => {
       e.stopPropagation();
       const k = e.key;
@@ -406,6 +439,24 @@ export function initDepthApps(deps) {
 
   return {
     openCalc: () => { openWin("win-calc"); setTimeout(() => $("#win-calc").focus(), 50); },
+    calcMenus: label => {
+      if (label === "Edit") return [
+        { label: "Copy", accel: "Ctrl+C", action: () => { try { navigator.clipboard.writeText(entry).catch(() => {}); } catch (e) {} } },
+        { label: "Paste", accel: "Ctrl+V", action: async () => {
+          try { const t = await navigator.clipboard.readText(); const n = parseFloat(t); if (isFinite(n)) { entry = String(n); fresh = false; calcShow(); } } catch (e) {}
+        } },
+      ];
+      if (label === "View") return [
+        { label: "Standard", check: !calcSci, action: () => { calcSci = false; store.data.calcSci = 0; store.save(); calcInit(); } },
+        { label: "Scientific", check: calcSci, action: () => { calcSci = true; store.data.calcSci = 1; store.save(); calcInit(); } },
+        { sep: 1 },
+        { label: "Digit grouping", disabled: 1 },
+      ];
+      if (label === "Help") return [
+        { label: "About Calculator", action: () => showError("About Calculator", "Calculator\nVersion 5.1 (Build 2600)", true) },
+      ];
+      return null;
+    },
     openCharmap: () => openWin("win-charmap"),
     openDefrag: dfOpen,
     openRegedit: regOpen,

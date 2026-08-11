@@ -3,7 +3,9 @@ import "./style.css";
 import WebampImport from "webamp";
 import { IMG, SNDF, TRACKS, MINE, EMO, PAINT, AGENT_PNG, AGENT_DEF, CURFILES } from "./assets.js";
 import { initMinesweeper } from "./minesweeper.js";
-import { initMessenger } from "./messenger.js";
+import { initMessenger, CONTACTS as MSN_CONTACTS } from "./messenger.js";
+import { initOE } from "./oe.js";
+import { initSysInfo } from "./sysinfo.js";
 import { initPaint } from "./paint.js";
 import { initExplorer } from "./explorer.js";
 import { initIE } from "./ie.js";
@@ -465,6 +467,7 @@ function openWin(id,opts){
   if(id==="win-services") sys.openConsole("services");
   if(id==="win-devmgr") sys.openConsole("devmgr");
   if(id==="win-gpedit") sys.openConsole("gpedit");
+  if(id==="win-eventvwr"||id==="win-msinfo"||id==="win-dxdiag") sysinfo.wake(id);
   if(!was) smTouch(id);
 }
 /* no window may hang off the screen — the small-screen safety net */
@@ -753,6 +756,7 @@ const SYSICONS=[
      and the two applets nobody finds by accident get their own shortcuts. */
   {id:"cpl",label:"Control Panel",ico:"@ic-cpl",app:"win-control",sys:1,lnk:1},
   {id:"mouse",label:"Mouse Properties",ico:"@ic-dev",app:"run",cmd:"main.cpl",sys:1,lnk:1},
+  {id:"oe",label:"Outlook Express",ico:"outlook32",app:"win-oe",sys:1,lnk:1},
   {id:"calc",label:"Calculator",ico:"calc32",app:"run",cmd:"calc",sys:1,lnk:1},
   /* the crowded-desktop look: everything from the last four phases, pinned
      the way a 2003 family PC accreted shortcuts nobody ever cleaned up */
@@ -1719,6 +1723,7 @@ function editMenu(t){
 /* ---- menu bars actually drop menus ---- */
 function menubarMenu(label,id){
   if(id==="win-regedit"&&depth.regMenus){ const m=depth.regMenus(label); if(m) return m; }
+  if(id==="win-calc"&&depth.calcMenus){ const m=depth.calcMenus(label); if(m) return m; }
   if((id==="win-chat"||id.indexOf("win-conv")===0)&&msn.menus){ const m=msn.menus(label,id); if(m) return m; }
   if(id==="win-cursors"){
     const P={Play:"cx-play",Stats:"cx-stats",Rakeback:"cx-rake",History:"cx-hist",Verify:"cx-verify"};
@@ -1783,6 +1788,8 @@ document.addEventListener("click",e=>{
   if(win.id==="win-sndrec"){ snd.recorderMenu(m.textContent,r.left,r.bottom+2); return; }
   if(win.id==="win-explorer"){ explorer.menu(m.textContent,r.left,r.bottom+2); return; }
   if(win.id==="win-taskmgr"){ tmMenu(m.textContent,r.left,r.bottom+2); return; }
+  if(win.id==="win-oe"){ const mm=oe.menus(m.textContent); if(mm){ showMenu(mm,r.left,r.bottom+2); return; } }
+  if(win.id==="win-eventvwr"||win.id==="win-msinfo"){ showMenu(sysinfo.menus(m.textContent,win.id),r.left,r.bottom+2); return; }
   if(win.id==="win-ie"){ ie.menu(m.textContent,r.left,r.bottom+2); return; }
   showMenu(menubarMenu(m.textContent,win.id),r.left,r.bottom+2);
 });
@@ -2256,6 +2263,7 @@ const SMAPPS={
   "win-explorer":{label:"My Computer",ico:"computer32"},
   "win-log":{label:"fights.log",ico:"note32"},
   "win-readme":{label:"README.txt",ico:"note32"},
+  "win-oe":{label:"Outlook Express",ico:"outlook32"},
   "win-help":{label:"Help and Support",ico:"help32"},
   "win-dispprops":{label:"Display Properties",ico:"cpanel32"},
   "win-datetime":{label:"Date and Time",ico:"cpanel32"},
@@ -2433,6 +2441,7 @@ function allProgramsMenu(){
   return [
     {label:"CURSORS.EXE",bold:1,action:go("win-cursors")},
     {label:"Internet Explorer",action:go("win-ie")},
+    {label:"Outlook Express",action:go("win-oe")},
     ...only("chat",{label:"Windows Messenger",action:go("win-chat")}),
     ...only("amp",{label:"Winamp",action:go("win-amp")}),
     {sep:1},
@@ -2449,7 +2458,7 @@ function allProgramsMenu(){
         {label:"Disk Defragmenter",action:()=>{ closeStart(); depth.openDefrag(); }},
         {label:"System Restore",action:()=>{ closeStart(); maint.openRestore(); }},
         {label:"Scheduled Tasks",action:()=>{ closeStart(); maint.openTasks(); }},
-        {label:"System Information",action:()=>{ closeStart(); $("#sp-user").textContent=playerNameFull(); openWin("win-sysprops"); }},
+        {label:"System Information",action:()=>{ closeStart(); sysinfo.openMsinfo(); }},
         {label:"Character Map",action:()=>{ closeStart(); depth.openCharmap(); }},
         {label:"Fonts",action:()=>{ closeStart(); maint.openFonts(); }}]},
       {label:"Entertainment",sub:[
@@ -2466,6 +2475,7 @@ function allProgramsMenu(){
       {label:"Services",action:go("win-services")},
       {label:"Device Manager",action:go("win-devmgr")},
       {label:"Group Policy",action:go("win-gpedit")},
+      {label:"Event Viewer",action:go("win-eventvwr")},
       {label:"System Configuration Utility",action:()=>{ closeStart(); maint.openMsconfig(); }},
       {label:"Add or Remove Programs",action:()=>{ closeStart(); maint.openAddRemove(); }},
       {sep:1},
@@ -2486,7 +2496,7 @@ function allProgramsMenu(){
 }
 function smAction(act,itemEl){
   switch(act){
-    case "email": showError("Outlook Express","No mail account is configured. Use Messenger."); break;
+    case "email": oe.open(); break;
     case "wmp": showError("Windows Media Player","Another application (winamp.exe) has exclusive control of the llama."); break;
     case "mydocs": openFolderWin("My Documents"); break;
     case "mypics": openFolderWin("My Pictures"); break;
@@ -2538,6 +2548,10 @@ const RUNMAP={
   "mmc":"win-services","taskman":"win-taskmgr","appwiz.cpl":"win-control",
   "msconfig":"win-msconfig","msconfig.exe":"win-msconfig",
   "rstrui":"win-restore","rstrui.exe":"win-restore",
+  "msimn":"win-oe","msimn.exe":"win-oe",
+  "eventvwr":"win-eventvwr","eventvwr.msc":"win-eventvwr","eventvwr.exe":"win-eventvwr",
+  "msinfo32":"win-msinfo","msinfo32.exe":"win-msinfo",
+  "dxdiag":"win-dxdiag","dxdiag.exe":"win-dxdiag",
   "winver":"win-winver","winver.exe":"win-winver",
   "utilman":"win-utilman","utilman.exe":"win-utilman",
   "narrator":"win-narrator","narrator.exe":"win-narrator",
@@ -3183,6 +3197,36 @@ const msn=initMessenger({
   netLive:()=>MP.on,
   toastsOn:()=>toastsOn,
 });
+/* ================= Outlook Express ================= */
+const oe=initOE({
+  IMG, $, store, sysSnd,
+  playerName:()=>playerName(),
+  wireWindow, openWin, closeWin,
+  showMenu, showError, showConfirm,
+  desk:desktop,
+  /* read-only getters — the statement mail reads these at display time */
+  hooks:{
+    wallet:()=>wallet,
+    rake:()=>rakeAccrued,
+    tickets:()=>myTickets,
+    deploys:()=>stats.deploys,
+    staked:()=>stats.tIn,
+    banked:()=>stats.tOut,
+    epoch:()=>roundNo,
+    contacts:()=>MSN_CONTACTS.map(c=>({name:c.name,status:"Online"})),
+  },
+});
+const sysinfo=initSysInfo({
+  $,store,sysSnd,showMenu,showError,openWin,closeWin,icoNode,
+  tone,   /* the mixer-respecting oscillator: SW Synth fader applies */
+  hooks:{
+    appLog:()=>appEvents,
+    sysLog:()=>sysEvents,
+    uptime:()=>upT,
+    tasks:()=>liveProcesses().map(p=>({name:p.name,pid:p.pid})),
+    cursorCount:()=>curs.length,
+  },
+});
 const chatSys=t=>msn.lobbySys(t);
 const botChat=(kind,vars)=>{ if(!MP.on&&(msnAuto||openApps.has("win-chat"))) msn.botChat(kind,vars); };
 
@@ -3677,6 +3721,8 @@ function forceRecall(c){
 /* the epoch boundary, dressed as what it is: a crash that banks everyone */
 function crashSystem(){
   if(phase!=="battle") return;   /* two timers in one batch = one crash */
+  pushEv(sysEvents,"error","Save Dump",1001,
+    "The computer has rebooted from a bugcheck. The bugcheck was: 0x0000007b. The disk filled with dead cursors. All live cursors were banked in full.");
   for(const c of [...curs]) if(!c.dead) bank(c,true);
   closeWin("win-shutdown",{silent:true});
   const share=myTickets>0?myTickets/(globalTickets+myTickets):0;
@@ -4346,7 +4392,13 @@ Restarting automatically. Deploys reopen on restart.`);
 
 /* ================= log / bin / panels ================= */
 const logpaper=$("#logpaper");
+const appEvents=[], sysEvents=[];
+function pushEv(arr,t,src,id,text){
+  arr.unshift({t,at:Date.now(),src,id,text:String(text)});
+  if(arr.length>200) arr.pop();
+}
 function log(line){
+  pushEv(appEvents,"info","CURSORS.EXE",1000,line);
   const t=new Date().toLocaleTimeString([],{hour12:false});
   logpaper.textContent+=`[${t}] ${line}\n`;
   while(logpaper.textContent.length>9000)
@@ -5462,6 +5514,8 @@ if(MOBILE){
   focusWin("win-cursors");
 }
 chatSys("connected to the lobby.");
+pushEv(sysEvents,"info","eventlog",6005,"The Event log service was started.");
+pushEv(sysEvents,"info","eventlog",6009,"Microsoft (R) Windows (R) 5.01. 2600 Service Pack 2 Uniprocessor Free.");
 renderBin(); updatePanel();
 startEpoch();
 requestAnimationFrame(frame);

@@ -430,6 +430,48 @@ icons/sounds: winXP (MIT)</div>
     </div>
   </div>
 
+  <!-- Outlook Express -->
+  <div class="window" id="win-oe" data-minw="480" data-minh="340" style="left:110px;top:56px;width:640px;height:460px">
+    <div class="title-bar">
+      <div class="tb-l"><i class="xico tb-ico" data-ico="outlook32"></i><div class="title-bar-text">Inbox - Outlook Express</div></div>
+      <div class="title-bar-controls"><button aria-label="Minimize"></button><button aria-label="Maximize"></button><button aria-label="Close"></button></div>
+    </div>
+    <div class="win-body oe-win">
+      <div class="menubar"><span>File</span><span>Edit</span><span>View</span><span>Tools</span><span>Message</span><span>Help</span></div>
+      <div class="oe-toolbar">
+        <button class="oe-tb" data-oe="new">Create Mail</button>
+        <button class="oe-tb" data-oe="reply">Reply</button>
+        <button class="oe-tb" data-oe="replyall">Reply All</button>
+        <button class="oe-tb" data-oe="forward">Forward</button>
+        <span class="oe-tbsep"></span>
+        <button class="oe-tb" data-oe="print">Print</button>
+        <button class="oe-tb" data-oe="delete">Delete</button>
+        <span class="oe-tbsep"></span>
+        <button class="oe-tb" data-oe="sendrecv">Send/Recv</button>
+        <span class="oe-tbsep"></span>
+        <button class="oe-tb" data-oe="addresses">Addresses</button>
+        <button class="oe-tb" data-oe="find">Find</button>
+      </div>
+      <div class="oe-main">
+        <div class="oe-folders">
+          <div class="oe-fhead">Folders</div>
+          <div class="oe-ftree" id="oe-ftree"></div>
+        </div>
+        <div class="oe-right">
+          <div class="oe-list">
+            <div class="oe-lhead"><span class="oe-c-from">From</span><span class="oe-c-subj">Subject</span><span class="oe-c-recv">Received</span></div>
+            <div class="oe-rows" id="oe-rows"></div>
+          </div>
+          <div class="oe-preview">
+            <div class="oe-phead" id="oe-phead"></div>
+            <div class="oe-pbody" id="oe-pbody"></div>
+          </div>
+        </div>
+      </div>
+      <div class="oe-status" id="oe-status"></div>
+    </div>
+  </div>
+
   <!-- regedit's Edit String -->
   <div class="window fixed" id="win-regstr" style="left:calc(50% - 165px);top:170px;width:330px">
     <div class="title-bar"><div class="tb-l"><div class="title-bar-text">Edit String</div></div>
@@ -679,6 +721,28 @@ icons/sounds: winXP (MIT)</div>
   </div>
 
   <!-- one properties sheet, retitled per console (XP opens one at a time too) -->
+  <!-- ===== Event Viewer / System Information / DirectX Diagnostic Tool ===== -->
+  <div class="window" id="win-eventvwr" data-minw="560" data-minh="300" style="left:84px;top:70px;width:720px;height:460px">
+    <div class="title-bar">
+      <div class="tb-l"><i class="xico tb-ico" data-ico="@ic-mmc"></i><div class="title-bar-text">Event Viewer</div></div>
+      <div class="title-bar-controls"><button aria-label="Minimize"></button><button aria-label="Maximize"></button><button aria-label="Close"></button></div>
+    </div>
+    <div class="win-body mmc-body ev-body"></div>
+  </div>
+  <div class="window" id="win-msinfo" data-minw="540" data-minh="320" style="left:96px;top:60px;width:740px;height:480px">
+    <div class="title-bar">
+      <div class="tb-l"><i class="xico tb-ico" data-ico="computer32"></i><div class="title-bar-text">System Information</div></div>
+      <div class="title-bar-controls"><button aria-label="Minimize"></button><button aria-label="Maximize"></button><button aria-label="Close"></button></div>
+    </div>
+    <div class="win-body mmc-body msi-body"></div>
+  </div>
+  <div class="window" id="win-dxdiag" data-minw="440" data-minh="380" style="left:180px;top:56px;width:480px;height:470px">
+    <div class="title-bar">
+      <div class="tb-l"><i class="xico tb-ico" data-ico="@ic-app"></i><div class="title-bar-text">DirectX Diagnostic Tool</div></div>
+      <div class="title-bar-controls"><button aria-label="Minimize"></button><button aria-label="Maximize"></button><button aria-label="Close"></button></div>
+    </div>
+    <div class="win-body dx-body"></div>
+  </div>
   <div class="window fixed" id="win-mmcprops" style="left:calc(50% - 190px);top:60px;width:380px">
     <div class="title-bar">
       <div class="tb-l"><i class="xico tb-ico" data-ico="@ic-mmc"></i><div class="title-bar-text">Properties</div></div>

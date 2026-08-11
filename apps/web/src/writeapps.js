@@ -64,6 +64,9 @@ export function initWriteApps(deps) {
         + d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) + " " + d.toLocaleDateString() + "\n";
       if (np.doc.set) np.doc.set(ta.value);
     }
+    /* the Unicode-detection bug: saved as ANSI, guessed UTF-16LE on reopen.
+       Only the display is wrong; the stored text stays what it was. */
+    if (np.doc.get && ta.value === "Bush hid the facts") ta.value = "畂桳栠摩琠敨映捡獴";
     npTitle(); npApply();
     openWin("win-notepad");
     ta.focus();
@@ -167,7 +170,7 @@ export function initWriteApps(deps) {
   }
 
   /* ================= WordPad ================= */
-  const wp = { doc: null };
+  const wp = { doc: null, tb: 1, fb: 1 };
   const wpEd = $("#wp-edit");
   function wpTitle() { $("#win-wordpad .title-bar-text").textContent = (wp.doc ? wp.doc.title : "Document") + " - WordPad"; }
   function openWordpad(doc) {
@@ -189,6 +192,9 @@ export function initWriteApps(deps) {
   $("#wp-font").addEventListener("change", () => { wpEd.focus(); document.execCommand("fontName", false, $("#wp-font").value); });
   $("#wp-size").addEventListener("change", () => { wpEd.focus(); document.execCommand("fontSize", false, $("#wp-size").value); });
   $("#wp-color").addEventListener("change", () => { wpEd.focus(); document.execCommand("foreColor", false, $("#wp-color").value); });
+  /* one strip plays toolbar and format bar both; either box hides it */
+  function wpBars() { $("#wp-bar").style.display = (wp.tb && wp.fb) ? "" : "none"; }
+  const wpCmd = (cmd, val) => { wpEd.focus(); document.execCommand(cmd, false, val || null); };
   function wpMenu(which, x, y) {
     const M = {
       File: [
@@ -200,6 +206,24 @@ export function initWriteApps(deps) {
       Edit: [
         { label: "Undo", action: () => document.execCommand("undo") },
         { label: "Select All", action: () => { wpEd.focus(); document.execCommand("selectAll"); } },
+      ],
+      View: [
+        { label: "Toolbar", check: wp.tb, action: () => { wp.tb = wp.tb ? 0 : 1; wpBars(); } },
+        { label: "Format Bar", check: wp.fb, action: () => { wp.fb = wp.fb ? 0 : 1; wpBars(); } },
+        { label: "Status Bar", disabled: 1 },
+      ],
+      Insert: [
+        { label: "Date and Time...", action: () => wpCmd("insertText", new Date().toLocaleString()) },
+        { label: "Object...", disabled: 1 },
+      ],
+      Format: [
+        { label: "Font...", action: () => $("#wp-font").focus() },
+        { label: "Bullet Style", action: () => wpCmd("insertUnorderedList") },
+        { label: "Paragraph", sub: [
+          { label: "Left", action: () => wpCmd("justifyLeft") },
+          { label: "Center", action: () => wpCmd("justifyCenter") },
+          { label: "Right", action: () => wpCmd("justifyRight") },
+        ] },
       ],
       Help: [{ label: "About WordPad", action: () => showError("About WordPad", "Windows WordPad\nVersion 5.1", true) }],
     };

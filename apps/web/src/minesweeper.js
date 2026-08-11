@@ -61,6 +61,8 @@ export function initMinesweeper(deps) {
   /* ---- board ---- */
   function newGame(lv) {
     if (lv) level = lv;
+    if (!LEVELS[level]) level = "beginner";
+    oracleOff();
     const L = LEVELS[level];
     W = L.w; H = L.h; MINES = L.m;
     cells = Array.from({ length: W * H }, () => ({ mine: false, adj: 0, st: "hidden" }));
@@ -171,6 +173,7 @@ export function initMinesweeper(deps) {
     return store.data.mineBest;
   }
   function recordBest() {
+    if (level === "custom") return;   /* XP keeps bests for the three named boards only */
     const b = bestTimes(), prev = b[level];
     if (!prev || time < prev.t) {
       b[level] = { t: time, who: deps.playerName() };
@@ -245,20 +248,59 @@ export function initMinesweeper(deps) {
     if (wasChord) { chord(i); chordDone = true; return; }
     if (chordDone) { chordDone = false; return; }
     if (e.button !== 0) return;
-    if (!started) { started = true; placeMines(i); startTimer(); }
+    if (!started) { started = true; placeMines(i); time = 1; syncTimer(); startTimer(); }   /* XP shows 1 the moment the clock starts */
     reveal(i);
   });
   headEls.face.addEventListener("click", () => newGame());
 
+  /* ---- xyzzy ---- */
+  /* type x-y-z-z-y, then Shift+Enter: a 1px oracle in the screen's top-left
+     corner, white when the square under the pointer is safe, black over a
+     mine. Off again on repeat or a new game. */
+  let oracle = null, xyzzyArmed = false, xyzzySeq = 0;
+  function oracleOff() { if (oracle) { oracle.remove(); oracle = null; } }
+  function oracleToggle() {
+    if (oracle) return oracleOff();
+    oracle = document.createElement("div");
+    oracle.style.cssText = "position:fixed;left:0;top:0;width:1px;height:1px;z-index:2147483647;background:#fff;pointer-events:none";
+    document.body.appendChild(oracle);
+  }
+  document.addEventListener("keydown", e => {
+    if (!host.offsetParent) return;          /* only while the box is on screen */
+    if (xyzzyArmed && e.key === "Enter" && e.shiftKey) { oracleToggle(); return; }
+    const k = e.key.length === 1 ? e.key.toLowerCase() : "";
+    if (!k) return;
+    xyzzySeq = k === "xyzzy"[xyzzySeq] ? xyzzySeq + 1 : (k === "x" ? 1 : 0);
+    if (xyzzySeq === 5) { xyzzyArmed = true; xyzzySeq = 0; }
+  });
+  host.addEventListener("mousemove", e => {
+    if (!oracle) return;
+    const c = cells[cellAt(e)];
+    oracle.style.background = c && c.mine ? "#000" : "#fff";
+  });
+
   /* ---- menus ---- */
+  function customGame() {
+    if (!deps.customDialog) return;
+    deps.customDialog(r => {
+      const h = Math.max(9, Math.min(24, +r.h || 0));
+      const w = Math.max(9, Math.min(30, +r.w || 0));
+      const m = Math.max(10, Math.min((h - 1) * (w - 1), +r.m || 0));
+      LEVELS.custom = { w, h, m, label: "Custom" };
+      store.data.mineCustom = { w, h, m };
+      store.data.mineLevel = "custom"; store.save();
+      newGame("custom");
+    });
+  }
   function gameMenu(x, y) {
     showMenu([
       { label: "New", action: () => newGame() },
       { sep: 1 },
-      ...Object.keys(LEVELS).map(k => ({
+      ...["beginner", "intermediate", "expert"].map(k => ({
         label: LEVELS[k].label, check: level === k,
         action: () => { store.data.mineLevel = k; store.save(); newGame(k); },
       })),
+      { label: "Custom...", check: level === "custom", disabled: deps.customDialog ? 0 : 1, action: customGame },
       { sep: 1 },
       { label: "Marks (?)", check: marks, action: () => { marks = !marks; store.data.mineMarks = marks; store.save(); } },
       { sep: 1 },
@@ -278,6 +320,7 @@ export function initMinesweeper(deps) {
     ], x, y);
   }
 
+  if (store.data.mineCustom) LEVELS.custom = { ...store.data.mineCustom, label: "Custom" };
   marks = store.data.mineMarks !== false;
   newGame(store.data.mineLevel || "beginner");
 

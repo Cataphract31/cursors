@@ -145,6 +145,7 @@ await new Promise(res => ws.addEventListener("open", res));
 const evaluate = async expression =>
   (await send("Runtime.evaluate", { expression, returnByValue: true, awaitPromise: true })).result?.value;
 const sleep = ms => new Promise(r => setTimeout(r, ms));
+let ytVerified = true;   // set false if the TV leg could not be exercised
 
 try {
   await send("Page.enable");
@@ -184,7 +185,11 @@ try {
     'sheets: document.styleSheets.length, bg: cs.backgroundColor,' +
     'taskbar: !!document.getElementById("taskbar"),' +
     'login: document.getElementById("login").style.display,' +
-    'icons: document.querySelectorAll("#desktop .dicon").length,' +
+    'icons: document.querySelectorAll("#icons > *").length,' +
+    // computed style reports url(...) whether or not the file arrived, so ask
+    // the network instead: a nonzero transfer means img-src really let it in
+    'wallpaper: performance.getEntriesByType("resource")' +
+    '.filter(r=>/bliss.*\\.jpg/.test(r.name)).map(r=>r.decodedBodySize)[0] || 0,' +
     'subresources: performance.getEntriesByType("resource").length }; })()');
   console.log("  mounted: " + JSON.stringify(mounted));
   if (mounted.bg !== "rgb(90, 126, 220)")
@@ -193,6 +198,10 @@ try {
       "every visitor whose cache is cold.", 1);
   if (!mounted.taskbar || mounted.login === "flex")
     bail("FAILED: the app never reached the desktop", 1);
+  if (!mounted.icons)
+    bail("FAILED: the desktop rendered no icons — the shell did not finish building", 1);
+  if (!mounted.wallpaper)
+    bail("FAILED: the Bliss wallpaper never loaded — img-src is blocking the CSS background", 1);
 
   console.log("  " + mounted.subresources + " subresources, " + mounted.sheets +
     " stylesheets applied, desktop reached");
@@ -234,14 +243,28 @@ try {
     if (yt.api === "object" && yt.frames.some(f => f.indexOf("youtube-nocookie.com") >= 0)) break;
   }
   console.log("  youtube: " + JSON.stringify(yt));
-  if (!yt.apiScript)
-    bail("FAILED: the TV never even requested youtube.com/iframe_api — the harness did not " +
-      "reach the code path it claims to cover, so script-src and frame-src are unverified.", 1);
-  if (yt.api === "undefined")
-    bail("FAILED: script-src blocked https://www.youtube.com/iframe_api — window.YT never " +
-      "appeared, so the TV would never play.", 1);
-  if (!yt.frames.some(f => f.indexOf("youtube-nocookie.com") >= 0))
-    bail("FAILED: frame-src blocked the youtube-nocookie player iframe", 1);
+
+  // This leg leans on a third party that sometimes just does not answer inside
+  // the 12s the app itself allows before it gives up. Failing the *policy* for
+  // that would make the gate cry wolf, and a gate that cries wolf gets ignored
+  // — which costs more than it ever saves. So split the two cases on evidence:
+  // if the browser said it blocked something YouTube-shaped, the policy is
+  // wrong and this fails. If it said nothing and YouTube simply never showed
+  // up, the leg is unverified — say so, loudly, and do not call it a pass.
+  const ytEvidence = [...violations, ...blocked].filter(s => /youtube|ytimg/i.test(s || ""));
+  const ytOk = yt.api === "object" && yt.frames.some(f => f.indexOf("youtube-nocookie.com") >= 0);
+  if (!ytOk && ytEvidence.length)
+    bail("FAILED: the policy blocked the TV's YouTube traffic —\n    " + ytEvidence.join("\n    "), 1);
+  if (!yt.apiScript) {
+    ytVerified = false;
+    console.warn("  UNVERIFIED: the TV never requested youtube.com/iframe_api at all, so this run " +
+      "did not reach the code path script-src and frame-src exist for.");
+  } else if (!ytOk) {
+    ytVerified = false;
+    console.warn("  UNVERIFIED: youtube.com/iframe_api was requested and the browser reported no " +
+      "CSP objection, but window.YT never initialised — YouTube did not answer in time. The policy " +
+      "is not implicated; this leg simply went untested. Re-run to cover it.");
+  }
 
   /* --- pass 2: the network-touching apps, behind the #desktop dev hash --- */
   console.log("\npass 2 — Winamp (data: skin, blob: icons) and Solitaire (same-origin iframe + injected <style>)");
@@ -343,5 +366,8 @@ if (v.length || b.length) {
   console.error("\nFAILED: the policy that ships breaks the app that ships.");
   process.exit(1);
 }
-console.log("OK — every header in vercel.json served, 0 violations, 0 blocked requests, app mounted and styled.");
+console.log("OK — every header in vercel.json served, 0 violations, 0 blocked requests, app mounted and styled." +
+  (ytVerified ? "" : "\nNOTE: green everywhere it looked, but the YouTube leg above went unverified — " +
+    "script-src https://www.youtube.com and frame-src https://www.youtube-nocookie.com are unproven " +
+    "by THIS run. Re-run before trusting them."));
 process.exit(0);

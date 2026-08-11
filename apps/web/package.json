@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "node scripts/smoke.mjs && vite build && node scripts/postbuild.mjs",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "csp": "node scripts/csp.mjs"
   },
   "dependencies": {
     "webamp": "^1.5.0",

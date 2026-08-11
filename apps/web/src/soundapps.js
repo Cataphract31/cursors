@@ -43,7 +43,8 @@ export function initSoundApps(deps) {
         `<div class="sv32-name">${label}</div>` +
         `<div class="sv32-brow">Balance:<br><input type="range" class="sv32-bal" min="0" max="100" value="${m[k].b}"></div>` +
         `<div class="sv32-vrow"><span>Volume:</span><input type="range" class="sv32-vol" min="0" max="100" value="${k === "master" ? Math.round(hooks.getMaster() * 100) : m[k].v}"></div>` +
-        `<label class="sv32-mute"><input type="checkbox" class="sv32-m"${(k === "master" ? hooks.getMuted() : m[k].m) ? " checked" : ""}> Mute${k === "master" ? " all" : ""}</label>`;
+        `<label class="sv32-mute"><input type="checkbox" class="sv32-m"${(k === "master" ? hooks.getMuted() : m[k].m) ? " checked" : ""}> Mute${k === "master" ? " all" : ""}</label>` +
+        (k === "master" && store.data.mixAdv ? `<button class="xbtn sv32-adv">Advanced</button>` : "");
       const vs = col.querySelector(".sv32-vol"), mc = col.querySelector(".sv32-m"),
             bs = col.querySelector(".sv32-bal");
       vertDrag(vs);
@@ -57,6 +58,8 @@ export function initSoundApps(deps) {
         if (k === "wave" && !mc.checked) sysSnd("ding", .5);   /* proof of life */
       });
       bs.addEventListener("input", () => { m[k].b = +bs.value; store.save(); });
+      const adv = col.querySelector(".sv32-adv");
+      if (adv) adv.addEventListener("click", svAdvOpen);
       host.appendChild(col);
     }
   }
@@ -88,7 +91,8 @@ export function initSoundApps(deps) {
     const M = {
       Options: [
         { label: "Properties", action: () => showError("Properties", "Mixer device: cursor$ AC'97 Audio\n\nPlayback controls: Volume Control, Wave, SW Synth, CD Audio, Line In.", true) },
-        { label: "Advanced Controls", disabled: 1 },
+        { label: "Advanced Controls", check: !!store.data.mixAdv,
+          action: () => { store.data.mixAdv = store.data.mixAdv ? 0 : 1; store.save(); volRender(); } },
         { sep: 1 },
         { label: "Exit", action: () => closeWin("win-sndvol") },
       ],
@@ -96,6 +100,19 @@ export function initSoundApps(deps) {
     };
     showMenu(M[which] || [], x, y);
   }
+  /* Advanced Controls — bass and treble, remembered and cosmetic, which is
+     what they were on most AC'97 drivers */
+  function svAdvOpen() {
+    const b = $("#sv-bass"), t = $("#sv-treble");
+    if (!b || !t) return;
+    b.value = store.data.mixBass ?? 50;
+    t.value = store.data.mixTreble ?? 50;
+    openWin("win-svadv");
+  }
+  const svB = $("#sv-bass"), svT = $("#sv-treble"), svOk = $("#svadv-ok");
+  if (svB) svB.addEventListener("input", () => { store.data.mixBass = +svB.value; store.save(); });
+  if (svT) svT.addEventListener("input", () => { store.data.mixTreble = +svT.value; store.save(); });
+  if (svOk) svOk.addEventListener("click", () => closeWin("win-svadv"));
 
   /* ================= Sound Recorder ================= */
   const sr = { ac: null, buf: null, playing: null, recording: null, chunks: [], stream: null, pos: 0, raf: 0, analyser: null };

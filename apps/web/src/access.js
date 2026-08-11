@@ -328,6 +328,39 @@ export function initAccess(deps) {
   });
   const stickyLatched = () => latched;
 
+  /* ================================================================
+     4. Narrator
+     ================================================================ */
+  /* speechSynthesis is the voice. #nr-events reads shell events handed to
+     narrate(); #nr-typed reads keys as they land in a text box. Both only
+     while the window is open. */
+  const narOpen = () => { const w = $("#win-narrator"); return !!(w && w.offsetParent); };
+  function narSpeak(text) {
+    if (!window.speechSynthesis || !text) return;
+    if (hooks.getMuted && hooks.getMuted()) return;   /* the mixer wins */
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(String(text));
+    u.rate = 1.1;
+    const vs = speechSynthesis.getVoices();
+    u.voice = vs.find(v => v.lang === "en-US") || vs.find(v => v.lang && v.lang.slice(0, 2) === "en") || null;
+    speechSynthesis.speak(u);
+  }
+  function openNarrator() { openWin("win-narrator"); }
+  function narrate(text) {
+    const c = $("#nr-events");
+    if (!narOpen() || !c || !c.checked) return;
+    narSpeak(text);
+  }
+  /* typed characters — capture phase, because the text boxes stopPropagation */
+  addEventListener("keydown", e => {
+    const c = $("#nr-typed");
+    if (!narOpen() || !c || !c.checked) return;
+    if (e.key.length !== 1 || e.ctrlKey || e.altKey || e.metaKey) return;
+    const t = e.target;
+    if (!t || !(t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
+    narSpeak(e.key === " " ? "space" : e.key);
+  }, true);
+
   return {
     init() {
       applyAccess();
@@ -339,8 +372,11 @@ export function initAccess(deps) {
       if (can) can.addEventListener("click", () => closeWin("win-access"));
       const oc = $("#osk-close");
       if (oc) oc.addEventListener("click", () => closeWin("win-osk"));
+      const no = $("#nr-ok");
+      if (no) no.addEventListener("click", () => closeWin("win-narrator"));
     },
     openMagnifier, stopMagnifier, magRender, openOSK, openAccessOptions,
+    openNarrator, narrate,
     magnifying: () => magOn,
     stickyLatched,
     contrastOn: () => !!opts().contrast,
