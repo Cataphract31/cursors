@@ -32,12 +32,21 @@ export function initSysApps(deps) {
   const hist = [];
   let histAt = 0, line = "", screen = null, kbd = null, cmdReady = false;
 
+  let promptFmt = null;   /* PROMPT overrides $P$G */
+/* the handful of variables the shell really expanded, so %random% works */
+  const expandVars = t => String(t)
+    .replace(/%random%/ig, () => Math.floor(Math.random() * 32768))
+    .replace(/%date%/ig, () => new Date().toLocaleDateString())
+    .replace(/%time%/ig, () => new Date().toLocaleTimeString([], { hour12: false }))
+    .replace(/%cd%/ig, () => cwd)
+    .replace(/%username%/ig, () => hooks.sysInfo().owner)
+    .replace(/%computername%/ig, () => hooks.sysInfo().host);
   function cmdWrite(text) {
     const d = el("div", "cmd-line");
     d.textContent = text === "" ? "\u00a0" : text;
     screen.insertBefore(d, screen.lastChild);
   }
-  const cmdPrompt = () => cwd + ">";
+  const cmdPrompt = () => (promptFmt != null ? promptFmt : cwd + ">");
   function drawInput() {
     const c = screen.lastChild;
     c.textContent = cmdPrompt() + line;
@@ -152,6 +161,7 @@ export function initSysApps(deps) {
     ["IPCONFIG", "Displays all current TCP/IP network configuration values."],
     ["NET", "Manages network resources. Try NET START."],
     ["PING", "Tests connectivity to another host."],
+    ["PROMPT", "Changes the cmd.exe command prompt."],
     ["SC", "Communicates with the Service Controller. Try SC QUERY."],
     ["SHUTDOWN", "Allows proper local shutdown of machine. Try SHUTDOWN -s -t 60."],
     ["START", "Starts a separate window to run a specified program."],
@@ -184,7 +194,7 @@ export function initSysApps(deps) {
     date() { cmdWrite("The current date is: " + new Date().toDateString()); },
     time() { cmdWrite("The current time is: " + new Date().toLocaleTimeString([], { hour12: false })); },
     exit() { closeWin("win-cmd"); return true; },
-    echo(a) { cmdWrite(a ? a : "ECHO is on."); },
+    echo(a) { cmdWrite(a ? expandVars(a) : "ECHO is on."); },
     cd(a) {
       if (!a) { cmdWrite(cwd); return; }
       const p = resolvePath(a);
@@ -281,6 +291,13 @@ export function initSysApps(deps) {
         const m = /-t\s+(\d+)/.exec(s);
         hooks.shutdownBox(Math.min(600, m ? +m[1] : 30));
       }
+    },
+    prompt(a) {
+      /* $P$G is the default; the real one accepted the whole $-code set */
+      promptFmt = (a || "").trim()
+        ? a.replace(/\$p/ig, cwd).replace(/\$g/ig, ">").replace(/\$l/ig, "<")
+            .replace(/\$b/ig, "|").replace(/\$\$/g, "$").slice(0, 40)
+        : null;
     },
     title(a) {
       const t = document.querySelector("#win-cmd .title-bar-text");
