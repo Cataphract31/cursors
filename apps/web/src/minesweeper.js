@@ -271,10 +271,10 @@ export function initMinesweeper(deps) {
   function helpMenu(x, y) {
     showMenu([
       { label: "Help Topics", action: () => showError("Minesweeper Help",
-        "Left click clears a square. Right click flags a mine.\nBoth buttons on a number clears its neighbours once you have flagged that many.\n\nThe first square is always safe. Nothing else is.", true) },
+        "Left click clears a square. Right click flags a mine.\nBoth buttons on a number clears its neighbours once you have flagged that many.\n\nThe first square is always safe.", true) },
       { sep: 1 },
       { label: "About Minesweeper", action: () => showError("About Minesweeper",
-        "Minesweeper\nVersion 5.1 (Build 2600.casino)\n\nThe original 0.1 SOL wager: 480 squares, 99 mines,\nno rakeback. At least here the odds are printed on the board.", true) },
+        "Minesweeper\nVersion 5.1 (Build 2600)", true) },
     ], x, y);
   }
 

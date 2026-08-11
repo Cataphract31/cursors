@@ -70,7 +70,7 @@ export function initExplorer(deps) {
       dir("Program Files", { ico: "progfolder32", go: "C:\\Program Files" }),
       dir("WINDOWS", { ico: "winfolder32", go: "C:\\WINDOWS" }),
       f("AUTOEXEC.BAT", { size: 0, ico: "@ic-file", act: () => txt("AUTOEXEC.BAT", "@ECHO OFF\nREM nothing to load. it is 2003 and this file is\nREM already vestigial.\n") }),
-      f("boot.ini", { size: 211, ico: "@ic-file", act: () => hooks.bootIni ? txt("boot.ini", hooks.bootIni()) : txt("boot.ini", "[boot loader]\ntimeout=30\ndefault=multi(0)disk(0)rdisk(0)partition(1)\\WINDOWS\n\n[operating systems]\nmulti(0)disk(0)rdisk(0)partition(1)\\WINDOWS=\"Windows XP Professional\" /fastdetect\nmulti(0)disk(0)rdisk(0)partition(1)\\WINDOWS=\"Windows XP (last known good decision)\" /safeboot\n") }),
+      f("boot.ini", { size: 211, ico: "@ic-file", act: () => hooks.bootIni ? txt("boot.ini", hooks.bootIni()) : txt("boot.ini", "[boot loader]\ntimeout=30\ndefault=multi(0)disk(0)rdisk(0)partition(1)\\WINDOWS\n\n[operating systems]\nmulti(0)disk(0)rdisk(0)partition(1)\\WINDOWS=\"Windows XP Professional\" /fastdetect\nmulti(0)disk(0)rdisk(0)partition(1)\\WINDOWS=\"Microsoft Windows XP Professional\" /safeboot\n") }),
       f("CONFIG.SYS", { size: 0, ico: "@ic-file", act: () => txt("CONFIG.SYS", "REM this file is empty and has been for years.\n") }),
       f("pagefile.sys", { size: 768 * MB, ico: "@ic-file", hidden: 1,
         act: () => showError("pagefile.sys", "Access is denied.\n\nThis file is in use by the system, by which we mean it is holding your regrets in memory.") }),
@@ -138,7 +138,7 @@ export function initExplorer(deps) {
       f("cursors.exe", { size: 1.2 * MB, ico: "@ic-app", act: () => hooks.openWin("win-cursors") }),
       f("arena.dll", { size: 284 * 1024, ico: "@ic-file", act: () => showError("arena.dll", "1280 x 800 logical units. Every player gets the same battlefield.\nThis file is the reason that is true.") }),
       f("rng.dll", { size: 96 * 1024, ico: "@ic-file", act: () => showError("rng.dll", "128-bit seed, sfc32, tagged sub-streams.\nCommitted before the round, revealed after. You can check.") }),
-      f("house_edge.ini", { size: 96, act: () => txt("house_edge.ini", "[fees]\nplatform=0.001\nrakeback=0.002\narena=0.097\n\n[truth]\nrtp=0.99\nedge_on_any_single_touch=0.00\n; the edge is the fee. that is the whole edge.\n") }),
+      f("house_edge.ini", { size: 96, act: () => txt("house_edge.ini", "[fees]\nplatform=0.001\nrakeback=0.002\narena=0.097\n\n[truth]\nrtp=0.99\nedge_on_any_single_touch=0.00\n") }),
       f("fights.log", { size: hooks.logSize(), act: () => hooks.openWin("win-log") }),
     ],
     "C:\\WINDOWS": () => [
@@ -154,7 +154,6 @@ export function initExplorer(deps) {
     ],
     "C:\\WINDOWS\\system32": () => [
       f("kernel32.dll", { size: 984 * 1024, ico: "@ic-file", act: () => sysErr("kernel32.dll") }),
-      f("hopium.sys", { size: 4 * MB, ico: "@ic-file", act: () => showError("hopium.sys", "This driver has never been signed and has never crashed.\nIt is the most stable component on this computer.") }),
       f("copium.drv", { size: 2 * MB, ico: "@ic-file", act: () => showError("copium.drv", "Loaded at boot. Consumes no memory. Explains every loss.") }),
       f("luck.dll", { size: 0, ico: "err32", act: () => showError("luck.dll", "The file or directory is corrupted and unreadable.\n\nIt has been like this since you got here.") }),
       f("mumu.exe", { size: 44 * 1024, ico: "@ic-app", act: () => showError("mumu.exe", "This process is already running and cannot be stopped.\nIt is up 0.4 SOL and will not be taking questions.") }),
@@ -386,7 +385,7 @@ export function initExplorer(deps) {
   function openItem(it) {
     if (it.go) return go(it.go);
     if (it.act) return it.act();
-    showError(it.name, "Windows cannot open this file. It is decorative.");
+    showError(it.name, "Windows cannot open this file:\n\n" + it.name + "\n\nTo open this file, Windows needs to know what program created it.");
   }
 
   /* ---------- the blue task pane ---------- */

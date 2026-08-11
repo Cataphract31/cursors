@@ -261,7 +261,7 @@ export function initDepthApps(deps) {
     const d = hooks.disk();
     $("#df-vol").textContent = `(C:)  ·  NTFS  ·  20.0 GB  ·  ${(20 * (100 - d.pct) / 100).toFixed(2)} GB free  ·  ${d.pct.toFixed(0)}% in use`;
     dfState = dfBuild(); dfDraw();
-    $("#df-status").textContent = dfState.frag ? "" : "This volume has never seen a fight.";
+    $("#df-status").textContent = dfState.frag ? "" : "You do not need to defragment this volume.";
     openWin("win-defrag");
   }
 
@@ -288,7 +288,7 @@ export function initDepthApps(deps) {
           "CURSORS.EXE": {
             "PlayerName": g.name, "Wallet": g.wallet, "Kills": String(g.kills), "Deaths": String(g.deaths),
             "PointerScheme": g.scheme || "(default)",
-            "RTP": "0.99", "Edge": "the fee. that is the whole edge.",
+            "RTP": "0.99", "Edge": "0.001 (the platform fee)",
           },
           "Microsoft": { "Windows": { "CurrentVersion": { "Run": { "cursors": "C:\\Program Files\\CURSORS.EXE\\cursors.exe" } } } },
         },

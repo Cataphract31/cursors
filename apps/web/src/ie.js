@@ -476,7 +476,7 @@ Internet Explorer</p>
       items = [
         { label: "Open", bold: 1, action: () => { sysSnd("nav", .4); go(u); } },
         { label: "Open in New Window", action: () => { sysSnd("nav", .4); go(u); } },
-        { label: "Save Target As...", action: () => showError("Save As", "Access is denied.\n\nThe disk is nearly full of dead cursors. Saving is not going to help.") },
+        { label: "Save Target As...", action: () => showError("Save As", "Access is denied.") },
         { label: "Print Target", action: () => noPrinter() },
         { sep: 1 },
         { label: "Copy Shortcut", action: () => { try { navigator.clipboard.writeText(/^https?:/i.test(u) ? u : ""); } catch (err) {} } },
@@ -697,7 +697,7 @@ ${srcHTML}
     inp.focus();
   }
   function noPrinter() {
-    showError("Print", "No printer is installed.\n\nThere has never been a printer. The icon is decorative.", true);
+    showError("Print", "Before you can print, you need to install a printer.", true);
   }
 
   /* ---------- the Explorer bar: Search / Favorites / History ---------- */
@@ -930,7 +930,7 @@ ${srcHTML}
     els.ioUseDef.addEventListener("click", () => { els.ioHome.value = HOME; });
     els.ioUseBlank.addEventListener("click", () => { els.ioHome.value = "about:blank"; });
     els.ioDelCookies.addEventListener("click", () => showError("Delete Cookies",
-      "Delete all cookies in the Temporary Internet Files folder?\n\nDone. Both of them.", true));
+      "Delete all cookies in the Temporary Internet Files folder?\n\nAll cookies have been deleted.", true));
     els.ioDelFiles.addEventListener("click", () => {
       store.data.ieCacheKB = 0; store.save();
       els.ioCache.textContent = els.ioCache.textContent.replace(/\(\d+ KB in use\)/, "(0 KB in use)");

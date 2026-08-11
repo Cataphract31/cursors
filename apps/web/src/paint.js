@@ -1059,10 +1059,10 @@ export function initPaint(deps) {
   function helpMenu(x, y) {
     showMenu([
       { label: "Help Topics", action: () => showError("Paint Help",
-        "Left button draws with the foreground colour, right button draws with the background colour.\nRight-click a swatch to set the background colour.\n\nFile > Set As Background puts your art on the desktop.\nUndo is three steps deep. It was three steps deep in 2001 too.", true) },
+        "Left button draws with the foreground colour, right button draws with the background colour.\nRight-click a swatch to set the background colour.\n\nFile > Set As Background puts your art on the desktop.\nUndo is three steps deep.", true) },
       { sep: 1 },
       { label: "About Paint", action: () => showError("About Paint",
-        "Microsoft Paint\nVersion 5.1 (Build 2600.casino)\n\nThe only application on this computer where\nyou keep what you make.", true) },
+        "Paint\nVersion 5.1 (Build 2600)", true) },
     ], x, y);
   }
   const MENUS = { File: fileMenu, Edit: editMenu, View: viewMenu, Image: imageMenu, Colors: colorsMenu, Help: helpMenu };

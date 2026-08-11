@@ -1719,7 +1719,7 @@ function menubarMenu(label,id){
       {label:"Verify fairness",action:()=>cxShow("cx-verify")},
       {sep:1},
       {label:"About CURSORS.EXE",action:()=>showError("About CURSORS.EXE",
-        "CURSORS.EXE · version 5.1 (Build 2600.casino)\nRTP 99% · P(reach ×N)=1/N · the edge is the fee.\nThis product is licensed to: whoever is losing right now.",true)}];
+        "CURSORS.EXE\nVersion 5.1 (Build 2600)\n\nRTP 99% · P(A wins) = A/(A+B)\nFee 0.001 · rakeback 0.002 per deploy\n\nThis product is licensed to:\n"+playerNameFull(),true)}];
   }
   switch(label){
     case "File": return [
@@ -1742,7 +1742,7 @@ function menubarMenu(label,id){
     case "Help": return [
       {label:"Help Topics",action:()=>openWin("win-readme")},{sep:1},
       {label:"About",action:()=>showError("About "+tabTitle(id),
-        "CURSORS XP · version 5.1 (Build 2600.casino)\nThis product is licensed to: whoever is losing right now.",true)}];
+        "Microsoft Windows XP\nVersion 5.1 (Build 2600)\n\nThis product is licensed to:\n"+playerNameFull(),true)}];
   }
   return [{label:"(nothing here)",disabled:1}];
 }
@@ -5342,7 +5342,7 @@ if(MOBILE){
   openWin("win-cursors",{silent:true});
   focusWin("win-cursors");
 }
-chatSys("welcome to the desktop. say gm.");
+chatSys("connected to the lobby.");
 renderBin(); updatePanel();
 startEpoch();
 requestAnimationFrame(frame);
@@ -5405,7 +5405,7 @@ function playerNameFull(){ return PLAYER||"Administrator"; }
 function syncIdentity(){
   $("#lg-name").textContent=playerNameFull();
   $("#sm-user").textContent=playerNameFull();
-  $("#lg-sub").textContent=PLAYER?"click to log on":"5.000 SOL and dreams";
+  $("#lg-sub").textContent=PLAYER?"click to log on":"click to begin";
 }
 function logon(){
   sessionStorage.setItem("cxp.booted","1");

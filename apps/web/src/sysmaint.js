@@ -357,7 +357,7 @@ export function initSysMaint(deps) {
     return "[boot loader]\ntimeout=" + (d.boot.timeout | 0) +
       "\ndefault=multi(0)disk(0)rdisk(0)partition(1)\\WINDOWS\n\n[operating systems]\n" +
       'multi(0)disk(0)rdisk(0)partition(1)\\WINDOWS="Windows XP Professional" /fastdetect' + sw + "\n" +
-      'multi(0)disk(0)rdisk(0)partition(1)\\WINDOWS="Windows XP (last known good decision)" /safeboot /fastdetect\n';
+      'multi(0)disk(0)rdisk(0)partition(1)\\WINDOWS="Microsoft Windows XP Professional" /safeboot /fastdetect\n';
   }
 
   const INI_SYSTEM = [
@@ -438,7 +438,7 @@ export function initSysMaint(deps) {
       box.appendChild(lab);
     }
     host.appendChild(box);
-    host.appendChild(el("div", "small dim", "Nothing on this computer reads " + name + ". The file is here because it was there."));
+    host.appendChild(el("div", "small dim", "This file is not used by any program on this computer."));
   }
 
   function mcRenderBoot() {
@@ -777,7 +777,7 @@ export function initSysMaint(deps) {
       if (note) host.appendChild(el("div", "mc-note", note));
     };
     check("nobin", "Do not move files to the Recycle Bin. Remove files immediately when deleted.",
-      "This covers files you made. A cursor that dies still goes to the bin: that is where the disk writes the corpse.");
+      "This setting covers files you delete. Dead cursors are also sent to the Recycle Bin.");
     check("confirm", "Display delete confirmation dialog");
   }
   function fmtBytes(b) {
@@ -982,7 +982,7 @@ export function initSysMaint(deps) {
     box.appendChild(el("div", "aw-compgroup", "Programs"));
     for (const c of COMPONENTS.filter(x => x.grp === "top"))
       line(c.n, installed(c.id), c.mb, v => toggleComponent(c, v), null, 1);
-    line("Internet Explorer", true, 14.7, null, "Required by CURSORS.EXE, which watches television through it.", 1);
+    line("Internet Explorer", true, 14.7, null, "Provides Internet browsing. Required by CURSORS.EXE for cursorTV.", 1);
     line("CURSORS.EXE", true, 1.2, null, "Installed by the server.", 1);
     main.appendChild(box);
     const used = COMPONENTS.filter(c => installed(c.id)).reduce((s, c) => s + c.mb, 0) + 15.9;
@@ -1144,7 +1144,7 @@ export function initSysMaint(deps) {
         note: "The disk fills with corpses at 12 MB each. Cleanup happens when the round ends, and it is not optional." },
       { id: "defrag", n: "Disk Defragmenter", sched: "Weekly, Sunday 01:00",
         next: "Sunday 1:00 AM", run: () => hooks.openDefrag(),
-        note: "Analyses the drive. The red stripes are the dead." },
+        note: "Analyzes the volume for fragmentation." },
       { id: "autoplay", n: "Autoplay watchdog", sched: "Every 10 minutes",
         next: "Running now", run: () => showError("Autoplay watchdog",
           "Disarms autoplay after 10 idle minutes. Cannot be stopped from here."),
