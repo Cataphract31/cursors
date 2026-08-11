@@ -4146,7 +4146,11 @@ let shutFired=false;
 function startShutdownRush(){
   shutFired=true;
   phaseT=Math.min(phaseT,T_SHUT);
-  openWin("win-shutdown",{silent:true});
+  /* not on a phone: it is a .fixed dialog with no close button, and centred on
+     a sheet it lands squarely on ATTACK / DEFEND / RECALL ALL — the three
+     controls the shutdown window exists to make you use. The thumb bar chip
+     already counts the same seconds down. */
+  if(!MOBILE) openWin("win-shutdown",{silent:true});
   sShut();
   chatSys("CURSORS.EXE is not responding — all cursors recalling");
   botChat("shutdown");
@@ -5488,7 +5492,7 @@ function mpMsg(m){
     case "bank": if(MP.on) mpBank(m); break;
     case "refund": if(MP.on){ const c=mpCurs.get(m.id); if(c&&c.isMine){ R.myIn-=STAKE; stats.deploys--; stats.tIn-=STAKE; log("undeployed in grace — refunded in full"); } mpRemove(c); updatePanel(); } break;
     case "bal": if(MP.on){ wallet=m.balance; myTickets=m.tickets; globalTickets=m.glob; rakeAccrued=m.rake; updatePanel(); } break;
-    case "rush": if(MP.on){ shutFired=true; phaseT=m.secs; openWin("win-shutdown",{silent:true}); sShut(); renderPhase(); updatePanel(); } break;
+    case "rush": if(MP.on){ shutFired=true; phaseT=m.secs; if(!MOBILE) openWin("win-shutdown",{silent:true}); sShut(); renderPhase(); updatePanel(); } break;
     case "resync": if(MP.on) mpResync(m.epoch); break;
     case "crash": if(MP.on) mpCrash(m); break;
     case "epoch": if(MP.on) mpEpoch(m); break;
