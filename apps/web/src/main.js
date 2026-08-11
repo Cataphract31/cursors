@@ -62,7 +62,10 @@ addEventListener("resize",()=>{
       if(a.el&&a.el.classList.contains("fixed")&&!a.min&&a.el.style.display!=="none")
         requestAnimationFrame(()=>fitWin(a.el));
     const wa=openApps.get("win-amp");
-    if(wa&&!wa.min&&webamp&&!wampHidden()) try{ webamp.centerWindowsInContainer(); }catch(e){}
+    if(wa&&!wa.min&&webamp&&!wampHidden()){
+      try{ webamp.centerWindowsInContainer(); }catch(e){}
+      setTimeout(wampFit,60);
+    }
   }
 });
 /* iOS never tells you the keyboard opened — it just shrinks the visual
@@ -298,7 +301,20 @@ for(const u of store.data.userIcons) if(!u.ico) u.ico=u.kind==="folder"?"folder3
    is a normal entry (kind:"webamp"), so zombie tabs are impossible. */
 let webamp=null;
 function wampWrap(){ return document.getElementById("webamp-wrap"); }
-function showWamp(){ const w=wampWrap(); if(w) w.style.display=""; }
+function showWamp(){ const w=wampWrap(); if(w){ w.style.display=""; wampFit(); } }
+/* Webamp draws at a fixed 275px-wide stack that is taller than a phone lying
+   down. Scale the whole rig to whatever room the desktop actually has. */
+function wampFit(){
+  const w=wampWrap(); if(!w||!MOBILE) return;
+  w.style.transform=""; w.style.transformOrigin="0 0";
+  const inner=w.querySelector("#webamp")||w.firstElementChild;
+  if(!inner) return;
+  const r=inner.getBoundingClientRect();
+  if(!r.width||!r.height) return;
+  const availW=Math.max(160,desktop.clientWidth-8), availH=Math.max(160,desktop.clientHeight-8);
+  const s=Math.min(1,availW/r.width,availH/r.height);
+  if(s<1) w.style.transform="scale("+s.toFixed(3)+")";
+}
 function hideWamp(){ const w=wampWrap(); if(w) w.style.display="none"; }
 function wampHidden(){ const w=wampWrap(); return !w||w.style.display==="none"; }
 let zTop=100, focusedId=null;
@@ -374,8 +390,8 @@ function renderTaskbar(){
      desktop. But on a phone a sheet IS the whole screen, and tags scrolling
      over a Stats table is just noise, so behind a sheet the arena drops to a
      hint of motion and comes straight back when you close it. */
-  if(MOBILE) document.body.classList.toggle("sheeted",
-    [...openApps.values()].some(a=>!a.min&&!a.notab&&a.el&&a.el.id!=="win-cursors"&&!a.el.classList.contains("fixed")));
+  /* the arena stays at full strength behind everything: the fight is the
+     product, and a window is not a reason to stop watching it */
 }
 function tabClick(id){
   const a=openApps.get(id); if(!a) return;
@@ -922,6 +938,10 @@ function openIcon(ic){
   sysSnd("nav",.5);
   if(ic.app==="bin"){
     openWin("win-explorer"); explorer.go("Recycle Bin");
+  }else if(ic.id==="computer"){
+    /* the icon names a place, so it goes there — Explorer remembers its last
+       path, and My Computer opening on the Recycle Bin is not My Computer */
+    openWin("win-explorer"); explorer.go("My Computer");
   }else if(ic.app==="folder"){
     openFolderWin(ic.label);
   }else if(ic.app==="paintdoc"){
@@ -3253,7 +3273,9 @@ const sysinfo=initSysInfo({
   },
 });
 const chatSys=t=>msn.lobbySys(t);
-const botChat=(kind,vars)=>{ if(!MP.on&&(msnAuto||openApps.has("win-chat"))) msn.botChat(kind,vars); };
+/* the lobby is for real players. Scripted chatter was authored joke copy
+   pretending to be company, so there is none — the log still reports facts. */
+const botChat=()=>{};
 
 /* ================= the XP applications ================= */
 /* cmd.exe, Control Panel, Services, Device Manager, Group Policy. They read
@@ -3461,7 +3483,7 @@ function openWinamp(){
       hideWamp(); sMini(); renderTaskbar();
     });
     showWamp(); /* wrapper must be visible BEFORE render: webamp centers its stack on the slot's rect */
-    webamp.renderWhenReady(document.getElementById("webamp-slot")).then(()=>showWamp());
+    webamp.renderWhenReady(document.getElementById("webamp-slot")).then(()=>{ showWamp(); setTimeout(wampFit,120); });
   }else{
     showWamp();
     try{ webamp.reopen(); }catch(e){}
@@ -4560,7 +4582,7 @@ function updatePanel(){
   $("#mh-live").textContent=`${mine.length}/5 · ${fmtS(liveVal)}`;
   renderCx();   /* whatever pane is open stays live */
 }
-setInterval(()=>{ if(Math.random()<.25) botChat("idle"); },9000);
+
 
 /* logoff reset */
 $("#btn-logoff-yes").addEventListener("click",()=>{
@@ -5041,8 +5063,11 @@ function mpTvMounted(page){
   mpTvRenderQueue();
   const inp=page.querySelector("#tv-in");
   const add=()=>{
-    const m=/([\w-]{11})(?:[?&#]|$)/.exec((inp.value||"").trim().replace(/.*(?:v=|youtu\.be\/|shorts\/|embed\/)/,""));
-    if(!m){ showError("cursorTV","Paste a YouTube link.",true); return; }
+    const raw=(inp.value||"").trim();
+    if(!raw){ showError("cursorTV","Paste a YouTube link.",true); return; }
+    if(!MP.on){ showError("cursorTV","Not connected. The channel is shared, so it needs the arena.",true); return; }
+    const m=/([\w-]{11})(?:[?&#/]|$)/.exec(raw.replace(/^\s*<|>\s*$/g,"").replace(/.*(?:v=|youtu\.be\/|shorts\/|embed\/|live\/)/,""));
+    if(!m){ showError("cursorTV","That is not a YouTube link.",true); return; }
     const vid=m[1]; inp.value="";
     /* the title travels with the queue entry so every screen shows words, not
        ids. oEmbed is CORS-open; when a blocker eats it, the id shows. */
@@ -5252,7 +5277,7 @@ document.addEventListener("visibilitychange",()=>{
 function mpTvSync(){
   if(!tvPage||!tvPage.isConnected) return;
   mpTvRenderQueue();
-  if(!MP.tv.now){ try{ ytPlayer&&ytPlayer.stopVideo(); }catch(e){} return; }
+  if(!MP.tv.now){ tvDeadAir(); return; }
   if(ytApi!==2){ return; }
   try{
     /* same show, only late: seek, do not reload — reloading restarts the
@@ -5263,6 +5288,28 @@ function mpTvSync(){
     if(ytPlayer&&ytPlayer.loadVideoById) ytPlayer.loadVideoById(MP.tv.now.vid,tvElapsed());
     else mpTvPlayer();
   }catch(e){ mpTvPlayer(); }
+}
+/* nothing queued: tear the player down and say so. stopVideo() alone leaves
+   the last frame parked on screen, which reads as "the skip did nothing". */
+function tvDeadAir(){
+  tvGen++;   /* strand any watchdog belonging to the player we are killing */
+  try{ ytPlayer&&ytPlayer.destroy&&ytPlayer.destroy(); }catch(e){}
+  ytPlayer=null; tvDurSent=null; tvVoted=null;
+  if(!tvPage||!tvPage.isConnected) return;
+  const st=tvPage.querySelector("#tv-stage"); if(!st) return;
+  const keep=st.querySelector("#tv-exit");
+  const badge=tvPage.querySelector("#tv-live"); if(badge) badge.style.display="none";
+  const snd=tvPage.querySelector("#tv-sound"); if(snd) snd.style.display="none";
+  st.innerHTML="";
+  const d=document.createElement("div");
+  d.id="tv-slot";
+  d.style.cssText="width:100%;height:100%;background:#000;color:#9AA8BC;display:flex;"+
+    "flex-direction:column;align-items:center;justify-content:center;gap:6px;text-align:center;padding:12px";
+  const a=document.createElement("div"); a.style.cssText="font-size:13px;color:#CFCFCF"; a.textContent="no signal";
+  const b=document.createElement("div"); b.style.cssText="font-size:11px"; b.textContent="Paste a YouTube link below to start the channel.";
+  d.appendChild(a); d.appendChild(b);
+  st.appendChild(d);
+  if(keep) st.appendChild(keep);
 }
 function tvTitle(){
   try{ const d=ytPlayer&&ytPlayer.getVideoData&&ytPlayer.getVideoData(); return d&&d.title?d.title:null; }catch(e){ return null; }

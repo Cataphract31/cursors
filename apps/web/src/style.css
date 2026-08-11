@@ -512,7 +512,7 @@ body.mobile .ie-doc table{max-width:100%}
 /* ---------- game layer ---------- */
 #arena{position:absolute;left:0;top:0;width:1280px;height:800px;transform-origin:0 0;z-index:5000;pointer-events:none}
 body.mobile #arena{transition:opacity .18s ease-out}
-body.mobile.sheeted #arena{opacity:.5}
+
 /* the crash hiccup: filter-only, because syncArena owns this element's transform */
 #arena.crashed{animation:crashfx .9s steps(1) both}
 @keyframes crashfx{
@@ -1821,3 +1821,8 @@ body.mobile .dx-k{width:110px}
 .fc-modal input{width:80px;margin:2px 0 10px}
 .fc-modal-btns{display:flex;gap:6px;justify-content:flex-end}
 .solb-canvas{position:absolute;z-index:40;cursor:default}
+
+/* Winamp on a phone: the stack scales into whatever the desktop has left */
+body.mobile #webamp-wrap{position:fixed;left:0;top:0;transform-origin:0 0}
+body.mobile.land #tour-img{max-height:26vh}
+body.mobile.land .tour-pts li{line-height:1.35}

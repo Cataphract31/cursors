@@ -75,14 +75,7 @@ const REPLIES = {
   deg404:  ["404", "message not found", "have you tried turning it off and on again", "i exist only during shutdown", "(co) beep"],
 };
 
-const LOBBY_LINES = {
-  join:     ["gm", "pot looks juicy", "deploying this round, who else", "0.1 printer warming up", "ez round incoming", "who wants to die today"],
-  kill:     ["LOL {l}", "{w} eating good", "rip {l}, seen worse rolls", "gg {l}", "{w} is a problem", "bro really touched {w}"],
-  bigkill:  ["{w} IS FAT NOW", "someone kill {w} already", "{w} carrying the whole pot", "free lottery ticket walking around"],
-  bank:     ["{n} banked. coward", "smart exit tbh", "{n} took the money and ran", "paper hands {n}"],
-  shutdown: ["RUN", "exit rush GO", "camping the door hehe", "everybody OUT", "see you at start"],
-  idle:     ["anyone else lagging or is that the vibes", "this desktop needs a screensaver", "dial up holding strong", "nudge me again and see what happens", "imagine losing a 90:10"],
-};
+const LOBBY_LINES = {};   /* emptied: the lobby is real players only */
 
 export function initMessenger(deps) {
   const {
@@ -479,7 +472,8 @@ export function initMessenger(deps) {
   function lobbySys(text) { sys("lobby", text); }
   function lobbySay(who, text) { say("lobby", who, text, who === playerName()); }
   function botChat(kind, vars) {
-    if (quiet()) return;
+    return;   /* no scripted lobby chatter — the room is real players only */
+    /* eslint-disable no-unreachable */
     const now = Date.now();
     if (now - lastLobbyAt < 2600 || Math.random() < .45) return;
     lastLobbyAt = now;
@@ -489,6 +483,7 @@ export function initMessenger(deps) {
     if (vars) for (const k in vars) t = t.split("{" + k + "}").join(vars[k]);
     const c = pick(CONTACTS.filter(x => state[x.id] === "online")) || CONTACTS[0];
     setTimeout(() => say("lobby", c.name, t, false), rand(300, 1400));
+    /* eslint-enable no-unreachable */
   }
 
   /* boot: buddy list wiring */

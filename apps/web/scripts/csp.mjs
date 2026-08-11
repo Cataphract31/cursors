@@ -216,12 +216,12 @@ try {
     " stylesheets applied, desktop reached");
 
   /* --- pass 1b: the TV, which is only reachable with the live socket up --- */
-  // cursorTV renders its player only when multiplayer is connected, so getting
-  // to #tv-in is itself the proof that connect-src let the wss:// through. And
-  // the TV is the only thing that pulls https://www.youtube.com/iframe_api and
-  // frames youtube-nocookie, so this is where script-src, connect-src and
-  // frame-src are really tested. It cannot be done behind #desktop: that hash
-  // deliberately returns a null socket to keep screenshots deterministic.
+  // cursorTV renders only when multiplayer is connected, so reaching #tv-in is
+  // itself the proof that connect-src let the wss:// through — and that leg
+  // cannot be done behind #desktop, which deliberately returns a null socket.
+  // The YouTube half (script-src, frame-src, the oembed connect-src) is then
+  // proved by fetching those resources directly, WITHOUT queueing anything:
+  // the deck is shared with every live player and a test must not broadcast.
   console.log("\npass 1b — cursorTV over the live socket: youtube.com script, oembed fetch, nocookie iframe");
   await evaluate('document.querySelector(\'#startmenu [data-app="win-ie"]\').click()');
   await sleep(2500);
@@ -235,10 +235,26 @@ try {
     bail("FAILED: cursorTV never came up, so the websocket never connected — connect-src is " +
       "blocking wss://, or the beta server is down. Either way the YouTube paths went untested.", 1);
 
-  await evaluate('(()=>{ const i=document.getElementById("tv-in");' +
-    'i.value="https://youtu.be/dQw4w9WgXcQ";' +
-    'i.dispatchEvent(new Event("input",{bubbles:true}));' +
-    'document.getElementById("tv-add").click(); })()');
+  // NEVER queue into the deck here. cursorTV is one shared channel: a harness
+  // that submits a video broadcasts it to every player online, and this one
+  // rickrolled the live lobby for real. The policy legs this pass exists for —
+  // script-src youtube.com, frame-src nocookie, connect-src for the oembed —
+  // are all provable by pulling the same resources ourselves, with no message
+  // on the wire. If a video happens to be playing already, the page's own
+  // player exercises the identical paths and this only adds redundancy.
+  await evaluate('(()=>{' +
+    'window.__cspYt={oembed:null};' +
+    'const s=document.createElement("script");' +
+    's.src="https://www.youtube.com/iframe_api";' +          /* script-src */
+    'document.head.appendChild(s);' +
+    'const f=document.createElement("iframe");' +
+    'f.id="csp-yt-frame";f.style.cssText="position:fixed;left:-9999px;width:320px;height:180px";' +
+    'f.src="https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?autoplay=0&mute=1";' +   /* frame-src */
+    'document.body.appendChild(f);' +
+    'fetch("https://www.youtube.com/oembed?url=https%3A%2F%2Fyoutu.be%2FdQw4w9WgXcQ&format=json")' +
+    '.then(r=>{window.__cspYt.oembed=r.ok?"ok":("http "+r.status);})' +
+    '.catch(e=>{window.__cspYt.oembed="failed: "+e.message;});' +   /* connect-src */
+    '})()');
   // poll rather than sleep a fixed span: the oembed round trip, the api script
   // and the player iframe are three real network hops, and a fixed wait that is
   // merely usually long enough turns a pass/fail gate into a coin toss
@@ -251,7 +267,13 @@ try {
     yt = await evaluate(probeYt);
     if (yt.api === "object" && yt.frames.some(f => f.indexOf("youtube-nocookie.com") >= 0)) break;
   }
-  console.log("  youtube: " + JSON.stringify(yt));
+  const oem = await evaluate('(window.__cspYt||{}).oembed');
+  console.log("  youtube: " + JSON.stringify(yt) + " oembed=" + oem);
+  if (typeof oem === "string" && oem.indexOf("failed") === 0) {
+    const blockedFetch = [...violations, ...blocked].some(x => /oembed|youtube\.com/i.test(x || ""));
+    if (blockedFetch) bail("FAILED: connect-src blocked the oembed request the TV uses for titles.", 1);
+    console.warn("  UNVERIFIED: the oembed fetch failed with no CSP objection (" + oem + ")");
+  }
 
   // This leg leans on a third party that sometimes just does not answer inside
   // the 12s the app itself allows before it gives up. Failing the *policy* for
