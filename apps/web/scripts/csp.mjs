@@ -1,6 +1,13 @@
 // CSP harness: serve the real build under the exact shipped headers, drive it
 // in a real browser, fail on any violation.
 //
+// The policy lives in vercel.json and this harness parses that file, so what
+// it tests is always what ships. Do not document it with a "//" key inside
+// vercel.json: Vercel validates the schema before it runs anything and
+// rejects unknown properties, which fails the DEPLOY while the build and the
+// git push both look green. Add new external hosts to the CSP there, then
+// re-run this. `npm run build` now refuses a config Vercel would reject.
+//
 //   node scripts/csp.mjs            (needs a build: npm run build)
 //
 // Why this exists. A Content-Security-Policy is the one header that can break

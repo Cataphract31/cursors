@@ -90,3 +90,31 @@ try {
 } finally {
   rmSync(tmp, { force: true });
 }
+
+/* ---- vercel.json must be something Vercel will actually accept ----
+   A stray key here does not fail the build, it fails the DEPLOY: Vercel
+   validates the schema before it ever runs npm, so the site silently keeps
+   serving the last good commit while every push "succeeds" in git. That is
+   how a `"//"` comment key in headers[0] swallowed two days of work. JSON has
+   no comments; document the policy in this file instead of in the config. */
+try {
+  const vpath = join(root, "..", "..", "vercel.json");
+  const v = JSON.parse(readFileSync(vpath, "utf8"));
+  const ROUTE_KEYS = new Set(["source", "headers", "has", "missing"]);
+  const bad = [];
+  for (const [i, r] of (v.headers || []).entries()) {
+    for (const k of Object.keys(r)) if (!ROUTE_KEYS.has(k)) bad.push(`headers[${i}].${k}`);
+    for (const [j, kv] of (r.headers || []).entries()) {
+      const extra = Object.keys(kv).filter(k => k !== "key" && k !== "value");
+      if (extra.length) bad.push(`headers[${i}].headers[${j}].${extra.join(",")}`);
+    }
+  }
+  if (bad.length) {
+    console.error("VERCEL CONFIG INVALID — deploy would be rejected, not the build:\n  " +
+      bad.join("\n  ") + "\n  (Vercel rejects unknown properties; remove them.)");
+    process.exitCode = 1;
+  } else console.log("vercel.json OK — no properties Vercel would reject");
+} catch (e) {
+  console.error("vercel.json unreadable:", e.message);
+  process.exitCode = 1;
+}
