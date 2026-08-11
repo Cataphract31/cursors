@@ -683,6 +683,22 @@ function focusNextTop(){
     const z=+b.el.style.zIndex||0;
     if(z>bz){ bz=z; best=k; }
   }
+  /* On a phone every sheet except the focused one carries min=true by design —
+     focusWin sends the others home — so after closing the top sheet there is
+     no un-minimised candidate at all, and you were dropped onto the bare
+     desktop with the app you came FROM left sitting minimised in the taskbar.
+     Open Outlook Express, hit Create Mail, close the message: Outlook was
+     gone. Fall back to the highest sheet and wake it, which is what "close
+     this and go back" means when there is only one screen. */
+  if(!best&&MOBILE){
+    for(const [k,b] of openApps){
+      if(!b.el||!isSheet(k)) continue;
+      const z=+b.el.style.zIndex||0;
+      if(z>bz){ bz=z; best=k; }
+    }
+    const a=best&&openApps.get(best);
+    if(a){ a.min=false; a.el.style.display="flex"; }
+  }
   if(best) focusWin(best);
 }
 function minWin(id){

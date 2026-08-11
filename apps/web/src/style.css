@@ -2208,3 +2208,99 @@ body.mobile .txp-banner b{font-size:15px}
    this table has to be legible to someone who has never played a trick. */
 .ht-card.ht-ok{box-shadow:0 0 0 2px #FFD800,0 4px 10px rgba(0,0,0,.45);cursor:pointer}
 .ht-card.ht-no{filter:brightness(.62) saturate(.7);cursor:default}
+
+/* ---------- the last four unfolded apps: mail, the players, the tour -------- */
+/* Same rule as the Phase 13 block above, plus one this round made explicit:
+   portrait and landscape want opposite things. A side pane costs width, which
+   portrait has none of and landscape has plenty of; height is the other way
+   round. So the stacking rules are gated on :not(.land) and the trims that buy
+   vertical room are gated on .land. */
+
+/* ---- Outlook Express ---- */
+/* Three panes need 1024px. Portrait gets the folders as a row of chips over a
+   list and a reading pane that finally have the width; landscape keeps the
+   folder rail, where 148px of 726 is affordable and 40px of height is not. */
+body.mobile .oe-toolbar{flex-wrap:nowrap;overflow-x:auto;overscroll-behavior-x:contain;
+  -webkit-overflow-scrolling:touch;scrollbar-width:none}
+body.mobile .oe-toolbar::-webkit-scrollbar{display:none}
+body.mobile .oe-tb{flex:none;white-space:nowrap;min-height:30px;padding:4px 10px}
+body.mobile .oe-lhead span,body.mobile .oe-row span{padding:4px 6px}
+body.mobile .oe-row{min-height:30px}
+body.mobile .oe-frow{min-height:28px}
+body.mobile .oe-pbody{line-height:1.5}
+body.mobile:not(.land) .oe-main{flex-direction:column}
+body.mobile:not(.land) .oe-folders{width:auto;flex:none;flex-direction:row;overflow:hidden;
+  background:#ECE9D8;border-right:0;border-bottom:1px solid #ACA899}
+body.mobile:not(.land) .oe-fhead,body.mobile:not(.land) .oe-froot{display:none}
+body.mobile:not(.land) .oe-ftree{display:flex;gap:4px;padding:4px 5px;overflow-x:auto;
+  overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+body.mobile:not(.land) .oe-ftree::-webkit-scrollbar{display:none}
+body.mobile:not(.land) .oe-frow{flex:none;display:flex;align-items:center;padding:4px 10px;
+  border:1px solid #ACA899;border-radius:3px;background:#fff}
+body.mobile:not(.land) .oe-frow.sel{background:#316AC5;color:#fff;border-color:#2A5BB0}
+body.mobile:not(.land) .oe-list{flex:1 1 36%}
+body.mobile:not(.land) .oe-preview{flex:1 1 64%}
+/* the received date is the first thing a 390px row can lose: the list is
+   already sorted by it, and the reading pane still carries it */
+body.mobile:not(.land) .oe-c-recv{display:none}
+body.mobile:not(.land) .oe-c-from{width:112px}
+body.mobile .oe-a-st{display:none}
+body.mobile .oe-cfields{grid-template-columns:58px 1fr;padding:6px 8px}
+body.mobile .oe-cfields input{min-height:32px}
+body.mobile .oe-fbar input{min-height:30px}
+body.mobile .oe-fbar .xbtn{min-height:30px;padding:3px 12px}
+
+/* ---- Windows Media Player ---- */
+/* The visualiser was the only thing sized in percent, so on a sheet it ate the
+   screen and pushed the transport — volume knob first — off the side and out
+   the bottom. Cap the picture, wrap the row, and let the volume have a line of
+   its own in portrait, which is the one place there is no room beside it. */
+body.mobile #wmp-viz{height:150px}
+body.mobile.land #wmp-viz{height:92px}
+body.mobile .wmp-ctl{flex-wrap:wrap;gap:8px;padding:8px 9px}
+body.mobile .wmp-ctl button{min-width:0;width:44px;height:38px;flex:none;font-size:13px}
+body.mobile .wmp-big{width:52px !important;height:38px !important;border-radius:19px !important}
+body.mobile .wmp-time{flex:1 1 auto;min-width:56px;font-size:11px;white-space:nowrap}
+body.mobile .wmp-ctl input[type=range]{width:auto;flex:1 1 100px;min-width:90px}
+body.mobile:not(.land) .wmp-ctl input[type=range]{flex:1 0 100%}
+body.mobile .wmp-seek,body.mobile #wmp-vol{min-height:26px}
+body.mobile .wmp-row{padding:7px 11px}
+body.mobile .wmp-list{min-height:96px}
+
+/* ---- Sound Recorder ---- */
+/* 150px of transport, like the mixer: a sheet only gave it 550px of empty
+   beige, so it sits at the top of the screen the way sndvol32 does. */
+body.mobile #desktop>#win-sndrec{height:222px !important;top:52px !important}
+body.mobile .srec-main{padding:9px 10px;gap:9px}
+body.mobile .sr-labels{justify-content:center;gap:16px}
+body.mobile #sr-slider{min-height:26px}
+body.mobile .sr-btns{gap:6px;width:100%;max-width:430px;margin:0 auto}
+body.mobile .sr-btns .xbtn{flex:1;min-width:0;height:40px;font-size:15px}
+
+/* ---- Tour Windows XP ---- */
+/* Portrait lies the chapter rail down across the top — icons only, because the
+   chapter's name is already the panel's heading — and drops the Exit button,
+   which on a sheet is the close box two rows above it. */
+body.mobile:not(.land) .txp-mid{flex-direction:column}
+body.mobile:not(.land) .txp-rail{flex:none;display:flex;gap:4px;padding:5px 6px;
+  border-right:0;border-bottom:1px solid #17398C;
+  overflow-x:auto;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+body.mobile:not(.land) .txp-rail::-webkit-scrollbar{display:none}
+body.mobile:not(.land) .txp-ch{flex:none;padding:7px 10px;border-radius:3px 3px 0 0}
+body.mobile:not(.land) .txp-ch span{display:none}
+body.mobile:not(.land) .txp-ch.on{box-shadow:inset 0 -3px 0 #FFC83D}
+body.mobile:not(.land) .txp-chico{width:18px;height:18px}
+/* the picture takes whatever the four lines of copy leave */
+body.mobile:not(.land) .txp-art{flex:1 1 168px;height:auto;min-height:150px}
+body.mobile:not(.land) #txp-exit{display:none}
+body.mobile .txp-foot .xbtn{min-height:32px}
+/* landscape: 244px of middle has to hold a picture and four lines, so the
+   banner loses its subtitle and the picture loses a third of its height */
+body.mobile.land .txp-banner{padding:5px 12px}
+body.mobile.land .txp-banner span{display:none}
+body.mobile.land .txp-stage{padding:8px 12px}
+body.mobile.land .txp-art{height:96px}
+body.mobile.land .txp-copy{margin-top:8px;padding:7px 10px 8px}
+body.mobile.land .txp-headrow h2{font-size:13px}
+body.mobile.land .txp-pts li{font-size:11px;line-height:1.38}
+body.mobile.land .txp-foot{padding:5px 10px}
