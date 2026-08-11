@@ -4280,7 +4280,7 @@ function deploy(silent){
   if(!canDeploy()||myCurs().length>=MAXCUR) return;
   if(MP.on){
     if(!net||!net.up()){ log("reconnecting — deploy not sent"); return; }
-    mpSend({t:"deploy"}); if(!silent) sysSnd("hwin",.5); return;
+    mpSend({t:"deploy"}); if(!silent){ sysSnd("hwin",.5); haptic("deploy"); } return;
   }
   if(wallet<STAKE) return;
   wallet-=STAKE;
@@ -4290,7 +4290,7 @@ function deploy(silent){
   const c=makeCur(playerName(),true);
   c.mode="roam"; c.prevMode="roam";
   curs.push(c);
-  if(!silent) sysSnd("hwin",.5);   /* new hardware detected: 1 cursor */
+  if(!silent){ sysSnd("hwin",.5); haptic("deploy"); }   /* new hardware detected: 1 cursor */
   log(`you deployed 0.100 (${myCurs().length}/${MAXCUR})`);
   updatePanel();
 }
@@ -4662,6 +4662,7 @@ function resolveDuel(a,b){
     /* your last cursor dying is not a system event — the system is fine, it
        has your money. You get the receipt in the feed, not a blue screen and
        not a window over the fight you are still watching. */
+    haptic("death");
     if(myCurs().length===0){ sDie(); feedKill(binDead[0],!auto.on); }
     else { feedKill(binDead[0],false); float("cursor lost",l.x,l.y,true); }
   }else if(w.isMine){
@@ -5060,6 +5061,120 @@ function deathCert(d){
     row("record",`${d.kills} kill${d.kills===1?"":"s"} · ${d.lived}s`);
   openWin("win-cert");
 }
+/* ---- keep the screen awake while there is money on the field ---- */
+/* Autoplay stays on the client by design, and a client that gets suspended
+   stops honouring "bank at xN" — the cursor rides past the target and can die
+   carrying it. So while the player has cursors live, the screen does not go
+   out. Released the moment the field is empty; a phone should not burn battery
+   for a game nobody has anything riding on. iOS drops the sentinel silently
+   when you leave the tab, so it is re-requested on the way back. */
+let wakeLock=null;
+function syncWakeLock(){
+  const want=!document.hidden&&myCurs().length>0;
+  if(want&&!wakeLock){
+    if(!navigator.wakeLock||!navigator.wakeLock.request) return;
+    navigator.wakeLock.request("screen").then(l=>{
+      /* the field may have emptied while the request was in flight */
+      if(!(!document.hidden&&myCurs().length>0)){ try{ l.release(); }catch(e){} return; }
+      wakeLock=l;
+      l.addEventListener("release",()=>{ if(wakeLock===l) wakeLock=null; });
+    }).catch(()=>{});   /* refused (low battery, no permission) — not an error */
+  }else if(!want&&wakeLock){
+    const l=wakeLock; wakeLock=null;
+    try{ l.release(); }catch(e){}
+  }
+}
+document.addEventListener("visibilitychange",syncWakeLock);
+/* ---- haptics: the phone's answer to the desktop's chirps ---- */
+/* Every confirmation in this game is a SOUND, and a phone in a pocket or in
+   public plays none of them. These fire on things that moved money, not on
+   gestures — a buzz for a gesture that then does nothing reads as a
+   confirmation that never happened. Rides the same mute switch as audio. */
+const HAPTIC={deploy:[12],recall:[8],bank:[14,40,14],death:[60],big:[10,60,10,60,10]};
+function haptic(kind){
+  if(muted||!navigator.vibrate||document.hidden) return;
+  const p=HAPTIC[kind]; if(!p) return;
+  try{ navigator.vibrate(p); }catch(e){}
+}
+/* ---- individual recall ---- */
+/* RECALL ALL is all-or-nothing, so a player holding one cursor at x5 and one
+   that just spawned had to take both or neither — and the x5 rode into a fight
+   it was favoured to lose. The server has always accepted recallOne; nothing
+   in the UI could ask for it. One slot per cursor, click or tap to bank that
+   one. Same strip on the desktop and the phone. */
+function recallCursor(id){
+  const c=curs.find(x=>x.id===id&&x.isMine);
+  if(!c||c.dead) return;
+  if(netStalled()){ log("reconnecting — recall not sent"); renderHud(); return; }
+  if(MP.on){
+    if(c._bankReq) return;                      /* already on its way home */
+    c._bankReq=true; c._bankAt=Date.now();
+    mpSend({t:"recallOne",id:c.id});
+  }else if(c.mode==="roam"){
+    c.prevMode="recall"; c.mode="recall"; c.recallT=RECALL_SECS;
+  }else return;
+  sClick(); haptic("recall");
+  log(`recall: cursor #${id} (${fmtS(c.bounty)})`);
+  updatePanel();
+}
+/* a slot per live cursor, plus dashed blanks up to the 5-cursor cap so the
+   player can see the ceiling as well as what they hold */
+function renderStrip(host){
+  if(!host) return;
+  const mine=myCurs();
+  const want=mine.map(c=>"c"+c.id).join(",")+"|"+mine.map(c=>
+    (c._bankReq||c.mode==="recall"?"r":"")+Math.round(c.bounty)+(c.grace>0?"g":"")).join(",");
+  if(host._sig===want) return;   /* the frame loop calls this constantly */
+  host._sig=want;
+  host.innerHTML="";
+  for(const c of mine){
+    const mult=c.bounty/ENTRY;
+    const b=document.createElement("button");
+    const going=c._bankReq||c.mode==="recall";
+    b.className="cslot"+(going?" going":"")+(mult>=2?" up":"");
+    b.type="button";
+    b.dataset.cid=c.id;
+    b.title=going?"recalling…":"recall this cursor";
+    b.innerHTML=`<b>${going?"…":"×"+mult.toFixed(1)}</b><i>${fmtS(c.bounty)}</i>`;
+    host.appendChild(b);
+  }
+  for(let i=mine.length;i<MAXCUR;i++){
+    const s=document.createElement("span");
+    s.className="cslot empty";
+    host.appendChild(s);
+  }
+}
+document.addEventListener("click",e=>{
+  const s=e.target.closest&&e.target.closest(".cslot[data-cid]");
+  if(!s) return;
+  e.stopPropagation();   /* #mh-info would otherwise open the sheet underneath */
+  recallCursor(+s.dataset.cid);
+});
+/* ---- the thumb bar has ONE writer ---- */
+/* It used to be written from five unrelated places, so any state nobody had
+   written a line for simply kept rendering the last thing that was true —
+   which is every "the bar is stale / lit / lying" bug in one sentence. */
+function renderHud(){
+  const mine=myCurs();
+  const liveVal=mine.reduce((s,c)=>s+c.bounty,0);
+  const stalled=netStalled();
+  /* walletShown, not wallet: the frame loop rolls the figure toward its new
+     value and writing the raw number here would fight that animation */
+  $("#mh-wallet").textContent=fmtS(Math.round(walletShown))+" SOL";
+  const pl=walletShown+liveVal-plBase;
+  const plEl=$("#mh-pl");
+  plEl.textContent=fmtSign(pl);
+  plEl.classList.toggle("up",pl>0);
+  plEl.classList.toggle("down",pl<0);
+  const au=$("#mh-auto");
+  au.textContent=auto.on?`AUTO ×${auto.bankAt||"—"}·${auto.count}`:"AUTO OFF";
+  au.classList.toggle("on",auto.on);
+  au.classList.toggle("dim",!auto.on);
+  renderStrip($("#mh-strip"));
+  renderStrip($("#cx-strip"));
+  const hint=$("#strip-hint");
+  if(hint) hint.textContent=mine.length?"click a cursor to recall it":"no cursors live";
+}
 function updatePanel(){
   const mine=myCurs();
   const liveVal=mine.reduce((s,c)=>s+c.bounty,0);
@@ -5094,9 +5209,8 @@ function updatePanel(){
   hrc.textContent=graced?"◂ UNDO":recalling?"◂ CANCEL":"◂ RECALL";
   $("#mh-attack").classList.toggle("on",stance==="attack");
   $("#mh-defend").classList.toggle("on",stance==="defend");
-  /* autoplay had no state anywhere on the phone: the only place it was visible
-     was a pane the player usually is not looking at */
-  $("#mh-live").textContent=`${mine.length}/5 · ${fmtS(liveVal)}`+(auto.on?" · AUTO":"");
+  renderHud();  /* wallet, P/L, AUTO and the cursor strip have one writer */
+  syncWakeLock();
   renderCx();   /* whatever pane is open stays live */
 }
 
@@ -5113,7 +5227,8 @@ $("#btn-logoff-yes").addEventListener("click",()=>{
   for(const c of [...myCurs()]) removeCur(c);
   wallet=5000; walletShown=5000;
   $("#walletamt").textContent=fmtS(5000)+" SOL";
-  $("#mh-wallet").textContent=fmtS(5000)+" SOL";
+  plBase=5000; plBaseSet=false;   /* a new session starts its P/L from here */
+  renderHud();
   stats={kills:0,deaths:0,best:0,deploys:0,banks:0,bigBank:0,tIn:0,tOut:0};
   epochHist=[];
   myTickets=0; rakeAccrued=0;
@@ -5270,7 +5385,7 @@ function mpWelcome(m){
      balance was not 5.000 it was lifetime P/L wearing the wrong label */
   if(!plBaseSet){ plBase=wallet; plBaseSet=true; }
   $("#walletamt").textContent=fmtS(Math.round(wallet))+" SOL";
-  $("#mh-wallet").textContent=fmtS(Math.round(wallet))+" SOL";
+  renderHud();
   myTickets=m.tickets; globalTickets=m.glob; rakeAccrued=m.rake;
   if(m.tv&&typeof m.tv.srv==="number") tvSkew=m.tv.srv-Date.now();
   MP.tv=m.tv||MP.tv;
@@ -5406,6 +5521,7 @@ function mpBank(m){
     stats.best=Math.max(stats.best,m.amt/ENTRY);
     stats.banks++; stats.tOut+=m.amt; stats.bigBank=Math.max(stats.bigBank,m.amt);
     const x=c?c.x:AW/2, y=c?c.y:AH/2;
+    haptic(m.amt>=ENTRY*10?"big":"bank");
     if(m.amt>=ENTRY*10){
       sysSnd("tada",.6);
       for(let i=0;i<3;i++) setTimeout(()=>goldBurst(x+rand(-44,44),y+rand(-30,30)),i*170);
@@ -6120,7 +6236,7 @@ function frame(t){
     walletShown+=(wallet-walletShown)*Math.min(1,dt*7);
     if(Math.abs(walletShown-wallet)<.6) walletShown=wallet;
     $("#walletamt").textContent=fmtS(Math.round(walletShown))+" SOL";
-    $("#mh-wallet").textContent=fmtS(Math.round(walletShown))+" SOL";
+    renderHud();
   }
   requestAnimationFrame(frame);
 }
@@ -6141,7 +6257,7 @@ explorer.render();
 if(MOBILE){
   /* the phone boots to a clean desktop: icons, the arena, and the thumb bar.
      Every app is one tap away; none of them start covering the field. */
-  $("#mh-wallet").textContent=fmtS(wallet)+" SOL";
+  renderHud();
 }else{
   /* the desktop boots clean: one window, the game. Messenger and the log are
      one click away and their notifications (toasts, balloons) work closed —

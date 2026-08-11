@@ -26,7 +26,7 @@ input{user-select:text}
    opening an app, and at 64 they were 28px tall — 64% of the 44px touch floor,
    at the bottom edge where a thumb is least accurate. The landscape rail was
    already giving them 44. */
-body.mobile{--hud:84px;--sat:env(safe-area-inset-top,0px);--sab:env(safe-area-inset-bottom,0px);--sal:env(safe-area-inset-left,0px);--sar:env(safe-area-inset-right,0px)}
+body.mobile{--hud:112px;--sat:env(safe-area-inset-top,0px);--sab:env(safe-area-inset-bottom,0px);--sal:env(safe-area-inset-left,0px);--sar:env(safe-area-inset-right,0px)}
 /* phone lying down: height is the scarce axis, so the HUD leaves the bottom
    and becomes a right-hand rail. Everything below reads --hud/--rail, so the
    two orientations are the same layout with one variable moved. */
@@ -589,7 +589,22 @@ body.mobile #arena{transition:opacity .18s ease-out}
 .cur .tag{position:absolute;left:13px;top:25px;white-space:nowrap;font-weight:bold;font-family:Tahoma,sans-serif;font-size:calc(11px * var(--cmag,1));color:#fff;text-shadow:1px 1px 2px #000,-1px 1px 2px #000,0 0 3px #000}
 .cur .tag .bt{margin-left:4px}
 .cur .tag .mx{margin-left:4px;color:#FFD24A}
-.cur.me .nm{background:#316AC5;padding:0 4px;border-radius:2px}
+/* YOUR cursors read first. On a small screen your arrow was one of twenty
+   identical arrows and finding your own money in the crowd was guesswork.
+   Everyone else is left exactly as they were — the field stays busy, yours
+   just stops blending into it: a white outline, a brighter drop shadow, and
+   the name on its Luna-blue plate. */
+.cur.me svg{filter:drop-shadow(0 0 0 #fff) drop-shadow(1px 0 0 #fff) drop-shadow(-1px 0 0 #fff)
+  drop-shadow(0 1px 0 #fff) drop-shadow(0 -1px 0 #fff) drop-shadow(1px 2px 3px rgba(0,0,0,.6))}
+.cur.me .nm{background:#316AC5;padding:0 4px;border-radius:2px;box-shadow:0 0 0 1px rgba(255,255,255,.75)}
+.cur.me .tag{color:#FFFFFF}
+.cur.me .bt{color:#BFE3FF}
+/* a soft halo under your own arrow, so it is findable even mid-scrum */
+.cur.me::before{
+  content:"";position:absolute;left:-5px;top:-4px;width:26px;height:26px;border-radius:50%;
+  background:radial-gradient(circle,rgba(120,190,255,.55) 0,rgba(120,190,255,0) 70%);
+  pointer-events:none;
+}
 .cur.grace{opacity:.55}
 .cur.dueling svg{animation:shake .13s infinite;filter:drop-shadow(0 0 3px #FF3B20) drop-shadow(0 0 7px rgba(255,40,20,.55))}
 @keyframes shake{0%{transform:translate(0,0)}25%{transform:translate(-1.5px,1px)}50%{transform:translate(1.5px,-1px)}75%{transform:translate(-1px,-1.5px)}100%{transform:translate(1px,1px)}}
@@ -823,6 +838,55 @@ body.mobile #mhud{display:flex}
 .mh-phase.battle{background:#FFE9E0;border-color:#E08A5A}
 .mh-live{color:#FFFFFF;font-size:11px;white-space:nowrap;flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis}
 .mh-wallet{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis}
+/* am I up? the one number this audience checks, and it used to live three taps
+   away behind a sheet and a tab */
+.mh-pl{font-size:12px;font-weight:bold;white-space:nowrap;flex:none;color:#CFE0FF}
+.mh-pl.up{color:#8CF0A8}
+.mh-pl.down{color:#FFB3A6}
+/* autoplay had no state on the bar at all: it looked identical whether or not
+   money was being spent on your behalf */
+.mh-auto{flex:none;font-size:10px;font-weight:bold;letter-spacing:.04em;white-space:nowrap;
+  padding:1px 6px;border-radius:2px;border:1px solid rgba(255,255,255,.34);color:#D6E4FF}
+.mh-auto.on{background:#7BD160;border-color:#4E9E36;color:#06210A}
+.mh-auto.dim{opacity:.62}
+
+/* ---- the cursor strip: one slot per live cursor, click/tap to recall it ---- */
+/* RECALL ALL is all-or-nothing; this is the only way to bank the x5 and leave
+   the fresh one running. Same component on the desktop and the phone. */
+.curstrip{display:flex;gap:4px;align-items:stretch}
+.cslot{
+  flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:0;padding:2px 1px;min-height:30px;cursor:pointer;
+  font-family:Tahoma,sans-serif;line-height:1.1;
+  background:linear-gradient(180deg,#FFFFFF 0,#EFF3FA 48%,#DCE5F3 52%,#E9EFF8 100%);
+  border:1px solid #7A97C4;border-radius:2px;color:#0B1D3A;
+}
+.cslot b{font-size:12px;font-weight:bold;font-variant-numeric:tabular-nums}
+.cslot i{font-size:9.5px;font-style:normal;color:#3C5478;font-variant-numeric:tabular-nums}
+.cslot.up{border-color:#C9922A;background:linear-gradient(180deg,#FFFBEF 0,#FFF0C9 48%,#F6DFA0 52%,#FFF3D6 100%)}
+.cslot.up b{color:#6B4A05}
+.cslot.going{opacity:.6;cursor:default}
+.cslot:active{background:#CBD9EE}
+.cslot.empty{
+  flex:1 1 0;min-height:30px;border:1px dashed rgba(255,255,255,.34);
+  border-radius:2px;background:rgba(255,255,255,.05);cursor:default;
+}
+/* on the desktop the strip lives inside the Play pane, on a lighter ground */
+.striprow{margin-top:6px}
+.striprow .lb{display:block;font-size:10px;color:#5A6472;margin:0 0 3px}
+#cx-strip .cslot.empty{border-color:#B8C2D2;background:#F2F4F8}
+/* and on the phone it is a row of its own between the readout and the disk */
+body.mobile #mh-strip{margin:3px 2px 0;flex:none}
+body.mobile #mh-strip .cslot{min-height:32px}
+body.mobile .striprow{display:none}   /* the bar already carries it */
+/* `body.mobile .xbtn{min-height:28px}` outranks `.mh-btns .xbtn`, so without
+   this the money verbs quietly shrank back below the touch floor the moment
+   the strip took a slice of the bar */
+body.mobile .mh-btns .xbtn{min-height:44px}
+/* lying down the rail is 112px wide — five slots in a row would be 15px each.
+   Two columns keeps every multiplier readable and every slot tappable. */
+body.mobile.land #mh-strip{display:grid;grid-template-columns:1fr 1fr;gap:3px;margin:0 0 5px}
+body.mobile.land #mh-strip .cslot{min-height:30px}
 .mh-btns{display:flex;gap:6px;flex:1;min-height:0}
 .mh-btns .xbtn{min-height:44px;min-width:0;height:100%;font-weight:bold;font-size:12px;padding:0 2px}
 #mh-deploy{flex:2.1}
