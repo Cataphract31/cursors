@@ -118,6 +118,7 @@ const send = (method, params = {}) => new Promise((res, rej) => {
 const violations = [];     // the policy stopped the page from doing something
 const blocked = [];        // a request never left the browser
 const requestUrl = new Map();
+const thirdParty = [];   // youtube/ytimg responses, for diagnosing an unverified TV leg
 let loadFired = () => {};
 ws.addEventListener("message", ev => {
   const m = JSON.parse(ev.data);
@@ -136,6 +137,14 @@ ws.addEventListener("message", ev => {
   if (m.method === "Log.entryAdded" &&
       /Content Security Policy|Refused to/i.test(m.params.entry.text || ""))
     violations.push("log: " + m.params.entry.text.replace(/\s+/g, " ").slice(0, 200));
+  // keep the third-party traffic, so an unverified TV leg can say whether
+  // YouTube answered badly or never answered at all
+  if (m.method === "Network.responseReceived" && /youtube|ytimg/i.test(m.params.response.url))
+    thirdParty.push(m.params.response.status + " " + m.params.response.url.slice(0, 78));
+  if (m.method === "Network.loadingFailed" && requestUrl.get(m.params.requestId) &&
+      /youtube|ytimg/i.test(requestUrl.get(m.params.requestId)))
+    thirdParty.push("FAILED(" + (m.params.errorText || m.params.blockedReason) + ") " +
+      requestUrl.get(m.params.requestId).slice(0, 70));
   if (m.method === "Network.loadingFailed" && m.params.blockedReason)
     blocked.push(m.params.blockedReason + ": " + m.params.type + " " +
       (requestUrl.get(m.params.requestId) || "?").slice(0, 90));
@@ -262,8 +271,9 @@ try {
   } else if (!ytOk) {
     ytVerified = false;
     console.warn("  UNVERIFIED: youtube.com/iframe_api was requested and the browser reported no " +
-      "CSP objection, but window.YT never initialised — YouTube did not answer in time. The policy " +
-      "is not implicated; this leg simply went untested. Re-run to cover it.");
+      "CSP objection, but window.YT never initialised. The policy is not implicated; this leg " +
+      "simply went untested. What YouTube actually returned:");
+    for (const t of [...new Set(thirdParty)]) console.warn("      " + t);
   }
 
   /* --- pass 2: the network-touching apps, behind the #desktop dev hash --- */
