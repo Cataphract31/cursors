@@ -42,8 +42,8 @@ export function initHearts(deps) {
   ];
 
   const SLIDE = 180;    /* the card's flight */
-  const THINK = 340;    /* a computer player's pause before it plays */
-  const HOLD = 650;     /* the beat the finished trick sits there */
+  const THINK = 260;    /* a computer player's pause before it plays */
+  const HOLD = 550;     /* the beat the finished trick sits there */
 
   /* passing goes left, right, across, hold — then round again */
   const PASS = [1, 3, 2, 0];
@@ -138,7 +138,7 @@ export function initHearts(deps) {
 
   function scoreboard() {
     const d = document.createElement("div");
-    d.className = "ht-board";
+    d.className = "ht-score";
     let h = '<table><tr><th></th><th>Hand</th><th>Total</th></tr>';
     for (let i = 0; i < 4; i++) {
       const hp = handPts(i);
@@ -182,8 +182,8 @@ export function initHearts(deps) {
       const up = sel.indexOf(c) >= 0 ? 16 : 0;
       const d = faceEl("ht-card up ht-mine", c, startX + i * SPREAD, HANDY - up);
       d.dataset.i = i;
-      if (up) d.classList.add("sel");
-      if (got.indexOf(c) >= 0) d.classList.add("got");
+      if (up) d.classList.add("ht-sel");
+      if (got.indexOf(c) >= 0) d.classList.add("ht-got");
       host.appendChild(d);
     });
     host.appendChild(label("ht-name", names[0], 20, BH - 22, 150));
@@ -280,6 +280,19 @@ export function initHearts(deps) {
     return h.sort((a, b) => want(b) - want(a)).slice(0, 3);
   }
 
+  /* if one seat has every point taken so far, the rest of the table stops
+     ducking and starts spending aces — a moon costs everybody else 26 */
+  function moonThreat(i) {
+    let who = -1;
+    for (let k = 0; k < 4; k++) {
+      if (!handPts(k)) continue;
+      if (who >= 0) return -1;        /* the points are split; nobody is running */
+      who = k;
+    }
+    if (who < 0 || who === i || handPts(who) < 6) return -1;
+    return who;
+  }
+
   function pickPlay(i) {
     const opts = legalCards(i);
     if (opts.length === 1) return opts[0];
@@ -296,9 +309,9 @@ export function initHearts(deps) {
 
     let pool = follow;
     if (led === "s") {
-      const top = trickTop();
+      const topS = trickTop();
       /* she lands on the ace or the king the moment one shows up */
-      if (qMine && top > 12) return qMine;
+      if (qMine && topS > 12) return qMine;
       /* and she is never volunteered into a trick she would win herself */
       if (qMine && pool.length > 1) pool = pool.filter(c => !isQ(c));
       if (qLive) {
@@ -311,6 +324,7 @@ export function initHearts(deps) {
     const winners = pool.filter(c => c.r > top);
     if (!losers.length) return low(pool);            /* cannot avoid winning: win as cheaply as possible */
     if (!winners.length) return high(losers);        /* cannot win at all: throw the biggest */
+    if (moonThreat(i) >= 0) return low(winners);     /* break the moon up while it is still cheap */
     /* a clean trick with nobody left to speak is a free lead — take it early,
        but late in the hand the lead is a liability, so duck instead */
     if (!trickPts() && trick.length === 3 && hand.length > 5) return low(winners);
@@ -321,10 +335,10 @@ export function initHearts(deps) {
     const hand = seats[i];
     const spades = opts.filter(c => c.s === "s");
     const bigS = hand.filter(c => c.s === "s" && c.r >= 12).length;
-    /* flush the queen out with a low spade while we are safely under her */
+    /* hunt the queen: lead spades from under her and let her be squeezed out */
     if (qLive) {
       const under = spades.filter(c => c.r < 12);
-      if (under.length) return high(under);
+      if (under.length) return low(under);
     }
     /* short suits first: leading them is a step towards being void */
     const suits = ["c", "d", "s", "h"].filter(s => opts.filter(c => c.s === s).length);

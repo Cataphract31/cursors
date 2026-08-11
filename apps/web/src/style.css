@@ -1869,3 +1869,10 @@ body.mobile .lgo-h{font-size:18px}
 .tb-bar button.tbb:hover{background:rgba(255,255,255,.18)}
 .tb-bar .tbb .xico,.tb-bar .tbb svg{width:14px;height:14px;vertical-align:-3px;margin-right:3px}
 body.mobile .tb-bar{display:none !important}
+
+/* iOS long-press: the OS steals the gesture for its callout and text selection
+   unless the surface opts out, and the stolen gesture is exactly the one that
+   is supposed to open our context menu. */
+#taskbar,#tabs,.task-tab,#tray,#ql,.icon,.title-bar,.cit,#startmenu{
+  -webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+.task-tab,#tray,.trayico,#tray-chev{touch-action:none}

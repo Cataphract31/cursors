@@ -2272,7 +2272,7 @@ addEventListener("pointerdown",e=>{
   const cleanup=()=>{
     removeEventListener("pointermove",onMove,true);
     removeEventListener("pointerup",onEnd,true);
-    removeEventListener("pointercancel",onEnd,true);
+    removeEventListener("pointercancel",onCancel,true);
     removeEventListener("contextmenu",onNative,true);
   };
   const onMove=ev=>{
@@ -2280,9 +2280,18 @@ addEventListener("pointerdown",e=>{
     if(dx*dx+dy*dy>196){ clearTimeout(t); cleanup(); } /* moved: it's a drag/scroll */
   };
   const onEnd=()=>{ clearTimeout(t); cleanup(); };
+  /* pointercancel is NOT a release. iOS raises it the moment it decides the
+     press belongs to its own callout/selection gesture — which is precisely
+     the gesture we are trying to answer. Let the timer run; a real scroll is
+     already caught by onMove. */
+  const onCancel=()=>{
+    removeEventListener("pointermove",onMove,true);
+    removeEventListener("pointerup",onEnd,true);
+    removeEventListener("pointercancel",onCancel,true);
+  };
   addEventListener("pointermove",onMove,true);
   addEventListener("pointerup",onEnd,true);
-  addEventListener("pointercancel",onEnd,true);
+  addEventListener("pointercancel",onCancel,true);
 },true);
 /* the release of a long-press must not ALSO left-click (compat mouse events) */
 addEventListener("touchend",e=>{
