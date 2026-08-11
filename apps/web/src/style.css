@@ -463,8 +463,12 @@ body.mobile .hlp-doc{padding:10px 12px}
 .diskbar.warn i{background:repeating-linear-gradient(90deg,#C08000 0 9px,#E0A020 9px 11px)}
 .diskbar.crit i{background:repeating-linear-gradient(90deg,#B00000 0 9px,#E03030 9px 11px);animation:diskpulse 1s ease-in-out infinite}
 @keyframes diskpulse{50%{opacity:.62}}
+/* the label runs to within a couple of pixels of the bar's width at a fresh
+   0/900 — a three-digit corpse count or a wider GB figure walked it straight
+   out of the box. It ellipsises now instead of spilling over the border. */
 .diskbar span{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
-  font:11px Tahoma,sans-serif;color:#000;mix-blend-mode:luminosity;letter-spacing:.2px;white-space:nowrap}
+  font:11px Tahoma,sans-serif;color:#000;mix-blend-mode:luminosity;letter-spacing:.2px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 3px}
 body.mobile .diskbar{margin:0 4px 4px}
 
 /* ---------- Internet Explorer 6: the chrome ---------- */
