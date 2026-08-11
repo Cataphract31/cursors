@@ -784,3 +784,45 @@ The things that decide whether the beta survives contact with real players.
 compounding return) → **16** (real device, needs the owner) → **17** (shipping).
 15 and 16 produce lists; both are two-pass phases and should be scheduled as
 such.
+
+## The final pass (2026-08-11) — seven readers, the phone, and a face
+
+Shipped in three commits: `4c30003` (favicon/meta), `770c3f2` (the phone
+pass), `25c1fbe` (the audit). Server redeployed to the beta box, health
+verified live.
+
+**Identity**: favicon.svg/.ico + apple-touch-icon rasterized from the ic-app
+tile; og.jpg is a real 1200x630 capture of the desktop mid-fight; head grew
+description/theme-color/og/twitter. og:image is root-relative until the prod
+domain exists - make it absolute then.
+
+**The phone pass** (owner's 8 hallway findings, all fixed): tour fires from
+enterDesktop so every first visit sees it; long-press menus arm on a fresh
+tap (no more open-then-instantly-close, no click-through on dismiss); taskbar
+tabs activate on delegated pointerup (iOS drops clicks on rebuilt nodes);
+icon drags claim the gesture (touch-action:none) and survive pointercancel;
+CURSORS.EXE fullscreen no longer dims the arena (other sheets dim it .5,
+was .16); rotation re-centers dialogs and re-stacks Winamp
+(centerWindowsInContainer); the landscape phase chip wraps; toasts clear the
+rail; recall gets a cancel verb (client+server `recallCancel` - recalling
+cursors stay attackable so it dodges nothing; refused during shutdown).
+
+**The audit** (7 agents, ~120 findings, all P1s and most P2s fixed same day):
+worst were - a second tab kick-ponged the first forever while re-fetching the
+gallery each cycle; Log Off desynced a live session; a busted wallet could
+never reach the faucet; a hidden reconnect streamed 15Hz forever; Defrag
+hard-froze the tab at 91% disk; the TV watchdog could kill a healthy player;
+no WS backpressure (one non-reading socket = OOM); `vis` amplified full
+resyncs; gallery replies up to 6.4 MB. Server got backpressure, vis
+transition-gating, tv control throttles, tvDur cap 2h, galAdd single-item
+broadcasts, process-level handlers, transaction crash-persist, and three
+leak fixes (saveTimers, djLast, guestbook trim).
+
+**Still open, decided against fixing today** (owner's call or bigger surgery):
+gallery thumbnails (the structural egress fix, M); delta/binary snapshots
+(~40-60% egress, M); spatial grid for the O(n^2) sim (matters past ~150
+cursors, M); WMP viz rAF while paused; fileOp cancelled-flag latent trap;
+fixTop/dlgTop fold ordering; humdrift animates `top`; floating windows on
+phone landscape (design decision); authored-quip copy list (About boxes,
+boot.ini, regedit flavor - see the report); the fidelity gap list lives in
+the owner report of 2026-08-11.
