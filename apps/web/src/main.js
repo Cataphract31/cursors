@@ -257,7 +257,11 @@ const store={
     this.data.pinned=this.data.pinned||[];
   },
   save(){ clearTimeout(this._t); this._t=setTimeout(()=>this.flush(),250); },
-  flush(){ clearTimeout(this._t); try{ localStorage.setItem("cursorsxp",JSON.stringify(this.data)); }catch(e){} }
+  flush(){ clearTimeout(this._t); try{ this.flushOrThrow(); }catch(e){} },
+  /* Paint needs to KNOW the write failed — a picture that silently stopped
+     saving is worse than one that says the disk is full — so the quota error
+     has to reach a caller that wants it, and the key stays in one place. */
+  flushOrThrow(){ clearTimeout(this._t); localStorage.setItem("cursorsxp",JSON.stringify(this.data)); }
 };
 store.load();
 /* the debounce must not eat the write that raced a reload */

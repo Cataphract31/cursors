@@ -57,6 +57,13 @@ export function initPaint(deps) {
 
   let tool = 6;                       /* pencil, like a fresh install */
   let fg = "#000000", bg = "#FFFFFF";
+  /* A phone has no right mouse button, and that button is half of Paint: the
+     eraser's ink, the shapes' second fill, the colour picker's other slot.
+     On a phone the palette grows a two-state selector instead — the live slot
+     is what a stroke draws with and what a swatch tap sets. */
+  const MOB = !!(deps.isMobile ||
+    (document.body && document.body.classList && document.body.classList.contains("mobile")));
+  let slot = "fg";
   let zoom = 1;
   let cw = 0, ch = 0;
   /* fill 0 = outline only, which is what a fresh Paint gives you */
@@ -213,12 +220,66 @@ export function initPaint(deps) {
   function redo() { unstack(redos, undos); }
 
   /* ---------- persistence: your art survives a reboot ---------- */
-  let saveT = null;
+  /* Serialising the canvas to a PNG data URL and pushing it into the shell's
+     one settings blob is expensive: on a phone it is a main-thread stall and
+     a few hundred KB of localStorage, and it used to run 1.2s after every
+     single stroke. It now runs at most once every 20s while you draw, and
+     once more when you leave — and when the write does not fit, you are told,
+     because a picture that is quietly not being saved is worse than a slow
+     save. */
+  const SAVE_MS = 20000;
+  /* store.flush() swallows QuotaExceededError; flushOrThrow() is the same
+     write with the error left in, which is the only way to learn the picture
+     did not fit. Falls back to flush() if the shell is older than this. */
+  const writeStore = () => (store.flushOrThrow ? store.flushOrThrow() : store.flush());
+  let saveT = null, unsaved = false, lastSave = Date.now(), toldFull = false;
   function dirty() {
-    clearTimeout(saveT);
-    saveT = setTimeout(() => {
-      try { store.data.paintImage = cv.toDataURL("image/png"); store.data.paintW = cw; store.data.paintH = ch; store.save(); } catch (e) {}
-    }, 1200);
+    unsaved = true;
+    if (saveT) return;
+    saveT = setTimeout(() => { saveT = null; persist(); },
+      Math.max(1000, SAVE_MS - (Date.now() - lastSave)));
+  }
+  function persist() {
+    if (!unsaved) return;
+    let url;
+    try { url = cv.toDataURL("image/png"); } catch (e) { return; }
+    const prev = store.data.paintImage;
+    store.data.paintImage = url; store.data.paintW = cw; store.data.paintH = ch;
+    lastSave = Date.now();
+    try {
+      writeStore();
+      unsaved = false;
+      if (toldFull) { toldFull = false; sayFull(false); }
+    } catch (e) {
+      /* the picture comes back out so the rest of the desktop still saves —
+         one oversized canvas must not cost you your wallpaper and your files */
+      store.data.paintImage = prev;
+      store.save();
+      sayFull(true);
+      if (!toldFull) {
+        toldFull = true;
+        showError("Paint", "There is not enough memory or disk space to save the file.");
+      }
+    }
+  }
+  function flushSave() { clearTimeout(saveT); saveT = null; persist(); }
+  /* a phone kills a background tab without asking; these are the last honest
+     moments to write, and the shell's own pagehide flush runs before ours */
+  addEventListener("pagehide", flushSave);
+  addEventListener("blur", flushSave);
+  document.addEventListener("visibilitychange", () => { if (document.hidden) flushSave(); });
+  /* the status bar carries the truth for as long as it is true */
+  let fullChip = null;
+  function sayFull(on) {
+    if (!els.status) return;
+    if (!fullChip) {
+      if (!on) return;
+      fullChip = document.createElement("span");
+      fullChip.style.cssText = "flex:none;width:auto;color:#A32020";
+      fullChip.textContent = "Not saved: disk full";
+      els.status.appendChild(fullChip);
+    }
+    fullChip.style.display = on ? "" : "none";
   }
 
   /* ---------- flood fill (exact match, no tolerance — Paint had none) ---------- */
@@ -270,8 +331,11 @@ export function initPaint(deps) {
     const r = cv.getBoundingClientRect();
     return { x: Math.floor((e.clientX - r.left) / zoom), y: Math.floor((e.clientY - r.top) / zoom) };
   }
-  const inkFor = b => (b === 2 ? bg : fg);
-  const antiFor = b => (b === 2 ? fg : bg);
+  /* the selector swaps the two colours wholesale, so the right button keeps
+     meaning "the other one" on a desktop with the selector on Back */
+  const flipped = b => (b === 2) !== (slot === "bg");
+  const inkFor = b => (flipped(b) ? bg : fg);
+  const antiFor = b => (flipped(b) ? fg : bg);
 
   function begin(e) {
     if (e.button !== 0 && e.button !== 2) return;
@@ -284,7 +348,7 @@ export function initPaint(deps) {
     if (t === "zoom") { setZoom(zoom === 1 ? [1, 2, 6, 8][opt.zoomLevel] : 1); return; }
     if (t === "pick") { pickColor(p, btn); return; }
     if (t === "fill") { snapshot(); floodFill(p.x, p.y, ink); dirty(); return; }
-    if (t === "polygon") { polyClick(p, ink); return; }
+    if (t === "polygon") { polyClick(p, ink, antiFor(btn)); return; }
     if (t === "curve") { curveClick(p, ink); return; }
     if (t === "text") { textStart(p); return; }
 
@@ -351,7 +415,10 @@ export function initPaint(deps) {
   }
   function strokeTo(a, b, ink) {
     const t = TOOLS[tool].id;
-    if (t === "eraser") { use(ctx, antiFor(btn)); line(a.x, a.y, b.x, b.y, ERASER_SIZES[opt.eraser]); }
+    /* the eraser reads the real button, not the selector: "erase" means erase
+       to the background, and a phone switched to Back wanting black strokes
+       out of the rubber is nobody's idea of a fix */
+    if (t === "eraser") { use(ctx, btn === 2 ? fg : bg); line(a.x, a.y, b.x, b.y, ERASER_SIZES[opt.eraser]); }
     else if (t === "pencil") { use(ctx, ink); line(a.x, a.y, b.x, b.y, 1); }
     else if (t === "brush") { use(ctx, ink); line(a.x, a.y, b.x, b.y, 0, (x, y) => brushStamp(x, y, opt.brush)); }
     else if (t === "airbrush") { use(ctx, ink); spray(b.x, b.y); }
@@ -374,8 +441,8 @@ export function initPaint(deps) {
   }
 
   /* ---------- polygon: click a vertex at a time, double-click to close ---------- */
-  function polyClick(p, ink) {
-    if (!poly) { snapshot(); poly = { pts: [p], ink }; return; }
+  function polyClick(p, ink, anti) {
+    if (!poly) { snapshot(); poly = { pts: [p], ink, anti }; return; }
     const first = poly.pts[0];
     const near = Math.abs(p.x - first.x) < 5 && Math.abs(p.y - first.y) < 5;
     poly.pts.push(p);
@@ -392,7 +459,7 @@ export function initPaint(deps) {
     if (!poly) return;
     const pts = poly.pts, w = LINE_WIDTHS[opt.line];
     clearOverlay();
-    if (opt.fill === 1) { use(ctx, bg); polyFill(pts); }
+    if (opt.fill === 1) { use(ctx, poly.anti || bg); polyFill(pts); }
     if (opt.fill === 2) { use(ctx, poly.ink); polyFill(pts); }
     if (opt.fill !== 2) {
       use(ctx, poly.ink);
@@ -794,17 +861,48 @@ export function initPaint(deps) {
       });
     }
   }
+  /* the touch route to the background colour: two buttons in Paint's own
+     palette strip, drawn with the toolbox's sunken-selected idiom */
+  function slotPicker() {
+    const wrap = document.createElement("div");
+    wrap.style.cssText = "flex:none;display:flex;gap:3px";
+    const mk = (k, label, colour) => {
+      const b = document.createElement("button");
+      const on = slot === k;
+      b.style.cssText = "min-width:0;min-height:0;height:30px;padding:0 6px;border-radius:0;" +
+        "box-shadow:none;display:flex;align-items:center;gap:5px;cursor:default;" +
+        "font:11px Tahoma;color:#000;background-color:" + (on ? "#DCD8CC" : "#ECE9D8") +
+        (on ? ";border-top:1px solid #808080;border-left:1px solid #808080;border-right:1px solid #FFF;border-bottom:1px solid #FFF"
+            : ";border:1px solid #B4B2A6");
+      const chip = document.createElement("i");
+      chip.style.cssText = "width:14px;height:14px;flex:none;border:1px solid #808080;" +
+        "box-shadow:inset 1px 1px #000;background:" + colour;
+      const t = document.createElement("span");
+      t.textContent = label;
+      b.appendChild(chip); b.appendChild(t);
+      /* tapping the live slot again mixes a colour, the way clicking the
+         overlapping swatches does on a desktop */
+      b.addEventListener("click", () => { if (slot === k) editColors(); else { slot = k; renderColors(); } });
+      wrap.appendChild(b);
+    };
+    mk("fg", "Fore", fg);
+    mk("bg", "Back", bg);
+    return wrap;
+  }
   function renderColors() {
     const host = els.colors;
     host.innerHTML = "";
-    const cur = document.createElement("div");
-    cur.className = "pt-cur";
-    cur.innerHTML = `<i class="pt-bg"></i><i class="pt-fg"></i>`;
-    cur.querySelector(".pt-fg").style.background = fg;
-    cur.querySelector(".pt-bg").style.background = bg;
-    cur.title = "Foreground / background — right-click a swatch for background";
-    cur.addEventListener("click", editColors);
-    host.appendChild(cur);
+    if (MOB) host.appendChild(slotPicker());
+    else {
+      const cur = document.createElement("div");
+      cur.className = "pt-cur";
+      cur.innerHTML = `<i class="pt-bg"></i><i class="pt-fg"></i>`;
+      cur.querySelector(".pt-fg").style.background = fg;
+      cur.querySelector(".pt-bg").style.background = bg;
+      cur.title = "Foreground / background — right-click a swatch for background";
+      cur.addEventListener("click", editColors);
+      host.appendChild(cur);
+    }
     const grid = document.createElement("div");
     grid.className = "pt-swatches";
     const add = (hex) => {
@@ -812,7 +910,7 @@ export function initPaint(deps) {
       s.className = "pt-sw";
       s.dataset.hex = hex;
       s.style.background = hex;
-      s.addEventListener("click", () => { fg = hex; renderColors(); });
+      s.addEventListener("click", () => { if (slot === "bg") bg = hex; else fg = hex; renderColors(); });
       s.addEventListener("contextmenu", e => { e.preventDefault(); e.stopPropagation(); bg = hex; renderColors(); });
       s.addEventListener("dblclick", editColors);
       grid.appendChild(s);
@@ -826,14 +924,16 @@ export function initPaint(deps) {
     host.appendChild(grid);
   }
   function editColors() {
+    const into = slot;                 /* whichever half the palette is on */
     const inp = document.createElement("input");
-    inp.type = "color"; inp.value = fg;
+    inp.type = "color"; inp.value = into === "bg" ? bg : fg;
     inp.style.cssText = "position:fixed;left:-100px;top:0;opacity:0";
     document.body.appendChild(inp);
     inp.addEventListener("change", () => {
-      fg = inp.value.toUpperCase();
-      if (!PALETTE.includes(fg) && !custom.includes(fg)) {
-        custom.unshift(fg); custom = custom.slice(0, 14);
+      const hex = inp.value.toUpperCase();
+      if (into === "bg") bg = hex; else fg = hex;
+      if (!PALETTE.includes(hex) && !custom.includes(hex)) {
+        custom.unshift(hex); custom = custom.slice(0, 14);
         store.data.paintCustom = custom; store.save();
       }
       renderColors();
@@ -845,7 +945,7 @@ export function initPaint(deps) {
     try {
       const d = ctx.getImageData(p.x, p.y, 1, 1).data;
       const hex = "#" + [d[0], d[1], d[2]].map(v => v.toString(16).padStart(2, "0")).join("").toUpperCase();
-      if (button === 2) bg = hex; else fg = hex;
+      if (flipped(button)) bg = hex; else fg = hex;
       renderColors();
       setTool(6);
     } catch (e) {}
@@ -874,7 +974,9 @@ export function initPaint(deps) {
     clearOverlay();
     if (!silent) dirty();
   }
-  function loadDataURL(url, resizeTo) {
+  /* silent: the boot restore came straight OUT of the store, so writing it
+     back 20s later is a stall that buys nothing */
+  function loadDataURL(url, resizeTo, silent) {
     const img = new Image();
     img.onload = () => {
       cancelPending();
@@ -882,7 +984,7 @@ export function initPaint(deps) {
       else { ctx.fillStyle = "#FFF"; ctx.fillRect(0, 0, cw, ch); }
       ctx.drawImage(img, 0, 0);
       undos = []; redos = [];
-      dirty();
+      if (!silent) dirty(); else unsaved = false;
     };
     img.src = url;
   }
@@ -1059,7 +1161,10 @@ export function initPaint(deps) {
   function helpMenu(x, y) {
     showMenu([
       { label: "Help Topics", action: () => showError("Paint Help",
-        "Left button draws with the foreground colour, right button draws with the background colour.\nRight-click a swatch to set the background colour.\n\nFile > Set As Background puts your art on the desktop.\nUndo is three steps deep.", true) },
+        (MOB
+          ? "Fore and Back pick the colour a stroke uses.\nTap a swatch to set the chosen one."
+          : "Left button draws with the foreground colour, right button draws with the background colour.\nRight-click a swatch to set the background colour.") +
+        "\n\nFile > Set As Background puts your art on the desktop.\nUndo is three steps deep.", true) },
       { sep: 1 },
       { label: "About Paint", action: () => showError("About Paint",
         "Paint\nVersion 5.1 (Build 2600)", true) },
@@ -1126,7 +1231,7 @@ export function initPaint(deps) {
   resize(store.data.paintW || (deps.isMobile ? 336 : 384),
          store.data.paintH || (deps.isMobile ? 460 : 272), false);
   renderTools(); renderOpts(); renderColors();
-  if (store.data.paintImage) loadDataURL(store.data.paintImage, false);
+  if (store.data.paintImage) loadDataURL(store.data.paintImage, false, true);
 
   return {
     menu: (label, x, y) => { (MENUS[label] || helpMenu)(x, y); },
@@ -1138,7 +1243,10 @@ export function initPaint(deps) {
     },
     size: () => ({ w: cw, h: ch }),
     newImage, loadDataURL,
-    commit: cancelPending,
+    /* the shell calls this when the window closes: land the pending shape AND
+       the pending autosave, or the last 20s of drawing dies with the window */
+    commit: () => { cancelPending(); flushSave(); },
+    flushSave,
     toDataURL: () => cv.toDataURL("image/png"),
     setTool,
   };

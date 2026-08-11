@@ -98,7 +98,74 @@ export function initMinesweeper(deps) {
       return d;
     });
     cells.forEach((_, i) => paint(i));
+    fit();
   }
+
+  /* ---- the phone: the board is sized to the sheet, not to 2001 ---- */
+  /* A 16px cell is a third of a thumb and the page forbids pinch-zoom, so on a
+     phone the whole frame — LEDs, face and grid — rides one transform, the way
+     the Solitaire sheet does. Scaling the frame instead of the cells keeps
+     every XP metric (the 3px bevel, the 13x23 LEDs) exactly in proportion, and
+     an Expert board that is wider than the phone scales DOWN so it fits rather
+     than shoving the title bar's close button off the right edge. */
+  const MAXCELL = 34;                 /* past this a Beginner board is comedy */
+  let fitBox = null, fitting = false;
+  function isMobile() {
+    try { return !!document.body.classList.contains("mobile"); } catch (e) { return false; }
+  }
+  function fit() {
+    if (fitting || !isMobile() || !host.closest) return;
+    const frame = host.closest(".ms-frame");
+    const body = host.closest(".win-body");
+    if (!frame || !body || !frame.style || !body.getBoundingClientRect) return;
+    fitting = true;
+    try {
+      /* one wrapper, created on first fit: it takes the scaled size so the
+         sheet never gains a scroll area the transform alone would invent */
+      if (!fitBox || fitBox.parentNode !== body) {
+        fitBox = document.createElement("div");
+        fitBox.style.cssText = "overflow:hidden;margin:6px auto 0";
+        body.insertBefore(fitBox, frame);
+        fitBox.appendChild(frame);
+        frame.style.margin = "0";
+        frame.style.display = "inline-block";
+        frame.style.transformOrigin = "0 0";
+      }
+      /* measure with the margin reset, or each fit would read back the gap the
+         previous one added and walk the board down the sheet */
+      frame.style.transform = "";
+      fitBox.style.width = fitBox.style.height = "";
+      fitBox.style.margin = "0 auto";
+      const fw = frame.offsetWidth, fh = frame.offsetHeight;
+      if (!fw || !fh) return;
+      /* LAYOUT metrics only. The shell animates a window on open, and every
+         getBoundingClientRect() under a transform reports the animated size —
+         measuring that way fitted a Beginner board at 16% and never recovered,
+         because the animation ends without resizing anything the observer
+         watches. offsetHeight and clientHeight ignore transforms. */
+      let above = 0;
+      for (let n = body.firstElementChild; n && n !== fitBox; n = n.nextElementSibling)
+        above += n.offsetHeight;
+      const availW = body.clientWidth - 8;
+      const availH = body.clientHeight - above - 12;
+      if (availW <= 0 || availH <= 0) return;
+      const sc = Math.min(availW / fw, availH / fh, MAXCELL / 16);
+      const w = Math.ceil(fw * sc), h = Math.ceil(fh * sc);
+      fitBox.style.width = w + "px";
+      fitBox.style.height = h + "px";
+      fitBox.style.margin = Math.max(6, ((availH - h) / 2) | 0) + "px auto 0";
+      frame.style.transform = sc === 1 ? "" : "scale(" + sc + ")";
+    } finally { fitting = false; }
+  }
+  addEventListener("resize", fit);
+  /* the sheet measures 0 until it is shown, so a board rendered while the box
+     was shut would be fitted to nothing */
+  try {
+    if (typeof ResizeObserver === "function" && host.closest) {
+      const b = host.closest(".win-body");
+      if (b) new ResizeObserver(() => fit()).observe(b);
+    }
+  } catch (e) {}
 
   function paint(i) {
     const c = cells[i], el = els[i];
@@ -332,6 +399,7 @@ export function initMinesweeper(deps) {
     pause: stopTimer,
     /* reopening the box restarts the clock of an unfinished game — a paused
        clock must not turn into a 3-second Expert record */
-    resume: () => { if (started && !over && !timer) startTimer(); },
+    resume: () => { fit(); if (started && !over && !timer) startTimer(); },
+    fit,
   };
 }
