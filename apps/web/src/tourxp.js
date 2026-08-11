@@ -119,9 +119,9 @@ export function initTourXP(deps) {
       art: () => `
         <div class="txp-scene txp-photo">
           <div class="txp-strip">
-            <span style="background-image:url(${IMG.bliss});background-position:12% 40%"></span>
-            <span style="background-image:url(${IMG.bliss});background-position:50% 35%"></span>
-            <span style="background-image:url(${IMG.bliss});background-position:88% 45%"></span>
+            <span style="background-image:url(${IMG.bliss});background-position:0 100%"></span>
+            <span style="background-image:url(${IMG.bliss});background-position:50% 4%"></span>
+            <span style="background-image:url(${IMG.bliss});background-position:100% 62%"></span>
           </div>
           <div class="txp-prow">${im(IMG.pics32)}<i>My Pictures</i>${im(IMG.printer32)}<i>Print</i></div>
         </div>`,
@@ -138,9 +138,9 @@ export function initTourXP(deps) {
       art: () => `
         <div class="txp-scene txp-net">
           <svg class="txp-wire" viewBox="0 0 300 110" preserveAspectRatio="none" aria-hidden="true">
-            <path d="M150 26 L60 86 M150 26 L150 86 M150 26 L240 86" stroke="#fff" stroke-width="2" fill="none" opacity=".6"/>
+            <path d="M150 32 L75 80 M150 32 L150 80 M150 32 L225 80" stroke="#fff" stroke-width="2" fill="none" opacity=".6"/>
           </svg>
-          <div class="txp-hub">${im(IMG.connect32)}${im(IMG.earth16, "txp-globe")}</div>
+          <div class="txp-hub">${im(IMG.connect32)}</div>
           <div class="txp-nodes">${im(IMG.computer32)}${im(IMG.ie32)}${im(IMG.printer32)}</div>
         </div>`,
       pts: [

@@ -25,12 +25,13 @@ export function initSoundApps(deps) {
   }
   const factor = k => { const c = mix()[k]; return c.m ? 0 : c.v / 100; };
   function applyMix() {
-    if (sr && sr.gain) { try { sr.gain.gain.value = hooks.getMuted() ? 0 : hooks.getMaster() * factor("wave"); } catch (e) {} } try { wmpVol(); } catch (e) {} try { ampVol(); } catch (e) {} try { tvVol(); } catch (e) {} }
+    if (sr && sr.gain) { try { sr.gain.gain.value = hooks.getMuted() ? 0 : hooks.getMaster() * factor("wave"); } catch (e) {} } try { wmpVol(); } catch (e) {} try { ampVol(); } catch (e) {} try { tvVol(); } catch (e) {} try { tourVol(); } catch (e) {} }
   /* Winamp is a program on this machine, so it goes through the mixer like
      one: its own slider is the app's volume, Wave is its bus, and Volume
      Control is the master over both. */
   function ampVol() { if (hooks.ampVolume) hooks.ampVolume(factor("wave")); }
   function tvVol() { if (hooks.tvVolume) hooks.tvVolume(factor("wave")); }
+  function tourVol() { if (hooks.tourVolume) hooks.tourVolume(factor("wave")); }
 
   /* ================= sndvol32 ================= */
   function volRender() {
@@ -369,6 +370,7 @@ export function initSoundApps(deps) {
       wmpVol();
       ampVol();
       tvVol();
+      tourVol();
       const win = $("#win-sndvol");
       if (!win || win.style.display === "none") return;
       const col = $("#sv32-cols") && $("#sv32-cols").firstElementChild;

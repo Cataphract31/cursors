@@ -846,3 +846,27 @@ Advanced volume; Narrator via speechSynthesis, mute-aware).
 Still owed from the approved list: right-drag Move/Copy menu, CD
 autoplay dialog, full-screen Log Off, taskbar toolbars (Address/Links/
 Desktop), 3D Pipes teapot, Tour XP theater, Hearts, deeper WU catalog.
+
+## The finish (2026-08-11) — the approved list, closed out
+
+Field bugs (c57667f): My Computer vs Explorer's last path; cursorTV dead air;
+the phone's dimmed arena, Winamp fit and clipped tour card; the lobby bots
+silenced. The rickroll was the CSP harness queueing dQw4w9WgXcQ into the
+SHARED deck on every run - it now pulls the YouTube resources itself and puts
+nothing on the wire. iOS long-press (02beaf8): pointercancel is not a release;
+iOS fires it the instant it claims the press for its own callout, and we were
+treating that as the finger leaving. Only a release or real movement cancels
+now, and the surfaces opt out of callout/selection.
+
+Fidelity, wave four: FreeCell (Microsoft's real shuffle), Spider, Hearts
+(240-game simulation, zero rule violations), the Solitaire win cascade, the
+3D Pipes teapot, CD autoplay on a disc that is this machine's own soundtrack,
+right-drag Move/Copy/Shortcut, the full-screen Log Off band with Switch User,
+the three taskbar toolbars, PROMPT and %random%, and Tour Windows XP with the
+genuine Bill Brown score (archive.org xptourmusicost, 2.3 MB, mixer-routed).
+
+Dev note: `window.__open(id)` behind #desktop drives any window from a probe.
+
+Not done, and why: Charmap's full Advanced view (the keystroke line covers the
+delight); a deeper Windows Update catalog (the scan theater is the joke); and
+Solitaire remains the vendored js-solitaire rather than a rewrite.

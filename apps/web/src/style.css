@@ -1876,3 +1876,154 @@ body.mobile .tb-bar{display:none !important}
 #taskbar,#tabs,.task-tab,#tray,#ql,.icon,.title-bar,.cit,#startmenu{
   -webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
 .task-tab,#tray,.trayico,#tray-chev{touch-action:none}
+
+/* ================= Hearts ================= */
+/* the Hearts table is teal, not Solitaire's green - that is how you tell the
+   two felts apart at a glance in the taskbar preview */
+.win-body.ht-body{background:#008080;padding:0;display:flex;flex-direction:column;overflow:hidden}
+.ht-scroll{flex:1;min-height:0;overflow:auto}
+.ht-board{position:relative;width:700px;height:500px;margin:0 auto;flex:none;font:11px Tahoma,"Segoe UI",sans-serif;color:#fff}
+.ht-card{position:absolute;width:71px;height:96px;box-sizing:border-box;border:1px solid #000;border-radius:4px;background-color:#fff;background-repeat:no-repeat}
+.ht-card.up{background-image:var(--ht-sheet)}
+.ht-card.down{background-color:#02027f;background-size:4px 4px;background-image:linear-gradient(45deg,hsla(0,0%,100%,0),hsla(0,0%,100%,0) 44.9%,#fff 45%,#fff 55%,hsla(0,0%,100%,0) 55.1%,hsla(0,0%,100%,0)),linear-gradient(-45deg,hsla(0,0%,100%,0),hsla(0,0%,100%,0) 44.9%,#fff 45%,#fff 55%,hsla(0,0%,100%,0) 55.1%,hsla(0,0%,100%,0))}
+.ht-card.ht-mine{cursor:pointer}
+.ht-card.ht-sel{box-shadow:0 0 0 2px #ffd800}
+.ht-card.ht-got{box-shadow:0 0 0 2px #fff}
+.ht-card.ht-trick{pointer-events:none}
+.ht-nosheet .ht-card.up::before{content:attr(data-face);position:absolute;left:4px;top:2px;font-size:12px;color:#000}
+.ht-nosheet .ht-card.up[data-red="1"]::before{color:#c00}
+.ht-score{position:absolute;left:8px;top:8px;width:166px;background:rgba(0,0,0,.28);border:1px solid rgba(255,255,255,.35);border-radius:2px;padding:3px 4px}
+.ht-score table{width:100%;border-collapse:collapse;font-size:11px;color:#fff}
+.ht-score th{font-weight:400;text-align:right;padding:0 2px;color:#cfe9e9}
+.ht-score th:first-child{text-align:left}
+.ht-score td{padding:0 2px;text-align:right;white-space:nowrap}
+.ht-score td:first-child{text-align:left;overflow:hidden;text-overflow:ellipsis;max-width:82px}
+.ht-score tr.ht-now td{background:rgba(255,255,255,.22);font-weight:700}
+.ht-name{position:absolute;font-size:11px;color:#fff;text-shadow:0 1px 1px rgba(0,0,0,.5);pointer-events:none;overflow:hidden;white-space:nowrap}
+.ht-name.ht-r{text-align:right}
+.ht-msg{position:absolute;left:0;right:0;bottom:6px;text-align:center;font-size:11px;color:#fff;text-shadow:0 1px 1px rgba(0,0,0,.5);pointer-events:none}
+.ht-pass{position:absolute;right:10px;bottom:2px;min-width:76px}
+.ht-modal{position:absolute;left:50%;top:44%;transform:translate(-50%,-50%);background:#ECE9D8;color:#000;border:1px solid #716F64;box-shadow:2px 2px 6px rgba(0,0,0,.4);padding:10px 12px;font-size:11px;z-index:5;min-width:206px}
+.ht-modal-x{margin:6px 0 2px}
+.ht-modal table{width:100%;border-collapse:collapse;margin:6px 0 2px;font-size:11px}
+.ht-modal th{font-weight:400;text-align:right;color:#555}
+.ht-modal th:first-child{text-align:left}
+.ht-modal td{text-align:right;padding:1px 0}
+.ht-modal td:first-child{text-align:left;padding-right:12px}
+.ht-modal-btns{display:flex;gap:6px;justify-content:flex-end;margin-top:8px}
+
+/* ================= Tour Windows XP (tourstart.exe) ================= */
+/* The Microsoft tour, not ours: a Luna-blue title panel, a chapter rail, and a
+   Bliss-green theater. Every chapter picture is composed in tourxp.js out of
+   assets this machine already ships — Bliss, the flag, shell32 icons, the real
+   arrow cursor — so the only new bytes on disk are the mp3. */
+.txp-body{display:flex;flex-direction:column;min-height:0;padding:0;background:#ECE9D8;overflow:hidden}
+.txp-banner{flex:none;padding:9px 16px 8px;color:#fff;border-bottom:1px solid #0A2E77;
+  background:linear-gradient(180deg,#3C81E8 0,#1B5CC4 46%,#0B3E9E 100%);text-shadow:0 1px 1px rgba(0,0,0,.45)}
+.txp-banner b{display:block;font-size:17px;letter-spacing:.2px;line-height:1.2}
+.txp-banner span{font-size:11px;opacity:.9}
+.txp-mid{flex:1;display:flex;min-height:0}
+.txp-rail{flex:0 0 168px;overflow:auto;padding:8px 0;color:#fff;border-right:1px solid #17398C;
+  background:linear-gradient(180deg,#5A8FE0 0,#2F63C6 45%,#1E48AC 100%)}
+.txp-ch{display:flex;align-items:center;gap:8px;padding:6px 10px;font-size:11px;line-height:1.25;cursor:pointer;opacity:.85}
+.txp-ch:hover{background:rgba(255,255,255,.12);opacity:1}
+.txp-ch.on{background:rgba(255,255,255,.2);opacity:1;font-weight:bold;box-shadow:inset 3px 0 0 #FFC83D}
+.txp-chico{width:16px;height:16px;flex:none}
+.txp-stage{flex:1;min-width:0;display:flex;flex-direction:column;padding:12px 14px 10px;overflow:auto;
+  background:linear-gradient(180deg,#EAF3DA 0,#CFE3AD 42%,#A8CC7C 100%)}
+.txp-art{flex:none;height:180px;border-radius:8px;overflow:hidden;background:#fff;
+  border:1px solid rgba(255,255,255,.75);box-shadow:0 2px 6px rgba(0,0,0,.22)}
+.txp-copy{margin-top:10px;padding:9px 12px 10px;border-radius:8px;background:rgba(255,255,255,.9);
+  border:1px solid rgba(255,255,255,.92);box-shadow:0 1px 4px rgba(0,0,0,.14)}
+.txp-headrow{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.txp-headrow h2{margin:0;font-size:15px;font-weight:bold;color:#0A3E9E}
+.txp-step{font-size:10px;color:#5A6B3A;white-space:nowrap}
+.txp-pts{margin:7px 0 0;padding:0;list-style:none}
+.txp-pts li{position:relative;padding-left:14px;font-size:12px;line-height:1.5;color:#1B1B1B}
+.txp-pts li+li{margin-top:4px}
+.txp-pts li::before{content:"\25B8";position:absolute;left:0;color:#4A7C1F}
+.txp-foot{flex:none;display:flex;align-items:center;gap:6px;padding:7px 10px;background:#ECE9D8;border-top:1px solid #ACA899}
+.txp-gap{flex:1}
+.txp-spk{width:26px;height:22px;padding:0;display:grid;place-items:center;position:relative;cursor:pointer;
+  border:1px solid #ACA899;border-radius:3px;background:linear-gradient(180deg,#fff 0,#E6E3D6 100%)}
+.txp-spk .xico{width:16px;height:16px}
+.txp-spk.off .xico{opacity:.35}
+.txp-spk.off::after{content:"";position:absolute;left:3px;right:3px;top:50%;height:2px;border-radius:1px;
+  background:#C0392B;transform:rotate(-32deg)}
+
+/* ---- chapter scenes ---- */
+.txp-scene{position:relative;width:100%;height:100%;overflow:hidden}
+/* Basics: Bliss, real shell icons, the real arrow_r.cur, the real Start bitmap */
+.txp-desk{background-size:cover;background-position:center}
+.txp-icons{position:absolute;left:10px;top:10px;display:flex;flex-direction:column;gap:10px}
+.txp-icons span{display:flex;flex-direction:column;align-items:center;gap:2px;width:66px}
+.txp-icons img{width:32px;height:32px}
+.txp-icons i{font-style:normal;font-size:9px;line-height:1.1;color:#fff;text-align:center;text-shadow:0 1px 2px rgba(0,0,0,.85)}
+.txp-ptr{position:absolute;left:52%;top:44%;width:20px;height:20px;filter:drop-shadow(1px 2px 2px rgba(0,0,0,.5))}
+.txp-tbar{position:absolute;left:0;right:0;bottom:0;height:26px;display:flex;align-items:center;gap:6px;
+  border-top:1px solid #4F9EFF;background:linear-gradient(180deg,#3F8CF3 0,#245EDB 9%,#245EDB 88%,#1941A5 100%)}
+.txp-start{height:24px;width:auto;display:block}
+.txp-tab{display:flex;align-items:center;gap:4px;height:19px;padding:0 8px;font-size:10px;color:#fff;
+  border-radius:2px;background:rgba(255,255,255,.22)}
+.txp-tab img{width:14px;height:14px}
+.txp-tray{margin-left:auto;display:flex;align-items:center;gap:5px;height:26px;padding:0 8px;
+  background:linear-gradient(180deg,#149CE0 0,#0C77C4 100%)}
+.txp-tray img{width:14px;height:14px}
+/* What's New: the genuine flag over Luna, beside a task pane */
+.txp-luna{display:flex;align-items:center;gap:18px;padding:14px 18px;
+  background:linear-gradient(135deg,#2F6FD8 0,#12439E 55%,#0A2E77 100%)}
+.txp-flag{width:96px;height:auto;flex:none;filter:drop-shadow(0 3px 6px rgba(0,0,0,.4))}
+.txp-pane{flex:1;min-width:0;border-radius:6px;overflow:hidden;background:rgba(255,255,255,.94);box-shadow:0 2px 6px rgba(0,0,0,.3)}
+.txp-pane-h{padding:4px 10px;font-size:11px;font-weight:bold;color:#fff;background:linear-gradient(180deg,#6D9BE8 0,#3B6FD4 100%)}
+.txp-pane-r{display:flex;align-items:center;gap:9px;padding:6px 10px;font-size:11px;color:#0A3E9E;border-top:1px solid #E2E8F5}
+.txp-pane-r img{width:28px;height:28px;flex:none}
+/* Getting Started: the Help and Support Center masthead */
+.txp-help{display:flex;flex-direction:column;gap:9px;padding:10px 14px;background:linear-gradient(180deg,#F3F7FF 0,#DDE8FA 100%)}
+.txp-hbar{display:flex;align-items:center;gap:9px;font-size:14px;color:#0A3E9E}
+.txp-hbar img{width:30px;height:30px}
+.txp-hsearch{display:flex;align-items:center;gap:6px;font-size:11px;color:#33528F}
+.txp-hsearch em{flex:1;height:19px;border:1px solid #7F9DB9;border-radius:2px;background:#fff}
+.txp-hgo{width:16px;height:16px}
+.txp-hcols{display:flex;gap:8px;margin-top:2px}
+.txp-hcols>div{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;padding:8px 4px;text-align:center;
+  border-radius:6px;border:1px solid #C5D4EC;background:#fff;font-size:10px;color:#26467F}
+.txp-hcols img{width:28px;height:28px}
+.txp-hcols i{font-style:normal}
+/* Music and Movies */
+.txp-media{display:flex;flex-direction:column;gap:8px;padding:10px 14px;background:linear-gradient(180deg,#1B2B4A 0,#0A1326 100%)}
+.txp-eq{flex:1;min-height:0;display:flex;align-items:flex-end;gap:3px}
+.txp-eq i{flex:1;border-radius:1px 1px 0 0;background:linear-gradient(180deg,#7CE6A0 0,#2FA8D8 55%,#1B5CC4 100%)}
+.txp-mrow{display:flex;align-items:center;gap:12px}
+.txp-mrow img{width:28px;height:28px}
+.txp-mlist{display:flex;gap:14px;font-size:10px;color:#9FC4E8}
+/* Digital Photography: three crops of the real Bliss, in a filmstrip */
+.txp-photo{display:flex;flex-direction:column;gap:8px;padding:10px 12px;background:linear-gradient(180deg,#F1EFE2 0,#D8D3BE 100%)}
+.txp-strip{flex:1;min-height:0;display:flex;gap:8px}
+.txp-strip span{flex:1;background-size:260%;border:3px solid #fff;border-radius:2px;box-shadow:0 2px 5px rgba(0,0,0,.28)}
+.txp-prow{display:flex;align-items:center;gap:7px;font-size:11px;color:#3B4A22}
+.txp-prow img{width:22px;height:22px}
+.txp-prow i{font-style:normal;margin-right:12px}
+/* Networking and the Web */
+.txp-net{display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:12px 0 14px;
+  background:linear-gradient(180deg,#2F6FD8 0,#0E3B92 100%)}
+.txp-wire{position:absolute;inset:0;width:100%;height:100%}
+.txp-hub{position:relative;display:flex;align-items:center;gap:4px}
+.txp-hub img{width:34px;height:34px}
+.txp-globe{width:18px;height:18px}
+.txp-nodes{position:relative;display:flex;gap:56px}
+.txp-nodes img{width:30px;height:30px;filter:drop-shadow(0 2px 3px rgba(0,0,0,.4))}
+/* Safety and Security */
+.txp-safe{display:flex;align-items:center;gap:16px;padding:12px 18px;background:linear-gradient(135deg,#E7EEF8 0,#C3D6EE 100%)}
+.txp-shield{flex:none;width:74px;height:86px;display:grid;place-items:center;border:2px solid #fff;
+  border-radius:8px 8px 38px 38px;box-shadow:0 2px 6px rgba(0,0,0,.3);
+  background:linear-gradient(180deg,#3C81E8 0,#12439E 100%)}
+.txp-shield img{width:34px;height:34px}
+.txp-slist{flex:1;display:flex;flex-direction:column;gap:6px}
+.txp-slist>div{display:flex;align-items:center;gap:9px;padding:5px 9px;font-size:11px;color:#123B84;
+  border:1px solid #B8CCE6;border-radius:5px;background:#fff}
+.txp-slist img{width:24px;height:24px;flex:none}
+/* a phone cannot spare 168px for a rail it can scroll instead */
+body.mobile .txp-rail{flex:0 0 116px}
+body.mobile .txp-ch{font-size:10px;padding:5px 7px;gap:6px}
+body.mobile .txp-art{height:132px}
+body.mobile .txp-banner b{font-size:15px}

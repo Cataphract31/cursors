@@ -8,6 +8,7 @@ import { initOE } from "./oe.js";
 import { initSysInfo } from "./sysinfo.js";
 import { initFreeCell } from "./freecell.js";
 import { initSpider } from "./spider.js";
+import { initHearts } from "./hearts.js";
 import { initSolBounce } from "./solbounce.js";
 import { initPaint } from "./paint.js";
 import { initExplorer } from "./explorer.js";
@@ -22,6 +23,7 @@ import { initWriteApps } from "./writeapps.js";
 import { initSoundApps } from "./soundapps.js";
 import { initSysMaint } from "./sysmaint.js";
 import { initTour } from "./tour.js";
+import { initTourXP } from "./tourxp.js";
 import { initAccess } from "./access.js";
 const Webamp = (WebampImport && WebampImport.default) ? WebampImport.default : WebampImport;
 
@@ -452,6 +454,8 @@ function windowsUpdate(){
 function openWin(id,opts){
   if(id==="win-ie"&&MP.on&&MP.tv&&MP.tv.now) setTimeout(()=>{ try{ mpTvSync(); }catch(e){} },200);
   if(id==="win-mine"){ try{ mine.resume(); }catch(e){} }
+  if(id==="win-hearts"){ try{ hearts.resume(); }catch(e){} }
+  if(id==="win-tourxp"&&!tourxp.live()){ try{ tourxp.open(); return; }catch(e){} }
   if(id==="win-tour"&&!$("#tour-img").src){ try{ tour.open(true); return; }catch(e){} }
   if(id==="win-amp"){ winampApp.open(); return; }
   if(id==="win-readme"&&write){
@@ -548,6 +552,7 @@ function closeWin(id,opts){
   const a=openApps.get(id); if(!a) return;
   clearTimeout(a._minT);   /* close mid-minimize must not hide the next open */
   if(id==="win-mine") mine.pause(); /* the clock does not run while the box is shut */
+  if(id==="win-hearts") hearts.pause();   /* the computer players stop dealing to an empty room */
   if(id==="win-paint") paint.commit(); /* half-finished text/curves/selections land before the lid shuts */
   /* closing is quitting. A hidden window that keeps making noise is a bug,
      not a feature — every app that runs something stops it here. */
@@ -556,6 +561,7 @@ function closeWin(id,opts){
     if(fr){ fr.src="about:blank"; delete fr.dataset.live; }
   }
   if(id==="win-wmp"&&snd) snd.stopWmp();
+  if(id==="win-tourxp") tourxp.stop();
   if(id==="win-sndrec"&&snd) snd.stopRecorder();   /* also releases the microphone */
   if(id==="win-pictview"&&write) write.stopViewer();
   if(id==="win-ie"){ try{ ytPlayer&&ytPlayer.pauseVideo&&ytPlayer.pauseVideo(); }catch(e){} }
@@ -1805,6 +1811,7 @@ function editMenu(t){
 function menubarMenu(label,id){
   if(id==="win-freecell") return freecell.menus(label);
   if(id==="win-spider") return spider.menus(label);
+  if(id==="win-hearts") return hearts.menus(label);
   if(id==="win-regedit"&&depth.regMenus){ const m=depth.regMenus(label); if(m) return m; }
   if(id==="win-calc"&&depth.calcMenus){ const m=depth.calcMenus(label); if(m) return m; }
   if((id==="win-chat"||id.indexOf("win-conv")===0)&&msn.menus){ const m=msn.menus(label,id); if(m) return m; }
@@ -1992,6 +1999,15 @@ const spider=initSpider({
   isFocused:()=>focusedId==="win-spider",
   close:()=>closeWin("win-spider"),
 });
+const hearts=initHearts({
+  host:$("#ht-board"),
+  sysSnd, showError, showConfirm,
+  isFocused:()=>focusedId==="win-hearts",
+  close:()=>closeWin("win-hearts"),
+  /* the shell names the table; XP asked you for these at first run */
+  playerName:()=>playerNameFull(),
+  botNames:()=>["Pauline","Michele","Ben"],
+});
 const solb=initSolBounce({ sysSnd });
 const depth=initDepthApps({$,store,sysSnd,showMenu,showError,openWin,closeWin,hooks:{
   setPsm:v=>{ store.data.msnPsm=String(v||"").slice(0,60); store.save(); try{ msn.renderMe(); }catch(e){} },
@@ -2034,6 +2050,7 @@ snd=initSoundApps({$,store,sysSnd,showMenu,showError,openWin,closeWin,hooks:{
      inside its closure, and the mixer can be touched before it exists */
   ampVolume:bus=>{ try{ winampApp.applyVol(bus); }catch(e){} },
   tvVolume:bus=>{ try{ tvApplyVol(bus); }catch(e){} },
+  tourVolume:bus=>{ try{ tourxp.setVol(bus); }catch(e){} },
   getMuted:()=>muted,
   setMaster:v=>{ masterVol=clamp(v,0,1); volSync(); },
   setMuted:m=>{ muted=!!m; volSync(); },
@@ -2052,6 +2069,18 @@ const recWavs=new Map();   /* id -> AudioBuffer, session-lifetime */
 /* System Restore, the System Configuration Utility, Folder Options */
 const tour=initTour({ $, store, openWin, closeWin, sysSnd });
 tour.init();
+/* Tour Windows XP - the Microsoft tour, next to our own How to Play card.
+   Its music is a program on this machine, so it rides the mixer: the tour's
+   own speaker button is the app switch, Wave is the bus, Volume Control is
+   the master, and Mute is silence. */
+const tourxp=initTourXP({ $, store, sysSnd, openWin, closeWin, IMG, CURFILES,
+  isFocused:()=>focusedId==="win-tourxp",
+  hooks:{
+    getMaster:()=>masterVol,
+    getMuted:()=>muted,
+    waveBus:()=>(snd&&snd.ampBus?snd.ampBus():1),
+  }});
+tourxp.init();
 const maint=initSysMaint({$,store,sysSnd,showError,showConfirm,openWin,closeWin,icoNode,hooks:{
   /* a restore point puts every one of these back where it was */
   applyCosmetic(){
@@ -2613,7 +2642,8 @@ function allProgramsMenu(){
       ...only("wordpad",{label:"WordPad",action:()=>{ closeStart(); write.openWordpad(null); }}),
       ...only("paint",{label:"Paint",action:go("win-paint")}),
       ...only("calc",{label:"Calculator",action:()=>{ closeStart(); depth.openCalc(); }}),
-      {label:"Command Prompt",action:go("win-cmd")}]},
+      {label:"Command Prompt",action:go("win-cmd")},
+      {label:"Tour Windows XP",action:go("win-tourxp")}]},
     {label:"Administrative Tools",sub:[
       {label:"Services",action:go("win-services")},
       {label:"Device Manager",action:go("win-devmgr")},
@@ -2628,7 +2658,7 @@ function allProgramsMenu(){
       ...only("solitaire",{label:"Solitaire",action:()=>{ closeStart(); solitaireOpen(); }}),
       {label:"FreeCell",action:go("win-freecell")},
       {label:"Spider Solitaire",action:go("win-spider")},
-      {label:"Hearts",disabled:1},
+      {label:"Hearts",action:go("win-hearts")},
       {label:"Pinball",disabled:1}]},
     {label:"Startup",sub:[
       {label:"CURSORS.EXE",action:go("win-cursors")}]},
@@ -2669,6 +2699,7 @@ $("#shutdown").addEventListener("click",()=>{ $("#shutdown").style.display="none
 /* ---- Run dialog ---- */
 const RUNMAP={
   "tour":"win-tour",
+  "tourstart":"win-tourxp","tourstart.exe":"win-tourxp","tourxp":"win-tourxp",
   "cursors":"win-cursors","cursors.exe":"win-cursors",
   "taskmgr":"win-taskmgr","taskmgr.exe":"win-taskmgr",
   "winamp":"win-amp","winamp.exe":"win-amp",
@@ -2724,6 +2755,7 @@ function runNamed(k){
   if(k==="sol"||k==="sol.exe"||k==="solitaire"){ solitaireOpen(); return true; }
   if(k==="freecell"||k==="freecell.exe"){ openWin("win-freecell"); return true; }
   if(k==="spider"||k==="spider.exe"){ openWin("win-spider"); return true; }
+  if(k==="mshearts"||k==="mshearts.exe"||k==="hearts"){ openWin("win-hearts"); return true; }
   if(k==="msconfig"||k==="msconfig.exe"){ maint.openMsconfig(); return true; }
   if(k==="appwiz.cpl"||k==="add or remove programs"){ maint.openAddRemove(); return true; }
   if(k==="fonts"||k==="control fonts"){ maint.openFonts(); return true; }
@@ -5356,6 +5388,8 @@ function tvFallback(vid,code){
 /* dev only, behind the same #desktop hash the other probes use: a screenshot
    cannot show you a clock, a skew or whether two machines are on the same
    frame of the same video */
+/* dev only: drive any window from a probe, the same door the UI uses */
+if(location.hash.indexOf("#desktop")===0) window.__open=id=>openWin(id);
 if(location.hash.indexOf("#desktop")===0)
   window.__tv={
     go:()=>{ openWin("win-ie"); ie.connectNow(); ie.go("http://tv.cursor.land/"); },
