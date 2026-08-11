@@ -296,6 +296,15 @@ rush, ~18.5s the crash dialog, ~27s the recovered arena).
   incantation is fine for desktop-sized shots but shot.mjs works for everything.
   `--dump-dom` returns empty on this Edge — paint diagnostics into the page instead.
   **The loop has caught every visual bug so far. Do not skip it.**
+- **Sweep.** `node scripts/sweep.mjs` (from `apps/web`) is the same driver in bulk: every
+  state x every size, one browser, one PNG per pair, one line of summary each. Defaults are
+  the eight core states against **1280x800, 1024x768, 390x844 and 844x390** — landscape is a
+  first-class size, a large share of the mobile audit's findings lived there. Override with
+  `--states desktop-ie-hall,desktop-bin --sizes 844x390 --out DIR --settle 6000`; output goes
+  to a temp dir unless `--out` says otherwise. It seeds `localStorage` with `{"tourSeen":1}`
+  before the document runs (or the How to Play card covers every shot) and clears storage on
+  each new document, so a state that writes to disk — `-paint-wall` sets the wallpaper — cannot
+  leak into the next shot.
 - **Dev hashes** (skip boot/login and drive states headlessly): `#desktop`, `#desktop-start`,
   `#desktop-mine-play`, `#desktop-msn`, `#desktop-msn-emo`, `#desktop-msn-toast`,
   `#desktop-amptest`, `#desktop-logfill`, `#desktop-paint` (draws with 6 tools),

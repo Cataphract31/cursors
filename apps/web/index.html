@@ -9,6 +9,14 @@
 <link rel="icon" href="/favicon.ico" sizes="48x48">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<!-- added to a home screen this opens with no browser toolbars, which is also
+     the cleanest answer to iOS Safari disagreeing about where the bottom of
+     the screen is: with no toolbars there is nothing left to disagree about -->
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="CURSORS">
 <meta property="og:type" content="website">
 <meta property="og:title" content="CURSORS.EXE">
 <meta property="og:description" content="A Windows XP desktop where cursors fight for SOL. Deploy, watch, bank before the crash.">

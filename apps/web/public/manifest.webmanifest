@@ -1,0 +1,25 @@
+{
+  "name": "CURSORS.EXE",
+  "short_name": "CURSORS",
+  "description": "A Windows XP desktop where cursors fight for SOL. Deploy one, watch it battle, bank it before the crash.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#245EDC",
+  "theme_color": "#245EDC",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "type": "image/svg+xml",
+      "sizes": "any",
+      "purpose": "any"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "type": "image/png",
+      "sizes": "180x180",
+      "purpose": "any"
+    }
+  ]
+}

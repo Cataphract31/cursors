@@ -730,15 +730,20 @@ Captures live in `apps/web/public/tour/` — recapture when the HUD changes.
   white below it. Either default to theater in landscape or say "turn it
   sideways" once.
 
-## Phase 15 — the sweep: every window, three sizes, one list
+## Phase 15 — the sweep: every window, four sizes, one list
 
 Phase 13 found six bugs in an afternoon purely by looking at the built site at
 390x844 instead of reasoning about it. Nothing has been looked at that way at
 1024x768, and only some of it at 1280x800.
 
-- Drive all ~70 windows with the probe at 1280x800, 1024x768 and 390x844, open
-  each one, screenshot it, and write down what is wrong. No fixing during the
-  pass — the list first, so the shape of the problem is visible.
+- Drive all ~70 windows with `scripts/sweep.mjs` at 1280x800, 1024x768, 390x844
+  and **844x390**, open each one, screenshot it, and write down what is wrong.
+  No fixing during the pass — the list first, so the shape of the problem is
+  visible.
+- **844x390 is not optional.** The mobile audit ran 118 findings and a large
+  share of them existed only with the phone lying down; landscape was in no
+  testing pass at the time. A phone on its side is its own layout — the money
+  rail moves, the taskbar eats a third of the height — so it gets its own shot.
 - Then fix in one pass, grouped by cause. Phase 13's radio-button bug was one
   CSS rule that had been breaking five apps for weeks; those are the wins here.
 - Include the states that are hard to reach: an app opened from Run, an app
