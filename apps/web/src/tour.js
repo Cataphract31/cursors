@@ -1,7 +1,10 @@
-/* How to Play — the intro card. Five slides, one screenshot each, bullets you
+/* How to Play — the intro card. Six slides, one screenshot each, bullets you
    can read while a fight is happening behind the window. The screenshots are
    real captures of this build, served from tour/ and loaded only when the
    window opens, so first paint never pays for them.
+   Two sets, same file names: the desktop shell in tour/, the phone in tour/m/.
+   A phone player's whole client is the thumb bar, so the desktop captures were
+   teaching a machine most of the table never sees.
    Import-free like the other app modules; main.js injects the shell. */
 
 export function initTour(deps) {
@@ -22,6 +25,11 @@ export function initTour(deps) {
       "<b>RECALL</b> cashes your live cursors out",
       "<b>AUTOPLAY</b> redeploys and banks at ×2 · ×5 · ride",
       "Nothing counts until you bank",
+    ]},
+    { t: "Your five", img: "strip.png", pts: [
+      "One slot per live cursor, with its ×",
+      "<b>RECALL</b> banks all · a slot banks one",
+      "<b>⚔ ATTACK</b> chases · <b>🛡 DEFEND</b> runs",
     ]},
     { t: "The crash", img: "crash.png", pts: [
       "Every death fills C:",
@@ -45,7 +53,10 @@ export function initTour(deps) {
     const img = $("#tour-img");
     img.onerror = () => { img.style.visibility = "hidden"; };   /* a 404 shows nothing, not a broken glyph */
     img.onload = () => { img.style.visibility = ""; };
-    img.src = "tour/" + s.img;          /* lazy: only ever set while open */
+    /* the shell is chosen once at boot, so this is read per render rather than
+       cached: the same window has to be right after a rotate or a reload */
+    const set = document.body.classList.contains("mobile") ? "tour/m/" : "tour/";
+    img.src = set + s.img;              /* lazy: only ever set while open */
     $("#tour-pts").innerHTML = s.pts.map(p => `<li>${p}</li>`).join("");
     $("#tour-rail").innerHTML = SLIDES.map((x, i) =>
       `<div class="tour-dot${i === at ? " on" : ""}"><i></i>${x.t}</div>`).join("");
