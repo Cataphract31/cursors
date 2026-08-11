@@ -287,6 +287,32 @@ rush, ~18.5s the crash dialog, ~27s the recovered arena).
   inside the 12s the app allows, so the harness fails only on actual CSP evidence and otherwise
   reports that leg **UNVERIFIED** rather than crying wolf.
 
+- **Rules tests.** `npm test` in `server/` — 20 tests against the real sim, whole epochs in a
+  quarter of a second (the harness fakes `Date.now` forward one step per tick). They cover what
+  the mobile audit structurally could not: recall orders honoured from every state a cursor can
+  be in, money conservation per duel and per epoch, one fate per cursor, orders from a retrying
+  or unknown socket, and the rush and crash boundaries. `SIM=<path> npm test` points the suite
+  at another copy of `sim.js` — that is how you check a new test actually fails against the
+  build that had the bug, which is the only thing that makes it a test.
+  **Two lessons paid for in flakes, both of them the test's fault and not the sim's:** a recall
+  is killable, so a cursor can win a fight on its way out and bank *more* than it cost (never
+  assert a recall loses money, or that it banks at all); and a gliding cursor can be caught in a
+  chain of duels, so it legitimately outlasts any fixed deadline — assert "not roaming again",
+  never a stopwatch.
+
+- **Client/server agreement.** `node scripts/agree.mjs [secs]` (from `apps/web`) boots its own
+  `FAST=1` server and vite, wraps `WebSocket` before any page script runs, and builds the
+  server's truth from inbound frames *only* — so the app cannot agree with itself, it has to
+  agree with the wire. Then it plays and compares wallet, strip ids, per-slot bounty and live
+  count, reporting only disagreements that persist past 2s (the wallet counter animates; a
+  number mid-roll is not a lie). This is the harness for the whole "the bar is stale / lit /
+  lying" family. `FLAP=1` kills the live socket every 12s and lets the client's backoff
+  reconnect — where the stuck "recalling…" latch lived. **`SELFTEST=wallet|strip` plants a
+  deliberate lie and the run must come back FAIL**; a detector nobody has seen fail is not
+  evidence. Note CDP's offline emulation does *not* disturb an already-open WebSocket — an
+  earlier version "passed" 4 drops that never happened, which is why the run now aborts if the
+  drops produced no reconnect.
+
 - **Screenshot loop.** Claude can see its own UI work:
   `node scripts/shot.mjs <url> out.png [w] [h] [settleMs]` (run from `apps/web`), then Read
   the PNG. It drives Edge over the DevTools protocol with real viewport emulation.

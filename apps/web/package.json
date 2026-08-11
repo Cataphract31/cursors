@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "node scripts/smoke.mjs && vite build && node scripts/postbuild.mjs",
     "preview": "vite preview",
-    "csp": "node scripts/csp.mjs"
+    "csp": "node scripts/csp.mjs",
+    "agree": "node scripts/agree.mjs"
   },
   "dependencies": {
     "webamp": "^1.5.0",
