@@ -239,6 +239,7 @@ function handle(c, m) {
     case "deploy": { const err = sim.requestDeploy(c.key); if (err && err !== "deploys closed" && err !== "max live") send(c, { t: "err", msg: err }); break; }
     case "recall": sim.requestRecall(c.key); break;
     case "recallOne": if (Number.isInteger(m.id)) sim.recallOne(c.key, m.id); break;
+    case "recallCancel": sim.cancelRecall(c.key); break;
     case "stance": sim.setStance(c.key, m.s); break;
     case "rake": sim.claimRake(c.key); break;
     case "chat": {

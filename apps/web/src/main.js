@@ -51,6 +51,14 @@ addEventListener("resize",()=>{
   syncOrient();W=desktop.clientWidth;H=desktop.clientHeight;syncArena();reflowIcons();
   /* maximized means "as big as the desktop", including after the desktop grew */
   $$(".window.maxed").forEach(el=>{ el.style.left="0px"; el.style.top="0px"; el.style.width=W+"px"; el.style.height=H+"px"; });
+  if(MOBILE){
+    /* rotation: dialogs re-center into the new viewport, Winamp re-stacks */
+    for(const a of openApps.values())
+      if(a.el&&a.el.classList.contains("fixed")&&!a.min&&a.el.style.display!=="none")
+        requestAnimationFrame(()=>fitWin(a.el));
+    const wa=openApps.get("win-amp");
+    if(wa&&!wa.min&&webamp&&!wampHidden()) try{ webamp.centerWindowsInContainer(); }catch(e){}
+  }
 });
 /* iOS never tells you the keyboard opened — it just shrinks the visual
    viewport out from under a layout that still thinks it owns the screen, and
@@ -354,7 +362,6 @@ function renderTaskbar(){
     tab.dataset.win=id;
     tab.innerHTML=`${a.icon}<span></span>`;
     tab.querySelector("span").textContent=tabTitle(id);
-    tab.addEventListener("click",()=>tabClick(id));
     host.appendChild(tab);
     a.tabEl=tab;
   }
@@ -363,7 +370,7 @@ function renderTaskbar(){
      over a Stats table is just noise, so behind a sheet the arena drops to a
      hint of motion and comes straight back when you close it. */
   if(MOBILE) document.body.classList.toggle("sheeted",
-    [...openApps.values()].some(a=>!a.min&&!a.notab&&a.el&&!a.el.classList.contains("fixed")));
+    [...openApps.values()].some(a=>!a.min&&!a.notab&&a.el&&a.el.id!=="win-cursors"&&!a.el.classList.contains("fixed")));
 }
 function tabClick(id){
   const a=openApps.get(id); if(!a) return;
@@ -814,19 +821,24 @@ function hookIcon(el,ic){
     let moved=false;
     const mv=ev=>{
       const dx=ev.clientX-sx, dy=ev.clientY-sy;
-      if(!moved&&dx*dx+dy*dy<25) return;
+      if(!moved&&dx*dx+dy*dy<(e.pointerType==="touch"?196:25)) return;
       if(!moved){ crew.forEach(o=>{ o.el.classList.add("dragging"); o.el.style.zIndex="89"; }); }
       moved=true; el.style.opacity=".6"; el.style.zIndex="90";
       el.style.left=(ox+dx)+"px"; el.style.top=(oy+dy)+"px";
       for(const o of crew){ o.el.style.left=(o.x+dx)+"px"; o.el.style.top=(o.y+dy)+"px"; }
     };
+    const cancel=()=>{
+      removeEventListener("pointermove",mv); removeEventListener("pointerup",up); removeEventListener("pointercancel",cancel);
+      el.style.opacity=""; el.style.zIndex="";
+      crew.forEach(o=>{ o.el.classList.remove("dragging"); o.el.style.zIndex=""; });
+    };
     const up=ev0=>{
-      removeEventListener("pointermove",mv); removeEventListener("pointerup",up);
+      removeEventListener("pointermove",mv); removeEventListener("pointerup",up); removeEventListener("pointercancel",cancel);
       el.style.opacity=""; el.style.zIndex="";
       if(!moved){
         /* on the phone the desktop is a launcher: one tap opens (unless this
            release is the tail end of a long-press that already opened a menu) */
-        if(MOBILE&&e.pointerType==="touch"&&performance.now()-lpFiredAt>600) openIcon(ic);
+        if(MOBILE&&e.pointerType==="touch"&&performance.now()-lpFiredAt>600&&performance.now()-menuDismissAt>500) openIcon(ic);
         /* Folder Options, "single-click to open an item" — it means the desktop too */
         else if(!MOBILE&&e.button===0&&!e.ctrlKey&&!e.shiftKey&&maint.fo().click==="single") openIcon(ic);
         return;
@@ -857,7 +869,7 @@ function hookIcon(el,ic){
       store.save();
       renderIcons();
     };
-    addEventListener("pointermove",mv); addEventListener("pointerup",up);
+    addEventListener("pointermove",mv); addEventListener("pointerup",up); addEventListener("pointercancel",cancel);
   });
   el.addEventListener("dblclick",()=>{ sClick(); openIcon(ic); });
 }
@@ -1319,6 +1331,8 @@ $("#dcw-cancel").addEventListener("click",()=>closeWin("win-cleanup"));
 /* ================= context menus ================= */
 const ctx=$("#ctx");
 let menuShownAt=0; /* a long-press opens the menu under the finger — the release must not pick an item */
+let ctxArmed=false;   /* touch may only pick an item with a tap that STARTED on the open menu */
+let menuDismissAt=0;  /* the tap that dismissed a menu must not also click what was under it */
 function buildMenu(host,items){
   for(const it of items){
     if(!it) continue;   /* menus may hold conditional entries */
@@ -1348,14 +1362,14 @@ function buildMenu(host,items){
       });
     }
     if(!it.disabled&&it.action) d.addEventListener("pointerup",e=>{
-      if(e.pointerType==="touch"&&performance.now()-menuShownAt<400) return;
+      if(e.pointerType==="touch"&&(!ctxArmed||performance.now()-menuShownAt<120)) return;
       e.stopPropagation(); hideMenu(); sClick(); it.action();
     });
     host.appendChild(d);
   }
 }
 function showMenu(items,x,y){
-  menuShownAt=performance.now();
+  menuShownAt=performance.now(); ctxArmed=false;
   ctx.innerHTML=""; buildMenu(ctx,items);
   ctx.style.display="block"; ctx.style.left="0px"; ctx.style.top="0px";
   ctx.style.maxHeight=""; ctx.style.overflowY="";
@@ -1390,7 +1404,10 @@ addEventListener("keydown",e=>{
   else if(e.key==="ArrowLeft"&&host!==ctx){ host.classList.remove("open"); host.closest(".cit").classList.add("kbd"); e.preventDefault(); }
   else if(e.key==="Enter"&&cur>=0){ its[cur].dispatchEvent(new PointerEvent("pointerup",{bubbles:true})); e.preventDefault(); }
 },true);
-addEventListener("pointerdown",e=>{ if(!e.target.closest("#ctx")) hideMenu(); },true);
+addEventListener("pointerdown",e=>{
+  if(!e.target.closest("#ctx")){ if(ctx.style.display==="block") menuDismissAt=performance.now(); hideMenu(); }
+  else ctxArmed=true;
+},true);
 /* ---- the shell clipboard: Cut/Copy/Paste on desktop icons ---- */
 let clip=null;   /* {mode:"copy"|"cut", ic} */
 function copyOf(ic,label){
@@ -2090,12 +2107,13 @@ addEventListener("pointerdown",e=>{
     if(sawNative) return;
     lpFiredAt=performance.now();
     if(navigator.vibrate) navigator.vibrate(12);
-    const cell=target.closest&&target.closest(".ms-c");
+    const live=target.isConnected?target:(document.elementFromPoint(sx,sy)||document.body);
+    const cell=live.closest&&live.closest(".ms-c");
     if(cell){ /* Minesweeper: long-press plants a flag (its cells speak mousedown) */
       cell.dispatchEvent(new MouseEvent("mousedown",{bubbles:true,button:2,buttons:2,clientX:sx,clientY:sy}));
       cell.dispatchEvent(new MouseEvent("mouseup",{bubbles:true,button:2,clientX:sx,clientY:sy}));
     }else{
-      target.dispatchEvent(new MouseEvent("contextmenu",{bubbles:true,cancelable:true,clientX:sx,clientY:sy}));
+      live.dispatchEvent(new MouseEvent("contextmenu",{bubbles:true,cancelable:true,clientX:sx,clientY:sy}));
     }
   },550);
   const cleanup=()=>{
@@ -2106,7 +2124,7 @@ addEventListener("pointerdown",e=>{
   };
   const onMove=ev=>{
     const dx=ev.clientX-sx, dy=ev.clientY-sy;
-    if(dx*dx+dy*dy>81){ clearTimeout(t); cleanup(); } /* moved: it's a drag/scroll */
+    if(dx*dx+dy*dy>196){ clearTimeout(t); cleanup(); } /* moved: it's a drag/scroll */
   };
   const onEnd=()=>{ clearTimeout(t); cleanup(); };
   addEventListener("pointermove",onMove,true);
@@ -2115,8 +2133,21 @@ addEventListener("pointerdown",e=>{
 },true);
 /* the release of a long-press must not ALSO left-click (compat mouse events) */
 addEventListener("touchend",e=>{
-  if(performance.now()-lpFiredAt<700) e.preventDefault();
+  if(performance.now()-lpFiredAt<700||(ctx.style.display==="block"&&!ctxArmed)) e.preventDefault();
 },{capture:true,passive:false});
+
+/* taskbar tabs activate on pointerup, delegated: renderTaskbar rebuilds the
+   nodes constantly, and on iOS a tap whose node died mid-press never clicks */
+let tabPtrAt=0;
+$("#tabs").addEventListener("pointerup",e=>{
+  const t=e.target.closest(".task-tab"); if(!t) return;
+  if(performance.now()-lpFiredAt<700||performance.now()-menuDismissAt<500) return;
+  tabPtrAt=performance.now(); tabClick(t.dataset.win);
+});
+$("#tabs").addEventListener("click",e=>{   /* keyboard activation only */
+  const t=e.target.closest(".task-tab"); if(!t||performance.now()-tabPtrAt<500) return;
+  tabClick(t.dataset.win);
+});
 
 /* ================= quick launch / cascade ================= */
 let deskStash=null;
@@ -3694,7 +3725,18 @@ function botDeploy(name){
   updatePanel();
 }
 function recallAll(){
-  if(MP.on){ mpSend({t:"recall"}); sClick(); return; }
+  if(MP.on){
+    const rc=[...mpCurs.values()].some(c=>c.isMine&&c.mode==="recall");
+    mpSend({t:rc?"recallCancel":"recall"}); sClick(); return;
+  }
+  /* tapping again inside the 3s glide = changed your mind */
+  if(phase==="battle"&&!shutFired){
+    const rc=[...myCurs()].filter(c=>c.mode==="recall");
+    if(rc.length&&![...myCurs()].some(c=>c.grace>0)){
+      for(const c of rc){ c.mode="roam"; c.prevMode="roam"; c.recallT=0; }
+      log("recall cancelled"); sClick(); updatePanel(); return;
+    }
+  }
   let refunded=0, recalled=0;
   for(const c of [...myCurs()]){
     if(c.grace>0){
@@ -4271,8 +4313,9 @@ function updatePanel(){
     :phase==="crash"?"▸ RESTARTING…":"▸ SHUTDOWN IN PROGRESS";
   const rec=$("#btn-recall");
   const graced=mine.some(c=>c.grace>0);
-  rec.disabled=phase==="crash"||!mine.some(c=>c.mode==="roam"||c.grace>0);
-  rec.textContent=graced?"◂ UNDEPLOY (refund)":`◂ RECALL ALL (${RECALL_SECS}s)`;
+  const recalling=!graced&&mine.some(c=>c.mode==="recall");
+  rec.disabled=phase==="crash"||!(recalling||mine.some(c=>c.mode==="roam"||c.grace>0));
+  rec.textContent=graced?"◂ UNDEPLOY (refund)":recalling?"◂ CANCEL RECALL":`◂ RECALL ALL (${RECALL_SECS}s)`;
   $("#st-attack").classList.toggle("on",stance==="attack");
   $("#st-defend").classList.toggle("on",stance==="defend");
   $("#livecount").textContent=mine.length;
@@ -4287,7 +4330,7 @@ function updatePanel(){
   hd.textContent=wallet<STAKE?"NO FUNDS":mine.length>=MAXCUR?"MAX 5 LIVE":canDeploy()?"▸ DEPLOY 0.1":phase==="crash"?"REBOOT…":"SHUTDOWN";
   const hrc=$("#mh-recall");
   hrc.disabled=rec.disabled;
-  hrc.textContent=graced?"◂ UNDO":"◂ RECALL";
+  hrc.textContent=graced?"◂ UNDO":recalling?"◂ CANCEL":"◂ RECALL";
   $("#mh-attack").classList.toggle("on",stance==="attack");
   $("#mh-defend").classList.toggle("on",stance==="defend");
   $("#mh-live").textContent=`${mine.length}/5 · ${fmtS(liveVal)}`;
@@ -5253,6 +5296,7 @@ function enterDesktop(){
     const lg=$("#login");
     lg.style.display="none"; lg.style.opacity=""; lg.classList.remove("welcoming");
     if(store.data.tourSeen) showBalloon();   /* first visit gets the How to Play card instead */
+    else setTimeout(()=>{ try{ tour.open(); }catch(e){} },3200);
     /* MSConfig nags every boot until you put startup back to Normal */
     try{ maint.applyStartup(); }catch(e){}
     setTimeout(()=>{ try{ maint.maybeNag(); }catch(e){} },2600);
@@ -5302,9 +5346,6 @@ function logon(){
   $("#login").classList.add("welcoming");
   chime();
   setTimeout(enterDesktop,1500);
-  /* first session: the card that explains the game, once, after the desktop
-     has settled. Closing it (any way) is "seen it". */
-  if(!store.data.tourSeen) setTimeout(()=>{ try{ tour.open(); }catch(e){} },5200);
 }
 function commitUserName(){
   const raw=$("#lg-user").value.trim().replace(/[^\w .$-]/g,"").slice(0,14);
@@ -5659,7 +5700,7 @@ if(location.hash==="#desktop-amptest"){ /* dev: reproduce the open/close/reopen 
 }
 if(sessionStorage.getItem("cxp.booted")){
   desktopEntered=true;
-  setTimeout(showBalloon,900);
+  setTimeout(()=>{ if(store.data.tourSeen) showBalloon(); else try{ tour.open(); }catch(e){} },1200);
 }else{
   showBootThenLogin();
 }

@@ -523,7 +523,7 @@ body.mobile .ie-doc table{max-width:100%}
 /* ---------- game layer ---------- */
 #arena{position:absolute;left:0;top:0;width:1280px;height:800px;transform-origin:0 0;z-index:5000;pointer-events:none}
 body.mobile #arena{transition:opacity .18s ease-out}
-body.mobile.sheeted #arena{opacity:.16}
+body.mobile.sheeted #arena{opacity:.5}
 /* the crash hiccup: filter-only, because syncArena owns this element's transform */
 #arena.crashed{animation:crashfx .9s steps(1) both}
 @keyframes crashfx{
@@ -795,8 +795,8 @@ body.mobile.land #mhud{top:0;bottom:calc(var(--tb) + var(--sab));left:auto;right
   background:linear-gradient(90deg,#1E4FC4 0,#245DDB 40%,#2E6FE0 100%)}
 body.mobile.land .mh-top{flex-direction:column;align-items:stretch;gap:3px;padding:0 0 6px;text-align:center}
 body.mobile.land .mh-wallet{font-size:13px}
-body.mobile.land .mh-phase{font-size:11px;line-height:16px}
-body.mobile.land .mh-live{font-size:10px}
+body.mobile.land .mh-phase{font-size:11px;line-height:1.4;white-space:normal}
+body.mobile.land .mh-live{font-size:11px}
 body.mobile.land .mh-disk{margin:0 0 6px;order:-1}
 /* buttons sit at the FOOT of the rail — that is where a thumb is when the
    phone is held in two hands — and keep XP-sized rows instead of stretching
@@ -1678,3 +1678,11 @@ body.mobile .tour-rail{flex:none;flex-direction:row;overflow-x:auto;padding:6px 
 body.mobile .tour-dot{flex:none;padding:6px 9px}
 body.mobile .tour-dot span{display:none}
 body.mobile #tour-img{max-height:44vh}
+
+/* ---- mobile pass: touch ergonomics ---- */
+.icon{touch-action:none}          /* drags must not become scrolls */
+.title-bar{touch-action:none}     /* dialogs drag by the bar on the phone too */
+body.mobile .msn-toast{bottom:calc(var(--tb) + var(--hud) + var(--sab) + 8px)}
+body.mobile.land .msn-toast{right:calc(var(--rail) + var(--sar) + 8px);bottom:calc(var(--tb) + var(--sab) + 8px)}
+body.mobile .tour-pts{flex:none}
+body.mobile .tour-foot{padding-top:12px}

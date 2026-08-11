@@ -189,6 +189,13 @@ export function createSim(opts) {
     const c = curs.find(c => c.id === id && c.key === key);
     if (c && c.mode === "roam" && !graced(c)) forceRecall(c);
   }
+  function cancelRecall(key) {
+    /* changed your mind inside the 3s glide. Recalling cursors stay
+       attackable, so this dodges nothing; during shutdown the sweep owns
+       every cursor and the answer is no. */
+    if (phase !== "battle" || rushAt) return;
+    for (const c of cursOf(key)) if (c.mode === "recall") { c.mode = "roam"; c.prevMode = "roam"; c.recallT = 0; }
+  }
   function forceRecall(c) {
     if (c.mode !== "recall") { c.mode = "recall"; c.prevMode = "recall"; c.recallT = RECALL_SECS; }
   }
@@ -469,7 +476,7 @@ export function createSim(opts) {
 
   return {
     tick, snapshot, welcomeState,
-    registerPlayer, requestDeploy, requestRecall, recallOne,
+    registerPlayer, requestDeploy, requestRecall, recallOne, cancelRecall,
     setStance: (key, s) => { const p = players.get(key); if (p && (s === "attack" || s === "defend")) p.stance = s; },
     players, cursCount: () => curs.length,
     diskUsed, DISK_TOTAL, CORPSES,
