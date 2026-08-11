@@ -1799,3 +1799,25 @@ body.mobile .msi-citem{width:130px}
 .dx-testdlg{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:#ECE9D8;border:1px solid #003C74;border-radius:3px;padding:14px 18px;font:11px Tahoma,"Segoe UI",sans-serif;text-align:center;cursor:default;box-shadow:2px 2px 6px rgba(0,0,0,.5)}
 .dx-testdlg .xbtn{min-width:66px;margin:10px 4px 0}
 body.mobile .dx-k{width:110px}
+
+/* ================= FreeCell / Spider ================= */
+.win-body.fc-body,.win-body.sp-body{background:#008000;padding:0;display:flex;flex-direction:column;overflow:hidden}
+.fc-scroll,.sp-scroll{flex:1;min-height:0;overflow:auto}
+.fc-board{position:relative;width:633px;height:430px;margin:0 auto;flex:none}
+.sp-board{position:relative;width:780px;height:470px;margin:0 auto;flex:none}
+.fc-card,.sp-card{position:absolute;width:71px;height:96px;box-sizing:border-box;border:1px solid #000;border-radius:4px;background-color:#fff;background-repeat:no-repeat}
+.fc-card.up{background-image:var(--fc-sheet)}
+.sp-card.up{background-image:var(--sp-sheet)}
+/* the back is CSS, exactly as the vendored deck draws it */
+.fc-card.down,.sp-card.down{background-color:#02027f;background-size:4px 4px;background-image:linear-gradient(45deg,hsla(0,0%,100%,0),hsla(0,0%,100%,0) 44.9%,#fff 45%,#fff 55%,hsla(0,0%,100%,0) 55.1%,hsla(0,0%,100%,0)),linear-gradient(-45deg,hsla(0,0%,100%,0),hsla(0,0%,100%,0) 44.9%,#fff 45%,#fff 55%,hsla(0,0%,100%,0) 55.1%,hsla(0,0%,100%,0))}
+.fc-card.sel,.sp-card.sel{filter:invert(.85)}
+.fc-slot,.sp-slot{position:absolute;width:71px;height:96px;box-sizing:border-box;border:1px solid #060;border-radius:4px}
+/* if the sprite sheet never arrives, ranks print in the corner */
+.fc-nosheet .fc-card.up::before,.sp-nosheet .sp-card.up::before{content:attr(data-face);position:absolute;left:4px;top:2px;font-size:12px;color:#000}
+.fc-nosheet .fc-card.up[data-red="1"]::before,.sp-nosheet .sp-card.up[data-red="1"]::before{color:#c00}
+.sp-score{position:absolute;left:0;right:0;bottom:48px;text-align:center;color:#fff;font-size:11px;pointer-events:none}
+.fc-modal{position:absolute;left:50%;top:36%;transform:translate(-50%,-50%);background:#ECE9D8;color:#000;border:1px solid #716F64;box-shadow:2px 2px 6px rgba(0,0,0,.4);padding:10px 12px;font-size:11px;z-index:5;min-width:190px}
+.fc-modal-x{margin:6px 0 4px}
+.fc-modal input{width:80px;margin:2px 0 10px}
+.fc-modal-btns{display:flex;gap:6px;justify-content:flex-end}
+.solb-canvas{position:absolute;z-index:40;cursor:default}

@@ -256,6 +256,37 @@ rush, ~18.5s the crash dialog, ~27s the recovered arena).
 
 ## 6. Working practices that matter
 
+- **Security headers, and the harness that keeps them honest** (added 2026-08-11). The site
+  used to serve none — no CSP, no framing rule, no HSTS, no nosniff. The framing gap was the
+  live one: with nothing forbidding it, anyone could load the real game in an iframe on their
+  own domain and float their own buttons over it, and the player would see the real game at
+  the real address. The full set now lives in the root `vercel.json` under `source: "/(.*)"`.
+
+  A CSP is the one header that can break the site it protects, and it breaks it *silently for
+  whoever wrote it* — your browser has the stylesheet cached, so you see a working page while
+  a first-time visitor gets unstyled HTML. So `npm run csp` (root, or `apps/web`) serves the
+  real `dist/` under the headers **parsed out of `vercel.json` itself** — the policy under
+  test cannot drift from the policy that ships — drives it in headless Edge, and fails on any
+  violation. It covers the cold boot and login, the live `wss://` game socket, Winamp's
+  data:-URI skin, the Solitaire iframe, cursorTV's YouTube player, and a second origin trying
+  to frame the game. Currently: **0 violations, 0 blocked requests.**
+
+  Two things it caught that would otherwise have shipped broken:
+  - `frame-ancestors 'none'` also blocks the app framing *itself* — it killed Solitaire. The
+    correct value is `'self'` (with `X-Frame-Options: SAMEORIGIN`), which still refuses every
+    foreign origin. Pass 3 proves that refusal rather than assuming it.
+  - Webamp's dependencies ship three `eval`/`Function("return this")` calls. They are inert in
+    a browser, but they trip `script-src`. `scripts/postbuild.mjs` rewrites each to the value
+    it already resolves to, so the report stays at zero without `unsafe-eval` in the header.
+    Anything eval-shaped it does *not* recognise is left alone and warned about.
+
+  Two gotchas if you touch the harness: it must serve from a **non-loopback hostname** (it maps
+  `cursors.csptest` via `--host-resolver-rules`), because `mpUrl()` returns a null socket on
+  `localhost`/`127.` and the whole multiplayer and YouTube half would go untested while still
+  looking green; and the YouTube leg depends on a third party that sometimes does not answer
+  inside the 12s the app allows, so the harness fails only on actual CSP evidence and otherwise
+  reports that leg **UNVERIFIED** rather than crying wolf.
+
 - **Screenshot loop.** Claude can see its own UI work:
   `node scripts/shot.mjs <url> out.png [w] [h] [settleMs]` (run from `apps/web`), then Read
   the PNG. It drives Edge over the DevTools protocol with real viewport emulation.

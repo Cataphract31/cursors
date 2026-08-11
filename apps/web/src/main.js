@@ -6,6 +6,9 @@ import { initMinesweeper } from "./minesweeper.js";
 import { initMessenger, CONTACTS as MSN_CONTACTS } from "./messenger.js";
 import { initOE } from "./oe.js";
 import { initSysInfo } from "./sysinfo.js";
+import { initFreeCell } from "./freecell.js";
+import { initSpider } from "./spider.js";
+import { initSolBounce } from "./solbounce.js";
 import { initPaint } from "./paint.js";
 import { initExplorer } from "./explorer.js";
 import { initIE } from "./ie.js";
@@ -1125,6 +1128,7 @@ function solitaireOpen(){
         d.addEventListener("pointerdown",()=>{ try{ focusWin("win-solitaire"); }catch(e){} },true);
         solitaireTouch(d);
         solitaireFit(fr,d);
+        solb.arm(fr);
       }catch(e){}
     },{once:true});
   }
@@ -1722,6 +1726,8 @@ function editMenu(t){
 
 /* ---- menu bars actually drop menus ---- */
 function menubarMenu(label,id){
+  if(id==="win-freecell") return freecell.menus(label);
+  if(id==="win-spider") return spider.menus(label);
   if(id==="win-regedit"&&depth.regMenus){ const m=depth.regMenus(label); if(m) return m; }
   if(id==="win-calc"&&depth.calcMenus){ const m=depth.calcMenus(label); if(m) return m; }
   if((id==="win-chat"||id.indexOf("win-conv")===0)&&msn.menus){ const m=msn.menus(label,id); if(m) return m; }
@@ -1895,6 +1901,21 @@ const mouse=initMouse({$,store,sysSnd,CURFILES,openWin,closeWin,icoNode,
     schemeSeen=id; },
 });
 /* Calculator, Character Map, Disk Defragmenter, Registry Editor */
+/* ================= FreeCell / Spider ================= */
+const freecell=initFreeCell({
+  host:$("#fc-board"),
+  store, sysSnd, showError, showConfirm,
+  setTitle:t=>{ $("#win-freecell .title-bar-text").textContent=t; renderTaskbar(); },
+  isFocused:()=>focusedId==="win-freecell",
+  close:()=>closeWin("win-freecell"),
+});
+const spider=initSpider({
+  host:$("#sp-board"),
+  store, sysSnd, showError, showConfirm,
+  isFocused:()=>focusedId==="win-spider",
+  close:()=>closeWin("win-spider"),
+});
+const solb=initSolBounce({ sysSnd });
 const depth=initDepthApps({$,store,sysSnd,showMenu,showError,openWin,closeWin,hooks:{
   setPsm:v=>{ store.data.msnPsm=String(v||"").slice(0,60); store.save(); try{ msn.renderMe(); }catch(e){} },
   disk:()=>{ const d=diskPct(); return {pct:d.pct,corpses:(binDead&&binDead.length)||0}; },
@@ -1997,6 +2018,7 @@ const maint=initSysMaint({$,store,sysSnd,showError,showConfirm,openWin,closeWin,
 maint.init();
 /* the Magnifier, the On-Screen Keyboard, High Contrast and StickyKeys */
 const access=initAccess({$,store,sysSnd,showError,openWin,closeWin,hooks:{
+  getMuted:()=>muted,
   confirm:(t,b,ok)=>showConfirm(t,b,ok),
 }});
 access.init();
@@ -2483,7 +2505,8 @@ function allProgramsMenu(){
     {label:"Games",sub:[
       ...only("mine",{label:"Minesweeper",action:go("win-mine")}),
       ...only("solitaire",{label:"Solitaire",action:()=>{ closeStart(); solitaireOpen(); }}),
-      {label:"FreeCell",disabled:1},
+      {label:"FreeCell",action:go("win-freecell")},
+      {label:"Spider Solitaire",action:go("win-spider")},
       {label:"Hearts",disabled:1},
       {label:"Pinball",disabled:1}]},
     {label:"Startup",sub:[
@@ -2578,6 +2601,8 @@ function runNamed(k){
   if(k==="wordpad"||k==="wordpad.exe"||k==="write"||k==="write.exe"){ write.openWordpad(null); return true; }
   if(k==="clipbrd"||k==="clipbrd.exe"){ write.openClipbook(); return true; }
   if(k==="sol"||k==="sol.exe"||k==="solitaire"){ solitaireOpen(); return true; }
+  if(k==="freecell"||k==="freecell.exe"){ openWin("win-freecell"); return true; }
+  if(k==="spider"||k==="spider.exe"){ openWin("win-spider"); return true; }
   if(k==="msconfig"||k==="msconfig.exe"){ maint.openMsconfig(); return true; }
   if(k==="appwiz.cpl"||k==="add or remove programs"){ maint.openAddRemove(); return true; }
   if(k==="fonts"||k==="control fonts"){ maint.openFonts(); return true; }

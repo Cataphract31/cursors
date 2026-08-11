@@ -826,3 +826,23 @@ fixTop/dlgTop fold ordering; humdrift animates `top`; floating windows on
 phone landscape (design decision); authored-quip copy list (About boxes,
 boot.ini, regedit flavor - see the report); the fidelity gap list lives in
 the owner report of 2026-08-11.
+
+## The fidelity build-out (2026-08-11, owner-approved: "ALL of these") 
+
+Slop purge first (33ee987) - every authored quip replaced with what XP
+would say. Then three waves: 00f2d46 (cmd arsenal: chkdsk/shutdown -s
+countdown box/tracert/telnet/title/net send; winver; utilman; Ctrl+Esc;
+TM process menu; CrashOnCtrlScroll; regedit writable PersonalMessage +
+menus; Messenger menus; recovered-from-serious-error after crashes; the
+green Windows Update site; Windows Classic style; charmap keystrokes),
+581ce64 (Outlook Express wired end-to-end incl. the 0x800CCC0D dialup
+truth; Event Viewer fed by the game's own journal; msinfo32; dxdiag with
+the spinning cube; Calculator Scientific), and this commit (FreeCell
+with Microsoft's real shuffle - #11982 authentically unwinnable; Spider
+1/2/4 suits; the Solitaire win cascade with bounce trails; xyzzy;
+Custom minefields; WordPad View/Insert/Format; Bush hid the facts;
+Advanced volume; Narrator via speechSynthesis, mute-aware).
+
+Still owed from the approved list: right-drag Move/Copy menu, CD
+autoplay dialog, full-screen Log Off, taskbar toolbars (Address/Links/
+Desktop), 3D Pipes teapot, Tour XP theater, Hearts, deeper WU catalog.
