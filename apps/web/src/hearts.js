@@ -175,15 +175,21 @@ export function initHearts(deps) {
       host.appendChild(d);
     }
 
-    /* your hand */
+    /* your hand. When it is your move the legal cards are lit and the rest go
+       flat: Hearts refuses most of your hand most of the time, and a player
+       who does not know the rules cannot tell "illegal" from "broken". */
     const hand = seats[0];
     const startX = Math.round((BW - handSpan(hand.length)) / 2);
+    const myMove = phase === "play" && turn === 0 && trick.length < 4;
+    const ok = myMove ? legalCards(0) : null;
     hand.forEach((c, i) => {
       const up = sel.indexOf(c) >= 0 ? 16 : 0;
-      const d = faceEl("ht-card up ht-mine", c, startX + i * SPREAD, HANDY - up);
+      const playable = ok ? ok.indexOf(c) >= 0 : false;
+      const d = faceEl("ht-card up ht-mine", c, startX + i * SPREAD, HANDY - (up || (playable ? 10 : 0)));
       d.dataset.i = i;
       if (up) d.classList.add("ht-sel");
       if (got.indexOf(c) >= 0) d.classList.add("ht-got");
+      if (myMove) d.classList.add(playable ? "ht-ok" : "ht-no");
       host.appendChild(d);
     });
     host.appendChild(label("ht-name", names[0], 20, BH - 22, 150));
@@ -242,14 +248,15 @@ export function initHearts(deps) {
     }
     return h.slice();
   }
+  const SUITNAME = { c: "clubs", d: "diamonds", h: "hearts", s: "spades" };
   function refusal(c) {
     if (!trick.length) {
-      if (firstTrick) return "The two of clubs leads the first trick.";
-      return "Hearts have not been broken.";
+      if (firstTrick) return "The two of clubs leads the first trick — play the lit card.";
+      return "Hearts have not been broken — lead a lit card.";
     }
     const led = trick[0].card.s;
-    if (suited(seats[0], led).length) return "You must follow suit.";
-    return "You cannot play a point card on the first trick.";
+    if (suited(seats[0], led).length) return "You must follow suit — play a lit " + SUITNAME[led] + ".";
+    return "No hearts or the queen of spades on the first trick.";
   }
   const trickPts = () => trick.reduce((n, p) => n + pts(p.card), 0);
   function trickTop() {
@@ -400,7 +407,9 @@ export function initHearts(deps) {
     if (phase !== "play" || paused) return;
     if (trick.length === 4) { after(HOLD, finishTrick); return; }
     if (turn === 0) {
-      msg = firstTrick && !trick.length ? "Your lead: the two of clubs." : "Your turn.";
+      msg = firstTrick && !trick.length
+        ? "Your lead — play the two of clubs (lit below)."
+        : "Your turn — play a lit card.";
       render();
       return;
     }

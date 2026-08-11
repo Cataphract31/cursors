@@ -2027,3 +2027,8 @@ body.mobile .txp-rail{flex:0 0 116px}
 body.mobile .txp-ch{font-size:10px;padding:5px 7px;gap:6px}
 body.mobile .txp-art{height:132px}
 body.mobile .txp-banner b{font-size:15px}
+
+/* Hearts: which cards you may actually play. XP left you to know the rules;
+   this table has to be legible to someone who has never played a trick. */
+.ht-card.ht-ok{box-shadow:0 0 0 2px #FFD800,0 4px 10px rgba(0,0,0,.45);cursor:pointer}
+.ht-card.ht-no{filter:brightness(.62) saturate(.7);cursor:default}
