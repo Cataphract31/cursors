@@ -217,7 +217,7 @@ export function initPaint(deps) {
   function dirty() {
     clearTimeout(saveT);
     saveT = setTimeout(() => {
-      try { store.data.paintImage = cv.toDataURL("image/png"); store.save(); } catch (e) {}
+      try { store.data.paintImage = cv.toDataURL("image/png"); store.data.paintW = cw; store.data.paintH = ch; store.save(); } catch (e) {}
     }, 1200);
   }
 
@@ -319,6 +319,7 @@ export function initPaint(deps) {
       strokeTo(last, p, ink); last = p;
     } else if (t === "select" || t === "freeselect") {
       if (sel && sel.moving) { moveSel(p); return; }
+      if (!sel) return;   /* Escape/Delete killed it mid-drag */
       sel.x1 = p.x; sel.y1 = p.y;
       if (sel.free) sel.path.push(p);
       drawSelOverlay();
@@ -908,7 +909,7 @@ export function initPaint(deps) {
     cancelPending();
     let url;
     try { url = cv.toDataURL("image/png"); }
-    catch (e) { return showError("Save As", "Cannot write to disk. The drive is 20 GB of nostalgia."); }
+    catch (e) { return showError("Save As", "There is not enough memory or disk space to save the file."); }
     const name = deps.savePicture(url);
     if (setTitle) setTitle(name);
     showConfirm("Save As", `Saved as ${name} in My Pictures.\n\nAlso save a copy to your real computer?`, () => {
@@ -925,7 +926,7 @@ export function initPaint(deps) {
       setWallpaperFrom(cv.toDataURL("image/png"), mode);
       sysSnd("ding", .5);
     } catch (e) {
-      showError("Paint", "Could not set the wallpaper. The desktop refused your art.");
+      showError("Paint", "The wallpaper could not be set.");
     }
   }
 
@@ -956,8 +957,8 @@ export function initPaint(deps) {
     cancelPending(); snapshot();
     hs = Math.max(1, Math.min(500, hs || 100)) / 100;
     vs = Math.max(1, Math.min(500, vs || 100)) / 100;
-    hd = Math.max(-89, Math.min(89, hd || 0)) * Math.PI / 180;
-    vd = Math.max(-89, Math.min(89, vd || 0)) * Math.PI / 180;
+    hd = Math.max(-75, Math.min(75, hd || 0)) * Math.PI / 180;
+    vd = Math.max(-75, Math.min(75, vd || 0)) * Math.PI / 180;
     const sw = Math.max(1, Math.round(cw * hs)), sh = Math.max(1, Math.round(ch * vs));
     const shx = Math.abs(Math.tan(hd)) * sh, shy = Math.abs(Math.tan(vd)) * sw;
     const nw = Math.round(sw + shx), nh = Math.round(sh + shy);

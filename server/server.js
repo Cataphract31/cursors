@@ -30,16 +30,24 @@ const chatLog = [];               /* ring buffer of {who,text,at} */
 const saveTimers = new Map();
 
 /* ---------- broadcast plumbing ---------- */
-function send(c, msg) { if (c.ws.readyState === 1) c.ws.send(JSON.stringify(msg)); }
+const MAX_BUFFER = 1 << 20;
+function lagging(c) {
+  /* TCP zero-window: the client stopped reading and every send queues in our
+     heap. On a 1 GB box that is an OOM kill with everyone's session on it. */
+  if (c.ws.bufferedAmount <= MAX_BUFFER) return false;
+  try { c.ws.terminate(); } catch {}
+  return true;
+}
+function send(c, msg) { if (c.ws.readyState === 1 && !lagging(c)) c.ws.send(JSON.stringify(msg)); }
 /* A hidden tab cannot draw a snapshot, so it does not get one. Events (kills,
    banks, chat, the crash) still go to everyone: those are state, not frames,
    and a returning player must not have missed them. */
 function watchers() { let n = 0; for (const c of conns) if (c.visible) n++; return n; }
 function broadcastSnap(msg) {
   const s = JSON.stringify(msg);
-  for (const c of conns) if (c.visible && c.ws.readyState === 1) c.ws.send(s);
+  for (const c of conns) if (c.visible && c.ws.readyState === 1 && !lagging(c)) c.ws.send(s);
 }
-function broadcast(msg) { const s = JSON.stringify(msg); for (const c of conns) if (c.ws.readyState === 1) c.ws.send(s); }
+function broadcast(msg) { const s = JSON.stringify(msg); for (const c of conns) if (c.ws.readyState === 1 && !lagging(c)) c.ws.send(s); }
 function sys(text) { pushChat("*", text); broadcast({ t: "sys", text }); }
 function pushChat(who, text) { chatLog.push({ who, text, at: Date.now() }); if (chatLog.length > 40) chatLog.shift(); }
 
@@ -56,7 +64,7 @@ function balMsg(key) {
 function schedSave(key) {
   if (key.startsWith("bot:")) return;
   clearTimeout(saveTimers.get(key));
-  saveTimers.set(key, setTimeout(() => persistPlayer(key), 2000));
+  saveTimers.set(key, setTimeout(() => { saveTimers.delete(key); persistPlayer(key); }, 2000));
 }
 function persistPlayer(key) {
   const p = sim.players.get(key); if (!p || p.bot) return;
@@ -78,7 +86,8 @@ const sim = createSim({
       }
       case "crash": {
         db.epochAdd(evt);
-        for (const key of byKey.keys()) persistPlayer(key);
+        try { db.tx(() => { for (const key of byKey.keys()) persistPlayer(key); }); }
+        catch (e) { console.error("crash persist failed:", e); }
         broadcast(evt);
         pushChat("*", "it crashed again. everyone got banked. we go again");
         break;
@@ -108,7 +117,8 @@ setInterval(() => {
   while (acc >= STEP_MS) {
     acc -= STEP_MS;
     try { sim.tick(STEP); } catch (e) { console.error("sim tick failed:", e); }
-    if (++steps % 2 === 0 && watchers()) broadcastSnap(sim.snapshot());
+    try { if (++steps % 2 === 0 && watchers()) broadcastSnap(sim.snapshot()); }
+    catch (e) { console.error("snapshot failed:", e); }
   }
 }, 10);
 
@@ -296,7 +306,7 @@ function handle(c, m) {
       gp.published = (gp.published || 0) + 1;
       const title = String(m.name || "").replace(/[^\w .$'-]/g, "").slice(0, 28) || "untitled";
       db.galleryPost(title, sim.players.get(c.key)?.name || "?", png);
-      broadcast({ t: "gallery", list: db.galleryList() });
+      broadcast({ t: "galAdd", item: db.galleryLatest() });
       sys(`${sim.players.get(c.key)?.name} published a painting to the gallery`);
       break;
     }
@@ -320,28 +330,37 @@ function handle(c, m) {
     }
     case "tvDur": {
       const d = +m.dur;
-      if (tv.now && tv.now.vid === m.vid && !tv.now.dur && d > 4 && d < 4 * 3600) {
+      if (tv.now && tv.now.vid === m.vid && !tv.now.dur && d > 4 && d <= 2 * 3600) {
         tv.now.dur = Math.round(d);
         scheduleTvEnd();
       }
       break;
     }
     case "tvWatch":
-      if (c.tvWatch !== !!m.on) { c.tvWatch = !!m.on; broadcast(tvMsg()); }
+      if (c.tvWatch !== !!m.on && now - (c.lastTvCtl || 0) > 1000) {
+        c.lastTvCtl = now; c.tvWatch = !!m.on; broadcast(tvMsg());
+      }
       break;
     case "tvSkip": {
       if (!tv.now) return;
+      const freshVote = !skipVotes.has(c.key);
       skipVotes.add(c.key);
       const need = conns.size <= 2 ? 1 : Math.ceil(conns.size / 3);
       if (skipVotes.size >= need) { sys("the lobby voted to skip"); tvAdvance(); }
-      else broadcast(tvMsg());   /* the page shows the count; no chat spam */
+      else if (freshVote) broadcast(tvMsg());   /* the page shows the count; repeats change nothing */
       break;
     }
-    case "vis":
-      c.visible = m.on !== false;
-      /* coming back needs the whole world, not the next 66ms of it */
-      if (c.visible) send(c, { t: "resync", epoch: sim.welcomeState() });
+    case "vis": {
+      const on = m.on !== false, was = c.visible;
+      c.visible = on;
+      /* the resync is the biggest recurring reply on the wire: only a true
+         hidden->visible transition earns one, at most every 2s per socket */
+      if (on && !was && now - (c.lastResync || 0) > 2000) {
+        c.lastResync = now;
+        send(c, { t: "resync", epoch: sim.welcomeState() });
+      }
       break;
+    }
     case "ping": send(c, { t: "pong" }); break;
   }
 }
@@ -375,6 +394,7 @@ const wss = new WebSocketServer({
 });
 
 wss.on("connection", ws => {
+  if (wss.clients.size > 150) { try { ws.terminate(); } catch {} return; }
   const c = { ws, key: null, hello: false, lastChat: 0, lastGuest: 0, lastGallery: 0, alive: true, visible: true };
   /* a socket that never says hello is not in conns, so the reaper below
      never pings it — it would hold its zlib context forever */
@@ -394,6 +414,7 @@ wss.on("connection", ws => {
     if (c.key) skipVotes.delete(c.key);
     if (c.tvWatch) broadcast(tvMsg());
     if (c.key) {
+      clearTimeout(saveTimers.get(c.key)); saveTimers.delete(c.key);
       persistPlayer(c.key);
       if (byKey.get(c.key) === c) {
         byKey.delete(c.key);
@@ -405,7 +426,7 @@ wss.on("connection", ws => {
 });
 setInterval(() => {
   for (const c of conns) {
-    if (!c.alive) { c.ws.terminate(); continue; }
+    if (!c.alive) { try { c.ws.terminate(); } catch {} continue; }
     c.alive = false;
     try { c.ws.ping(); } catch {}
   }
@@ -418,5 +439,16 @@ function shutdown() {
 }
 process.on("SIGINT", shutdown);
 process.on("SIGTERM", shutdown);
+/* the last line of defense: log and live. A thrown callback must not take
+   forty sessions down with it. */
+process.on("uncaughtException", e => console.error("uncaught:", e));
+process.on("unhandledRejection", e => console.error("unhandled:", e));
+
+/* djLast is fairness memory; names that left the rotation stop being memory */
+setInterval(() => {
+  const active = new Set(tv.queue.map(q => q.by));
+  if (tv.now) active.add(tv.now.by);
+  for (const k of [...djLast.keys()]) if (!active.has(k)) djLast.delete(k);
+}, 3600 * 1000);
 
 http.listen(PORT, () => console.log(`CURSORS.EXE beta server on :${PORT} — epoch ${sim.epochNo()}, ${CORPSES} corpses to a crash`));

@@ -78,6 +78,7 @@
       <circle cx="23" cy="23" r="6" fill="#E8C24A" stroke="#8A6A00"/>
       <path d="M20.4 23 l1.8 1.9 3.6 -3.9" fill="none" stroke="#4A3800" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
     </symbol>
+    <symbol id="ic-check" viewBox="0 0 32 32"><path d="M6 17 L13 24 L26 8" fill="none" stroke="#1B7E28" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
     <symbol id="ic-cpl" viewBox="0 0 32 32">
       <rect x="3" y="6" width="26" height="20" rx="2" fill="#DCE9FB" stroke="#4A6FA5"/>
       <circle cx="11" cy="13" r="3.4" fill="#fff" stroke="#4A6FA5"/>
@@ -96,7 +97,7 @@
   <div id="marquee"></div>
 
   <!-- CURSORS.EXE control panel -->
-  <div class="window" id="win-cursors" style="left:calc(100% - 348px);top:44px;width:318px">
+  <div class="window" id="win-cursors" data-minw="318" data-minh="520" style="left:calc(100% - 348px);top:44px;width:318px">
     <div class="title-bar">
       <div class="tb-l"><i class="xico tb-ico" data-ico="@ic-app"></i><div class="title-bar-text">CURSORS.EXE</div></div>
       <div class="title-bar-controls"><button aria-label="Minimize"></button><button aria-label="Close"></button></div>
@@ -182,7 +183,7 @@
   </div>
 
   <!-- README -->
-  <div class="window" id="win-readme" style="left:330px;top:52px;width:340px">
+  <div class="window" id="win-readme" data-minw="260" data-minh="200" style="left:330px;top:52px;width:340px">
     <div class="title-bar">
       <div class="tb-l"><i class="xico tb-ico" data-ico="note16"></i><div class="title-bar-text">README.txt - Notepad</div></div>
       <div class="title-bar-controls"><button aria-label="Minimize"></button><button aria-label="Close"></button></div>
@@ -287,8 +288,8 @@ icons/sounds: winXP (MIT)</div>
       <div class="menubar"><span>File</span><span>Edit</span><span>View</span><span>Favorites</span><span>Tools</span><span>Help</span></div>
       <div class="ex-bar">
         <button class="ex-tb" id="ex-back"><img id="ex-backi" alt=""><span>Back</span></button>
-        <button class="ex-tb" id="ex-fwd"><img id="ex-fwdi" alt=""></button>
-        <button class="ex-tb" id="ex-up"><img id="ex-upi" alt=""></button>
+        <button class="ex-tb" id="ex-fwd" aria-label="Forward"><img id="ex-fwdi" alt=""></button>
+        <button class="ex-tb" id="ex-up" aria-label="Up"><img id="ex-upi" alt=""></button>
         <span class="ex-sep"></span>
         <button class="ex-tb sm" id="ex-search"><img id="ex-searchi" alt=""><span>Search</span></button>
         <button class="ex-tb sm" id="ex-folders"><img id="ex-foldersi" alt=""><span>Folders</span></button>
@@ -388,17 +389,17 @@ icons/sounds: winXP (MIT)</div>
       <div class="ex-bar ie-bar">
         <button class="ex-tb" id="ie-back"><img id="ie-backi" alt=""><span>Back</span></button>
         <button class="ex-tb" id="ie-fwd"><img id="ie-fwdi" alt=""><span>Forward</span></button>
-        <button class="ex-tb" id="ie-stop"><img id="ie-stopi" alt=""></button>
-        <button class="ex-tb" id="ie-refresh"><img id="ie-refreshi" alt=""></button>
-        <button class="ex-tb" id="ie-home"><img id="ie-homei" alt=""></button>
+        <button class="ex-tb" id="ie-stop" aria-label="Stop"><img id="ie-stopi" alt=""></button>
+        <button class="ex-tb" id="ie-refresh" aria-label="Refresh"><img id="ie-refreshi" alt=""></button>
+        <button class="ex-tb" id="ie-home" aria-label="Home"><img id="ie-homei" alt=""></button>
         <span class="ex-sep"></span>
         <button class="ex-tb sm" id="ie-search"><img id="ie-searchi" alt=""><span>Search</span></button>
         <button class="ex-tb sm" id="ie-favs"><img id="ie-favsi" alt=""><span>Favorites</span></button>
         <button class="ex-tb sm" id="ie-media"><img id="ie-mediai" alt=""><span>Media</span></button>
         <button class="ex-tb sm" id="ie-hist"><img id="ie-histi" alt=""><span>History</span></button>
         <span class="ex-sep"></span>
-        <button class="ex-tb sm" id="ie-mail"><img id="ie-maili" alt=""></button>
-        <button class="ex-tb sm" id="ie-print"><img id="ie-printi" alt=""></button>
+        <button class="ex-tb sm" id="ie-mail" aria-label="Mail"><img id="ie-maili" alt=""></button>
+        <button class="ex-tb sm" id="ie-print" aria-label="Print"><img id="ie-printi" alt=""></button>
         <span class="ie-throb" id="ie-throb"><img id="ie-throbi" alt=""></span>
       </div>
       <div class="ex-addrbar">

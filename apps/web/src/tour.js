@@ -43,6 +43,8 @@ export function initTour(deps) {
     $("#tour-step").textContent = (at + 1) + " of " + SLIDES.length;
     $("#tour-title").textContent = s.t;
     const img = $("#tour-img");
+    img.onerror = () => { img.style.visibility = "hidden"; };   /* a 404 shows nothing, not a broken glyph */
+    img.onload = () => { img.style.visibility = ""; };
     img.src = "tour/" + s.img;          /* lazy: only ever set while open */
     $("#tour-pts").innerHTML = s.pts.map(p => `<li>${p}</li>`).join("");
     $("#tour-rail").innerHTML = SLIDES.map((x, i) =>

@@ -282,11 +282,15 @@ Internet Explorer</p>
   function go(u, opts) {
     opts = opts || {};
     if (!u) return;
-    if (offline) { render({ url: u, title: "Web page unavailable while offline", cls: "err", html: pageOffline(u) }, true); return; }
+    if (offline) {
+      if(!opts.replace&&url){ past.push(url); future.length=0; }
+      render({ url: u, title: "Web page unavailable while offline", cls: "err", html: pageOffline(u) }, true);
+      return;
+    }
     if (!online) { pending = u; dialup(); return; }
 
     const r = resolve(u);
-    if (!opts.replace && url) { past.push(url); future.length = 0; }
+    if (!opts.replace && url && !loading) { past.push(url); future.length = 0; }
     clearTimers(); loading = r; buttons();
     els.addr.value = r.url;
     els.throb.classList.add("spin");
@@ -343,6 +347,7 @@ Internet Explorer</p>
     if (!loading) return;
     clearTimers();
     const half = loading; loading = null;
+    url = half.url;   /* the bar shows the stopped target; Refresh must agree */
     els.throb.classList.remove("spin");
     progress(null); status("Done"); buttons();
     els.page.className = "ie-doc err";
@@ -395,7 +400,7 @@ Internet Explorer</p>
       sysSnd("hwin", .5);
       hooks.balloon("Connected at 56.6 Kbps", "cursor$net is connected.");
       const u = pending || HOME; pending = null;
-      go(u, { replace: !url });
+      go(u, { replace: !url || u === url });
     }, 8100);
   }
   function hangup() {
@@ -415,9 +420,6 @@ Internet Explorer</p>
 
   /* ---------- clicks inside a page ---------- */
   const ACTIONS = {
-    deploy: () => { hooks.openWin("win-cursors"); hooks.deploy(); },
-    amp: () => hooks.openWin("win-amp"),
-    mail: () => hooks.openLobby(),
     hall: () => hooks.hallOfPain(),
     refresh: () => go(url || HOME, { replace: true }),
     /* reconnecting means dialing again — go() re-opens the dial-up box itself */
@@ -455,6 +457,7 @@ Internet Explorer</p>
     go(a.dataset.go);
   });
   els.page.addEventListener("keydown", e => {
+    if (e.key === "F11" || e.key === "Escape") return;   /* theater keys belong to the shell */
     e.stopPropagation();
     if (e.key === "Enter" && e.target.id === "sq") { e.preventDefault(); ACTIONS.search(); }
   });
@@ -731,7 +734,7 @@ ${srcHTML}
       h.className = "ie-side-group"; h.textContent = "Today";
       body.appendChild(h);
       if (!HISTORY.length) item("(nothing yet)", () => {});
-      for (const u of HISTORY.slice(0, 30)) item(u.replace(/^http:..(www.)?/, ""), () => go(u));
+      for (const u of HISTORY.slice(0, 30)) item(u.replace(/^https?:\/\/(www\.)?/, ""), () => go(u));
     } else if (mode === "search") {
       title.textContent = "Search";
       const box = document.createElement("div");
@@ -798,7 +801,7 @@ ${srcHTML}
     if (what === "rename") {
       els.afName.value = f.label; els.afUrl.textContent = f.u;
       hooks.openWin("win-addfav");
-      els.afName.dataset.renaming = orgSel;
+      els.afName.dataset.renaming = f.u;
       setTimeout(() => { els.afName.focus(); els.afName.select(); }, 50);
       return;
     }
@@ -904,7 +907,8 @@ ${srcHTML}
     els.afOk.addEventListener("click", () => {
       const ren = els.afName.dataset.renaming;
       if (ren !== undefined && ren !== "") {
-        FAVS()[+ren].label = els.afName.value.trim().slice(0, 40) || FAVS()[+ren].label;
+        const f = FAVS().find(x => x.u === ren);
+        if (f) f.label = els.afName.value.trim().slice(0, 40) || f.label;
         delete els.afName.dataset.renaming;
         store.save(); hooks.closeWin("win-addfav"); renderOrgFav();
         return;
@@ -941,6 +945,7 @@ ${srcHTML}
     els.sideX.addEventListener("click", () => sidebar(null));
   }
   els.addr.addEventListener("keydown", e => {
+    if (e.key === "F11" || e.key === "Escape") return;
     e.stopPropagation();
     if (e.key === "Enter") go(els.addr.value);
   });

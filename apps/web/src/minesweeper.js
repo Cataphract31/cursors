@@ -32,7 +32,7 @@ export function initMinesweeper(deps) {
   /* ---- digits & face ---- */
   function setDigits(node, n) {
     const neg = n < 0;
-    const v = Math.min(999, Math.abs(n));
+    const v = Math.min(neg ? 99 : 999, Math.abs(n));
     const s = String(v).padStart(3, "0");
     const chars = neg ? ["-", s[1], s[2]] : [s[0], s[1], s[2]];
     node.innerHTML = "";
@@ -231,6 +231,7 @@ export function initMinesweeper(deps) {
     press(cellAt(e), lDown && rDown);
   });
   host.addEventListener("mouseleave", () => { if (!over) clearPressed(); });
+  let chordDone = false;   /* the second release of a chord must not reveal */
   addEventListener("mouseup", e => {
     const wasChord = lDown && rDown;
     if (e.button === 0) lDown = false;
@@ -241,7 +242,8 @@ export function initMinesweeper(deps) {
     clearPressed();
     setFace("smile");
     if (i < 0) return;
-    if (wasChord) { chord(i); return; }
+    if (wasChord) { chord(i); chordDone = true; return; }
+    if (chordDone) { chordDone = false; return; }
     if (e.button !== 0) return;
     if (!started) { started = true; placeMines(i); startTimer(); }
     reveal(i);

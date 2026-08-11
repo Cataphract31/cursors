@@ -307,7 +307,7 @@ export function initMessenger(deps) {
     sysSnd("msnNudge", .6);
     sys(id, "You have just sent a nudge.");
     shake(conv(id).el);
-    if (id !== "lobby" && Math.random() < .5)
+    if (id !== "lobby" && !quiet() && Math.random() < .5)
       setTimeout(() => { sys(id, byId(id).name + " has just sent a nudge."); shake(conv(id).el); sysSnd("msnNudge", .5); }, rand(1800, 3200));
   }
   function shake(el) { el.classList.remove("nudged"); void el.offsetWidth; el.classList.add("nudged"); }
@@ -354,6 +354,7 @@ export function initMessenger(deps) {
     }
   }
   function toast(c, text, openId) {
+    if (deps.toastsOn && !deps.toastsOn()) return;   /* the Messenger service is stopped */
     const balloon = document.getElementById("balloon");
     if (balloon) balloon.style.display = "none";   /* the tray tip does not fight the toast */
     const t = document.createElement("div");

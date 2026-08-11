@@ -85,6 +85,11 @@ export function initAccess(deps) {
       view.innerHTML = "";
       const c = host.cloneNode(true);
       c.classList.add("mag-clone");
+      /* clones must not shadow the live windows' ids, and an iframe clone
+         would re-fetch its whole document once a second */
+      c.removeAttribute("id");
+      c.querySelectorAll("[id]").forEach(n => n.removeAttribute("id"));
+      c.querySelectorAll("iframe").forEach(f => { const d = document.createElement("div"); d.style.cssText = "background:#000;width:100%;height:100%"; f.replaceWith(d); });
       /* cloneNode does not carry what a field holds or what a canvas has drawn,
          so copy both across: the strip has to show the real screen */
       const src = host.querySelectorAll("input,textarea,canvas");
@@ -166,9 +171,12 @@ export function initAccess(deps) {
     openWin("win-osk");
     /* XP's OSK never takes focus; it types into whatever had it */
     const w = $("#win-osk");
-    w.addEventListener("pointerdown", e => {
-      if (e.target.closest(".osk-key")) e.preventDefault();
-    });
+    if (!w.dataset.oskWired) {
+      w.dataset.oskWired = "1";
+      w.addEventListener("pointerdown", e => {
+        if (e.target.closest(".osk-key")) e.preventDefault();
+      });
+    }
   }
   function oskRender() {
     const host = $("#osk-keys"); if (!host) return;

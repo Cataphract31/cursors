@@ -265,6 +265,7 @@ export function initSysMaint(deps) {
     foot.appendChild(btn("Cancel", () => closeWin("win-restore")));
   }
 
+  let srWorkT = null;   /* the working screen's ticker: owned, so a close kills it */
   function srWorkingScreen(head, side, main, foot) {
     head.textContent = "Restoration In Progress";
     srSideNotes(side, "Do not turn off your computer while the restoration is in progress.", []);
@@ -277,7 +278,10 @@ export function initSysMaint(deps) {
     const STEPS = ["Initializing restore...", "Reading restore point...", "Restoring desktop settings...",
       "Restoring shell configuration...", "Restoring startup items...", "Finalizing..."];
     let i = 0;
-    const t = setInterval(() => {
+    clearInterval(srWorkT);
+    const t = srWorkT = setInterval(() => {
+      const w = document.getElementById("win-restore");
+      if (!w || w.style.display === "none") { clearInterval(t); return; }
       i++;
       fill.style.width = Math.min(100, Math.round(i / STEPS.length * 100)) + "%";
       step.textContent = STEPS[Math.min(i, STEPS.length - 1)];

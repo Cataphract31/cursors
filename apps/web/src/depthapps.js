@@ -165,7 +165,7 @@ export function initDepthApps(deps) {
     fsel.addEventListener("change", cmRender);
     $("#cm-select").addEventListener("click", cmPick);
     $("#cm-copy").addEventListener("click", () => {
-      try { navigator.clipboard.writeText($("#cm-copybuf").value); } catch (e) {}
+      try { navigator.clipboard.writeText($("#cm-copybuf").value).catch(() => {}); } catch (e) {}
     });
     $("#cm-copybuf").addEventListener("input", e => { cmBuf = e.target.value; });
     cmRender();
@@ -190,9 +190,9 @@ export function initDepthApps(deps) {
     /* corpses scatter: fragmentation you can see growing between epochs */
     let seed = 1234 + d.corpses * 7;
     const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
-    while (placed < frag) { const i = sys + Math.floor(rnd() * (CELLS - sys)); if (cells[i] === "w") { cells[i] = "r"; placed++; } }
+    while (placed < frag && cells.includes("w")) { const i = sys + Math.floor(rnd() * (CELLS - sys)); if (cells[i] === "w") { cells[i] = "r"; placed++; } }
     placed = 0;
-    while (placed < cont) { const i = sys + Math.floor(rnd() * (CELLS - sys)); if (cells[i] === "w") { cells[i] = "b"; placed++; } }
+    while (placed < cont && cells.includes("w")) { const i = sys + Math.floor(rnd() * (CELLS - sys)); if (cells[i] === "w") { cells[i] = "b"; placed++; } }
     return { cells, frag, analyzed: false, defragging: false, done: 0 };
   }
   function dfDraw() {
@@ -213,6 +213,7 @@ export function initDepthApps(deps) {
     clearInterval(dfTimer);
     dfState = dfBuild(); dfDraw();
     dfState.analyzed = true;
+    { const st = $("#df-status"); if (st) st.textContent = "Analysis is complete for: (C:)"; }
     const d = hooks.disk();
     showError("Disk Defragmenter",
       `Analysis is complete for: (C:)\n\nYou should defragment this volume.\n\nVolume fragmentation: ${Math.min(99, Math.round(d.pct * .6 + 8))}%\nFile fragmentation: ${d.corpses} fragmented files (dead cursors, 12 MB each)`, true);
@@ -236,11 +237,12 @@ export function initDepthApps(deps) {
         if (j < 0 || j > i) { cells[i] = "b"; moved++; continue; }
         cells[j] = "b"; cells[i] = "w"; moved++;
       }
-      dfState.done = Math.min(100, dfState.done + 2 + Math.random() * 2);
-      const left = cells.filter(c => c === "r").length;
+      const left0 = cells.filter(c => c === "r").length;
+      dfState.done = Math.min(left0 ? 99 : 100, dfState.done + 2 + Math.random() * 2);
+      const left = left0;
       $("#df-status").textContent = `Defragmenting... ${Math.round(dfState.done)}%`;
       dfDraw();
-      if (!left || dfState.done >= 100) {
+      if (!left) {
         clearInterval(dfTimer);
         dfState.defragging = false;
         $("#df-status").textContent = "Defragmentation is complete for: (C:)";

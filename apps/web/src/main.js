@@ -200,7 +200,7 @@ addEventListener("pointerdown",e=>{ if(!e.target.closest("#volflyout,#sndico")) 
 const store={
   data:{},
   load(){
-    try{ this.data=JSON.parse(localStorage.getItem("cursorsxp")||"{}"); }catch(e){ this.data={}; }
+    try{ this.data=JSON.parse(localStorage.getItem("cursorsxp")||"{}")||{}; }catch(e){ this.data={}; }
     this.data.icons=this.data.icons||{};
     this.data.wins=this.data.wins||{};
     this.data.userIcons=this.data.userIcons||[];
@@ -507,6 +507,7 @@ function closeWin(id,opts){
   }
   if(id==="win-amp"){ winampApp.close(); return; }
   const a=openApps.get(id); if(!a) return;
+  clearTimeout(a._minT);   /* close mid-minimize must not hide the next open */
   if(id==="win-mine") mine.pause(); /* the clock does not run while the box is shut */
   if(id==="win-paint") paint.commit(); /* half-finished text/curves/selections land before the lid shuts */
   /* closing is quitting. A hidden window that keeps making noise is a bug,
@@ -521,15 +522,25 @@ function closeWin(id,opts){
   if(id==="win-ie"){ try{ ytPlayer&&ytPlayer.pauseVideo&&ytPlayer.pauseVideo(); }catch(e){} }
   a.el.style.display="none"; a.el.classList.remove("focused");
   openApps.delete(id);
-  if(focusedId===id) focusedId=null;
+  if(focusedId===id){ focusedId=null; focusNextTop(); }
   renderTaskbar();
+}
+/* XP hands focus to whatever is on top after a close/minimize */
+function focusNextTop(){
+  let best=null,bz=-1;
+  for(const [k,b] of openApps){
+    if(b.min||!b.el||b.el.classList.contains("fixed")) continue;
+    const z=+b.el.style.zIndex||0;
+    if(z>bz){ bz=z; best=k; }
+  }
+  if(best) focusWin(best);
 }
 function minWin(id){
   const a=openApps.get(id); if(!a||a.min) return;
   clearTimeout(a._minT);
   if(a.kind==="webamp"){ tabClick(id); return; }
   a.min=true;
-  if(focusedId===id) focusedId=null;
+  if(focusedId===id){ focusedId=null; focusNextTop(); }
   renderTaskbar();
   const el=a.el, r=el.getBoundingClientRect();
   let tx=40;
@@ -657,9 +668,12 @@ function wireWindow(w){
   if(btnMin) btnMin.addEventListener("click",e=>{e.stopPropagation();minWin(w.id);});
   if(btnClose) btnClose.addEventListener("click",e=>{e.stopPropagation();closeWin(w.id);});
   if(!MOBILE&&!w.classList.contains("fixed")&&btnClose){
-    const btnMax=document.createElement("button");
-    btnMax.setAttribute("aria-label","Maximize");
-    btnClose.before(btnMax);
+    let btnMax=w.querySelector('.title-bar-controls button[aria-label="Maximize"]');
+    if(!btnMax){
+      btnMax=document.createElement("button");
+      btnMax.setAttribute("aria-label","Maximize");
+      btnClose.before(btnMax);
+    }
     btnMax.addEventListener("click",e=>{e.stopPropagation();maxWin(w.id);});
     tb.addEventListener("dblclick",e=>{ if(!e.target.closest(".title-bar-controls")) maxWin(w.id); });
     w.addEventListener("pointermove",e=>{
@@ -1088,6 +1102,7 @@ function solitaireOpen(){
           "html,body{margin:0!important;background:transparent!important}"+
           ".window{border:0!important;box-shadow:none!important;background:transparent!important}";
         d.head.appendChild(st);
+        d.addEventListener("pointerdown",()=>{ try{ focusWin("win-solitaire"); }catch(e){} },true);
         solitaireTouch(d);
         solitaireFit(fr,d);
       }catch(e){}
@@ -1180,7 +1195,9 @@ addEventListener("keydown",e=>{
   const err=openApps.has("win-error"), conf=openApps.has("win-confirm");
   if(!err&&!conf) return;
   e.preventDefault();
-  if(conf){ $(e.key==="Enter"?"#conf-yes":"#conf-no").click(); }
+  const zc=conf?+document.getElementById("win-confirm").style.zIndex||0:-1;
+  const ze=err?+document.getElementById("win-error").style.zIndex||0:-1;
+  if(conf&&zc>=ze){ $(e.key==="Enter"?"#conf-yes":"#conf-no").click(); }
   else closeWin("win-error");
 });
 function showConfirm(title,text,cb){
@@ -2318,7 +2335,11 @@ function altTabShow(){
   atBox.style.display="block";
   return true;
 }
-function winTitle(id){ const t=$("#"+id+" .title-bar-text"); return t?t.textContent:id; }
+function winTitle(id){
+  const a=openApps.get(id);
+  if(a&&a.title) return a.title;
+  const t=$("#"+id+" .title-bar-text"); return t?t.textContent:id;
+}
 function altTabEnd(commit){
   if(!atBox||atBox.style.display!=="block") return;
   atBox.style.display="none";
@@ -2481,7 +2502,7 @@ const RUNMAP={
   "cmd":"win-cmd","cmd.exe":"win-cmd","command":"win-cmd","command.com":"win-cmd",
   "control.exe":"win-control","control panel":"win-control",
   "services.msc":"win-services","services":"win-services",
-  "devmgmt.msc":"win-devmgr","devmgmt":"win-devmgr","hdwwiz.cpl":"win-devmgr","main.cpl":"win-devmgr",
+  "devmgmt.msc":"win-devmgr","devmgmt":"win-devmgr","hdwwiz.cpl":"win-devmgr",
   "gpedit.msc":"win-gpedit","gpedit":"win-gpedit",
   "mmc":"win-services","taskman":"win-taskmgr","appwiz.cpl":"win-control",
   "msconfig":"win-msconfig","msconfig.exe":"win-msconfig",
@@ -3111,6 +3132,7 @@ const msn=initMessenger({
      do not make small talk, and scripted chatter in a room with real players in
      it is just noise pretending to be company. */
   netLive:()=>MP.on,
+  toastsOn:()=>toastsOn,
 });
 const chatSys=t=>msn.lobbySys(t);
 const botChat=(kind,vars)=>{ if(!MP.on&&(msnAuto||openApps.has("win-chat"))) msn.botChat(kind,vars); };
@@ -3191,7 +3213,7 @@ sys=initSysApps({
     recallOne:id=>{
       const c=curs.find(x=>x.id===id&&x.isMine);
       if(!c) return;
-      if(MP.on){ c._bankReq=true; mpSend({t:"recallOne",id:c.id}); }
+      if(MP.on){ c._bankReq=true; c._bankAt=Date.now(); mpSend({t:"recallOne",id:c.id}); }
       else if(c.mode==="roam"){ c.prevMode="recall"; c.mode="recall"; c.recallT=RECALL_SECS; }
       log(`recall order: cursor #${id}`);
     },
@@ -3493,6 +3515,8 @@ function skinCurEl(el,skin){
     const svg=el.querySelector("svg"); if(!svg) return;
     const img=document.createElement("img");
     img.className="curskin"; img.src=u; img.draggable=false;
+    if(svg.style.width) img.style.width=svg.style.width;     /* keep the bounty/cmag size */
+    if(svg.style.height) img.style.height=svg.style.height;
     svg.replaceWith(img);
   });
 }
@@ -3700,8 +3724,12 @@ function renderPhase(){
 /* ================= deploy / recall / bank ================= */
 function canDeploy(){ return phase==="battle"&&!shutFired; }
 function deploy(silent){
-  if(!canDeploy()||myCurs().length>=MAXCUR||wallet<STAKE) return;
-  if(MP.on){ mpSend({t:"deploy"}); if(!silent) sysSnd("hwin",.5); return; }
+  if(!canDeploy()||myCurs().length>=MAXCUR) return;
+  if(MP.on){
+    if(!net||!net.up()){ log("reconnecting — deploy not sent"); return; }
+    mpSend({t:"deploy"}); if(!silent) sysSnd("hwin",.5); return;
+  }
+  if(wallet<STAKE) return;
   wallet-=STAKE;
   myTickets+=200;
   R.myIn+=STAKE; stats.deploys++; stats.tIn+=STAKE;
@@ -3936,7 +3964,7 @@ setInterval(()=>{
     if(!c._bankReq&&c.bounty>=auto.bankAt*ENTRY){ c._bankReq=true; c._bankAt=Date.now(); mpSend({t:"recallOne",id:c.id}); }
   }
   if(!canDeploy()) return;
-  if(auto.on&&myCurs().length<auto.count&&wallet>=STAKE) deploy(true);
+  if(auto.on&&myCurs().length<auto.count&&(MP.on||wallet>=STAKE)) deploy(true);
   if(MP.on) return;   /* the server runs the bots */
   const botCurs=curs.filter(c=>!c.isMine&&!c.dead).length;
   const target=7+(roundNo*3)%5;
@@ -4306,8 +4334,9 @@ function updatePanel(){
   const mine=myCurs();
   const liveVal=mine.reduce((s,c)=>s+c.bounty,0);
   const dep=$("#btn-deploy");
-  dep.disabled=!canDeploy()||mine.length>=MAXCUR||wallet<STAKE;
-  dep.textContent=wallet<STAKE?"▸ INSUFFICIENT FUNDS"
+  const broke=wallet<STAKE&&!MP.on;   /* online, the server faucets the busted */
+  dep.disabled=!canDeploy()||mine.length>=MAXCUR||broke;
+  dep.textContent=broke?"▸ INSUFFICIENT FUNDS"
     :mine.length>=MAXCUR?"▸ MAX 5 CURSORS LIVE"
     :canDeploy()?"▸ DEPLOY 0.1 SOL"
     :phase==="crash"?"▸ RESTARTING…":"▸ SHUTDOWN IN PROGRESS";
@@ -4327,7 +4356,7 @@ function updatePanel(){
   /* the thumb bar shows the same state in fewer letters */
   const hd=$("#mh-deploy");
   hd.disabled=dep.disabled;
-  hd.textContent=wallet<STAKE?"NO FUNDS":mine.length>=MAXCUR?"MAX 5 LIVE":canDeploy()?"▸ DEPLOY 0.1":phase==="crash"?"REBOOT…":"SHUTDOWN";
+  hd.textContent=broke?"NO FUNDS":mine.length>=MAXCUR?"MAX 5 LIVE":canDeploy()?"▸ DEPLOY 0.1":phase==="crash"?"REBOOT…":"SHUTDOWN";
   const hrc=$("#mh-recall");
   hrc.disabled=rec.disabled;
   hrc.textContent=graced?"◂ UNDO":recalling?"◂ CANCEL":"◂ RECALL";
@@ -4341,8 +4370,16 @@ setInterval(()=>{ if(Math.random()<.25) botChat("idle"); },9000);
 /* logoff reset */
 $("#btn-logoff-yes").addEventListener("click",()=>{
   sClick();
+  if(MP.on){
+    /* the server owns this session's money; a local wipe just desyncs the
+       readout and lets autoplay double-deploy over invisible cursors */
+    mpSend({t:"recall"});
+    closeWin("win-logoff"); showLogin(true); return;
+  }
   for(const c of [...myCurs()]) removeCur(c);
   wallet=5000; walletShown=5000;
+  $("#walletamt").textContent=fmtS(5000)+" SOL";
+  $("#mh-wallet").textContent=fmtS(5000)+" SOL";
   stats={kills:0,deaths:0,best:0,deploys:0,banks:0,bigBank:0,tIn:0,tOut:0};
   epochHist=[];
   myTickets=0; rakeAccrued=0;
@@ -4384,6 +4421,9 @@ function mpHello(){
      welcome purges and rebuilds, so a duplicate hello is harmless. */
   if(!net||!net.up()) return;
   net.send({t:"hello",token:store.data.mpToken||undefined,name:PLAYER||undefined,skin:store.data.curScheme||""});
+  /* the server assumes new sockets are visible; a hidden tab reconnecting
+     overnight would stream 15Hz snapshots to a renderer that never draws */
+  net.send({t:"vis",on:document.visibilityState==="visible"});
 }
 
 /* ---- server cursors: same DOM, same tag scaling, positions interpolated ---- */
@@ -4469,10 +4509,16 @@ function mpWelcome(m){
   store.data.mpToken=m.token; store.save();
   if(PLAYER!==m.name){ PLAYER=m.name; store.data.userName=m.name; store.save(); syncIdentity(); try{ msn.renderMe(); }catch(e){} }
   mpPurge();
+  const keepMy=(roundNo===m.epoch.no&&R)?{i:R.myIn,o:R.myOut}:null;
   roundNo=m.epoch.no; R=newRoundRecord();
+  if(keepMy){ R.myIn=keepMy.i; R.myOut=keepMy.o; }   /* same epoch: my ledger survives the blip */
   R.pot=m.epoch.pot; R.deploys=m.epoch.deploys; R.deaths=m.epoch.deaths;
   upT=m.epoch.up; epochStart=upT-(m.epoch.eup||0);   /* the epoch is older than our connection */
   phase=m.epoch.phase; shutFired=m.epoch.rush!=null; phaseT=shutFired?m.epoch.rush:999;
+  /* the crash/rush UI we missed the events for */
+  if(phase!=="crash"&&bsodEl.style.display==="block") bsodHide();
+  if(!shutFired&&openApps.has("win-shutdown")) closeWin("win-shutdown");
+  mpOff=null; mpOffWin.length=0;   /* the server clock restarted with the socket */
   commitHex=m.epoch.commit; seedHex=null;
   MP.fill=m.epoch.fill; MP.disk=m.epoch.disk; MP.corpses=m.epoch.corpses||64;
   for(const sc of m.epoch.curs){
@@ -4486,11 +4532,13 @@ function mpWelcome(m){
   myTickets=m.tickets; globalTickets=m.glob; rakeAccrued=m.rake;
   if(m.tv&&typeof m.tv.srv==="number") tvSkew=m.tv.srv-Date.now();
   MP.tv=m.tv||MP.tv;
+  tvWatchLast=false;               /* re-announce "watching" on the new socket */
+  try{ mpTvSync(); }catch(e){}     /* the room may have changed videos while we were gone */
   if(!MP.chatSeeded){
     MP.chatSeeded=true;
     for(const e of (m.chat||[])) e.who==="*"?msn.lobbySys(e.text):msn.lobbySay(e.who,e.text);
   }
-  mpSend({t:"guest"}); mpSend({t:"gallery"});
+  mpSend({t:"guest"});
   MP.online=m.online;
   msn.setHumans(m.online);
   log(`connected to the beta arena as ${MP.name} — epoch ${roundNo}, ${m.online.length} online`);
@@ -4666,7 +4714,7 @@ function mpDown(){
   mpGraceT=setTimeout(()=>{
     mpGraceT=null;
     if(net.up()) return;              /* came back; mpWelcome already rebuilt the world */
-    MP.on=false; MP.name=null; MP.chatSeeded=false;
+    MP.on=false; MP.name=null;
     mpPurge(); msn.setHumans([]);
     showBalloon("Offline sandbox","Server gone. Fake bots, fake money. Reconnects on its own.");
     log("server unreachable — offline sandbox running");
@@ -4697,14 +4745,25 @@ function mpMsg(m){
     case "sys": if(MP.on) msn.lobbySys(m.text); break;
     case "join": if(MP.on&&m.online){ MP.online=m.online; msn.setHumans(m.online); mpTvRenderQueue(); } break;   /* the sys line covers the greeting */
     case "part": if(MP.on){ msn.lobbySys(`${m.name} signed out`); if(m.online){ MP.online=m.online; msn.setHumans(m.online); mpTvRenderQueue(); } } break;
-    case "guest": MP.guest=m.list; mpRefreshIe("guest."); break;
+    case "guest": MP.guest=m.list;
+      { const t=document.querySelector("#gb-txt"); if(!t||!t.value.trim()) mpRefreshIe("guest."); }
+      break;
     case "gallery": MP.gallery=m.list; mpRefreshIe("gallery"); break;
+    case "galAdd": if(m.item){ MP.gallery=[m.item,...(MP.gallery||[])].slice(0,16); mpRefreshIe("gallery"); } break;
     case "tv":
       if(typeof m.srv==="number") tvSkew=m.srv-Date.now();
       MP.tv={now:m.now,queue:m.queue,skip:m.skip,w:m.w};
       mpTvSync();
       break;
-    case "err": if(m.msg) showBalloon("beta server",m.msg); break;
+    case "err":
+      if(m.msg==="signed in elsewhere"){
+        /* both tabs share one token: retrying just kicks the other tab back.
+           This tab stands down; the sandbox takes over. */
+        try{ net.stop(); }catch(e){}
+        if(mpGraceT){ clearTimeout(mpGraceT); mpGraceT=null; mpDrop(); }
+        showBalloon("beta server","You signed in from another tab. This one went offline — reload it to take over.");
+      }else if(m.msg) showBalloon("beta server",m.msg);
+      break;
   }
 }
 const net=MPURL?initNet({url:MPURL,onMsg:mpMsg,onUp:()=>{ if(PLAYER) mpHello(); },onDown:mpDown}):null;
@@ -4733,7 +4792,7 @@ function mpGuestPost(who,txt){
 }
 function mpGuestOpen(){ if(MP.on) mpSend({t:"guest"}); }
 function mpGalleryData(){ return MP.on?(MP.gallery||[]):null; }
-function mpGalleryOpen(){ if(MP.on) mpSend({t:"gallery"}); }
+function mpGalleryOpen(){ if(MP.on&&MP.gallery==null) mpSend({t:"gallery"}); }
 function mpPublishPainting(name,png){
   if(!MP.on){ showError("Gallery","Offline — nowhere to publish.",true); return; }
   if(png.length>400000){ showError("Gallery","Over the 400 KB limit.",true); return; }
@@ -4752,7 +4811,7 @@ let ytApi=0, ytPlayer=null, tvPage=null;
    was wrong, so every tv message carries the server's time and we keep the
    difference. Old servers do not send it; then the skew is zero and this
    behaves exactly as it did before. */
-let tvSkew=0, tvLastSeek=0, tvFitObs=null, tvDurSent=null, tvVoted=null, tvWatchLast=false;
+let tvSkew=0, tvLastSeek=0, tvFitObs=null, tvDurSent=null, tvVoted=null, tvWatchLast=false, tvGen=0;
 /* the server cannot see how long a video is; the first screen that can read
    the duration tells it, and the channel advances on time even if every
    player is closed when the credits roll */
@@ -4832,7 +4891,13 @@ function mpTvMounted(page){
 }
 function mpTvPlayer(){
   if(!tvPage||!tvPage.isConnected||!MP.tv.now) return;
+  const gen=++tvGen;
   let slot=tvPage.querySelector("#tv-slot");
+  if(slot&&ytPlayer){
+    /* fresh mount over a dead player from the last visit */
+    try{ ytPlayer.destroy&&ytPlayer.destroy(); }catch(e){}
+    ytPlayer=null;
+  }
   if(!slot){
     /* the slot is gone because a fallback panel took the screen, or because a
        player is already sitting in it. Either way, clear the stage and build
@@ -4845,6 +4910,8 @@ function mpTvPlayer(){
     try{ ytPlayer&&ytPlayer.destroy&&ytPlayer.destroy(); }catch(e){}
     const badge=tvPage.querySelector("#tv-live");
     if(badge) badge.style.display="";
+    const sndBtn=tvPage.querySelector("#tv-sound");
+    if(sndBtn) sndBtn.style.display="";
     slot=document.createElement("div");
     slot.id="tv-slot";
     st.insertBefore(slot,st.firstChild);
@@ -4861,9 +4928,9 @@ function mpTvPlayer(){
     playerVars:{autoplay:1,mute:1,start:Math.floor(elapsed),rel:0,modestbranding:1,
       playsinline:1,origin:location.origin},
     events:{
-      onReady:()=>{ ready=true; tvReport(vid); tvApplyVol(); },
+      onReady:()=>{ ready=true; tvReport(MP.tv.now?MP.tv.now.vid:vid); tvApplyVol(); },
       onStateChange:e=>{
-        ready=true; tvReport(vid);
+        ready=true; tvReport(MP.tv.now?MP.tv.now.vid:vid);
         /* pressing play after a pause rejoins the broadcast rather than
            starting a private screening from where you left off */
         if(e.data===1) tvCatchUp();
@@ -4883,7 +4950,7 @@ function mpTvPlayer(){
   /* the embed can also fail without ever telling us — a blocker or a proxy
      returning something Chrome will not render leaves a dead grey box. If the
      player has not said a word in eight seconds, say so and offer the link. */
-  setTimeout(()=>{ if(!ready) tvFallback(vid,null); },12000);
+  setTimeout(()=>{ if(gen===tvGen&&!ready) tvFallback(vid,null); },12000);
 }
 /* what the TV shows when YouTube will not play inside this page */
 function tvFallback(vid,code){

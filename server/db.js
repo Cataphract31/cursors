@@ -78,6 +78,8 @@ export function openDb(path) {
     galleryList: db.prepare("SELECT id, name, by, at, png FROM gallery ORDER BY id DESC LIMIT 16"),
     galleryPost: db.prepare("INSERT INTO gallery (name, by, at, png) VALUES (?,?,?,?)"),
     galleryTrim: db.prepare("DELETE FROM gallery WHERE id NOT IN (SELECT id FROM gallery ORDER BY id DESC LIMIT 24)"),
+    galleryLast: db.prepare("SELECT * FROM gallery ORDER BY id DESC LIMIT 1"),
+    guestTrim: db.prepare("DELETE FROM guestbook WHERE rowid NOT IN (SELECT rowid FROM guestbook ORDER BY rowid DESC LIMIT 200)"),
     epochAdd: db.prepare("INSERT OR REPLACE INTO epochs (no,endedAt,up,pot,deploys,deaths,seed,commitv,top) VALUES (?,?,?,?,?,?,?,?,?)"),
   };
 
@@ -102,10 +104,12 @@ export function openDb(path) {
       p.totIn, p.totOut, p.published || 0, p.created || Date.now(), Date.now()),
     nameTaken: (name, token) => !!q.nameTaken.get(name, token),
     guestList: () => q.guestList.all(),
-    guestPost: (who, txt) => q.guestPost.run(who, Date.now(), txt),
+    guestPost: (who, txt) => { q.guestPost.run(who, Date.now(), txt); q.guestTrim.run(); },
     galleryList: () => q.galleryList.all(),
+    galleryLatest: () => q.galleryLast.get(),
     galleryPost: (name, by, png) => { q.galleryPost.run(name, by, Date.now(), png); q.galleryTrim.run(); },
     epochAdd: r => q.epochAdd.run(r.no, Date.now(), r.up, r.pot, r.deploys, r.deaths, r.seed, r.commit, JSON.stringify(r.top || null)),
+    tx: fn => { db.exec("BEGIN"); try { fn(); db.exec("COMMIT"); } catch (e) { try { db.exec("ROLLBACK"); } catch {} throw e; } },
     close: () => db.close(),
   };
 }

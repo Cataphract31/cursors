@@ -24,7 +24,8 @@ export function initSoundApps(deps) {
     return store.data.mixer;
   }
   const factor = k => { const c = mix()[k]; return c.m ? 0 : c.v / 100; };
-  function applyMix() { try { wmpVol(); } catch (e) {} try { ampVol(); } catch (e) {} try { tvVol(); } catch (e) {} }
+  function applyMix() {
+    if (sr && sr.gain) { try { sr.gain.gain.value = hooks.getMuted() ? 0 : hooks.getMaster() * factor("wave"); } catch (e) {} } try { wmpVol(); } catch (e) {} try { ampVol(); } catch (e) {} try { tvVol(); } catch (e) {} }
   /* Winamp is a program on this machine, so it goes through the mixer like
      one: its own slider is the app's volume, Wave is its bus, and Volume
      Control is the master over both. */
@@ -76,9 +77,10 @@ export function initSoundApps(deps) {
       };
       set(e);
       const mv = ev => set(ev);
-      const up = () => { dragging = null; inp.removeEventListener("pointermove", mv); inp.removeEventListener("pointerup", up); };
+      const up = () => { dragging = null; inp.removeEventListener("pointermove", mv); inp.removeEventListener("pointerup", up); inp.removeEventListener("pointercancel", up); };
       inp.addEventListener("pointermove", mv);
       inp.addEventListener("pointerup", up);
+      inp.addEventListener("pointercancel", up);
     });
   }
   function openMixer() { volRender(); openWin("win-sndvol"); }
@@ -182,6 +184,7 @@ export function initSoundApps(deps) {
     sr.analyser = ac.createAnalyser(); sr.analyser.fftSize = 512;
     const gain = ac.createGain();
     gain.gain.value = hooks.getMuted() ? 0 : hooks.getMaster() * factor("wave");
+    sr.gain = gain;   /* applyMix re-aims this while the clip plays */
     node.connect(sr.analyser); sr.analyser.connect(gain); gain.connect(ac.destination);
     const from = Math.min(sr.pos, sr.buf.duration);
     const t0 = ac.currentTime - from;
@@ -193,7 +196,7 @@ export function initSoundApps(deps) {
       sr.pos = Math.min(sr.buf.duration, ac.currentTime - t0);
       srLabel();
     }, 60);
-    node.onended = () => { sr.playing = null; sr.pos = 0; srStopAll(); };
+    node.onended = () => { sr.playing = null; sr.gain = null; sr.pos = 0; srStopAll(); };
   }
   /* Effects — real DSP on the buffer, exactly what the menu claims */
   function srMap(fn, lenScale) {
