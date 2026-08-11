@@ -181,22 +181,33 @@ export function createSim(opts) {
         removeCur(c);
         emit({ t: "refund", id: c.id, owner: c.owner });
         refunded++;
-      } else if (c.mode === "roam") forceRecall(c);
+      } else if (c.mode === "roam" || c.mode === "duel") forceRecall(c);
     }
     if (refunded) money(p);
   }
   function recallOne(key, id) {
     const c = curs.find(c => c.id === id && c.key === key);
-    if (c && c.mode === "roam" && !graced(c)) forceRecall(c);
+    if (c && (c.mode === "roam" || c.mode === "duel") && !graced(c)) forceRecall(c);
   }
   function cancelRecall(key) {
     /* changed your mind inside the 3s glide. Recalling cursors stay
        attackable, so this dodges nothing; during shutdown the sweep owns
        every cursor and the answer is no. */
     if (phase !== "battle" || rushAt) return;
-    for (const c of cursOf(key)) if (c.mode === "recall") { c.mode = "roam"; c.prevMode = "roam"; c.recallT = 0; }
+    for (const c of cursOf(key)) {
+      if (c.mode === "recall") { c.mode = "roam"; c.prevMode = "roam"; c.recallT = 0; }
+      /* armed mid-duel and not yet gliding — disarm it the same way */
+      else if (c.mode === "duel" && c.prevMode === "recall") { c.prevMode = "roam"; c.recallT = 0; }
+    }
   }
   function forceRecall(c) {
+    /* Mid-duel the mode field is spoken for, and dropping the order here was a
+       silent theft: the player tapped recall on a cursor that collided in the
+       same instant, the request hit this line, and the cursor kept fighting
+       while the client showed it banking. A duel is 700ms, which is exactly
+       when a nervous player reaches for the button. So arm prevMode instead —
+       resolveDuel restores into the glide rather than back into a roam. */
+    if (c.mode === "duel") { c.prevMode = "recall"; c.recallT = RECALL_SECS; return; }
     if (c.mode !== "recall") { c.mode = "recall"; c.prevMode = "recall"; c.recallT = RECALL_SECS; }
   }
   function bank(c, atShutdown) {

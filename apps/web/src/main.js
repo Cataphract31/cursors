@@ -3744,7 +3744,7 @@ sys=initSysApps({
       const c=curs.find(x=>x.id===id&&x.isMine);
       if(!c) return;
       if(MP.on){ c._bankReq=true; c._bankAt=Date.now(); mpSend({t:"recallOne",id:c.id}); }
-      else if(c.mode==="roam"){ c.prevMode="recall"; c.mode="recall"; c.recallT=RECALL_SECS; }
+      else if(c.mode==="roam"||c.mode==="duel"){ forceRecall(c); }
       log(`recall order: cursor #${id}`);
     },
     /* --- shell --- */
@@ -4178,6 +4178,11 @@ function startShutdownRush(){
   updatePanel();
 }
 function forceRecall(c){
+  /* mid-duel the mode field is spoken for, so arm prevMode: resolveDuel puts a
+     survivor back into prevMode, which now means the glide instead of a roam.
+     Dropping the order here meant a recall tapped in the same instant as a
+     collision simply never happened — see the server sim for the whole note. */
+  if(c.mode==="duel"){ c.prevMode="recall"; c.recallT=RECALL_SECS; return; }
   if(c.mode!=="recall"){ c.mode="recall"; c.prevMode="recall"; c.recallT=RECALL_SECS; }
 }
 /* the epoch boundary, dressed as what it is: a crash that banks everyone */
@@ -4332,9 +4337,9 @@ function recallAll(){
   }
   /* tapping again inside the 3s glide = changed your mind */
   if(phase==="battle"&&!shutFired){
-    const rc=[...myCurs()].filter(c=>c.mode==="recall");
+    const rc=[...myCurs()].filter(c=>c.mode==="recall"||(c.mode==="duel"&&c.prevMode==="recall"));
     if(rc.length&&![...myCurs()].some(c=>c.grace>0)){
-      for(const c of rc){ c.mode="roam"; c.prevMode="roam"; c.recallT=0; }
+      for(const c of rc){ if(c.mode==="recall") c.mode="roam"; c.prevMode="roam"; c.recallT=0; }
       log("recall cancelled"); sClick(); updatePanel(); return;
     }
   }
@@ -4345,7 +4350,7 @@ function recallAll(){
          so undeploying inside it refunds in full with nothing to game */
       wallet+=STAKE; myTickets-=200; R.myIn-=STAKE; R.pot-=ENTRY; R.deploys--;
       removeCur(c); refunded++;
-    }else if(c.mode==="roam"){ forceRecall(c); recalled++; }
+    }else if(c.mode==="roam"||c.mode==="duel"){ forceRecall(c); recalled++; }
   }
   if(refunded) log(`undeployed ${refunded} in grace — refunded in full`);
   if(recalled) log(`recalling ${recalled} cursor${recalled>1?"s":""} — banking in ${RECALL_SECS}s`);
@@ -4535,10 +4540,16 @@ setInterval(()=>{
   lastTick=Date.now();
   /* bank-at must not depend on a painted frame: a hidden tab still banks.
      A recallOne that got lost in a blip re-arms after 6s. */
-  if(MP.on&&auto.on&&auto.bankAt>0) for(const c of mpCurs.values()){
-    if(!c.isMine||c.mode!=="roam") continue;
-    if(c._bankReq&&c._bankAt&&Date.now()-c._bankAt>6000) c._bankReq=false;
-    if(!c._bankReq&&c.bounty>=auto.bankAt*ENTRY){ c._bankReq=true; c._bankAt=Date.now(); mpSend({t:"recallOne",id:c.id}); }
+  if(MP.on) for(const c of mpCurs.values()){
+    if(!c.isMine) continue;
+    /* The "…" in a cursor's slot is a local promise that a recall is on its
+       way home. If the server never acted on it the promise has to expire, or
+       the slot lies forever AND refuses a second tap. Six seconds is two
+       glides; a real recall is showing mode "recall" long before then. */
+    if(c._bankReq&&c.mode==="roam"&&c._bankAt&&Date.now()-c._bankAt>6000) c._bankReq=false;
+    if(auto.on&&auto.bankAt>0&&c.mode==="roam"&&!c._bankReq&&c.bounty>=auto.bankAt*ENTRY){
+      c._bankReq=true; c._bankAt=Date.now(); mpSend({t:"recallOne",id:c.id});
+    }
   }
   if(!canDeploy()) return;
   if(auto.on&&myCurs().length<auto.count&&(MP.on||wallet>=STAKE)) deploy(true);
@@ -5126,27 +5137,33 @@ function recallCursor(id){
     if(c._bankReq) return;                      /* already on its way home */
     c._bankReq=true; c._bankAt=Date.now();
     mpSend({t:"recallOne",id:c.id});
-  }else if(c.mode==="roam"){
-    c.prevMode="recall"; c.mode="recall"; c.recallT=RECALL_SECS;
+  }else if(c.mode==="roam"||c.mode==="duel"){
+    forceRecall(c);
   }else return;
   sClick(); haptic("recall");
   log(`recall: cursor #${id} (${fmtS(c.bounty)})`);
   updatePanel();
 }
+/* "on its way home" — true for a cursor already gliding out, for one whose
+   order is still in flight to the server, and for one that took the order
+   during a duel, where the mode field is busy for 700ms and prevMode carries
+   the intent. Without that last case the slot went dark for the length of the
+   fight, which is exactly when the player is watching it. */
+const homing=c=>!!c._bankReq||c.mode==="recall"||(c.mode==="duel"&&c.prevMode==="recall");
 /* a slot per live cursor, plus dashed blanks up to the 5-cursor cap so the
    player can see the ceiling as well as what they hold */
 function renderStrip(host){
   if(!host) return;
   const mine=myCurs();
   const want=mine.map(c=>"c"+c.id).join(",")+"|"+mine.map(c=>
-    (c._bankReq||c.mode==="recall"?"r":"")+Math.round(c.bounty)+(c.grace>0?"g":"")).join(",");
+    (homing(c)?"r":"")+Math.round(c.bounty)+(c.grace>0?"g":"")).join(",");
   if(host._sig===want) return;   /* the frame loop calls this constantly */
   host._sig=want;
   host.innerHTML="";
   for(const c of mine){
     const mult=c.bounty/ENTRY;
     const b=document.createElement("button");
-    const going=c._bankReq||c.mode==="recall";
+    const going=homing(c);
     b.className="cslot"+(going?" going":"")+(mult>=2?" up":"");
     b.type="button";
     b.dataset.cid=c.id;
@@ -5203,8 +5220,10 @@ function updatePanel(){
     :phase==="crash"?"▸ RESTARTING…":"▸ SHUTDOWN IN PROGRESS";
   const rec=$("#btn-recall");
   const graced=mine.some(c=>c.grace>0);
-  const recalling=!graced&&mine.some(c=>c.mode==="recall");
-  rec.disabled=phase==="crash"||!(recalling||mine.some(c=>c.mode==="roam"||c.grace>0));
+  /* the ALL button reads confirmed state, not the in-flight latch: one slot
+     tapped must not relabel it CANCEL before the order has even landed */
+  const recalling=!graced&&mine.some(c=>c.mode==="recall"||(c.mode==="duel"&&c.prevMode==="recall"));
+  rec.disabled=phase==="crash"||!(recalling||mine.some(c=>c.mode==="roam"||c.mode==="duel"||c.grace>0));
   rec.textContent=graced?"◂ UNDEPLOY (refund)":recalling?"◂ CANCEL RECALL":`◂ RECALL ALL (${RECALL_SECS}s)`;
   $("#st-attack").classList.toggle("on",stance==="attack");
   $("#st-defend").classList.toggle("on",stance==="defend");
