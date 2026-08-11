@@ -509,6 +509,43 @@ body.mobile .ie-doc table{max-width:100%}
 #balloon b{display:block;margin-bottom:3px}
 #balloon-x{position:absolute;right:6px;top:5px;font-size:9px;border:1px solid #8A867A;padding:0 2px;cursor:pointer;background:#ECE9D8}
 
+/* ---------- the kill feed ---------- */
+/* Every death in the arena, streamed into a fixed strip instead of thrown at
+   you as a window. It sits along the bottom of the field, over the arena and
+   under every dialog, and it takes no clicks except on your own death row —
+   so it can never swallow a window's close button or trap anybody in it. */
+#feed{position:fixed;z-index:5200;left:var(--sal);right:calc(var(--rail) + var(--sar));
+  bottom:calc(var(--tb) + var(--hud) + var(--sab) + 8px);
+  display:flex;flex-direction:column-reverse;align-items:center;gap:3px;
+  pointer-events:none;font:11px "Lucida Console",Consolas,monospace;line-height:15px}
+.fd{max-width:min(330px,64vw);display:flex;align-items:center;gap:5px;padding:2px 7px 2px 5px;
+  background:rgba(6,10,24,.66);border:1px solid rgba(255,255,255,.14);border-left:3px solid #6E88C8;
+  border-radius:2px;color:#D6E0F8;white-space:nowrap;overflow:hidden;
+  text-shadow:0 1px 2px #000;animation:fdIn .18s ease-out;transition:opacity .5s linear}
+.fd.out{opacity:0}
+.fd svg{width:9px;height:14px;flex:none;opacity:.85}
+.fd .fd-n{overflow:hidden;text-overflow:ellipsis}
+.fd .fd-v{color:#93A6CE}
+.fd b{color:#FFD24A;font-weight:400}
+/* your kill is green down the edge, your death is red — the two rows you look for */
+.fd.fd-kill{border-left-color:#7FD25A;color:#E4F2DC}
+.fd.fd-lost{border-left-color:#E04A32;color:#F4DAD4}
+.fd.fd-mine{border-left-color:#E04A32;background:rgba(38,8,6,.82);
+  flex-direction:column;align-items:flex-start;gap:0;padding:4px 26px 5px 7px;
+  white-space:normal;position:relative;pointer-events:auto;cursor:pointer}
+.fd.fd-mine .fd-top{display:flex;align-items:center;gap:5px;max-width:100%;color:#FFC9BE}
+.fd.fd-mine .fd-sub{color:#E0C4BC;font-size:11px;white-space:nowrap}
+.fd.fd-mine .fd-sub.dim{color:#B08D85;font-size:10px}
+.fd.fd-mine .fd-sub .bad{color:#FF8C74}
+.fd-x{position:absolute;right:4px;top:3px;width:15px;height:15px;line-height:13px;text-align:center;
+  border:1px solid rgba(255,255,255,.3);border-radius:2px;color:#F2D4CE;font-size:10px;background:rgba(0,0,0,.3)}
+@keyframes fdIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+/* a phone gets fatter hit targets on the one row that takes a touch */
+body.mobile .fd{max-width:min(320px,80vw);border-left-width:4px}
+body.mobile .fd-x{width:24px;height:24px;line-height:22px;font-size:12px;right:2px;top:2px}
+body.mobile .fd.fd-mine{padding:5px 32px 6px 8px}
+body.mobile.land .fd{max-width:min(320px,48vw)}
+
 /* ---------- game layer ---------- */
 #arena{position:absolute;left:0;top:0;width:1280px;height:800px;transform-origin:0 0;z-index:5000;pointer-events:none}
 body.mobile #arena{transition:opacity .18s ease-out}

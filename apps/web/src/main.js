@@ -3936,6 +3936,7 @@ function phaseTick(dt){
     bsodEl.style.display="none";
     errorReport();
     /* the playfield hiccups back to life; nothing about the money does */
+    feedClear();
     $("#arena").classList.add("crashed");
     setTimeout(()=>$("#arena").classList.remove("crashed"),900);
     degauss();   /* the tube collects itself after a stop error */
@@ -4374,6 +4375,7 @@ function resolveDuel(a,b){
   explode(l);
   R.deaths++; localDeaths++;
   binDead.unshift(certify(l,w,w===a?1-pA:pA)); renderBin();
+  if(!l.isMine) feedKill(binDead[0],false);
   removeCur(l);
   /* every corpse is 12 MB, and a full disk is a crash */
   if(localDeaths>=LOCAL_CORPSES){ setTimeout(crashSystem,0); }
@@ -4384,9 +4386,10 @@ function resolveDuel(a,b){
   if(l.isMine){
     stats.deaths++;
     /* your last cursor dying is not a system event — the system is fine, it
-       has your money. You get the death certificate, not a blue screen. */
-    if(myCurs().length===0){ sDie(); if(!auto.on) deathCert(binDead[0]); }
-    else float("cursor lost",l.x,l.y,true);
+       has your money. You get the receipt in the feed, not a blue screen and
+       not a window over the fight you are still watching. */
+    if(myCurs().length===0){ sDie(); feedKill(binDead[0],!auto.on); }
+    else { feedKill(binDead[0],false); float("cursor lost",l.x,l.y,true); }
   }else if(w.isMine){
     stats.kills++; R.myKills++;
     stats.best=Math.max(stats.best,w.bounty/ENTRY);
@@ -4465,6 +4468,56 @@ function float(text,x,y,small){
   f.textContent=text;
   f.style.left=clamp(x-20,4,AW-80)+"px"; f.style.top=clamp(y-30,4,AH-30)+"px";
   fxlayer.appendChild(f); setTimeout(()=>f.remove(),1250);
+}
+
+/* ================= the kill feed ================= */
+/* Deaths used to arrive as a window. On a phone that window is the whole
+   phone, and dying again while it was up put a second one on top of the first
+   — people ended up stuck inside their own receipt. Same information, streamed
+   instead of dealt: every death in the arena scrolls a fixed strip, your own
+   sits longer in red, and the certificate is one tap away for whoever wants
+   the numbers. Nothing here is modal and nothing here blocks the arena. */
+const feedEl=$("#feed");
+const FEEDGLYPH=`<svg viewBox="0 0 14 22"><use href="#ic-cursor"/></svg>`;
+function feedDrop(el){
+  if(!el||el.dataset.going) return;
+  el.dataset.going="1";
+  el.classList.add("out");
+  setTimeout(()=>{ el.remove(); },520);
+}
+function feedPush(el,ms){
+  feedEl.insertBefore(el,feedEl.firstChild);   /* newest first */
+  /* the sticky red row is not pushed out by the traffic behind it */
+  const plain=[...feedEl.children].filter(r=>!r.classList.contains("fd-mine")&&!r.dataset.going);
+  while(plain.length>(MOBILE?3:5)) feedDrop(plain.pop());
+  setTimeout(()=>feedDrop(el),ms);
+  return el;
+}
+function feedClear(){ if(feedEl) feedEl.innerHTML=""; }
+/* `mine` means this death emptied your side of the board: the moment the old
+   certificate popup fired, and the only row that waits for you */
+function feedKill(d,mine){
+  if(!feedEl) return;
+  const file=esc(d.name)+"_"+String(d.id).padStart(4,"0")+".cur";
+  if(mine){
+    const el=document.createElement("div");
+    el.className="fd fd-mine";
+    el.innerHTML=`<div class="fd-top">${FEEDGLYPH}<span class="fd-n">${file}</span></div>`+
+      `<div class="fd-sub">${esc(d.killer)} took <b>${fmtS(d.lost)}</b> SOL`+
+      ` · you were <span class="${d.odds>=50?"bad":""}">${d.odds}%</span></div>`+
+      `<div class="fd-sub dim">tap for the certificate</div>`+
+      `<span class="fd-x" role="button" aria-label="Dismiss">✕</span>`;
+    el.addEventListener("click",e=>{
+      feedDrop(el);
+      if(!e.target.classList.contains("fd-x")) deathCert(d);
+    });
+    return feedPush(el,14000);
+  }
+  const el=document.createElement("div");
+  el.className="fd"+(d.killerMine?" fd-kill":"")+(d.mine?" fd-lost":"");
+  el.innerHTML=FEEDGLYPH+`<span class="fd-n">${file}</span>`+
+    `<span class="fd-v">▸ ${esc(d.killer)}</span><b>${fmtS(d.lost)}</b>`;
+  return feedPush(el,MOBILE?4400:5400);
 }
 
 /* ================= BSOD ================= */
@@ -5033,6 +5086,7 @@ function mpKill(m){
   cert.killerMine=m.wOwner===MP.name;
   cert.at=new Date().toLocaleTimeString([],{hour12:false});
   binDead.unshift(cert); renderBin();
+  if(!cert.mine) feedKill(cert,false);
   R.deaths++;
   if(l){ explode(l); mpRemove(l); }
   if(w){
@@ -5044,8 +5098,8 @@ function mpKill(m){
   log(`${m.wOwner} > ${m.lOwner}  +${fmtS(m.pot)}`);
   if(cert.mine){
     stats.deaths++;
-    if(myCurs().length===0){ sDie(); if(!auto.on) deathCert(binDead[0]); }
-    else if(l) float("cursor lost",l.x,l.y,true);
+    if(myCurs().length===0){ sDie(); feedKill(cert,!auto.on); }
+    else { feedKill(cert,false); if(l) float("cursor lost",l.x,l.y,true); }
   }else if(cert.killerMine){
     stats.kills++; R.myKills++;
     if(w){ stats.best=Math.max(stats.best,w.bounty/ENTRY); sKill(); float(fmtSign(m.pot),w.x,w.y,false);
@@ -5095,6 +5149,7 @@ function mpEpoch(m){
   commitHex=m.commit; seedHex=null;
   phase="battle"; shutFired=false; phaseT=999;
   MP.fill=0; epochStart=upT;
+  feedClear();
   $("#arena").classList.add("crashed");
   setTimeout(()=>$("#arena").classList.remove("crashed"),900);
   degauss();
@@ -6018,10 +6073,10 @@ if(location.hash.indexOf("#desktop-cx")===0) setTimeout(()=>{ /* dev: capture a 
     renderCx();
   }
   if(p==="jackpot") jackpot(ENTRY*11);   /* dev: the VHS moment */
-  if(p==="death"){ /* your last cursor dies -> certificate, not a bluescreen */
+  if(p==="death"){ /* your last cursor dies -> the feed row, not a window */
     binDead.unshift({id:++deathN,name:playerName(),mine:true,killer:"mumu",killerMine:false,
       lost:485,mult:5,peak:485,odds:71,kills:3,lived:88,round:roundNo,at:"09:41:12"});
-    deathCert(binDead[0]);
+    feedKill(binDead[0],true);
   }
 },900);
 if(location.hash.indexOf("#desktop-dog")===0) setTimeout(()=>{ /* dev: the Search Companion */
