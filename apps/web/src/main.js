@@ -482,6 +482,7 @@ function openWin(id,opts){
   if(id==="win-cmd"){ if(sys.policyOn("nocmd")){ closeWin("win-cmd"); showError("Command Prompt","The command prompt has been disabled by your administrator.\n\nPress any key to continue . . ."); return; } sys.cmdOpen(); }
   if(id==="win-control") sys.cplRender();
   if(id==="win-winver") fillWinver();
+  if(id==="win-autoplay") fillAutoplay();
   if(id==="win-utilman") fillUtilman();
   if(id==="win-services") sys.openConsole("services");
   if(id==="win-devmgr") sys.openConsole("devmgr");
@@ -861,9 +862,65 @@ function selectWith(el,e){
   if(!el.classList.contains("sel")||selIcons().length<=1) selectOnly(el);
   selAnchor=el;
 }
+/* Dragging with the RIGHT button and letting go asks what you meant. XP's
+   quiet power feature, and the only way to make a shortcut without the wizard. */
+function rightDrag(el,ic,e){
+  const sx=e.clientX, sy=e.clientY;
+  const ox=parseFloat(el.style.left), oy=parseFloat(el.style.top);
+  let moved=false;
+  const mv=ev=>{
+    const dx=ev.clientX-sx, dy=ev.clientY-sy;
+    if(!moved&&dx*dx+dy*dy<64) return;
+    moved=true; el.style.opacity=".6";
+    el.style.left=(ox+dx)+"px"; el.style.top=(oy+dy)+"px";
+  };
+  const up=ev=>{
+    removeEventListener("pointermove",mv,true); removeEventListener("pointerup",up,true);
+    el.style.opacity="";
+    if(!moved) return;
+    const dropX=ev.clientX, dropY=ev.clientY;
+    const home=()=>{ el.style.left=ox+"px"; el.style.top=oy+"px"; };
+    const land=nu=>{
+      const maxC=Math.max(0,Math.floor((W-GX-72)/CELLW)), maxR=Math.max(0,Math.floor((H-GY-84)/CELLH));
+      let c=clamp(Math.round((dropX-GX-36)/CELLW),0,maxC), r=clamp(Math.round((dropY-GY-40)/CELLH),0,maxR);
+      let g=0; while(!cellFree(c,r,nu.id)&&g++<300){ r++; if(r>maxR){ r=0; c=c+1>maxC?0:c+1; } }
+      store.data.icons[nu.id]={c,r}; store.save(); renderIcons();
+    };
+    /* the menu is modal in spirit: any dismissal puts the icon back */
+    let acted=false;
+    showMenu([
+      {label:"Move Here",bold:1,disabled:!!ic.sys,action:()=>{ acted=true; land(ic); }},
+      {label:"Copy Here",disabled:!!ic.sys,action:()=>{
+        acted=true; home();
+        const nu=copyOf(ic,ic.label);
+        store.data.userIcons.push(nu); store.save(); renderIcons(); land(nu);
+      }},
+      {label:"Create Shortcuts Here",action:()=>{
+        acted=true; home();
+        const nu=Object.assign({},ic,{id:"user_"+userN++,label:ic.label+" - Shortcut",sys:0,lnk:1});
+        delete nu._dc; delete nu._dr;
+        store.data.userIcons.push(nu); store.save(); renderIcons(); land(nu);
+      }},
+      {sep:1},
+      {label:"Cancel",action:()=>{ acted=true; home(); }},
+    ],dropX,dropY);
+    /* dismissing the menu without choosing is a cancel */
+    setTimeout(()=>{
+      const watch=setInterval(()=>{
+        if(ctx.style.display==="block") return;
+        clearInterval(watch); if(!acted) home();
+      },120);
+    },0);
+  };
+  addEventListener("pointermove",mv,true); addEventListener("pointerup",up,true);
+}
 function hookIcon(el,ic){
   el.addEventListener("pointerdown",e=>{
-    if(e.button===2){ if(!el.classList.contains("sel")) selectOnly(el); return; }
+    if(e.button===2){
+      if(!el.classList.contains("sel")) selectOnly(el);
+      rightDrag(el,ic,e);
+      return;
+    }
     e.stopPropagation();
     selectWith(el,e);
     const sx=e.clientX, sy=e.clientY;
@@ -1660,9 +1717,9 @@ function tileWins(vert){
 function taskbarMenu(){
   return [
     {label:"Toolbars",sub:[
-      {label:"Address",check:!!store.data.tbAddr,action(){ store.data.tbAddr=store.data.tbAddr?0:1; store.save(); }},
-      {label:"Links",check:!!store.data.tbLinks,action(){ store.data.tbLinks=store.data.tbLinks?0:1; store.save(); }},
-      {label:"Desktop",check:!!store.data.tbDesk,action(){ store.data.tbDesk=store.data.tbDesk?0:1; store.save(); }},
+      {label:"Address",check:!!store.data.tbAddr,action(){ store.data.tbAddr=store.data.tbAddr?0:1; store.save(); syncTaskToolbars(); }},
+      {label:"Links",check:!!store.data.tbLinks,action(){ store.data.tbLinks=store.data.tbLinks?0:1; store.save(); syncTaskToolbars(); }},
+      {label:"Desktop",check:!!store.data.tbDesk,action(){ store.data.tbDesk=store.data.tbDesk?0:1; store.save(); syncTaskToolbars(); }},
       {label:"Quick Launch",check:store.data.quickLaunch!==0,action(){
         store.data.quickLaunch=store.data.quickLaunch===0?1:0; store.save();
         $$("#taskbar .qlb").forEach(b=>b.style.display=store.data.quickLaunch===0?"none":"");
@@ -2257,6 +2314,41 @@ $("#ql-desk").addEventListener("click",()=>{
 });
 $$("#ql .qlb[data-app]").forEach(b=>b.addEventListener("click",()=>{ sysSnd("nav",.5); openWin(b.dataset.app); }));
 function showDesktopToggle(){ $("#ql-desk").click(); }
+/* Address, Links and Desktop: the three toolbars everyone right-clicked on by
+   accident and then could not find again. They do what they say. */
+function syncTaskToolbars(){
+  $("#tb-addr").classList.toggle("on",!!store.data.tbAddr);
+  $("#tb-links").classList.toggle("on",!!store.data.tbLinks);
+  $("#tb-desk").classList.toggle("on",!!store.data.tbDesk);
+  if(store.data.tbLinks&&!$("#tb-links-in").children.length){
+    for(const [label,url] of [["cursorTV","http://tv.cursor.land/"],["the gallery","http://gallery.cursor.land/"],
+        ["hall of fame","http://hall.cursor.land/"]]){
+      const b=document.createElement("button"); b.className="tbb"; b.textContent=label;
+      b.addEventListener("click",()=>{ sysSnd("nav",.4); openWin("win-ie"); try{ ie.connectNow(); }catch(e){} ie.go(url); });
+      $("#tb-links-in").appendChild(b);
+    }
+  }
+  if(store.data.tbDesk){
+    const host=$("#tb-desk-in"); host.innerHTML="";
+    for(const ic of allIcons().filter(i=>i.sys).slice(0,7)){
+      const b=document.createElement("button"); b.className="tbb";
+      b.appendChild(icoNode(ic.ico));
+      b.title=ic.label;
+      b.addEventListener("click",()=>openIcon(ic));
+      host.appendChild(b);
+    }
+  }
+}
+$("#tb-addr-go").addEventListener("click",()=>{
+  const v=$("#tb-addr-in").value.trim(); if(!v) return;
+  $("#tb-addr-in").value="";
+  /* the real one took a path, a program name or a URL, in that order */
+  if(/^(https?:|www\.|[\w-]+\.(com|net|org|land))/i.test(v)){
+    openWin("win-ie"); try{ ie.connectNow(); }catch(e){} ie.go(/^https?:/i.test(v)?v:"http://"+v);
+  }else if(!runNamed(v)) showError("Windows",
+    `Cannot find '${v}'. Make sure you typed the name correctly, and then try again.`);
+});
+$("#tb-addr-in").addEventListener("keydown",e=>{ e.stopPropagation(); if(e.key==="Enter") $("#tb-addr-go").click(); });
 function cascadeWins(){
   let i=0;
   for(const [id,a] of openApps){
@@ -2659,6 +2751,10 @@ $("#run-cancel").addEventListener("click",()=>closeWin("win-run"));
 $("#run-browse").addEventListener("click",()=>showError("Browse","There is nothing else. This is the whole computer."));
 $("#run-in").addEventListener("keydown",e=>{ e.stopPropagation(); if(e.key==="Enter") runCommand(); if(e.key==="Escape") closeWin("win-run"); });
 $("#btn-logoff-no").addEventListener("click",()=>{ sClick(); closeWin("win-logoff"); });
+$("#btn-logoff-switch").addEventListener("click",()=>{
+  /* Switch User keeps the session running underneath, exactly as it did */
+  sClick(); closeWin("win-logoff",{silent:true}); showLogin(true);
+});
 function tickClock(){ if(!clockOn) return; $("#clock").textContent=new Date().toLocaleTimeString([],{hour:"numeric",minute:"2-digit"}); }
 tickClock(); setInterval(tickClock,10000);
 let balloonT=null;
@@ -3319,6 +3415,7 @@ sys=initSysApps({
     openMouse:()=>mouse.open(),
     /* --- filesystem: cmd walks the same tree Explorer does --- */
     fsList:pth=>explorer.list(pth),
+    discIn:()=>discIn, insertDisc, autoPlay:autoPlayPrompt, ejectDisc,
     fsRead:it=>{
       if(it.dead) return `A cursor died here.\n\n  owner        ${it.dead.name}\n  killed by    ${it.dead.killer}\n  carrying     ${(it.dead.lost/1000).toFixed(3)} SOL\n  its odds     ${it.dead.odds}%\n  survived     ${it.dead.lived}s\n\nOpen it in the Recycle Bin for the certificate.`;
       if(typeof it.text==="string") return it.text;
@@ -4338,6 +4435,50 @@ const bsodEl=$("#bsod");
 function bsodHide(){ bsodEl.style.display="none"; }
 addEventListener("keydown",()=>{ if(bsodEl.style.display==="block") bsodHide(); });
 bsodEl.addEventListener("click",bsodHide);
+/* D: was empty forever. Now a disc goes in, and Windows asks the question it
+   always asked. The disc is the music this machine already ships. */
+let discIn=false;
+function insertDisc(){
+  discIn=true;
+  try{ explorer.render&&explorer.render(); }catch(e){}
+  sysSnd("hwin",.45);
+  autoPlayPrompt();
+}
+function ejectDisc(){ discIn=false; try{ explorer.render&&explorer.render(); }catch(e){} }
+function autoPlayPrompt(){
+  const pref=store.data.apAlways;
+  if(pref){ runAutoplay(pref); return; }
+  openWin("win-autoplay");
+}
+const AP_ACTIONS=[
+  {k:"amp",  ico:"amp16", label:"Play audio CD  using Winamp"},
+  {k:"wmp",  ico:"wmp32", label:"Play audio CD  using Windows Media Player"},
+  {k:"open", ico:"@ic-desk", label:"Open folder to view files  using Windows Explorer"},
+  {k:"none", ico:"@ic-app", label:"Take no action"},
+];
+let apSel="amp";
+function fillAutoplay(){
+  const host=$("#ap-list"); host.innerHTML="";
+  for(const a of AP_ACTIONS){
+    const r=document.createElement("div");
+    r.className="ap-row"+(a.k===apSel?" on":"");
+    r.appendChild(icoNode(a.ico));
+    const s=document.createElement("span"); s.textContent=a.label; r.appendChild(s);
+    r.addEventListener("click",()=>{ apSel=a.k; fillAutoplay(); });
+    r.addEventListener("dblclick",()=>{ apSel=a.k; $("#ap-ok").click(); });
+    host.appendChild(r);
+  }
+}
+function runAutoplay(k){
+  if(k==="amp") openWin("win-amp");
+  else if(k==="wmp") openWin("win-wmp");
+  else if(k==="open"){ openWin("win-explorer"); explorer.go("My Computer"); }
+}
+$("#ap-ok").addEventListener("click",()=>{
+  if($("#ap-always").checked){ store.data.apAlways=apSel; store.save(); }
+  closeWin("win-autoplay"); runAutoplay(apSel);
+});
+$("#ap-cancel").addEventListener("click",()=>closeWin("win-autoplay"));
 function fillWinver(){
   $("#wv-user").textContent=playerNameFull();
   $("#wv-mem").textContent=(500000+Math.round(Math.random()*40000)).toLocaleString("en-US");
@@ -5586,6 +5727,7 @@ if(MOBILE){
   focusWin("win-cursors");
 }
 chatSys("connected to the lobby.");
+syncTaskToolbars();
 pushEv(sysEvents,"info","eventlog",6005,"The Event log service was started.");
 pushEv(sysEvents,"info","eventlog",6009,"Microsoft (R) Windows (R) 5.01. 2600 Service Pack 2 Uniprocessor Free.");
 renderBin(); updatePanel();

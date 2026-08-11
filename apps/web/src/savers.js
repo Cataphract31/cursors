@@ -191,9 +191,17 @@ export function initSavers(deps) {
         const turned = !(dir[0] === p.dir[0] && dir[1] === p.dir[1] && dir[2] === p.dir[2]);
         placed.push({ kind: "seg", x: p.x, y: p.y, z: p.z, dir, col: p.col });
         /* joints live at turns only; ball mode just wears the bigger sphere */
-        if (turned)
-          placed.push({ kind: "joint", x: p.x, y: p.y, z: p.z, col: p.col,
-            r: conf.joint === "ball" || (conf.joint === "mixed" && Math.random() < .5) ? .36 : .26 });
+        if (turned) {
+          /* Mixed joints hid a Utah teapot, roughly one turn in forty. It is
+             the oldest joke in computer graphics and it shipped in a
+             screensaver, so it ships in this one. */
+          if (conf.joint === "mixed" && Math.random() < .025)
+            placed.push({ kind: "teapot", x: p.x, y: p.y, z: p.z, col: p.col,
+              rot: Math.random() * Math.PI * 2 });
+          else
+            placed.push({ kind: "joint", x: p.x, y: p.y, z: p.z, col: p.col,
+              r: conf.joint === "ball" || (conf.joint === "mixed" && Math.random() < .5) ? .36 : .26 });
+        }
         p.x += dir[0]; p.y += dir[1]; p.z += dir[2]; p.dir = dir;
         grid.add(key(p.x, p.y, p.z));
         total++;
@@ -215,6 +223,17 @@ export function initSavers(deps) {
           if (s.kind === "seg") {
             const model = M.mul(M.trans(s.x, s.y, s.z), M.mul(M.aim(s.dir), M.scale(.24, .24, STEP)));
             drawMesh(G, cyl, model, view, proj, col);
+          } else if (s.kind === "teapot") {
+            /* body, lid, spout and handle out of the two primitives already
+               loaded — a teapot at joint scale, not a Bezier patch set */
+            const at = M.mul(M.trans(s.x, s.y, s.z), M.rotY(s.rot));
+            drawMesh(G, sph, M.mul(at, M.scale(.40, .32, .40)), view, proj, col);
+            drawMesh(G, sph, M.mul(M.mul(at, M.trans(0, .30, 0)), M.scale(.15, .12, .15)), view, proj, col);
+            drawMesh(G, cyl, M.mul(M.mul(M.mul(at, M.trans(.34, .10, 0)), M.aim([.8, .6, 0])), M.scale(.075, .075, .34)), view, proj, col);
+            for (let i = 0; i < 5; i++) {
+              const a = -1.15 + i * 0.575;
+              drawMesh(G, sph, M.mul(M.mul(at, M.trans(-.34 - Math.cos(a) * .17, Math.sin(a) * .21, 0)), M.scale(.075, .075, .075)), view, proj, col);
+            }
           } else {
             drawMesh(G, sph, M.mul(M.trans(s.x, s.y, s.z), M.scale(s.r, s.r, s.r)), view, proj, col);
           }

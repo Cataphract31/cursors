@@ -60,8 +60,11 @@ export function initExplorer(deps) {
       dir(hooks.playerName() + "'s Documents", { ico: "docs32", go: DOCS, group: "Files Stored on This Computer" }),
       dir("Local Disk (C:)", { ico: "hdd32", go: "C:\\", kind: "drive", group: "Hard Disk Drives",
         tile: `${fmtSize(freeBytes())} free of ${fmtSize(DISK)}` }),
-      dir("CD Drive (D:)", { ico: "cd32", kind: "drive", tile: "no disc", group: "Devices with Removable Storage",
-        act: () => showError("D:\\", "Please insert a disc into drive D:.\n\nThere is no disc. There was never a disc.") }),
+      hooks.discIn && hooks.discIn()
+        ? dir("Audio CD (D:)", { ico: "cd32", kind: "drive", tile: "Audio CD", group: "Devices with Removable Storage",
+            act: () => hooks.autoPlay && hooks.autoPlay() })
+        : dir("CD Drive (D:)", { ico: "cd32", kind: "drive", tile: "no disc", group: "Devices with Removable Storage",
+            act: () => hooks.insertDisc ? hooks.insertDisc() : null }),
       dir("Control Panel", { ico: "@ic-cpl", tile: "System Folder", group: "Other",
         act: () => hooks.openWin("win-control") }),
     ],

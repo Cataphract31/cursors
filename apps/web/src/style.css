@@ -1826,3 +1826,46 @@ body.mobile .dx-k{width:110px}
 body.mobile #webamp-wrap{position:fixed;left:0;top:0;transform-origin:0 0}
 body.mobile.land #tour-img{max-height:26vh}
 body.mobile.land .tour-pts li{line-height:1.35}
+
+/* ---- Log Off: the full-screen band, not a dialog ---- */
+#win-logoff.lgo{left:0 !important;top:0 !important;width:100% !important;height:100% !important;
+  border:0 !important;box-shadow:none !important;background:transparent !important;z-index:99998 !important;
+  display:none;flex-direction:column;align-items:center;justify-content:center;padding:0 !important}
+#win-logoff.lgo .title-bar{display:none}
+.lgo-body{background:rgba(0,0,0,.45);width:100%;height:100%;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:0;padding:0;border:0}
+.lgo-band{width:100%;background:linear-gradient(180deg,#3F6FD6 0,#2B58BE 46%,#1F47A8 100%);
+  border-top:2px solid #7FA6EC;border-bottom:2px solid #16337C;padding:26px 0 30px;text-align:center;
+  box-shadow:0 0 40px rgba(0,0,0,.5)}
+.lgo-h{color:#fff;font-size:24px;text-shadow:1px 1px 3px rgba(0,0,0,.5);margin-bottom:20px}
+.lgo-btns{display:flex;gap:56px;justify-content:center}
+.lgo-b{background:none;border:0;box-shadow:none;color:#fff;font-size:12px;cursor:default;
+  display:flex;flex-direction:column;align-items:center;gap:7px;padding:6px 10px;min-width:0;min-height:0}
+.lgo-b b{font-weight:normal;text-shadow:1px 1px 2px rgba(0,0,0,.5)}
+.lgo-ico{width:56px;height:56px;border-radius:50%;display:grid;place-items:center;
+  background:radial-gradient(circle at 34% 30%,#FF9A3D 0,#E4651A 62%,#B44708 100%);
+  box-shadow:inset 0 0 0 2px rgba(255,255,255,.45),0 3px 8px rgba(0,0,0,.45)}
+.lgo-ico.lgo-out{background:radial-gradient(circle at 34% 30%,#F26A6A 0,#C42222 62%,#8E1010 100%)}
+.lgo-ico .xico,.lgo-ico svg{width:30px;height:30px}
+.lgo-b:hover .lgo-ico{filter:brightness(1.14)}
+.lgo-foot{margin-top:22px}
+body.mobile .lgo-btns{gap:26px}
+body.mobile .lgo-h{font-size:18px}
+/* ---- autoplay list ---- */
+.ap-list{background:#fff;border:1px solid #7F9DB9;max-height:132px;overflow:auto}
+.ap-row{display:flex;align-items:center;gap:7px;padding:4px 7px;cursor:default}
+.ap-row.on{background:#316AC5;color:#fff}
+.ap-row .xico{width:16px;height:16px;flex:none}
+/* ---- the taskbar's other toolbars ---- */
+.tb-bar{display:none;align-items:center;gap:5px;padding:0 6px;color:#fff;font-size:11px;
+  border-left:1px solid rgba(0,0,0,.25);box-shadow:inset 1px 0 0 rgba(255,255,255,.16);flex:none;max-width:46%}
+.tb-bar.on{display:flex}
+.tb-bar>span:first-child{opacity:.9;flex:none}
+#tb-addr-in{width:150px;height:18px;font:11px Tahoma,"Segoe UI",sans-serif;padding:1px 4px}
+#tb-addr-go{min-width:0;min-height:0;padding:1px 7px}
+#tb-links-in,#tb-desk-in{display:flex;gap:3px;overflow:hidden}
+.tb-bar button.tbb{min-width:0;min-height:0;padding:2px 7px;background:none;border:0;box-shadow:none;
+  color:#fff;font-size:11px;cursor:default;white-space:nowrap;border-radius:3px}
+.tb-bar button.tbb:hover{background:rgba(255,255,255,.18)}
+.tb-bar .tbb .xico,.tb-bar .tbb svg{width:14px;height:14px;vertical-align:-3px;margin-right:3px}
+body.mobile .tb-bar{display:none !important}

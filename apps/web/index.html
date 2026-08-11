@@ -1967,16 +1967,39 @@ icons/sounds: winXP (MIT)</div>
   </div>
 
   <!-- Log Off dialog -->
-  <div class="window fixed" id="win-logoff" style="left:calc(50% - 140px);top:calc(50% - 70px);width:280px">
-    <div class="title-bar">
-      <div class="tb-l"><i class="xico tb-ico" data-ico="flag16"></i><div class="title-bar-text">Log Off Windows</div></div>
-      <div class="title-bar-controls"><button aria-label="Close"></button></div>
+  <div class="window fixed lgo" id="win-logoff">
+    <div class="title-bar"><div class="tb-l"><div class="title-bar-text">Log Off Windows</div></div>
+      <div class="title-bar-controls"></div></div>
+    <div class="win-body lgo-body">
+      <div class="lgo-band">
+        <div class="lgo-h">Log Off Windows</div>
+        <div class="lgo-btns">
+          <button class="lgo-b" id="btn-logoff-switch">
+            <span class="lgo-ico"><i class="xico" data-ico="user48"></i></span><b>Switch User</b>
+          </button>
+          <button class="lgo-b" id="btn-logoff-yes">
+            <span class="lgo-ico lgo-out"><i class="xico" data-ico="@ic-cursor"></i></span><b>Log Off</b>
+          </button>
+        </div>
+      </div>
+      <div class="lgo-foot"><button class="xbtn" id="btn-logoff-no" style="min-width:74px">Cancel</button></div>
     </div>
-    <div class="win-body" style="text-align:center;padding:16px 12px">
-      <p>Log off and reset the session?<br>Wallet returns to 5.000 SOL.</p>
-      <div style="display:flex;gap:8px;justify-content:center;margin-top:13px">
-        <button class="xbtn" id="btn-logoff-yes">Log Off</button>
-        <button class="xbtn" id="btn-logoff-no">Cancel</button>
+  </div>
+
+  <!-- the autoplay list a disc raises -->
+  <div class="window fixed" id="win-autoplay" style="left:calc(50% - 175px);top:120px;width:350px">
+    <div class="title-bar"><div class="tb-l"><i class="xico tb-ico" data-ico="cd32"></i><div class="title-bar-text">Audio CD (D:)</div></div>
+      <div class="title-bar-controls"><button aria-label="Close"></button></div></div>
+    <div class="win-body pad" style="background:#ECE9D8;font-size:11px">
+      <div style="margin-bottom:6px">Windows can perform the same action each time you insert
+        a disk or connect a device with this kind of file:</div>
+      <div style="margin-bottom:8px"><b>Music files</b></div>
+      <div style="margin-bottom:6px">What do you want Windows to do?</div>
+      <div class="ap-list" id="ap-list"></div>
+      <label style="display:block;margin:8px 0 0"><input type="checkbox" id="ap-always"> Always do the selected action.</label>
+      <div style="text-align:right;margin-top:10px;display:flex;gap:6px;justify-content:flex-end">
+        <button class="xbtn" id="ap-ok" style="min-width:64px">OK</button>
+        <button class="xbtn" id="ap-cancel" style="min-width:64px">Cancel</button>
       </div>
     </div>
   </div>
@@ -1993,6 +2016,9 @@ icons/sounds: winXP (MIT)</div>
 <div id="taskbar">
   <img id="startbtn" alt="start" draggable="false" data-tip="Click here to begin">
   <div id="ql"><span class="ql-grip"></span><button class="qlb" id="ql-desk" data-tip="Show Desktop"><svg><use href="#ic-desk"/></svg></button><button class="qlb" data-app="win-amp" data-tip="Winamp"><i class="xico" data-ico="amp16"></i></button><button class="qlb" data-app="win-chat" data-tip="Windows Messenger"><i class="xico" data-ico="msn16"></i></button><span class="ql-grip"></span></div>
+  <div id="tb-addr" class="tb-bar"><span>Address</span><input type="text" id="tb-addr-in" spellcheck="false"><button class="xbtn" id="tb-addr-go">Go</button></div>
+  <div id="tb-links" class="tb-bar"><span>Links</span><span id="tb-links-in"></span></div>
+  <div id="tb-desk" class="tb-bar"><span>Desktop</span><span id="tb-desk-in"></span></div>
   <div id="tabs"></div>
   <div id="tray">
     <span id="tray-chev" data-tip="Show hidden icons">‹</span>
