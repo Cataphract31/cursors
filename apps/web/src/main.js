@@ -47,7 +47,14 @@ const SHORTSIDE=Math.min(screen.width||innerWidth,screen.height||innerHeight);
    the narrowest tablet is ~744 (iPad mini), so 600 sits in the gap and a
    tablet keeps the real desktop, which it has the room for. */
 const MOBILE=COARSE?SHORTSIDE<600:innerWidth<760;
-if(MOBILE) document.body.classList.add("mobile");
+if(MOBILE){
+  document.body.classList.add("mobile");
+  /* Minesweeper is .fixed so the desktop cannot resize it — but .fixed on a
+     phone means "dialog", which parked it in the 8500 band floating over
+     CURSORS.EXE's wallet and money rows. It is an app: it gets a sheet. */
+  const mw=document.getElementById("win-mine");
+  if(mw) mw.classList.remove("fixed");
+}
 /* landscape is a different shell, not a wider one: lying down, height is the
    scarce axis, so the HUD stands up as a right rail and the taskbar keeps the
    floor. One class; the CSS variables do the rest. */
@@ -426,12 +433,21 @@ function renderTaskbar(){
     host.appendChild(tab);
     a.tabEl=tab;
   }
-  /* Cursors crawl above every window by design — that is the point of the
-     desktop. But on a phone a sheet IS the whole screen, and tags scrolling
-     over a Stats table is just noise, so behind a sheet the arena drops to a
-     hint of motion and comes straight back when you close it. */
-  /* the arena stays at full strength behind everything: the fight is the
-     product, and a window is not a reason to stop watching it */
+  /* The arena stays at full strength behind everything: the fight is the
+     product, and a window is not a reason to stop watching it. But on a phone
+     a sheet IS the whole screen, so the TEXT layer — name/bounty tags and the
+     kill feed — lands on top of the WALLET figure and the DEPLOY face and
+     reads as part of them. The sprites keep crawling; only the words step
+     aside, and only while a full-screen sheet is up. */
+  if(MOBILE){
+    let sheetUp=false;
+    for(const [k,a] of openApps){
+      if(!a.el||a.min||NOTAB.has(k)) continue;
+      if(a.el.classList.contains("fixed")||a.el.style.display==="none") continue;
+      sheetUp=true; break;
+    }
+    document.body.classList.toggle("sheeted",sheetUp);
+  }
 }
 function tabClick(id){
   const a=openApps.get(id); if(!a) return;
@@ -494,7 +510,10 @@ function openWin(id,opts){
   if(id==="win-mine"){ try{ mine.resume(); }catch(e){} }
   if(id==="win-hearts"){ try{ hearts.resume(); }catch(e){} }
   if(id==="win-tourxp"&&!tourxp.live()){ try{ tourxp.open(); return; }catch(e){} }
-  if(id==="win-tour"&&!$("#tour-img").src){ try{ tour.open(true); return; }catch(e){} }
+  /* always through tour.open(): it rewinds to slide 1. Gating on "has the
+     image loaded yet" meant every visit after the first reopened wherever the
+     card was abandoned. */
+  if(id==="win-tour"){ try{ tour.open(true); return; }catch(e){} }
   if(id==="win-amp"){ winampApp.open(); return; }
   if(id==="win-readme"&&write){
     if(readmeText===null) readmeText=$("#win-readme .paper").textContent;
@@ -561,6 +580,7 @@ function restoreWin(id){
   if(a.kind==="webamp"){ if(a.min) tabClick(id); return; }
   clearTimeout(a._minT);   /* a minimize still animating must not re-hide us */
   a.min=false;
+  resumeApp(id);
   a.el.style.display="flex";
   /* the reverse of minimize: the window zooms back OUT of its taskbar tab */
   const r=a.el.getBoundingClientRect();
@@ -577,6 +597,29 @@ function restoreWin(id){
   sysSnd("restore",.5);
   focusWin(id);
 }
+/* Everything an app must STOP doing the moment it leaves the screen. Quitting
+   ran this; the phone's one-sheet-at-a-time switch did not, and a hidden sheet
+   on a phone is as gone as a closed one — so cursorTV kept streaming its audio
+   over the game, Sound Recorder kept the microphone hot, and Minesweeper's
+   clock kept counting against a board nobody could see.
+   Media players are the deliberate exception, Winamp included: audio that
+   keeps playing when you switch away is the behaviour people expect. */
+function suspendApp(id){
+  try{ if(id==="win-magnifier"&&access.magnifying()) access.stopMagnifier(); }catch(e){}
+  if(id==="win-mine") mine.pause();       /* the clock does not run while the box is shut */
+  if(id==="win-hearts") hearts.pause();   /* the computer players stop dealing to an empty room */
+  if(id==="win-paint") paint.commit();    /* half-finished text/curves/selections land first */
+  if(id==="win-tourxp") tourxp.stop();
+  if(id==="win-sndrec"&&snd) snd.stopRecorder();   /* also releases the microphone */
+  if(id==="win-pictview"&&write) write.stopViewer();
+  if(id==="win-ie"){ try{ ytPlayer&&ytPlayer.pauseVideo&&ytPlayer.pauseVideo(); }catch(e){} }
+}
+/* the other half of suspendApp: whatever it paused has to come back, or a
+   Minesweeper board returned from the taskbar with a stopped clock */
+function resumeApp(id){
+  if(id==="win-mine"){ try{ mine.resume(); }catch(e){} }
+  if(id==="win-hearts"){ try{ hearts.resume(); }catch(e){} }
+}
 function closeWin(id,opts){
   try{ if(id==="win-magnifier"&&access.magnifying()) access.stopMagnifier(); }catch(e){}
   if(id==="win-copy") fileOpCancel=true;   /* the X on a progress dialog is Cancel */
@@ -589,9 +632,7 @@ function closeWin(id,opts){
   if(id==="win-amp"){ winampApp.close(); return; }
   const a=openApps.get(id); if(!a) return;
   clearTimeout(a._minT);   /* close mid-minimize must not hide the next open */
-  if(id==="win-mine") mine.pause(); /* the clock does not run while the box is shut */
-  if(id==="win-hearts") hearts.pause();   /* the computer players stop dealing to an empty room */
-  if(id==="win-paint") paint.commit(); /* half-finished text/curves/selections land before the lid shuts */
+  suspendApp(id);
   /* closing is quitting. A hidden window that keeps making noise is a bug,
      not a feature — every app that runs something stops it here. */
   if(id==="win-solitaire"){
@@ -599,10 +640,6 @@ function closeWin(id,opts){
     if(fr){ fr.src="about:blank"; delete fr.dataset.live; }
   }
   if(id==="win-wmp"&&snd) snd.stopWmp();
-  if(id==="win-tourxp") tourxp.stop();
-  if(id==="win-sndrec"&&snd) snd.stopRecorder();   /* also releases the microphone */
-  if(id==="win-pictview"&&write) write.stopViewer();
-  if(id==="win-ie"){ try{ ytPlayer&&ytPlayer.pauseVideo&&ytPlayer.pauseVideo(); }catch(e){} }
   a.el.style.display="none"; a.el.classList.remove("focused");
   openApps.delete(id);
   if(focusedId===id){ focusedId=null; focusNextTop(); }
@@ -622,6 +659,7 @@ function minWin(id){
   const a=openApps.get(id); if(!a||a.min) return;
   clearTimeout(a._minT);
   if(a.kind==="webamp"){ tabClick(id); return; }
+  suspendApp(id);
   a.min=true;
   if(focusedId===id){ focusedId=null; focusNextTop(); }
   renderTaskbar();
@@ -678,7 +716,9 @@ function syncDialogs(sheetId){
     if(!own) continue;
     const mine=own===sheetId;
     a.el.style.display=mine?"flex":"none";
-    if(mine) a.el.style.zIndex=DLG_Z+(++dlgTop);
+    /* a dialog parked behind another sheet misses every rotation refit, so it
+       came back at its old orientation's rect with the button row off-screen */
+    if(mine){ a.el.style.zIndex=DLG_Z+(++dlgTop); requestAnimationFrame(()=>fitWin(a.el)); }
   }
 }
 function isSheet(id){
@@ -693,8 +733,10 @@ function focusWin(id){
       if(k===id||a.min) continue;
       if(a.kind==="webamp"){ a.min=true; hideWamp(); continue; }
       if(!isSheet(k)) continue;
+      suspendApp(k);   /* off-screen on a phone means off, not paused-in-name */
       a.min=true; a.el.style.display="none"; a.el.classList.remove("focused");
     }
+    resumeApp(id);
     syncDialogs(id);
   }
   zTop++; focusedId=id;
@@ -1221,6 +1263,10 @@ function solitaireFit(fr,d){
       if(bg&&bg!=="rgba(0, 0, 0, 0)") host.style.background=bg;
     }catch(e){}
     const w=host.clientWidth, h=host.clientHeight;
+    /* a hidden sheet measures 0, and scaling to 0 is how rotating away from
+       Solitaire and back brought it up as an empty felt with the game still
+       running underneath. Leave the last good fit alone and re-fit on show. */
+    if(!w||!h) return;
     const need=(d&&d.body&&d.body.scrollWidth)||700;
     const sc=Math.min(1,w/Math.max(560,need));
     fr.style.width=Math.round(w/sc)+"px";
@@ -1511,19 +1557,16 @@ function buildMenu(host,items){
       d.classList.add("has-sub");
       const sub=document.createElement("div"); sub.className="csub";
       buildMenu(sub,it.sub); d.appendChild(sub);
-      /* a submenu longer than the screen is unreadable and unclickable; XP
-         shifts it up to fit and flips it left of the parent when the right
-         edge runs out. visibility:hidden still has layout, so measuring
-         before the hover reveal is safe. */
-      d.addEventListener("mouseenter",()=>{
-        sub.style.top=""; sub.style.left=""; sub.style.right="";
-        sub.style.maxHeight=""; sub.style.overflowY="";
-        const r=sub.getBoundingClientRect();
-        if(r.height>innerHeight-12){ sub.style.maxHeight=(innerHeight-12)+"px"; sub.style.overflowY="auto"; }
-        const r2=sub.getBoundingClientRect();
-        const over=r2.bottom-(innerHeight-6);
-        if(over>0) sub.style.top=(-3-over)+"px";
-        if(r2.right>innerWidth-4){ sub.style.left="auto"; sub.style.right="100%"; }
+      d.addEventListener("mouseenter",()=>{ if(!MOBILE) placeSub(d,sub); });
+      /* a phone never fires hover, so the arrow row has to answer a tap — and
+         the panel it opens has to leave the parent's box, or the level below
+         it is clipped away and about twenty apps go missing from All Programs */
+      if(MOBILE) d.addEventListener("pointerup",e=>{
+        if(e.pointerType==="touch"&&(!ctxArmed||performance.now()-menuShownAt<120)) return;
+        e.stopPropagation();
+        const wasOpen=sub.classList.contains("open");
+        host.querySelectorAll(".csub.open").forEach(s=>s.classList.remove("open"));
+        if(!wasOpen){ sub.classList.add("open"); placeSub(d,sub); sClick(); }
       });
     }
     if(!it.disabled&&it.action) d.addEventListener("pointerup",e=>{
@@ -1532,6 +1575,37 @@ function buildMenu(host,items){
     });
     host.appendChild(d);
   }
+}
+/* A submenu longer than the screen is unreadable; XP shifts it up to fit and
+   flips it left of the parent when the right edge runs out. visibility:hidden
+   still has layout, so measuring before the reveal is safe.
+   On a phone it is taken out of the flow entirely (position:fixed): a nested
+   panel inside a parent that clips or scrolls simply never paints, which is
+   what took All Programs' third level — and, in landscape, its second — off
+   the map. Lifted out, any depth stays reachable. */
+function placeSub(item,sub){
+  sub.style.top=""; sub.style.left=""; sub.style.right="";
+  sub.style.maxHeight=""; sub.style.overflowY=""; sub.style.position="";
+  if(!MOBILE){
+    const r=sub.getBoundingClientRect();
+    if(r.height>innerHeight-12){ sub.style.maxHeight=(innerHeight-12)+"px"; sub.style.overflowY="auto"; }
+    const r2=sub.getBoundingClientRect();
+    const over=r2.bottom-(innerHeight-6);
+    if(over>0) sub.style.top=(-3-over)+"px";
+    if(r2.right>innerWidth-4){ sub.style.left="auto"; sub.style.right="100%"; }
+    return;
+  }
+  sub.style.position="fixed"; sub.style.left="0px"; sub.style.top="0px";
+  let r=sub.getBoundingClientRect();
+  if(r.height>innerHeight-8){
+    sub.style.maxHeight=(innerHeight-8)+"px"; sub.style.overflowY="auto";
+    r=sub.getBoundingClientRect();
+  }
+  const ir=item.getBoundingClientRect();
+  let x=ir.right-8;
+  if(x+r.width>innerWidth-4) x=ir.left-r.width+8;
+  sub.style.left=Math.round(clamp(x,4,Math.max(4,innerWidth-r.width-4)))+"px";
+  sub.style.top=Math.round(clamp(ir.top-4,4,Math.max(4,innerHeight-r.height-4)))+"px";
 }
 function showMenu(items,x,y){
   menuShownAt=performance.now(); ctxArmed=false;
@@ -1549,7 +1623,11 @@ function showMenu(items,x,y){
   ctx.style.top=Math.max(4,Math.min(y,innerHeight-r.height-4))+"px";
   sMenu();
 }
-function hideMenu(){ ctx.style.display="none"; ctx.querySelectorAll(".kbd").forEach(e=>e.classList.remove("kbd")); }
+function hideMenu(){
+  ctx.style.display="none";
+  ctx.querySelectorAll(".kbd").forEach(e=>e.classList.remove("kbd"));
+  ctx.querySelectorAll(".csub.open").forEach(s=>s.classList.remove("open"));
+}
 /* menus walk with the keyboard, exactly as far as XP let them */
 addEventListener("keydown",e=>{
   if(ctx.style.display!=="block") return;
@@ -1570,11 +1648,16 @@ addEventListener("keydown",e=>{
   else if(e.key==="Enter"&&cur>=0){ its[cur].dispatchEvent(new PointerEvent("pointerup",{bubbles:true})); e.preventDefault(); }
 },true);
 addEventListener("pointerdown",e=>{
-  /* latch BEFORE anything closes: by touchend the menu is gone and the compat
-     click would look like an innocent tap on the thumb bar underneath */
+  /* Latch BEFORE anything closes: by touchend the menu is gone and the compat
+     click would look like an innocent tap on the thumb bar underneath.
+     #ctx items act on pointerup, so their compat click is always surplus. The
+     Start menu's items act on CLICK, so only a tap that lands outside it is a
+     dismiss — latching those too left the launcher completely dead to a thumb. */
   if(e.pointerType==="touch"){
     const sm=document.getElementById("startmenu");
-    menuTouch=ctx.style.display==="block"||!!(sm&&sm.classList.contains("open"));
+    const startOpen=!!(sm&&sm.classList.contains("open"));
+    menuTouch=ctx.style.display==="block"
+      ||(startOpen&&!e.target.closest("#startmenu,#startbtn"));
   }
   if(!e.target.closest("#ctx")){ if(ctx.style.display==="block") menuDismissAt=performance.now(); hideMenu(); }
   else ctxArmed=true;
@@ -3035,6 +3118,12 @@ function stopSaver(){
 setInterval(()=>{
   if(saverOn||!desktopActive()) return;
   if(store.data.saver.t==="none") return;
+  /* Never on a phone. Watching your own cursors fight without touching the
+     glass is the normal way to play, and AFK is the whole point of autoplay —
+     so the idle timer was blacking out the wallet, the round clock and RECALL
+     during exactly the session it exists to serve, and eating the first tap
+     back. A phone already has a lock screen. */
+  if(MOBILE) return;
   if((performance.now()-lastAct)/60000>=store.data.saver.wait) startSaver(store.data.saver.t);
 },5000);
 /* the Screen Saver tab: XP's list, a working Settings... per saver, and the
@@ -4085,9 +4174,14 @@ function renderPhase(){
   const chip=phase==="crash"?`EPOCH ${roundNo} · CRASHED`:shutFired?`EPOCH ${roundNo} · SHUTDOWN ${mm}`
     :`EPOCH ${roundNo} · C: ${diskPct().pct}%`;
   $("#phasechip").textContent=chip;
+  /* On a phone the CURSORS.EXE status line is usually not on screen, so the
+     chip carries the connection too. A thumb bar that looks live while the
+     socket is down is how a recall the player believed had banked went
+     nowhere, and how sandbox money got spent against a real balance. */
   const mp=$("#mh-phase");
-  mp.textContent=chip;
-  mp.classList.toggle("battle",urgent);
+  if(netStalled()){ mp.textContent="RECONNECTING…"; mp.classList.add("battle"); }
+  else if(MPURL&&!MP.on){ mp.textContent="SANDBOX · fake money"; mp.classList.add("battle"); }
+  else{ mp.textContent=chip; mp.classList.toggle("battle",urgent); }
   renderDisk();
 }
 
@@ -4124,6 +4218,10 @@ function botDeploy(name){
 }
 function recallAll(){
   if(MP.on){
+    /* deploy() has always refused while the socket is down; recall did not, so
+       the click played, nothing was sent, and the player believed they had
+       banked while their cursors kept fighting */
+    if(netStalled()){ log("reconnecting — recall not sent"); renderPhase(); updatePanel(); return; }
     const rc=[...mpCurs.values()].some(c=>c.isMine&&c.mode==="recall");
     mpSend({t:rc?"recallCancel":"recall"}); sClick(); return;
   }
@@ -4889,11 +4987,13 @@ function updatePanel(){
   const pl=wallet+liveVal-5000;
   $("#statline").textContent=`kills ${stats.kills} · deaths ${stats.deaths} · best ×${stats.best.toFixed(1)} · P/L ${fmtSign(pl)}`;
   /* the thumb bar shows the same state in fewer letters */
+  /* nothing that moves money stays lit while the server cannot hear us */
+  const stalled=netStalled();
   const hd=$("#mh-deploy");
-  hd.disabled=dep.disabled;
-  hd.textContent=broke?"NO FUNDS":mine.length>=MAXCUR?"MAX 5 LIVE":canDeploy()?"▸ DEPLOY 0.1":phase==="crash"?"REBOOT…":"SHUTDOWN";
+  hd.disabled=dep.disabled||stalled;
+  hd.textContent=stalled?"RECONNECTING…":broke?"NO FUNDS":mine.length>=MAXCUR?"MAX 5 LIVE":canDeploy()?"▸ DEPLOY 0.1":phase==="crash"?"REBOOT…":"SHUTDOWN";
   const hrc=$("#mh-recall");
-  hrc.disabled=rec.disabled;
+  hrc.disabled=rec.disabled||stalled;
   hrc.textContent=graced?"◂ UNDO":recalling?"◂ CANCEL":"◂ RECALL";
   $("#mh-attack").classList.toggle("on",stance==="attack");
   $("#mh-defend").classList.toggle("on",stance==="defend");
@@ -4959,6 +5059,11 @@ function mpHello(){
   /* the server assumes new sockets are visible; a hidden tab reconnecting
      overnight would stream 15Hz snapshots to a renderer that never draws */
   net.send({t:"vis",on:document.visibilityState==="visible"});
+  /* hello has to describe the whole client, stance included: without this the
+     shield stayed lit across a reconnect over a server that had never been
+     told, so the player watched a stance that did not exist */
+  net.send({t:"stance",s:stance});
+  lastSnapAt=performance.now();
 }
 
 /* ---- server cursors: same DOM, same tag scaling, positions interpolated ---- */
@@ -5243,21 +5348,35 @@ function mpEpoch(m){
    say so; only fall back to the local sandbox if the server is really gone.
    Yanking the player between two different games on every hiccup was worse
    than a few frozen seconds. */
+/* "Connected" is not the same as "hearing from the server". A phone that walks
+   from wifi to cellular keeps a socket that will never deliver again, and the
+   thumb bar sat there showing a live balance over an enabled DEPLOY. Snapshots
+   arrive continuously, so their absence is the tell. */
+let lastSnapAt=0, mpStale=false;
+function netStalled(){ return !!MPURL&&MP.on&&(!net||!net.up()||mpStale); }
+/* dropping to the sandbox is one thing done in two places — the grace timer
+   and the signed-in-elsewhere kick, which used to call a function that had
+   never existed and threw away its own explanation with the exception */
+function mpDrop(msg){
+  MP.on=false; MP.name=null; mpStale=false;
+  mpPurge(); msn.setHumans([]);
+  showBalloon("Offline sandbox",msg||"Server gone. Fake bots, fake money. Reconnects on its own.");
+  log("server unreachable — offline sandbox running");
+  bsodEl.style.display="none";   /* the server died mid-crash-screen */
+  startEpoch();
+  renderPhase(); updatePanel();
+}
 let mpGraceT=null;
 function mpDown(){
   if(!MP.on||mpGraceT) return;
   log("connection lost — reconnecting…");
   $("#phaseline").textContent="⚠ RECONNECTING…";
+  renderPhase(); updatePanel();   /* the phone's only status line is the chip */
   msn.lobbySys("connection lost — trying to get back in");
   mpGraceT=setTimeout(()=>{
     mpGraceT=null;
     if(net.up()) return;              /* came back; mpWelcome already rebuilt the world */
-    MP.on=false; MP.name=null;
-    mpPurge(); msn.setHumans([]);
-    showBalloon("Offline sandbox","Server gone. Fake bots, fake money. Reconnects on its own.");
-    log("server unreachable — offline sandbox running");
-    bsodEl.style.display="none";   /* the server died mid-crash-screen */
-    startEpoch();
+    mpDrop();
   },7000);
 }
 let tmNetMsgs=0;
@@ -5265,7 +5384,7 @@ function mpMsg(m){
   tmNetMsgs++;
   switch(m.t){
     case "welcome": mpWelcome(m); break;
-    case "snap": if(MP.on) mpSnap(m); break;
+    case "snap": if(MP.on){ lastSnapAt=performance.now(); if(mpStale){ mpStale=false; renderPhase(); updatePanel(); } mpSnap(m); } break;
     /* Blind means the server has stopped sending us positions, so a cursor
        built now would stand still on the edge it spawned at until the resync.
        Skip it: becoming visible asks for the whole world back anyway. */
@@ -5298,7 +5417,8 @@ function mpMsg(m){
         /* both tabs share one token: retrying just kicks the other tab back.
            This tab stands down; the sandbox takes over. */
         try{ net.stop(); }catch(e){}
-        if(mpGraceT){ clearTimeout(mpGraceT); mpGraceT=null; mpDrop(); }
+        if(mpGraceT){ clearTimeout(mpGraceT); mpGraceT=null; }
+        mpDrop("You signed in from another tab. This one is a sandbox now.");
         showBalloon("beta server","You signed in from another tab. This one went offline — reload it to take over.");
       }else if(m.msg) showBalloon("beta server",m.msg);
       break;
@@ -5306,6 +5426,18 @@ function mpMsg(m){
 }
 const net=MPURL?initNet({url:MPURL,onMsg:mpMsg,onUp:()=>{ if(PLAYER) mpHello(); },onDown:mpDown}):null;
 if(net) net.start();
+/* the half-open-socket watchdog. A tab that asked not to be sent snapshots is
+   deliberately silent, so keep its clock fresh rather than kicking it. */
+setInterval(()=>{
+  if(!MPURL||!MP.on||!net||!net.up()){ if(mpStale){ mpStale=false; renderPhase(); updatePanel(); } return; }
+  if(document.hidden){ lastSnapAt=performance.now(); return; }
+  if(!lastSnapAt){ lastSnapAt=performance.now(); return; }
+  if(performance.now()-lastSnapAt<4000||mpStale) return;
+  mpStale=true;
+  log("no snapshots for 4s — forcing a reconnect");
+  renderPhase(); updatePanel();
+  try{ net.kick(); }catch(e){}
+},1000);
 /* a backgrounded tab cannot draw snapshots, so it asks not to be sent any —
    the single cheapest thing we can do for a free tier's egress budget */
 document.addEventListener("visibilitychange",()=>{
@@ -5983,10 +6115,17 @@ function logon(){
   setTimeout(enterDesktop,1500);
 }
 function commitUserName(){
-  const raw=$("#lg-user").value.trim().replace(/[^\w .$-]/g,"").slice(0,14);
+  const typed=$("#lg-user").value.trim();
+  /* Unicode letters and numbers, not just ASCII: a name in another script used
+     to be stripped to nothing and rejected with a 0.4s shake and a sound the
+     phone was probably muting — a dead end on the first screen of the game. */
+  let raw="";
+  try{ raw=typed.replace(/[^\p{L}\p{N} .$_-]/gu,"").slice(0,14); }
+  catch(e){ raw=typed.replace(/[^\w .$-]/g,"").slice(0,14); }
   if(!raw){
     const t=$("#tile-admin");
     t.classList.remove("shake"); void t.offsetWidth; t.classList.add("shake");
+    $("#lg-sub").textContent=typed?"letters and numbers only":"type a name first";
     sError(); return;
   }
   PLAYER=raw;

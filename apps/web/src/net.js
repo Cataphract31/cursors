@@ -29,6 +29,11 @@ export function initNet(deps) {
     start: () => { stopped = false; connect(); },
     stop: () => { stopped = true; if (ws) ws.close(); },
     send: o => { if (up && ws) { try { ws.send(JSON.stringify(o)); } catch (e) {} } },
+    /* A socket can be open and dead at the same time — a phone moving from wifi
+       to cellular leaves one that will never deliver again, and onclose never
+       fires. The caller notices the silence; this drops the corpse so the
+       normal close/retry path can build a live one. */
+    kick: () => { if (ws) { try { ws.close(); } catch (e) {} } },
     up: () => up,
   };
 }

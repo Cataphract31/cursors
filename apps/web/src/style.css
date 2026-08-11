@@ -2,7 +2,11 @@
    Taskbar + start menu values ported from ShizukuIchi/winXP (MIT). */
 
 *{margin:0;padding:0;box-sizing:border-box;user-select:none}
-html,body{height:100%}
+/* Nothing in this shell scrolls the page, so a drag that reaches the end of an
+   inner scroller must stop there. Without this, Android Chrome takes the
+   overscroll as pull-to-refresh and reloads the whole game mid-round — arena,
+   socket and balance gone for several seconds. */
+html,body{height:100%;overscroll-behavior:none}
 body{margin:0;overflow:hidden;background:#5A7EDC;font:11px Tahoma,"Segoe UI",Verdana,sans-serif;cursor:default;color:#000;touch-action:manipulation}
 button,input,select,textarea{font-family:Tahoma,"Segoe UI",Verdana,sans-serif}
 input{user-select:text}
@@ -18,7 +22,11 @@ input{user-select:text}
 /* ---------- desktop ---------- */
 /* --tb taskbar · --hud the mobile thumb bar (0 on desktop) · --sab phone home-indicator inset */
 :root{--tb:30px;--hud:0px;--rail:0px;--sab:0px;--sal:0px;--sar:0px;--kb:0px}
-body.mobile{--hud:64px;--sab:env(safe-area-inset-bottom,0px);--sal:env(safe-area-inset-left,0px);--sar:env(safe-area-inset-right,0px)}
+/* 84, not 64: the four money verbs are the only controls that move SOL without
+   opening an app, and at 64 they were 28px tall — 64% of the 44px touch floor,
+   at the bottom edge where a thumb is least accurate. The landscape rail was
+   already giving them 44. */
+body.mobile{--hud:84px;--sab:env(safe-area-inset-bottom,0px);--sal:env(safe-area-inset-left,0px);--sar:env(safe-area-inset-right,0px)}
 /* phone lying down: height is the scarce axis, so the HUD leaves the bottom
    and becomes a right-hand rail. Everything below reads --hud/--rail, so the
    two orientations are the same layout with one variable moved. */
@@ -92,6 +100,12 @@ body.mobile .icon .lbl{font-size:10px}
 .qlb:hover{background:rgba(255,255,255,.22)}
 .qlb svg,.qlb .xico{width:16px;height:16px}
 #tabs{flex:1;display:flex;gap:3px;padding:0 4px;overflow:hidden;align-items:flex-start}
+/* past the third app the phone strip simply stopped drawing buttons, so a
+   window's only restore route vanished. It scrolls now, and the drag does not
+   chain out to the page behind it. */
+body.mobile #tabs{overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:none}
+body.mobile #tabs::-webkit-scrollbar{display:none}
+body.mobile .task-tab{flex:0 0 auto}
 .task-tab{height:22px;min-height:0;margin-top:2px;flex:1;max-width:150px;min-width:0;display:flex;align-items:center;gap:4px;padding:0 8px;color:#fff;font:11px Tahoma;border:0;border-radius:2px;white-space:nowrap;overflow:hidden;cursor:default;background-image:none;background-color:#3c81f3;box-shadow:inset -1px 0px rgba(0,0,0,.3),inset 1px 1px 1px rgba(255,255,255,.2)}
 .task-tab:hover{background-color:#53a3ff}
 .task-tab:active,.task-tab.on{background-color:#1e52b7;box-shadow:inset 0 0 1px 1px rgba(0,0,0,.3),inset 1px 0 1px rgba(0,0,0,.7)}
@@ -796,13 +810,21 @@ label>input[type=radio][disabled]:checked{background:#ECE9D8 radial-gradient(cir
 body.mobile #mhud{display:flex}
 .mh-top{display:flex;align-items:center;justify-content:space-between;gap:8px;color:#fff;padding:0 2px 3px}
 .mh-wallet{font-weight:bold;font-size:12px}
-.mh-phase{background:#FFF7DE;color:#000;border:1px solid #E0C05A;border-radius:2px;padding:0 5px;font-size:10px;line-height:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* the chip carries the SHUTDOWN countdown — the window in which you recall or
+   lose the round — so it is the last thing allowed to run out of room, and it
+   sits at the 11px money floor rather than under it */
+.mh-phase{background:#FFF7DE;color:#000;border:1px solid #E0C05A;border-radius:2px;padding:0 5px;font-size:11px;line-height:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1 1 auto;min-width:0;text-align:center}
 .mh-phase.battle{background:#FFE9E0;border-color:#E08A5A}
-.mh-live{color:#FFFFFF;font-size:11px;white-space:nowrap}
-.mh-btns{display:flex;gap:5px;flex:1;min-height:0}
-.mh-btns .xbtn{min-height:0;min-width:0;height:100%;font-weight:bold;font-size:12px;padding:0 2px}
+.mh-live{color:#FFFFFF;font-size:11px;white-space:nowrap;flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis}
+.mh-wallet{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis}
+.mh-btns{display:flex;gap:6px;flex:1;min-height:0}
+.mh-btns .xbtn{min-height:44px;min-width:0;height:100%;font-weight:bold;font-size:12px;padding:0 2px}
 #mh-deploy{flex:2.1}
+/* dead space either side of the stance pair: a mis-hit reaching for the shield
+   used to land on RECALL, and a drift left off ATTACK used to land on DEPLOY */
 #mh-attack,#mh-defend{flex:.8;font-size:14px}
+#mh-attack{margin-left:6px}
+#mh-defend{margin-right:6px}
 #mh-recall{flex:1.5}
 /* the round clock, in the thumb bar: C: filling is the only thing that ends a
    round, so it belongs where a phone player is already looking */
@@ -860,9 +882,16 @@ body.mobile .ms-body{overflow:auto}
 
 /* the Start menu becomes a full-screen launcher (HUD stays visible) */
 body.mobile #startmenu{left:0;right:0;top:0;bottom:calc(var(--tb) + var(--hud) + var(--sab));border-radius:0;font-size:12px;line-height:16px}
-body.mobile .sm-menu{flex:1;min-height:0;overflow-y:auto}
-body.mobile .sm-left{width:50%;padding:8px 6px 0}
-body.mobile .sm-right{width:50%}
+/* All Programs is the door to everything that is not pinned, and on a phone the
+   left column outgrew the menu and pushed it under the fold — in landscape it
+   sat at y=371 in a 360px-tall menu, i.e. nowhere, with no scroll cue. XP pins
+   it to the foot of its own column and scrolls the list above it. Each column
+   scrolls on its own now, so Search and Run stay reachable too. */
+body.mobile .sm-menu{flex:1;min-height:0;overflow:hidden}
+body.mobile .sm-left{width:50%;padding:8px 6px 0;min-height:0}
+body.mobile #sm-mru{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain}
+body.mobile .sm-left .sm-item.allprog{flex:none}
+body.mobile .sm-right{width:50%;min-height:0;overflow-y:auto;overscroll-behavior:contain}
 body.mobile .sm-left .sm-item{height:44px}
 body.mobile .sm-left .sm-item.two{height:46px}
 body.mobile .sm-left .sm-item.allprog{height:34px}
@@ -885,8 +914,20 @@ body.mobile .lg-note{display:none}
    height (see mobKeyboard() in main.js): the taskbar and HUD step aside and
    the desktop ends where the keyboard begins, which puts every sheet's own
    bottom row right above it. Nothing here fires unless a keyboard is up. */
-body.mobile.kb #taskbar,body.mobile.kb #mhud{display:none}
-body.mobile.kb #desktop{inset:0 calc(var(--rail) + var(--sar)) var(--kb) 0}
+/* The taskbar may go — it is a switcher. The thumb bar may NOT: hiding it took
+   the balance, the round clock and RECALL off the screen for as long as a
+   keyboard was up, which on a phone is most of a Messenger conversation. It
+   rides above the keys instead. In landscape the rail is vertical and the
+   keyboard never reaches it, so it does not move at all. */
+body.mobile.kb #taskbar{display:none}
+body.mobile.kb #mhud{bottom:var(--kb)}
+body.mobile.land.kb #mhud{bottom:0}
+body.mobile.kb #desktop{inset:0 calc(var(--rail) + var(--sar)) calc(var(--kb) + var(--hud)) 0}
+/* the feed and the balloon hang off the taskbar, which .kb has just removed —
+   without this they render inside the keyboard */
+body.mobile.kb #feed{bottom:calc(var(--kb) + var(--hud) + 8px)}
+body.mobile.kb #balloon{bottom:calc(var(--kb) + var(--hud) + 18px)}
+body.mobile.kb .msn-toast{bottom:calc(var(--kb) + var(--hud) + 10px)}
 /* and 16px stops iOS zooming the page in the moment you tap a text field —
    the one place XP's 11px type has to give way to the hardware */
 body.mobile #ie-addr,body.mobile #ex-addr,body.mobile #hlp-search,
@@ -1611,6 +1652,11 @@ body.mobile #magnifier{height:96px}
 /* the tour balloon points at a tray that a sheet is covering, so on the phone
    it steps aside as soon as an app is open */
 body.mobile.sheeted #balloon{display:none !important}
+/* and so do the arena's name tags and the kill feed: over a full-screen sheet
+   they print across the wallet and the money buttons. The cursors themselves
+   keep crawling — the fight is still the product. */
+body.mobile.sheeted .cur .tag{display:none}
+body.mobile.sheeted #feed{display:none}
 /* Task Manager on a phone: a tab pane fills the sheet instead of sitting in a
    470px-tall box at the top of a 844px screen */
 body.mobile #win-taskmgr .win-body{display:flex;flex-direction:column}
@@ -1625,7 +1671,11 @@ body.mobile #startmenu.open ~ #balloon{display:none !important}
 /* XP's menu rows are 22px because a mouse is a pixel. A finger is not. */
 body.mobile .cit{padding:8px 24px 8px 18px;line-height:16px;font-size:12px}
 body.mobile #ctx,body.mobile .csub{min-width:180px}
-body.mobile .csub{max-height:60vh;overflow-y:auto}
+/* A submenu must NOT be a scroll box by default: overflow clips the level
+   below it, so on a phone every third-level flyout (Accessories > System
+   Tools) painted nothing, and in landscape the second level went too — about
+   twenty apps unreachable until you rotated. placeSub() takes each submenu out
+   of the flow (position:fixed) and clamps it only when it genuinely overflows. */
 body.mobile .trayico{width:20px;height:20px}
 body.mobile #tray{gap:11px}
 body.mobile #tray-chev{font-size:14px;padding:0 3px}

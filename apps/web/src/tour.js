@@ -62,6 +62,10 @@ export function initTour(deps) {
   }
   function done() {
     store.data.tourSeen = 1; store.save();
+    /* nav() walked `at` one PAST the last slide to get here. Left there, the
+       next opening rendered the final slide and Back only stepped from 5 to
+       5 — a card that could not be read a second time. */
+    at = 0;
     closeWin("win-tour");
   }
   function open(fromStart) {
