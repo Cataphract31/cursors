@@ -39,7 +39,6 @@ export function initTourXP(deps) {
         <div class="txp-scene txp-desk" style="background-image:url(${IMG.bliss})">
           <div class="txp-icons">
             <span>${im(IMG.computer32)}<i>My Computer</i></span>
-            <span>${im(IMG.docs32)}<i>My Documents</i></span>
             <span>${im(IMG.bin32)}<i>Recycle Bin</i></span>
           </div>
           ${im(curf("arrow_r.cur"), "txp-ptr")}
