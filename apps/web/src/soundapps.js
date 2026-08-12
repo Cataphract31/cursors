@@ -278,22 +278,48 @@ export function initSoundApps(deps) {
     }
     return wmp.audio;
   }
+  /* Media Player plays clips too. The <video> is a second element rather than a
+     mode of the first: an <audio> cannot show a picture, and the analyser is
+     permanently wired to the audio element once created, so a clip has to keep
+     its own audio path. Only one of the two is ever unpaused. */
+  function wmpVideo() {
+    if (!wmp.video) {
+      wmp.video = $("#wmp-video");
+      wmp.video.addEventListener("ended", () => wmpPlay(wmp.i + 1));
+      wmp.video.addEventListener("timeupdate", () => {
+        const v = wmp.video;
+        $("#wmp-seek").value = v.duration ? Math.round(v.currentTime / v.duration * 1000) : 0;
+        $("#wmp-time").textContent = clock(v.currentTime) + " / " + clock(v.duration || 0);
+      });
+    }
+    return wmp.video;
+  }
+  /* whichever element the current item is using */
+  const wmpEl = () => (wmp.isVideo ? wmpVideo() : wmpAudio());
   const clock = s => Math.floor(s / 60) + ":" + String(Math.floor(s % 60)).padStart(2, "0");
   function wmpVol() {
-    const a = wmpAudio();
-    a.volume = Math.min(1, ($("#wmp-vol").value / 100) * hooks.getMaster() * factor("cd"));
-    a.muted = hooks.getMuted() || !!mix().cd.m;
+    const vol = Math.min(1, ($("#wmp-vol").value / 100) * hooks.getMaster() * factor("cd"));
+    const mute = hooks.getMuted() || !!mix().cd.m;
+    /* both elements, always: the fader must mean the same thing to a clip */
+    for (const el of [wmpAudio(), wmp.video]) if (el) { el.volume = vol; el.muted = mute; }
   }
   function wmpPlay(i) {
     const t = wmp.tracks[(i + wmp.tracks.length) % wmp.tracks.length];
     wmp.i = (i + wmp.tracks.length) % wmp.tracks.length;
-    const a = wmpAudio();
+    /* stop whatever was playing before the mode flips, or a clip and a track
+       end up playing over each other */
+    try { wmpAudio().pause(); } catch (e) {}
+    if (wmp.video) { try { wmp.video.pause(); } catch (e) {} }
+    wmp.isVideo = !!t.video;
+    $("#win-wmp").classList.toggle("playing-video", wmp.isVideo);
+    const a = wmpEl();
     a.src = t.url; wmpVol();
     a.play().catch(() => {});
-    $("#wmp-title").textContent = t.artist + " — " + t.title;
+    $("#wmp-title").textContent = (t.artist ? t.artist + " — " : "") + t.title;
     $$0(".wmp-row.on") && $$0(".wmp-row.on").classList.remove("on");
     const row = $("#wmp-list").children[wmp.i]; if (row) row.classList.add("on");
-    wmpViz();
+    /* the bars read the analyser on the audio element; a clip is its own picture */
+    if (!wmp.isVideo) wmpViz(); else cancelAnimationFrame(wmp.raf);
   }
   const $$0 = sel => document.querySelector(sel);
   function wmpViz() {
@@ -330,36 +356,48 @@ export function initSoundApps(deps) {
   }
   function openWmp() {
     if (!wmp.tracks.length) {
-      wmp.tracks = hooks.tracks();
+      /* clips sit under the music, marked, the way Media Player has always
+         mixed a library rather than keeping two of them */
+      wmp.tracks = [...hooks.tracks(), ...(hooks.videos ? hooks.videos() : [])];
       const host = $("#wmp-list"); host.innerHTML = "";
       wmp.tracks.forEach((t, i) => {
         const r = document.createElement("div");
-        r.className = "wmp-row"; r.textContent = (i + 1) + ". " + t.title;
+        r.className = "wmp-row" + (t.video ? " vid" : "");
+        r.textContent = (i + 1) + ". " + t.title + (t.video ? "  (video)" : "");
         r.addEventListener("dblclick", () => wmpPlay(i));
         host.appendChild(r);
       });
     }
     openWin("win-wmp");
   }
+  /* open Media Player already playing one thing — how a file opens an app */
+  function playMedia(item) {
+    openWmp();
+    const i = wmp.tracks.findIndex(t => t.url === item.url);
+    if (i >= 0) wmpPlay(i);
+  }
   $("#wmp-playbtn").addEventListener("click", () => {
-    const a = wmpAudio();
+    const a = wmpEl();
     if (a.src && !a.paused) { a.pause(); return; }
-    if (a.src) { wmpVol(); a.play().catch(() => {}); wmpViz(); return; }
+    if (a.src) { wmpVol(); a.play().catch(() => {}); if (!wmp.isVideo) wmpViz(); return; }
     wmpPlay(0);
   });
-  $("#wmp-stop").addEventListener("click", () => { const a = wmpAudio(); a.pause(); a.currentTime = 0; });
+  $("#wmp-stop").addEventListener("click", () => { const a = wmpEl(); a.pause(); a.currentTime = 0; });
   $("#wmp-prev").addEventListener("click", () => wmpPlay(wmp.i - 1));
   $("#wmp-next").addEventListener("click", () => wmpPlay(wmp.i + 1));
   $("#wmp-seek").addEventListener("input", () => {
-    const a = wmpAudio();
+    const a = wmpEl();
     if (a.duration) a.currentTime = $("#wmp-seek").value / 1000 * a.duration;
   });
   $("#wmp-vol").addEventListener("input", wmpVol);
 
   return {
-    openMixer, openRecorder, openWmp,
+    openMixer, openRecorder, openWmp, playMedia,
     mixerMenu, recorderMenu,
-    stopWmp(){ try{ const a=wmpAudio(); a.pause(); a.currentTime=0; cancelAnimationFrame(wmp.raf); }catch(e){} },
+    stopWmp(){ try{
+      for (const el of [wmp.audio, wmp.video]) if (el) { el.pause(); el.currentTime = 0; }
+      cancelAnimationFrame(wmp.raf);
+    }catch(e){} },
     stopRecorder(){ srStopAll(); },
     factor,                       /* wave/cd scaling for the shell's own sounds */
     /* Winamp's bus. Webamp re-applies its own gain on every state change, and

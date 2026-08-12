@@ -1346,6 +1346,12 @@ body.tb-auto.tb-peek #taskbar{transform:none}
 .sr-btns .xbtn{min-width:44px;height:26px}
 .wmp-body{background:#10151d!important;color:#dfe7f2}
 #wmp-viz{flex:none;width:100%;background:#000;border-bottom:1px solid #2b3a52}
+/* a clip takes the visualiser slot: same box, same border, one of the two
+   is shown at a time so the layout never moves */
+#wmp-video{flex:none;display:none;width:100%;height:200px;background:#000;
+  border-bottom:1px solid #2b3a52;object-fit:contain}
+#win-wmp.playing-video #wmp-viz{display:none}
+#win-wmp.playing-video #wmp-video{display:block}
 .wmp-title{flex:none;padding:5px 9px;font-weight:700;color:#bfe0ff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .wmp-seek{flex:none;margin:0 8px}
 .wmp-ctl{flex:none;display:flex;align-items:center;gap:6px;padding:6px 9px}
@@ -2155,8 +2161,8 @@ body.mobile .oe-fbar .xbtn{min-height:30px;padding:3px 12px}
    screen and pushed the transport — volume knob first — off the side and out
    the bottom. Cap the picture, wrap the row, and let the volume have a line of
    its own in portrait, which is the one place there is no room beside it. */
-body.mobile #wmp-viz{height:150px}
-body.mobile.land #wmp-viz{height:92px}
+body.mobile #wmp-viz,body.mobile #wmp-video{height:150px}
+body.mobile.land #wmp-viz,body.mobile.land #wmp-video{height:92px}
 body.mobile .wmp-ctl{flex-wrap:wrap;gap:8px;padding:8px 9px}
 body.mobile .wmp-ctl button{min-width:0;width:44px;height:38px;flex:none;font-size:13px}
 body.mobile .wmp-big{width:52px !important;height:38px !important;border-radius:19px !important}

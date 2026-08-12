@@ -1,4 +1,5 @@
 import { defineConfig } from "vite";
+import musicPlugin from "./scripts/music-plugin.mjs";
 
 /* Normal multi-file build. It used to be a single inlined HTML file, which was
    a hard requirement of the Claude artifact host — and it cost 8.7 MB on every
@@ -14,6 +15,8 @@ import { defineConfig } from "vite";
 
    First paint goes from ~8.7 MB to a few hundred KB. */
 export default defineConfig({
+  /* the playlist is whatever is in public/music/ — see scripts/music-plugin.mjs */
+  plugins: [musicPlugin("public/music", "public/video")],
   base: "./",                     /* relative URLs: the folder can be served from anywhere */
   build: {
     target: "es2020",

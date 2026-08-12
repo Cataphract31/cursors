@@ -61,9 +61,12 @@ const walk = d => readdirSync(d, { withFileTypes: true }).flatMap(e =>
 const files = walk(dist);
 const size = f => statSync(f).size;
 const total = files.reduce((s, f) => s + size(f), 0);
-const eager = files.filter(f => !/[\\/](media|pinball|solitaire)[\\/]/.test(f)).reduce((s, f) => s + size(f), 0);
+/* on-demand buckets: nothing here is fetched until something plays or opens
+   it. music/ and video/ come from public/ verbatim, so they are not in the
+   module graph at all and cannot be pulled in by first paint. */
+const eager = files.filter(f => !/[\\/](media|music|video|tour|pinball|solitaire)[\\/]/.test(f)).reduce((s, f) => s + size(f), 0);
 console.log(`postbuild: escaped ${escaped} U+FFFD, defused ${devalued} eval; dist/ — ${files.length} files, ` +
   `${(total / 1e6).toFixed(1)} MB total, ${(eager / 1e6).toFixed(2)} MB on first paint ` +
-  `(media and the games stream on demand)`);
+  `(media, music, video and the games stream on demand)`);
 for (const f of files.map(f => [relative(dist, f), size(f)]).sort((a, b) => b[1] - a[1]).slice(0, 6))
   console.log(`  ${(f[1] / 1e6).toFixed(2)} MB  ${f[0]}`);

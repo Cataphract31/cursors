@@ -107,6 +107,7 @@ export function initExplorer(deps) {
     [DOCS]: () => [
       dir("My Pictures", { ico: "pics32", go: PICS }),
       dir("My Music", { ico: "music32", go: DOCS + "\\My Music" }),
+      dir("My Videos", { ico: "pics32", go: DOCS + "\\My Videos" }),
       f("fights.log", { size: hooks.logSize(), act: () => hooks.openWin("win-log") }),
       f("README.txt", { size: 2_048, act: () => hooks.openWin("win-readme") }),
       /* whatever Send To > My Documents actually sent — the copy has to exist */
@@ -115,6 +116,9 @@ export function initExplorer(deps) {
     ],
     /* opening a song opens that song. It used to open Winamp at the top of the
        playlist no matter which file was double-clicked. */
+    [DOCS + "\\My Videos"]: () => (hooks.videos ? hooks.videos() : []).map(v =>
+      f(v.stem + ".wmv", { size: 6.1 * MB, ico: "wmp32",
+        act: () => hooks.playVideo && hooks.playVideo(v) })),
     [DOCS + "\\My Music"]: () => hooks.tracks().map((t, i) =>
       f(t.title + ".mp3", { size: 3.4 * MB, ico: "music32",
         act: () => hooks.playTrack ? hooks.playTrack(i) : hooks.openWin("win-amp") })),

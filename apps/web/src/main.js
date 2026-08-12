@@ -1,6 +1,6 @@
 import "xp.css";
 import "./style.css";
-import { IMG, SNDF, TRACKS, MINE, EMO, PAINT, AGENT_PNG, AGENT_DEF, CURFILES } from "./assets.js";
+import { IMG, SNDF, TRACKS, VIDEOS, MINE, EMO, PAINT, AGENT_PNG, AGENT_DEF, CURFILES } from "./assets.js";
 import { initMinesweeper } from "./minesweeper.js";
 import { initMessenger, CONTACTS as MSN_CONTACTS } from "./messenger.js";
 import { initOE } from "./oe.js";
@@ -2254,6 +2254,7 @@ snd=initSoundApps({$,store,sysSnd,showMenu,showError,openWin,closeWin,hooks:{
   setMaster:v=>{ masterVol=clamp(v,0,1); volSync(); },
   setMuted:m=>{ muted=!!m; volSync(); },
   tracks:()=>TRACKS,
+  videos:()=>VIDEOS,
   saveWav(buf){
     /* a desktop .wav that really plays — this session only; a reload turns it
        back into an ordinary dead file, which is very 2001 */
@@ -2408,7 +2409,9 @@ const explorer=initExplorer({
     hallOfPain:()=>hallOfPain(),
     logSize:()=>logpaper.textContent.length||1024,
     tracks:()=>TRACKS,
+    videos:()=>VIDEOS,
     playTrack:i=>winampApp.open(i),
+    playVideo:v=>snd.playMedia(v),
     openText:openTextWindow,
     openPicture:p=>{
       const list=viewerList(), i=list.findIndex(x=>x.name===p.name);
