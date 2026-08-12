@@ -5,7 +5,7 @@
    Wave scales every game sound, CD Audio scales the music players. Sound
    Recorder records the actual microphone (locally — nothing leaves the
    machine) and its Effects menu does real DSP on the buffer. WMP9 plays the
-   same MacLeod tracks Winamp does, with an analyser driving the bars. */
+   same library Winamp does, plus any clips, with an analyser driving the bars. */
 
 export function initSoundApps(deps) {
   const { $, store, sysSnd, showMenu, showError, openWin, closeWin, hooks } = deps;

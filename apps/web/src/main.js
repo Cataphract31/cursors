@@ -3835,8 +3835,7 @@ if(window.fetch){
   };
 }
 
-/* -- the house playlist: real era MP3s, freely licensed --
-   Kevin MacLeod (incompetech.com), CC BY — attribution lives in README.txt. */
+/* -- the playlist: whatever is in public/music/, scanned at build time -- */
 /* Winamp's public API can only "play this list from the top", so starting on a
    chosen song means handing it the list rotated to begin there. The songs after
    it still follow in order and it wraps around to the ones before — which is
