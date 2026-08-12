@@ -3751,7 +3751,6 @@ sys=initSysApps({
     }),
     deploy:()=>{ const n=myCurs().length; deploy(false); return myCurs().length>n||MP.on; },
     recall:()=>recallAll(),
-    stance:st=>{ stance=st; mpSend({t:"stance",s:st}); updatePanel(); },
     recallOne:id=>{
       const c=curs.find(x=>x.id===id&&x.isMine);
       if(!c) return;
@@ -3978,18 +3977,16 @@ let plBase=5000, plBaseSet=false;
 let stats={kills:0,deaths:0,best:0,deploys:0,banks:0,bigBank:0,tIn:0,tOut:0};
 let curs=[], binDead=[];
 let myTickets=0, globalTickets=1437200, rakeAccrued=0;
-/* Stance and the autoplay dials were module state, so a reload — which on a
-   phone is a background tab being evicted, not a deliberate act — silently
-   reset them. Stance was the dangerous one: the server kept the old value
-   while the panel drew the default. They persist now, and mpHello sends the
-   stance so both ends agree. Autoplay itself deliberately does NOT persist:
-   coming back to a page that is already spending money would be worse. */
-let stance=(store.data.stance==="defend")?"defend":"attack";
+/* The autoplay dials were module state, so a reload — which on a phone is a
+   background tab being evicted, not a deliberate act — silently reset them.
+   They persist now. Autoplay itself deliberately does NOT persist: coming back
+   to a page that is already spending money would be worse. (Stance used to
+   live here too, and was the dangerous one, since the server kept the old
+   value while the panel drew the default. There is no stance any more.) */
 const auto={on:false,
   count:clamp(+(store.data.autoCount||3),1,MAXCUR),
   bankAt:+(store.data.autoBankAt!=null?store.data.autoBankAt:2)};
 function saveAutoPrefs(){
-  store.data.stance=stance;
   store.data.autoCount=auto.count;
   store.data.autoBankAt=auto.bankAt;
   store.save();
@@ -4041,49 +4038,74 @@ let R=null, epochHist=[];
 function newRoundRecord(){ return {pot:0,deploys:0,myIn:0,myOut:0,myKills:0,bigBank:null,deaths:0}; }
 
 let localCurId=0;   /* the offline sandbox numbers its cursors too — Device Manager lists them by id */
+let myEdge;         /* which wall your cursors come up from this round (see makeCur) */
 const CURSVG=`<svg viewBox="0 0 14 22"><use href="#ic-cursor"/></svg>`;
-/* the arena wears your scheme: if the owner picked one, their cursor IS that
-   arrow, for everyone. offline the bots have taste too. */
-const BOTSKINS={mumu:"bronze",deg404:"inv",xp_chad:"black",clippy:"std-l",bonk:"variations"};
+/* Mirrors server/sim.js — FOOD_CHAIN, tierOf and the size curve must agree with
+   the server exactly or the local prediction disagrees with the authority. */
+const FOOD_CHAIN=4;
+const TIER_SKINS=["","white","bronze","dinosaur"];   /* one rank per 4x — a rank step is the reach of the rule */
+const tierOf=b=>Math.min(TIER_SKINS.length-1,Math.floor(Math.log2(Math.max(1,b/ENTRY))/2));
+const skinOf=b=>TIER_SKINS[tierOf(b)];
+const mayFight=(a,b)=>{const big=a.bounty>=b.bounty?a:b,small=big===a?b:a;
+  return big.bounty<=FOOD_CHAIN*small.bounty;};
+/* The arena wears your WEIGHT CLASS, not your taste — see TIER_SKINS. Mouse
+   Properties still dresses your own desktop pointer; it stopped dressing your
+   cursors out there when the arrow had to start meaning your size, which it
+   cannot do while also meaning which scheme you like. */
 function skinCurEl(el,skin){
-  if(!skin||!mouse) return;
+  if(!mouse) return;
+  if(!skin){                                                 /* back to the plain arrow */
+    const img=el.querySelector("img.curskin"); if(!img) return;
+    const svg=document.createElement("div");
+    svg.innerHTML=CURSVG; const node=svg.firstChild;
+    node.style.width=img.style.width; node.style.height=img.style.height;
+    img.replaceWith(node); return;
+  }
   mouse.arenaArrow(skin,u=>{
     if(!u) return;
-    const svg=el.querySelector("svg"); if(!svg) return;
+    const old=el.querySelector("svg,img.curskin"); if(!old) return;
     const img=document.createElement("img");
     img.className="curskin"; img.src=u; img.draggable=false;
-    if(svg.style.width) img.style.width=svg.style.width;     /* keep the bounty/cmag size */
-    if(svg.style.height) img.style.height=svg.style.height;
-    svg.replaceWith(img);
+    if(old.style.width) img.style.width=old.style.width;     /* keep the bounty/cmag size */
+    if(old.style.height) img.style.height=old.style.height;
+    old.replaceWith(img);
   });
+}
+/* A promotion is the moment of the round, so it has to be visible the instant
+   it happens rather than at the next spawn. Only touches the DOM on an actual
+   class change — updateTag runs for every cursor every frame. */
+function tierSkin(c){
+  const t=tierOf(c.bounty);
+  if(c.tier===t) return;
+  c.tier=t; skinCurEl(c.el,TIER_SKINS[t]);
+  if(t>0&&c.el) { c.el.classList.remove("promote"); void c.el.offsetWidth; c.el.classList.add("promote"); }
 }
 function makeCur(owner,isMine){
   const el=document.createElement("div");
   el.className="cur grace"+(isMine?" me":"");
   el.innerHTML=CURSVG+`<div class="tag"><span class="nm">${owner}</span><span class="bt"></span><span class="mx"></span></div>`;
-  skinCurEl(el,isMine?(store.data.curScheme||""):BOTSKINS[owner]||"");
+  skinCurEl(el,TIER_SKINS[0]);   /* every cursor starts as plankton; the tier dresses it */
   curlayer.appendChild(el);
   /* pick the emptiest of eight candidate landing spots — deploying into an
      existing scrum is the arena choosing your fight for you (see server sim) */
-  let x,y,ax,ay;
+  let x,y,ax,ay,edge;
   { let bd=-1;
+    /* your taskbar edge for this round. Everyone deploying along the bottom put
+       87% of the field into the bottom quarter of the arena — see server sim. */
+    const mine=isMine?(myEdge===undefined?(myEdge=Math.floor(rand(0,4))):myEdge):-1;
     for(let i=0;i<8;i++){
-      let cx,cy;
-      if(isMine){ cx=rand(arena.x0+70,arena.x1-70); cy=arena.y1-22; }
-      else{
-        const side=Math.floor(rand(0,4));
-        cx=side===0?arena.x0+22:side===1?arena.x1-22:rand(arena.x0+50,arena.x1-50);
-        cy=side===2?arena.y0+22:side===3?arena.y1-22:rand(arena.y0+50,arena.y1-50);
-      }
+      const side=mine<0?Math.floor(rand(0,4)):mine;
+      const cx=side===0?arena.x0+22:side===1?arena.x1-22:rand(arena.x0+50,arena.x1-50);
+      const cy=side===2?arena.y0+22:side===3?arena.y1-22:rand(arena.y0+50,arena.y1-50);
       let d=1e9;
       for(const o of curs){ const q=(o.x-cx)**2+(o.y-cy)**2; if(q<d) d=q; }
-      if(d>bd){ bd=d; x=cx; y=cy; }
+      if(d>bd){ bd=d; x=cx; y=cy; edge=side; }
       if(d>200*200) break;
     }
-    if(isMine){ ax=x; ay=arena.y1-80; }
-    else{ ax=clamp(x+rand(-40,40),arena.x0+50,arena.x1-50); ay=clamp(y+rand(-40,40),arena.y0+50,arena.y1-50); }
+    ax=clamp(x+rand(-40,40),arena.x0+50,arena.x1-50);
+    ay=clamp(y+rand(-40,40),arena.y0+50,arena.y1-50);
   }
-  const c={id:++localCurId,owner,isMine,el,x,y,ax,ay,bounty:ENTRY,
+  const c={id:++localCurId,owner,isMine,el,x,y,ax,ay,edge,bounty:ENTRY,
     h:rand(0,Math.PI*2),spd:rand(78,124),mode:"hold",prevMode:"roam",recallT:0,
     grace:1.4,riskAt:1.5+Math.random()*5,dead:false,s:1,r:10,
     /* the death certificate is written from these — a cursor carries its own obituary */
@@ -4096,7 +4118,8 @@ function updateTag(c){
   if(c.bounty>(c.peak||0)) c.peak=c.bounty;
   c.el.querySelector(".bt").textContent=fmtS(c.bounty);
   c.el.querySelector(".mx").textContent=m>=1.05?"×"+(m>=10?m.toFixed(0):m.toFixed(1)):"";
-  c.s=Math.min(2.6,1+.35*Math.log2(Math.max(1,m)));
+  c.s=Math.min(4,1+.5*Math.log2(Math.max(1,m)));
+  tierSkin(c);
   c.r=10*c.s;                       /* collision radius stays in logical units */
   const v=c.s*CMAG;                 /* magnification is purely visual */
   /* the sprite is an <svg> until the owner picks a pointer scheme, at which
@@ -4124,6 +4147,7 @@ const myCurs=()=>curs.filter(c=>c.isMine&&!c.dead);
 function setPhase(p,t){ phase=p; phaseT=t; renderPhase(); }
 function startEpoch(){
   roundNo++; roundId++;
+  myEdge=undefined;   /* a fresh taskbar edge each round, like the server draws */
   R=newRoundRecord();
   /* no clock: the disk decides. phaseT only becomes meaningful once the
      shutdown rush starts and caps it at T_SHUT seconds. */
@@ -4148,9 +4172,9 @@ function startShutdownRush(){
   shutFired=true;
   phaseT=Math.min(phaseT,T_SHUT);
   /* not on a phone: it is a .fixed dialog with no close button, and centred on
-     a sheet it lands squarely on ATTACK / DEFEND / RECALL ALL — the three
-     controls the shutdown window exists to make you use. The thumb bar chip
-     already counts the same seconds down. */
+     a sheet it lands squarely on DEPLOY / RECALL ALL — the controls the
+     shutdown window exists to make you use. The thumb bar chip already counts
+     the same seconds down. */
   if(!MOBILE) openWin("win-shutdown",{silent:true});
   sShut();
   chatSys("CURSORS.EXE is not responding — all cursors recalling");
@@ -4340,13 +4364,9 @@ function recallAll(){
 }
 $("#btn-deploy").addEventListener("click",()=>deploy(false));
 $("#btn-recall").addEventListener("click",recallAll);
-$("#st-attack").addEventListener("click",()=>{ stance="attack"; sClick(); mpSend({t:"stance",s:"attack"}); saveAutoPrefs(); updatePanel(); });
-$("#st-defend").addEventListener("click",()=>{ stance="defend"; sClick(); mpSend({t:"stance",s:"defend"}); saveAutoPrefs(); updatePanel(); });
 /* the mobile thumb bar mirrors the dashboard verbs; the info row opens the full app */
 $("#mh-deploy").addEventListener("click",()=>deploy(false));
 $("#mh-recall").addEventListener("click",recallAll);
-$("#mh-attack").addEventListener("click",()=>{ stance="attack"; sClick(); mpSend({t:"stance",s:"attack"}); saveAutoPrefs(); updatePanel(); });
-$("#mh-defend").addEventListener("click",()=>{ stance="defend"; sClick(); mpSend({t:"stance",s:"defend"}); saveAutoPrefs(); updatePanel(); });
 $("#mh-info").addEventListener("click",()=>openWin("win-cursors"));
 function bank(c,atShutdown){
   const m=(c.bounty/ENTRY).toFixed(1);
@@ -4551,6 +4571,7 @@ function nearestEnemy(c){
   let best=null,bd=1e9;
   for(const o of curs){
     if(o===c||o.dead||o.owner===c.owner||o.grace>0||o.mode==="duel"||o.mode==="hold") continue;
+    if(!mayFight(c,o)) continue;
     const d=(o.x-c.x)**2+(o.y-c.y)**2;
     if(d<bd){bd=d;best=o;}
   }
@@ -4558,11 +4579,14 @@ function nearestEnemy(c){
 }
 function move(c,dt){
   if(c.grace>0){ c.grace-=dt; if(c.grace<=0) c.el.classList.remove("grace"); }
-  let tx=null,ty=null,turn=2.4,sped=1;
+  let tx=null,ty=null,turn=2.4;
   if(c.mode==="recall"){
     c.recallT-=dt;
-    /* out through your own nearest edge point, not one shared corner */
-    const dx=clamp(c.x,60,AW-60)-c.x, dy=(AH-18)-c.y, dist=Math.hypot(dx,dy);
+    /* out through the wall you came up from — one shared edge is one long scrum */
+    const e=c.edge===undefined?3:c.edge;
+    const ex=e===0?18:e===1?AW-18:clamp(c.x,60,AW-60);
+    const ey=e===2?18:e===3?AH-18:clamp(c.y,60,AH-60);
+    const dx=ex-c.x, dy=ey-c.y, dist=Math.hypot(dx,dy);
     if(c.recallT<=0){ bank(c,false); return; }
     const sp=dist/Math.max(.2,c.recallT);
     c.x+=dx/Math.max(1,dist)*sp*dt; c.y+=dy/Math.max(1,dist)*sp*dt;
@@ -4571,17 +4595,13 @@ function move(c,dt){
   }
   if(c.mode==="hold"){ tx=c.ax; ty=c.ay; turn=2.0; }
   else{
-    const st=c.isMine?stance:(c.bounty/ENTRY>=c.riskAt*.7?"defend":"attack");
     const {best,bd}=nearestEnemy(c);
     /* aggression ramps across the epoch: calm after a restart, frenzy before the crash */
     const aggr=phase==="battle"?(.7+1.5*clamp((epochLen-phaseT)/epochLen,0,1)):1;
     turn=2.6*aggr;
     if(best){
       if(bd<130*130) turn*=2.8;   /* close in: a 38px turn radius cannot reach a 20px contact */
-      if(st==="attack"&&bd<520*520){ tx=best.x; ty=best.y; sped=1.12; }
-      else if(st==="defend"&&bd<300*300){
-        tx=c.x+(c.x-best.x); ty=c.y+(c.y-best.y); sped=.90;
-      }
+      if(bd<520*520){ tx=best.x; ty=best.y; }
     }
     /* your own cursors regroup but never stack — they cannot fight each other,
        so a pile of them just looks broken (see the server sim for the whole note) */
@@ -4621,7 +4641,7 @@ function move(c,dt){
   const weight=1+.25*(c.s-1);
   /* attacking is 12% faster, defending 10% slower, so a hunt can actually end
      instead of the two of them orbiting forever. Duel odds never move. */
-  const sp=c.spd*sped*(c.mode==="hold"?.5:1)/weight;
+  const sp=c.spd*(c.mode==="hold"?.5:1)/weight;
   const ux=c.x+Math.cos(c.h)*sp*dt, uy=c.y+Math.sin(c.h)*sp*dt;
   c.x=clamp(ux,arena.x0+24,arena.x1-24); c.y=clamp(uy,arena.y0+24,arena.y1-24);
   if(c.x!==ux) c.h=Math.PI-c.h;    /* the clamp bit: bounce, never weld */
@@ -5206,8 +5226,6 @@ function updatePanel(){
   const recalling=!graced&&mine.some(c=>c.mode==="recall"||(c.mode==="duel"&&c.prevMode==="recall"));
   rec.disabled=phase==="crash"||!(recalling||mine.some(c=>c.mode==="roam"||c.mode==="duel"||c.grace>0));
   rec.textContent=graced?"◂ UNDEPLOY (refund)":recalling?"◂ CANCEL RECALL":`◂ RECALL ALL (${RECALL_SECS}s)`;
-  $("#st-attack").classList.toggle("on",stance==="attack");
-  $("#st-defend").classList.toggle("on",stance==="defend");
   $("#livecount").textContent=mine.length;
   $("#liveval").textContent=fmtS(liveVal);
   const share=myTickets>0?100*myTickets/(globalTickets+myTickets):0;
@@ -5223,8 +5241,6 @@ function updatePanel(){
   const hrc=$("#mh-recall");
   hrc.disabled=rec.disabled||stalled;
   hrc.textContent=graced?"◂ UNDO":recalling?"◂ CANCEL":"◂ RECALL";
-  $("#mh-attack").classList.toggle("on",stance==="attack");
-  $("#mh-defend").classList.toggle("on",stance==="defend");
   renderHud();  /* wallet, P/L, AUTO and the cursor strip have one writer */
   syncWakeLock();
   renderCx();   /* whatever pane is open stays live */
@@ -5260,7 +5276,7 @@ $("#btn-logoff-yes").addEventListener("click",()=>{
 /* ================= multiplayer ================= */
 /* The beta server (server/ in this repo) is the single authority: it runs the
    same sim, owns every balance, and commits its RNG seed before each epoch.
-   Online, this client is a display — deploys/recalls/stances are requests,
+   Online, this client is a display — deploys and recalls are requests,
    positions arrive as 10Hz snapshots we interpolate, deaths and banks arrive
    as events and reuse the exact solo FX paths. Offline (no server, dev
    hashes, file://) the local sandbox sim runs untouched. */
@@ -5289,10 +5305,6 @@ function mpHello(){
   /* the server assumes new sockets are visible; a hidden tab reconnecting
      overnight would stream 15Hz snapshots to a renderer that never draws */
   net.send({t:"vis",on:document.visibilityState==="visible"});
-  /* hello has to describe the whole client, stance included: without this the
-     shield stayed lit across a reconnect over a server that had never been
-     told, so the player watched a stance that did not exist */
-  net.send({t:"stance",s:stance});
   lastSnapAt=performance.now();
 }
 
@@ -5720,17 +5732,24 @@ const HELP={
     was carrying.</p>
     <p>You make exactly one decision: <b>when to stop</b>. Recall a cursor and
     its bounty is banked to your wallet. Leave it out and it keeps fighting.</p>
-    <h2>The three verbs</h2>
+    <h2>The two verbs</h2>
     <ul>
       <li><b>DEPLOY</b> — put a new cursor in, 0.1 SOL, up to five at once.</li>
-      <li><b>ATTACK / DEFEND</b> — a standing order for all your cursors. Attack
-      hunts the nearest enemy; defend runs from it and regroups.</li>
       <li><b>RECALL</b> — bank everything. Takes three seconds, during which
       your cursors can still be caught.</li>
     </ul>
     <p>A freshly deployed cursor is in <b>spawn grace</b> for a moment and
     cannot fight. Recall during grace and you get everything back — it is there
-    for misclicks.</p>`},
+    for misclicks.</p>
+    <h2>The food chain</h2>
+    <p>A cursor only fights inside <b>4×</b> its own size. Sharks do not eat
+    plankton: a fresh 0.1 deploy cannot be taken by the monster across the
+    desktop, and that monster has to go and find something its own size. When
+    two cursors are too far apart to fight, they pass straight through
+    each other.</p>
+    <p>Every fight you can actually get is therefore close to even, which is
+    why there is no defend button any more — there is nothing left worth
+    running from except the size you chose to keep riding.</p>`},
 
   odds:{t:"The odds, stated plainly",group:"Start here",body:()=>`
     <h1>The odds, stated plainly</h1>
@@ -5917,6 +5936,7 @@ function frame(t){
       if(a.dead||b.dead||a.grace>0||b.grace>0) continue;
       if(a.owner===b.owner) continue;
       if(a.mode==="duel"||b.mode==="duel"||a.mode==="hold"||b.mode==="hold") continue;
+      if(!mayFight(a,b)) continue;
       const rr=a.r+b.r;
       if((a.x-b.x)**2+(a.y-b.y)**2<rr*rr) startDuel(a,b);
     }

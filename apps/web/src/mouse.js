@@ -7,9 +7,12 @@
    and the XP-only schemes are composed from the same files XP shipped for
    them — the bronze set really is 3dg*, the dinosaur really walks.
 
-   The scheme is also an identity: the arena renders every player's cursor
-   in the scheme its owner picked, so choosing 3D-Bronze is not a setting,
-   it is a flex. Import-free sibling module; main.js injects the shell. */
+   The scheme dresses your desktop pointer. It used to dress your arena cursors
+   too — until the arena needed the arrow to mean your weight class, which is
+   earned rather than chosen (see TIER_SKINS in main.js: one rank per 4x —
+   3D-White at 4x, 3D-Bronze at 16x, the Dinosaur at 64x). So the flex moved:
+   out there you are not what you picked, you are what you have eaten.
+   Import-free sibling module; main.js injects the shell. */
 export function initMouse(deps) {
   const { $, store, sysSnd, CURFILES, openWin, closeWin, icoNode, onScheme } = deps;
 
@@ -135,8 +138,13 @@ export function initMouse(deps) {
   /* what the arena shows for a player on this scheme; null = the stock glyph */
   function arenaArrow(id, cb) {
     const s = byId(id);
-    if (!s.id || !s.roles.arrow) return cb(null);
-    stillOf(s.roles.arrow, cb);
+    /* Dinosaur, Conductor and Old Fashioned have no Normal Select — XP only
+       ever shipped them animating in the Busy and Background roles. The arena
+       wears schemes as weight classes now, so it takes whichever role the
+       scheme actually has rather than refusing to render one at all. */
+    const role = s.roles.arrow || s.roles.appstart || s.roles.wait;
+    if (!s.id || !role) return cb(null);
+    stillOf(role, cb);
   }
 
   /* ---------- pointer trails / hide-while-typing / Ctrl locate ---------- */

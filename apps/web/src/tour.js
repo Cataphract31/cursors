@@ -29,7 +29,7 @@ export function initTour(deps) {
     { t: "Your five", img: "strip.png", pts: [
       "One slot per live cursor, with its ×",
       "<b>RECALL</b> banks all · a slot banks one",
-      "<b>⚔ ATTACK</b> chases · <b>🛡 DEFEND</b> runs",
+      "You only fight within 4× your size",
     ]},
     { t: "The crash", img: "crash.png", pts: [
       "Every death fills C:",

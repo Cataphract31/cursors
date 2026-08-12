@@ -846,13 +846,11 @@ body.mobile.land #mh-strip{display:grid;grid-template-columns:1fr 1fr;gap:3px;ma
 body.mobile.land #mh-strip .cslot{min-height:30px}
 .mh-btns{display:flex;gap:6px;flex:1;min-height:0}
 .mh-btns .xbtn{min-height:44px;min-width:0;height:100%;font-weight:bold;font-size:12px;padding:0 2px}
-#mh-deploy{flex:2.1}
-/* dead space either side of the stance pair: a mis-hit reaching for the shield
-   used to land on RECALL, and a drift left off ATTACK used to land on DEPLOY */
-#mh-attack,#mh-defend{flex:.8;font-size:14px}
-#mh-attack{margin-left:6px}
-#mh-defend{margin-right:6px}
-#mh-recall{flex:1.5}
+/* Two verbs left, and they are opposites — one spends, one banks — so they get
+   real dead space between them rather than the 6px the stance chips used to
+   sit in. A thumb that misses DEPLOY must not find RECALL. */
+#mh-deploy{flex:1.5}
+#mh-recall{flex:1.15;margin-left:14px}
 /* the round clock, in the thumb bar: C: filling is the only thing that ends a
    round, so it belongs where a phone player is already looking */
 .mh-disk{display:block;height:5px;margin:3px 2px 0;background:#0E2E6E;border:1px solid #14357C;border-radius:2px;overflow:hidden}
@@ -875,10 +873,8 @@ body.mobile.land .mh-disk{margin:0 0 6px;order:-1}
 /* buttons sit at the FOOT of the rail — that is where a thumb is when the
    phone is held in two hands — and keep XP-sized rows instead of stretching
    into slabs just because the rail is tall */
-body.mobile.land .mh-btns{display:grid;grid-template-columns:1fr 1fr;grid-auto-rows:44px;gap:5px;flex:none;margin-top:auto}
-body.mobile.land .mh-btns .xbtn{height:auto}
-body.mobile.land #mh-deploy,body.mobile.land #mh-recall{grid-column:1/3}
-body.mobile.land #mh-attack,body.mobile.land #mh-defend{font-size:17px}
+body.mobile.land .mh-btns{display:grid;grid-template-columns:1fr;grid-auto-rows:44px;gap:10px;flex:none;margin-top:auto}
+body.mobile.land .mh-btns .xbtn{height:auto;margin:0}
 /* the full-screen launcher and every sheet stop at the rail, never under it */
 body.mobile.land #startmenu{right:calc(var(--rail) + var(--sar));bottom:calc(var(--tb) + var(--sab))}
 body.mobile.land .sm-head{height:38px}
@@ -2253,3 +2249,13 @@ body.mobile .np-sign{grid-template-columns:1fr 64px}
 body.mobile .np-sign .xbtn{min-height:44px}
 body.mobile figure.gal{width:calc(50% - 4px)}
 body.mobile .npt td.note{display:none}
+
+/* A promotion: crossing a weight-class boundary swaps the pointer scheme under
+   you mid-round, so the swap gets one flare to make sure it is not missed. */
+@keyframes promote{
+  0%{filter:none;transform:scale(1)}
+  35%{filter:drop-shadow(0 0 6px #ffd75e) drop-shadow(0 0 14px #ffb020);transform:scale(1.22)}
+  100%{filter:none;transform:scale(1)}
+}
+.cur.promote>svg,.cur.promote>img.curskin{animation:promote .5s ease-out}
+@media (prefers-reduced-motion:reduce){ .cur.promote>svg,.cur.promote>img.curskin{animation:none} }

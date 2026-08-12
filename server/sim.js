@@ -19,6 +19,43 @@ import { rngFromSeedHex, newSeedHex, commitOf } from "./rng.js";
 /* economics — LOCKED, matches the client and THIN ICE's audited config */
 export const STAKE = 100, ENTRY = 97, FEE_PLAT = 1, FEE_RAKE = 2;
 export const MAXCUR = 5, BOT_MAXCUR = 3;
+
+/* The food chain. A cursor only fights inside 4x its own size — sharks stop
+   bothering with plankton, and a fresh deploy cannot be eaten by the whale it
+   happened to spawn beside. This says which fights HAPPEN, never how they
+   resolve: every legal duel is still P(A wins) = A/(A+B), winner takes all,
+   and the ladder still prices ×N at exactly 1/N. Measured against the old
+   free-for-all it takes "new player eaten by something enormous" from 35% to
+   9%, and whale-farming of fresh deploys from 83% to zero, while leaving the
+   right tail alone — the biggest cursor of a long run is unchanged. */
+export const FOOD_CHAIN = 4;
+
+/* Four weight classes, one per 4x step, each wearing a real XP pointer scheme.
+   You never pick this one: it is what you have grown into, and it changes under
+   you mid-round the moment you cross a boundary. A player's own Mouse
+   Properties choice still dresses their desktop pointer — it just no longer
+   dresses their cursors in the arena, because out there the arrow has to mean
+   your size and it cannot mean two things at once.
+
+   A rank step IS the reach of the rule, deliberately: at 4x apiece, everything
+   you can legally fight is your own rank or the one next door, and nothing two
+   ranks away is ever touchable. Ranks every DOUBLING were tried first and gave
+   more steps, but a step that does not line up with the rule is just a colour
+   change — you could not read "can I fight that" off the arrow any more. The
+   top rank is 64x, which a good run really does reach. */
+export const TIER_SKINS = ["", "white", "bronze", "dinosaur"];
+export const TIER_NAMES = ["Plankton", "3D-White", "3D-Bronze", "Dinosaur"];
+export const TIER_AT = [1, 4, 16, 64];
+export function tierOf(bounty) {
+  const m = Math.max(1, bounty / ENTRY);
+  return Math.min(TIER_SKINS.length - 1, Math.floor(Math.log2(m) / 2));   /* log4 */
+}
+export const skinOf = bounty => TIER_SKINS[tierOf(bounty)];
+
+/* Exported so the rules suite can pin the boundary without reaching into a sim,
+   and so the client mirror has one definition to copy rather than two. */
+export const canFight = (aBounty, bBounty) =>
+  Math.max(aBounty, bBounty) <= FOOD_CHAIN * Math.min(aBounty, bBounty);
 const TICKETS_PER_DEPLOY = 200;
 const HALF_LIFE_MS = 45 * 24 * 3600 * 1000;   /* rakeback tickets, 45-day half-life */
 
@@ -81,7 +118,7 @@ export function createSim(opts) {
     if (p) { p.name = name; return p; }
     p = Object.assign({
       key, name, bot: !!bot, balance: bot ? BOT_REFILL : 5000,
-      tickets: 0, ticketsAt: now(), rake: 0, stance: "attack", skin: "",
+      tickets: 0, ticketsAt: now(), rake: 0, skin: "",
       epochIn: 0, epochOut: 0, totIn: 0, totOut: 0,
     }, persisted || {});
     p.key = key; p.name = name; p.bot = !!bot;
@@ -111,27 +148,38 @@ export function createSim(opts) {
     for (const o of curs) { const d = (o.x - x) ** 2 + (o.y - y) ** 2; if (d < bd) bd = d; }
     return bd;
   }
-  function spawnPoint(bot) {
+  const edgePoint = side => ({
+    x: side === 0 ? 22 : side === 1 ? AW - 22 : rand(50, AW - 50),
+    y: side === 2 ? 22 : side === 3 ? AH - 22 : rand(50, AH - 50),
+  });
+  /* Which wall you come up from. Everyone used to deploy along the bottom, and
+     since a fresh cursor rarely lives long enough to travel, 87% of the field
+     and 96% of all deaths happened in the bottom quarter — a 1280x200 arena
+     with a large decorative area above it. Now each player gets a taskbar edge
+     for the epoch, the way a real XP taskbar docks to any side. It is drawn
+     from the epoch's own seeded stream, not chosen, because a choice with no
+     mechanical advantage still ends with everyone copying one wall. */
+  function edgeOf(p) {
+    if (p.edgeEpoch !== epochNo) { p.edge = Math.floor(rng.next() * 4); p.edgeEpoch = epochNo; }
+    return p.edge;
+  }
+  function spawnPoint(p) {
+    const fixed = p.bot ? -1 : edgeOf(p);                  /* bots use the whole rim */
     let best = null, bestD = -1;
     for (let i = 0; i < 8; i++) {
-      let x, y;
-      if (!bot) { x = rand(70, AW - 70); y = AH - 22; }   /* humans come up from their own edge */
-      else {
-        const side = Math.floor(rand(0, 4));
-        x = side === 0 ? 22 : side === 1 ? AW - 22 : rand(50, AW - 50);
-        y = side === 2 ? 22 : side === 3 ? AH - 22 : rand(50, AH - 50);
-      }
+      const side = fixed < 0 ? Math.floor(rand(0, 4)) : fixed;
+      const { x, y } = edgePoint(side);
       const d = nearestCurDist2(x, y);
-      if (d > bestD) { bestD = d; best = { x, y }; }
+      if (d > bestD) { bestD = d; best = { x, y, side }; }
       if (d > 200 * 200) break;                            /* far enough, stop looking */
     }
     return best;
   }
   function spawnCur(p) {
-    const { x, y } = spawnPoint(p.bot);
+    const { x, y, side } = spawnPoint(p);
     const c = {
-      id: nextCurId++, key: p.key, owner: p.name, bot: p.bot, skin: p.skin || "",
-      x, y, h: rand(0, Math.PI * 2), spd: rand(78, 124),
+      id: nextCurId++, key: p.key, owner: p.name, bot: p.bot, skin: skinOf(ENTRY),
+      x, y, edge: side, h: rand(0, Math.PI * 2), spd: rand(78, 124),
       bounty: ENTRY, mode: "roam", prevMode: "roam", recallT: 0,
       graceUntil: now() + GRACE_MS, riskAt: 1.5 + rng.next() * 5,
       s: 1, r: 10, kills: 0, peak: ENTRY, born: now(), epoch: epochNo,
@@ -141,8 +189,12 @@ export function createSim(opts) {
     return c;
   }
   function sizeOf(c) {
+    /* +0.5 of a cursor for every doubling, out to 64x. The old .35/2.6 curve
+       flattened at 32x and only ever made a whale 2.6 arrows wide, which was
+       not enough to read across a crowded desktop — and size is now doing real
+       work, because size is what decides who may fight you. */
     const m = Math.max(1, c.bounty / ENTRY);
-    c.s = Math.min(2.6, 1 + .35 * Math.log2(m));
+    c.s = Math.min(4, 1 + .5 * Math.log2(m));
     c.r = 10 * c.s;
     if (c.bounty > c.peak) c.peak = c.bounty;
   }
@@ -162,7 +214,7 @@ export function createSim(opts) {
     p.epochIn += STAKE; p.totIn += STAKE;
     R.pot += ENTRY; R.deploys++; platformFees += FEE_PLAT;
     const c = spawnCur(p);
-    emit({ t: "spawn", id: c.id, owner: c.owner, skin: c.skin, x: Math.round(c.x), y: Math.round(c.y), bounty: c.bounty, grace: GRACE_MS / 1000 });
+    emit({ t: "spawn", id: c.id, owner: c.owner, skin: skinOf(c.bounty), x: Math.round(c.x), y: Math.round(c.y), bounty: c.bounty, grace: GRACE_MS / 1000 });
     money(p);
     return null;
   }
@@ -221,10 +273,14 @@ export function createSim(opts) {
   }
 
   /* ---------- movement (verbatim port) ---------- */
+  /* the whole rule, in one predicate — used for hunting and for contact, so a
+     cursor never chases something it would pass straight through */
+  const mayFight = (a, b) => canFight(a.bounty, b.bounty);
   function nearestEnemy(c) {
     let best = null, bd = 1e9;
     for (const o of curs) {
       if (o === c || o.key === c.key || graced(o) || o.mode === "duel") continue;
+      if (!mayFight(c, o)) continue;
       const d = (o.x - c.x) ** 2 + (o.y - c.y) ** 2;
       if (d < bd) { bd = d; best = o; }
     }
@@ -238,18 +294,23 @@ export function createSim(opts) {
   function move(c, dt) {
     if (c.mode === "recall") {
       c.recallT -= dt;
-      /* out through the nearest point on your own edge, not one shared corner
-         — every recall funnelling to (40, AH) made a permanent scrum there */
-      const dx = clamp(c.x, 60, AW - 60) - c.x, dy = (AH - 18) - c.y, dist = Math.hypot(dx, dy);
+      /* out through the wall you came up from. Funnelling every recall to one
+         corner made a permanent scrum there; funnelling them all to one EDGE
+         just made a longer scrum, which is what the bottom of the arena was. */
+      const e = c.edge === undefined ? 3 : c.edge;
+      const ex = e === 0 ? 18 : e === 1 ? AW - 18 : clamp(c.x, 60, AW - 60);
+      const ey = e === 2 ? 18 : e === 3 ? AH - 18 : clamp(c.y, 60, AH - 60);
+      const dx = ex - c.x, dy = ey - c.y, dist = Math.hypot(dx, dy);
       if (c.recallT <= 0) { bank(c, rushAt !== null); return; }
       const sp = dist / Math.max(.2, c.recallT);
       c.x += dx / Math.max(1, dist) * sp * dt; c.y += dy / Math.max(1, dist) * sp * dt;
       return;
     }
-    const p = players.get(c.key);
-    const st = c.bot
-      ? (c.bounty / ENTRY >= c.riskAt * .7 ? "defend" : "attack")
-      : ((p && p.stance) || "attack");
+    /* No stances. DEFEND existed so a small cursor could refuse a hopeless
+       fight with a whale; the food chain now refuses it on their behalf, and
+       everything still reachable is inside 4x — which is a fight worth having.
+       One verb remains, RECALL, and it is the honest one: leaving costs you the
+       round rather than just tempo. */
     /* aggression ramps with the disk: calm on a fresh drive, frenzy near full */
     const fill = clamp(epochDeaths / CORPSES, 0, 1);
     const aggr = phase === "battle" ? (.7 + 1.5 * fill) : 1;
@@ -260,8 +321,7 @@ export function createSim(opts) {
          38px circle, and contact needs 20px — so an attacker could literally
          orbit its target forever without touching it. Close in, turn hard. */
       if (bd < 130 * 130) turn *= 2.8;
-      if (st === "attack" && bd < 520 * 520) { tx = best.x; ty = best.y; }
-      else if (st === "defend" && bd < 300 * 300) { tx = c.x + (c.x - best.x); ty = c.y + (c.y - best.y); }
+      if (bd < 520 * 520) { tx = best.x; ty = best.y; }
     }
     /* Your own cursors regroup, but they must never stack. They cannot fight
        each other, so a pile of them reads as a bug — two arrows sitting in the
@@ -306,15 +366,10 @@ export function createSim(opts) {
     if (c.y > AH - M) wy -= (c.y - (AH - M)) / M;
     if (wx || wy) c.h += clamp(angDiff(Math.atan2(wy, wx) - c.h), -1, 1) * WT * dt * Math.min(1, Math.hypot(wx, wy));
     const weight = 1 + .25 * (c.s - 1);
-    let sp = c.spd / weight;
-    /* A hunt has to be able to end. Everyone moved at the same speed, so an
-       attacker could never close on a fleeing defender and the two of them
-       orbited each other until something else interrupted — the circles.
-       Attacking is 12% faster, defending 10% slower: DEFEND still buys you
-       time, which is what it is for, but it is no longer a way to live
-       forever. Duel odds are untouched, so none of this moves the EV. */
-    if (best && st === "attack" && bd < 520 * 520) sp *= 1.12;
-    else if (best && st === "defend" && bd < 300 * 300) sp *= .90;
+    /* The old +12% chase / -10% flee pair existed only so an attacker could
+       close on a fleeing defender. With nobody fleeing it was a bonus everyone
+       held at once, which is the same as no bonus at all. */
+    const sp = c.spd / weight;
     /* and a hard guarantee on top of the soft one: if the clamp actually bit,
        the cursor is against a wall, so mirror the heading off it. A bounce
        cannot get stuck the way a slow turn can. */
@@ -438,6 +493,7 @@ export function createSim(opts) {
       const a = curs[i], b = curs[j];
       if (a.key === b.key || graced(a) || graced(b)) continue;
       if (a.mode === "duel" || b.mode === "duel") continue;
+      if (!mayFight(a, b)) continue;
       const rr = a.r + b.r;
       if ((a.x - b.x) ** 2 + (a.y - b.y) ** 2 < rr * rr) startDuel(a, b);
     }
@@ -470,7 +526,7 @@ export function createSim(opts) {
       rush: rushAt ? Math.max(0, RUSH_MS - (now() - rushAt)) / 1000 : null,
       disk: { used: diskUsed(), total: DISK_TOTAL, corpse: CORPSE_BYTES, deaths: epochDeaths },
       curs: curs.map(c => ({
-        id: c.id, owner: c.owner, skin: c.skin, x: Math.round(c.x), y: Math.round(c.y),
+        id: c.id, owner: c.owner, skin: skinOf(c.bounty), x: Math.round(c.x), y: Math.round(c.y),
         bounty: c.bounty, grace: Math.max(0, c.graceUntil - now()) / 1000,
         mode: c.mode === "recall" ? "c" : c.mode === "duel" ? "d" : "r",
       })),
@@ -488,7 +544,6 @@ export function createSim(opts) {
   return {
     tick, snapshot, welcomeState,
     registerPlayer, requestDeploy, requestRecall, recallOne, cancelRecall,
-    setStance: (key, s) => { const p = players.get(key); if (p && (s === "attack" || s === "defend")) p.stance = s; },
     players, cursCount: () => curs.length,
     diskUsed, DISK_TOTAL, CORPSES,
     epochNo: () => epochNo, phase: () => phase,

@@ -14,8 +14,9 @@ export const advance = () => { CLOCK += STEP; };
 
 /* SIM=<path> points the suite at another copy of the sim — how you confirm a
    new test actually fails against the build that had the bug. */
-const { createSim, ENTRY, STAKE, MAXCUR } = await import(process.env.SIM || "../sim.js");
-export { ENTRY, STAKE, MAXCUR };
+const SIM = await import(process.env.SIM || "../sim.js");
+const { createSim, ENTRY, STAKE, MAXCUR } = SIM;
+export { ENTRY, STAKE, MAXCUR, SIM };
 
 /* One rig per test: its own sim, its own event log, its own player. */
 export function rig({ corpses = 40, balance = 1000000, name = "tester", key = "me" } = {}) {

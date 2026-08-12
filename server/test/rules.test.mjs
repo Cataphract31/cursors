@@ -11,7 +11,7 @@
        make a dropped order look honoured. Every recall test excludes shut. */
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { rig, untilMyDuel, ENTRY, STAKE, MAXCUR } from "./harness.mjs";
+import { rig, untilMyDuel, ENTRY, STAKE, MAXCUR, SIM } from "./harness.mjs";
 
 /* ---------------- orders survive every state a cursor can be in ------------- */
 
@@ -232,4 +232,77 @@ test("nobody else's cursor answers your orders", () => {
     assert.ok(!b || b.owner !== r.name, "a stranger's cursor banked into our name");
   }
   assert.ok(r.bal() <= before, "recalling a stranger's cursor paid us");
+});
+
+/* ---------------------------- the food chain ------------------------------- */
+
+/* The rule that lets a fresh deploy survive its first ten seconds: a cursor
+   only fights inside 4x its own size. These tests are the reason to trust that
+   the rule is actually wired into contact, and not merely defined. */
+
+test("the food chain boundary is inclusive, and it is 4x", () => {
+  const { canFight, FOOD_CHAIN, tierOf, TIER_SKINS } = SIM;
+  assert.equal(FOOD_CHAIN, 4, "the locked ratio moved");
+  assert.ok(canFight(ENTRY, ENTRY), "equals must fight");
+  assert.ok(canFight(ENTRY, 4 * ENTRY), "exactly 4x is still a legal fight");
+  assert.ok(!canFight(ENTRY, 4 * ENTRY + 1), "a hair over 4x is not");
+  assert.ok(!canFight(ENTRY, 100 * ENTRY), "a whale cannot eat plankton");
+  assert.ok(canFight(50 * ENTRY, 200 * ENTRY), "the rule is a ratio, not a size");
+  /* the weight class the arena draws is one step per 4x, so a class boundary
+     is exactly the reach of the rule */
+  assert.equal(tierOf(ENTRY), 0);
+  assert.equal(tierOf(3.99 * ENTRY), 0);
+  assert.equal(tierOf(4 * ENTRY), 1, "a rank step is one FOOD_CHAIN, so it reads off the arrow");
+  assert.equal(tierOf(16 * ENTRY), 2);
+  assert.equal(tierOf(64 * ENTRY), 3, "the dinosaur is the top rank, at 64x");
+  assert.equal(tierOf(1e9), TIER_SKINS.length - 1, "the top class must absorb everything above it");
+});
+
+test("nothing is ever eaten by something outside its weight class", () => {
+  /* The integration test — it never asks the predicate anything, it just
+     watches every death in a busy arena. Against the build before the rule,
+     this fails in the first epoch: whales ate fresh deploys 83% of the time. */
+  const FOOD_CHAIN = SIM.FOOD_CHAIN || 4;   /* literal fallback so this still detects a build with no rule at all */
+  const r = rig({ corpses: 300 });
+  const bad = [];
+  let checked = 0;
+  const seen = () => r.evs("kill").length;
+  let done = seen();
+  r.until(() => {
+    if (r.mine().length < MAXCUR) r.sim.requestDeploy(r.key);
+    const live = r.sim.welcomeState().curs;
+    for (const k of r.evs("kill").slice(done)) {
+      const w = live.find(c => c.id === k.w);
+      if (!w) continue;                      /* the winner died later in the same tick */
+      const killer = w.bounty - k.pot;       /* what the winner brought to the fight */
+      checked++;
+      if (Math.max(killer, k.pot) > FOOD_CHAIN * Math.min(killer, k.pot))
+        bad.push(`${(killer / ENTRY).toFixed(1)}x ate ${(k.pot / ENTRY).toFixed(1)}x`);
+    }
+    done = r.evs("kill").length;
+    return r.evs("crash").length > 0;
+  }, 900);
+  assert.ok(checked >= 100, `only ${checked} duels observed`);
+  assert.deepEqual(bad.slice(0, 5), [], `${bad.length} of ${checked} duels crossed the food chain`);
+});
+
+test("deploys do not all come up from the same wall", () => {
+  /* Every human used to spawn at y = AH - 22, and a fresh cursor rarely lives
+     long enough to travel, so 87% of the field sat in the bottom quarter. The
+     taskbar edge is drawn per player per epoch, so this samples many epochs. */
+  const r = rig({ corpses: 12 });
+  const ys = [];
+  r.until(() => {
+    if (r.mine().length < MAXCUR) {
+      const before = new Set(r.mine().map(c => c.id));
+      if (!r.sim.requestDeploy(r.key)) {
+        const c = r.mine().find(x => !before.has(x.id));
+        if (c) ys.push(c.y);
+      }
+    }
+    return ys.length >= 150;
+  }, 1800);
+  assert.ok(ys.length >= 80, `only ${ys.length} deploys sampled`);
+  const bottom = ys.filter(y => y > 700).length / ys.length;
+  assert.ok(bottom < 0.9, `${(100 * bottom).toFixed(0)}% of deploys came up from the bottom edge`);
 });

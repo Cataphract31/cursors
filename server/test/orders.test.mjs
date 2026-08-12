@@ -45,7 +45,6 @@ test("orders from a session the server never saw do nothing", () => {
   r.sim.recallOne("ghost", id);
   r.sim.requestRecall("ghost");
   r.sim.cancelRecall("ghost");
-  r.sim.setStance("ghost", "defend");
   assert.equal(r.sim.requestDeploy("ghost"), "no such player");
   /* one tick only: the bot population grows on its own, so the field size is
      not a fixture — our own cursors are */

@@ -190,7 +190,6 @@ function handle(c, m) {
     case "recall": sim.requestRecall(c.key); break;
     case "recallOne": if (Number.isInteger(m.id)) sim.recallOne(c.key, m.id); break;
     case "recallCancel": sim.cancelRecall(c.key); break;
-    case "stance": sim.setStance(c.key, m.s); break;
     case "rake": sim.claimRake(c.key); break;
     case "chat": {
       const text = String(m.text || "").slice(0, 200).trim();
