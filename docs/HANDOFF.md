@@ -280,6 +280,14 @@ rush, ~18.5s the crash dialog, ~27s the recovered arena).
   inside the 12s the app allows, so the harness fails only on actual CSP evidence and otherwise
   reports that leg **UNVERIFIED** rather than crying wolf.
 
+- **Media.** ffmpeg 9.0 is installed (winget `Gyan.FFmpeg`) — use it before adding any
+  audio or video. Two gotchas: winget's downloader failed once with an `InternetOpenUrl`
+  error and worked on a plain retry, and a fresh shell is needed for PATH. Social
+  re-uploads are routinely encoded at ten times the bitrate they need; the meme clip was
+  VP9 at 1.1 Mbps for a 320x240 picture and went 5983 KB -> 1087 KB at CRF 40 / cpu-used 0
+  with no visible difference. Compare frames at the real display size before choosing a
+  CRF — at 320x240 even 43 looked fine, and the extra 120 KB was not worth the risk.
+
 - **Rules tests.** `npm test` in `server/` — 20 tests against the real sim, whole epochs in a
   quarter of a second (the harness fakes `Date.now` forward one step per tick). They cover what
   the mobile audit structurally could not: recall orders honoured from every state a cursor can
