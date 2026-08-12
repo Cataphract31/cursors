@@ -44,7 +44,16 @@ Source layout (`apps/web/src/`):
 - `assets/xp/` — icons (winXP repo, MIT), sounds (2001 XP scheme + MSN 7), emo (80 MSN
   emoticons), mine (Minesweeper sprites), paint (jspaint tool sprites, MIT), wall (Bliss),
   logo (XP flag)
-- `assets/music/` — 4 Kevin MacLeod CC-BY MP3s at 96kbps
+- `public/music/` — **the playlist is this folder.** Drop an audio file in and it is in
+  Winamp, Media Player and My Music on the next build; nothing to register. Names come
+  from the file's own ID3 tags (v2, then v1), falling back to a cleaned-up filename
+  ("Artist - Title.mp3" splits; download-site junk, track numbers and `[320kbps]` are
+  stripped). The scanner is `scripts/music-plugin.mjs`, wired as a Vite plugin so it
+  works in dev and build. `public/` not `src/` on purpose: Vite copies it verbatim
+  instead of running every track through rollup. The four Kevin MacLeod CC-BY tracks
+  keep their credit in code, not in a strippable tag, and stay pinned first.
+- `public/video/` — same idea for clips; Media Player lists them under the music and
+  plays them in the visualiser slot. `preload="none"`, no `src` until play.
 
 ---
 
