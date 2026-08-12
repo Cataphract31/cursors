@@ -306,3 +306,31 @@ test("deploys do not all come up from the same wall", () => {
   const bottom = ys.filter(y => y > 700).length / ys.length;
   assert.ok(bottom < 0.9, `${(100 * bottom).toFixed(0)}% of deploys came up from the bottom edge`);
 });
+
+test("a crowded epoch is played on a bigger field", () => {
+  /* Density is what a round feels like, so the field is sized to the
+     population at every epoch start rather than being 1280x800 forever. The
+     fairness rule it has to respect is that everyone in a ROUND shares one
+     field — which the epoch event carries, so a client cannot guess wrong. */
+  const r = rig({ corpses: 60 });
+  for (let i = 0; i < 14; i++) {
+    const k = "crowd" + i;
+    r.sim.registerPlayer(k, k, false, false);
+    r.sim.players.get(k).balance = 1e9;
+  }
+  const t = r.until(() => {
+    for (let i = 0; i < 14; i++) r.sim.requestDeploy("crowd" + i);
+    r.sim.requestDeploy(r.key);
+    return r.evs("epoch").length >= 2;      /* the one after the first crash */
+  }, 900);
+  assert.ok(t >= 0, "no second epoch inside 15 minutes");
+  const ep = r.evs("epoch").at(-1);
+  assert.ok(ep.aw > 0 && ep.ah > 0, "the epoch never announced its field");
+  assert.equal(Math.round((ep.aw / ep.ah) * 100), 160, "the field changed shape, not just size");
+  assert.ok(ep.aw > 1280, `a crowded epoch still ran on ${ep.aw}x${ep.ah}`);
+  /* and the snapshot has to agree, or a client joining mid-epoch draws the
+     wrong field and every position it renders is in the wrong place */
+  const snap = r.sim.snapshot();
+  assert.equal(snap.aw, ep.aw, "snapshot and epoch disagree about the field");
+  assert.equal(r.sim.welcomeState().aw, ep.aw, "welcome and epoch disagree about the field");
+});

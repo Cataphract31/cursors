@@ -21,6 +21,11 @@ export function initTour(deps) {
       "Winner takes both bounties",
       "Odds = your SOL : theirs · no house edge in fights",
     ]},
+    { t: "The food chain", img: "ranks.png", pts: [
+      "You only fight within <b>4×</b> your own size",
+      "Cross <b>4× · 16× · 64×</b> and your arrow upgrades",
+      "Out of range goes dim — it cannot touch you, you cannot touch it",
+    ]},
     { t: "Bank it", img: "bank.png", pts: [
       "<b>RECALL</b> cashes your live cursors out",
       "<b>AUTOPLAY</b> redeploys and banks at ×2 · ×5 · ride",

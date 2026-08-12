@@ -3996,12 +3996,22 @@ function saveAutoPrefs(){
    scaled to fit the screen. Two reasons, one of them load-bearing for real
    money: every player must fight on an identical battlefield, and on a phone
    you then see the whole fight instead of a corner of it. */
-const AW=1280, AH=800;
+/* The field is sized to the population by the server and announced with the
+   seed commit, so it is fixed for the ROUND and identical for everyone in it —
+   which is the fairness rule; it was never "1280x800 for all time". Offline the
+   sandbox is one player, so it stays at the base size. */
+let AW=1280, AH=800;
+function setArena(aw,ah){
+  if(!aw||!ah||(aw===AW&&ah===AH)) return;
+  AW=aw; AH=ah; syncArena();
+}
 let arena={x0:0,y0:0,x1:AW,y1:AH};
 let AS=1, CMAG=1, AROT=false;
 function syncArena(){
   arena={x0:0,y0:0,x1:AW,y1:AH};
   const el=$("#arena"); if(!el) return;
+  el.style.setProperty("--aw",AW+"px");
+  el.style.setProperty("--ah",AH+"px");
   /* Portrait phones ROTATE THE VIEW 90° instead of letterboxing. The sim is
      untouched — same fixed field, same positions, same fairness — but shown
      sideways the field fills the screen (~0.49 scale instead of ~0.30) and
@@ -4320,8 +4330,10 @@ function deploy(silent){
   log(`you deployed 0.100 (${myCurs().length}/${MAXCUR})`);
   updatePanel();
 }
+/* dev only: freezes the sandbox so a capture holds still (see #desktop-ranks) */
+let DEMO=false;
 function botDeploy(name){
-  if(MP.on) return;   /* the server owns the population; a local bot here would never be drawn */
+  if(MP.on||DEMO) return;   /* the server owns the population; a local bot here would never be drawn */
   if(!canDeploy()) return;
   if(curs.filter(c=>c.owner===name).length>=3) return;
   const c=makeCur(name,false);
@@ -5393,6 +5405,7 @@ function mpWelcome(m){
   mpPurge();
   const keepMy=(roundNo===m.epoch.no&&R)?{i:R.myIn,o:R.myOut}:null;
   roundNo=m.epoch.no; R=newRoundRecord();
+  setArena(m.epoch.aw,m.epoch.ah);   /* joining mid-epoch: adopt the field in progress */
   if(keepMy){ R.myIn=keepMy.i; R.myOut=keepMy.o; }   /* same epoch: my ledger survives the blip */
   R.pot=m.epoch.pot; R.deploys=m.epoch.deploys; R.deaths=m.epoch.deaths;
   upT=m.epoch.up; epochStart=upT-(m.epoch.eup||0);   /* the epoch is older than our connection */
@@ -5577,6 +5590,7 @@ function mpEpoch(m){
   bsodEl.style.display="none";
   if(phase==="crash") errorReport();
   roundNo=m.no; R=newRoundRecord();
+  setArena(m.aw,m.ah);          /* a new epoch can be a new field */
   commitHex=m.commit; seedHex=null;
   phase="battle"; shutFired=false; phaseT=999;
   MP.fill=0; epochStart=upT;
@@ -5627,7 +5641,7 @@ function mpMsg(m){
   tmNetMsgs++;
   switch(m.t){
     case "welcome": mpWelcome(m); break;
-    case "snap": if(MP.on){ lastSnapAt=performance.now(); if(mpStale){ mpStale=false; renderPhase(); updatePanel(); } mpSnap(m); } break;
+    case "snap": if(MP.on){ setArena(m.aw,m.ah); lastSnapAt=performance.now(); if(mpStale){ mpStale=false; renderPhase(); updatePanel(); } mpSnap(m); } break;
     /* Blind means the server has stopped sending us positions, so a cursor
        built now would stand still on the edge it spawned at until the resync.
        Skip it: becoming visible asks for the whole world back anyway. */
@@ -5922,6 +5936,18 @@ renderHelp();
 
 /* ================= main loop ================= */
 let last=performance.now();
+/* Who can reach you, without a legend. Anything outside the food chain from
+   every cursor you own goes quiet; your own carry a green ring. Recomputed per
+   frame because both sides of the comparison grow mid-round, but it only
+   touches the DOM when a cursor actually crosses in or out of range. */
+function markFightRange(){
+  const mine=curs.filter(c=>c.isMine&&!c.dead);
+  for(const c of curs){
+    if(c.dead) continue;
+    const off=!c.isMine&&mine.length>0&&!mine.some(m=>mayFight(m,c));
+    if(c.nofight!==off){ c.nofight=off; c.el.classList.toggle("nofight",off); }
+  }
+}
 function frame(t){
   const dt=Math.min(.05,(t-last)/1000); last=t;
   if(MP.on){ mpFrame(dt,t); }
@@ -5953,6 +5979,7 @@ function frame(t){
     $("#walletamt").textContent=fmtS(Math.round(walletShown))+" SOL";
     renderHud();
   }
+  markFightRange();
   requestAnimationFrame(frame);
 }
 
@@ -6194,6 +6221,22 @@ if(location.hash.indexOf("#desktop-mp")===0) setTimeout(()=>{ /* dev: drive the 
   });
   if(p==="-gal"||p==="-guest") when(()=>netpages.open(p==="-gal"?"gallery":"guest"));
 },700);
+if(location.hash==="#desktop-ranks") setTimeout(()=>{ /* dev: the weight classes, for the How to Play capture */
+  for(const w of document.querySelectorAll(".window")) w.style.display="none";
+  for(const c of [...curs]) removeCur(c);
+  /* built outside `curs` on purpose: nothing moves them, nothing fights them,
+     so the capture is the four ranks and only the four ranks */
+  DEMO=true;
+  [[1,"PLANKTON"],[4,"3D-WHITE"],[16,"3D-BRONZE"],[64,"DINOSAUR"]].forEach(([m,nm],i)=>{
+    const c=makeCur(nm,false);
+    c.bounty=Math.round(ENTRY*m);
+    c.x=320+i*185; c.y=530-i*112;   /* a climb, not a row: reads as a ladder and keeps the slide near 2:1 */
+    c.el.classList.remove("grace");
+    c.el.style.transform=`translate(${c.x-8}px,${c.y-4}px)`;
+    updateTag(c);
+    c.el.querySelector(".mx").textContent="×"+m;   /* ×1 is hidden in play; the chart needs it */
+  });
+},1400);
 if(location.hash==="#desktop-crash") setTimeout(()=>{ /* dev: fast-forward to the shutdown rush and crash */
   phaseT=Math.min(phaseT,T_SHUT+3);
 },2500);

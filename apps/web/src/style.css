@@ -524,7 +524,8 @@ body.mobile .fd.fd-mine{padding:5px 32px 6px 8px}
 body.mobile.land .fd{max-width:min(320px,48vw)}
 
 /* ---------- game layer ---------- */
-#arena{position:absolute;left:0;top:0;width:1280px;height:800px;transform-origin:0 0;z-index:5000;pointer-events:none}
+/* the field is sized per epoch by the server; syncArena writes --aw/--ah */
+#arena{position:absolute;left:0;top:0;width:var(--aw,1280px);height:var(--ah,800px);transform-origin:0 0;z-index:5000;pointer-events:none}
 body.mobile #arena{transition:opacity .18s ease-out}
 
 /* the crash hiccup: filter-only, because syncArena owns this element's transform */
@@ -2259,3 +2260,12 @@ body.mobile .npt td.note{display:none}
 }
 .cur.promote>svg,.cur.promote>img.curskin{animation:promote .5s ease-out}
 @media (prefers-reduced-motion:reduce){ .cur.promote>svg,.cur.promote>img.curskin{animation:none} }
+
+
+/* Fight range, at a glance. Everything outside your own weight class goes quiet
+   and slightly cold; your own cursors carry a soft green ring. No legend, no
+   tooltip — you learn it the first time a monster drifts through you. */
+.cur.nofight{opacity:.42;filter:grayscale(.55) brightness(.9) drop-shadow(0 0 3px rgba(200,40,40,.55))}
+.cur.me>svg,.cur.me>img.curskin{filter:drop-shadow(0 0 3px rgba(70,225,120,.95)) drop-shadow(0 0 7px rgba(40,190,90,.5))}
+.cur{transition:opacity .18s ease-out}
+@media (prefers-reduced-motion:reduce){ .cur{transition:none} }

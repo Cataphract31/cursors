@@ -60,7 +60,16 @@ const TICKETS_PER_DEPLOY = 200;
 const HALF_LIFE_MS = 45 * 24 * 3600 * 1000;   /* rakeback tickets, 45-day half-life */
 
 /* arena + feel constants, verbatim from the client */
-const AW = 1280, AH = 800;
+/* The arena's BASE size. The field the epoch actually runs on is derived from
+   this and the population — see sizeArena. 16:10 always, because the client
+   fits the field to the viewport and a changing aspect would move the
+   letterbox around under the player. */
+const BASE_AW = 1280, BASE_AH = 800;
+/* Density, not size, is what a round feels like: it sets how long a fresh
+   cursor lives and how fast the disk fills. Measured, at 4x food chain and
+   all-edge spawns: ~24k px2 per cursor is a meat grinder, ~35k breathes.
+   Hold the number and the game plays the same at 10 cursors or 400. */
+const PX2_PER_CUR = 32000, ARENA_MAX = 3;
 const GRACE_MS = 1400, RECALL_SECS = 3, DUEL_MS = 700, RUSH_MS = 12000, CRASH_MS = 5000;
 
 /* The disk, which is the round clock. A 20 GB drive is what an XP box actually
@@ -78,6 +87,9 @@ const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
 const angDiff = a => { while (a > Math.PI) a -= 2 * Math.PI; while (a < -Math.PI) a += 2 * Math.PI; return a; };
 
 export function createSim(opts) {
+  /* per-sim, not per-module: two sims in one process (the test rig does this)
+     must not share a field size */
+  let AW = BASE_AW, AH = BASE_AH;
   const emit = opts.emit;                       /* (evt) => void — server forwards */
   const CORPSES = opts.corpses || 900;          /* deaths that fill the disk */
   /* The rush is a short dramatic window, not a fraction of the round. It used
@@ -97,7 +109,7 @@ export function createSim(opts) {
   let simClock = 0;
   let rushAt = null, crashUntil = 0, deploysOpen = false;
   let R = null;
-  let botQueue = [], botTimer = 0;
+  let botQueue = [], botTimer = 0, peakCurs = 0;
   let platformFees = 0;
 
   const now = () => Date.now();
@@ -446,8 +458,20 @@ export function createSim(opts) {
     emit({ t: "crash", ...receipt });
     for (const p of players.values()) { p.epochIn = 0; p.epochOut = 0; }
   }
+  /* Sized once, at epoch start, from the population the last epoch carried —
+     never mid-epoch, because a field that resizes under a live cursor moves it
+     relative to everyone else. Announced with the seed commit, so every client
+     in the round is on the identical field and the fixed-arena fairness rule
+     still holds: it fixes the field for the ROUND, not for all time. */
+  function sizeArena(n) {
+    const want = Math.max(1, n) * PX2_PER_CUR;
+    const k = clamp(Math.sqrt(want / (BASE_AW * BASE_AH)), 1, ARENA_MAX);
+    AW = Math.round(BASE_AW * k); AH = Math.round(BASE_AH * k);
+  }
   function startEpoch() {
     epochNo++;
+    sizeArena(peakCurs);
+    peakCurs = 0;
     seedHex = newSeedHex(); commit = commitOf(seedHex);
     rng = rngFromSeedHex(seedHex);
     R = { pot: 0, deploys: 0, deaths: 0, banked: 0, bigBank: null };
@@ -460,12 +484,13 @@ export function createSim(opts) {
       for (let i = 0; i < n; i++) botQueue.push({ key: "bot:" + name, at: now() + rand(600, 9500) });
     }
     botQueue.sort((a, b) => a.at - b.at);
-    emit({ t: "epoch", no: epochNo, commit, corpses: CORPSES });
+    emit({ t: "epoch", no: epochNo, commit, corpses: CORPSES, aw: AW, ah: AH });
   }
 
   /* ---------- the loop ---------- */
   function tick(dt) {
     upT += dt; simClock += dt * 1000;
+    if (curs.length > peakCurs) peakCurs = curs.length;
     if (phase === "crash") {
       if (now() >= crashUntil) startEpoch();
       return;
@@ -511,6 +536,7 @@ export function createSim(opts) {
   function snapshot() {
     return {
       t: "snap", ts: Math.round(simClock),   /* sim clock: exactly even, unlike wall time */
+      aw: AW, ah: AH,
       p: curs.map(c => [c.id, Math.round(c.x), Math.round(c.y), c.bounty,
         c.mode === "recall" ? "c" : c.mode === "duel" ? "d" : "r"]),
       up: Math.round(upT), pot: R ? R.pot : 0,
@@ -520,6 +546,7 @@ export function createSim(opts) {
   function welcomeState() {
     return {
       no: epochNo, commit, phase, up: Math.round(upT), eup: Math.round(upT - epochStart),
+      aw: AW, ah: AH,
       pot: R ? R.pot : 0,
       deploys: R ? R.deploys : 0, deaths: R ? R.deaths : 0,
       fill: +(epochDeaths / CORPSES).toFixed(4), corpses: CORPSES,
@@ -546,6 +573,7 @@ export function createSim(opts) {
     registerPlayer, requestDeploy, requestRecall, recallOne, cancelRecall,
     players, cursCount: () => curs.length,
     diskUsed, DISK_TOTAL, CORPSES,
+    arena: () => ({ aw: AW, ah: AH }),
     epochNo: () => epochNo, phase: () => phase,
     claimRake: key => {
       const p = players.get(key); if (!p || p.rake <= 0) return 0;
