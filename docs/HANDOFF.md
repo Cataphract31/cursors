@@ -120,29 +120,15 @@ lighten the lines. **Degauss** (a 0.9s filter wobble on body) fires at logon, af
 BSOD, and when the toggle is switched on. Toggle lives in Display Properties → Appearance
 → "CRT glass", persisted as `store.data.crt` (default ON), `body.crt-off` kills it.
 
-**Internet Explorer + the handmade web (2026-08-09).** `ie.js`, import-free sibling
-module. Real IE6 chrome: the genuine toolbar art (back/forward/stop/refresh/home/search/
-favorites/media/history/mail/print, all from the same winXP archive), address bar with a
-working Go, the Links bar, a spinning throbber, and a status bar whose chunked blue
-progress bar fills as the page "arrives". Ten pages of real 2003 tag soup — `<center>`,
-`<font>`, `<marquee>`, nested tables — because **View > Source is a feature** and the
-source has to look handmade. The sites: **cursor$land** (the geocities homepage, live hit
-counter), **the odds** (the honest-casino thesis as one ugly page: a/(a+b), P(×N)=1/N with
-a table, the 1%/2%/99% arithmetic, "bet size cannot change your variance"), **hall of fame**
-(reads live game state — alive cursors and bin deaths, ranked by peak), a **guestbook** that
-really persists your entry (`store.data.guest`), **THE CURSOR WEBRING** (10 members, 5 dead
-in period-accurate ways, prev/random/next actually ring), **mumu.tripod.com** (a rival's
-shrine, superstition presented as a system), **deg404** (sells CURSORBOT 9000 for 2 SOL at a
-"94% win rate", then admits in the footer that the seed is committed and revealed and the
-page would not be free if the RNG were crackable), bobo's eternally under-construction angelfire
-page, **MSN Search** (indexes all ten pages; searching for "how to win" promotes the odds
-page to #1 with a note saying so), and a carbon-copy **"The page cannot be displayed"** for
-everything else. Plus: a **dial-up ceremony** on the first navigation of a session — the
-real Connect dialog, then a synthesised 56k handshake (dial tone, DTMF, ringback, answer
-tone, carrier hiss, ~8s, Cancel actually shuts it up), a tray connection icon, and a
-"Connected at 56.6 Kbps" balloon. Work Offline gives the real offline page; reconnecting
-re-dials. One popup fires on deg404 (1,000,000th visitor; the prize is nothing). Explorer's
-Favorites folder holds six .url shortcuts that really navigate, and Run… now takes URLs.
+**Internet Explorer — REMOVED 2026-08-12 (owner decree).** `ie.js` (1029 lines), cursorTV
+and its YouTube iframe API, MSN Search, Windows Update, the dial-up modem fiction and
+Favorites are all gone, along with ~250 lines of markup, ~95 lines of CSS and the server's
+whole TV engine (deck rotation, skip votes, duration reporting). The three pages that held
+real player content — **hall of fame, guestbook, gallery** — are now three plain XP windows
+in `netpages.js` (~110 lines), fed by the game socket that always carried their data. They
+sit in All Programs, on the Links bar, and Hall of Fame is the pinned top-left Start item
+where Internet Explorer used to be. There is no browser and no `fetch` to any third party
+left in the client.
 
 **LIVE MULTIPLAYER BETA (2026-08-09, owner-directed).** The game is now server-
 authoritative: `server/` runs the same sim (a faithful port of main.js's rules — same
@@ -166,11 +152,9 @@ pays the room at fair odds. **The RNG is honest now:** every epoch's sim randomn
 from one sfc32 stream (ZINC's audited generator, ported); sha256(seed) is committed at
 epoch start, revealed at the crash, and the Verify pane says exactly what is and isn't
 provable yet. Also live on the wire: the **lobby is real chat** (Messenger's "everyone"
-window, server-echoed, bot chatter muted online), the **guestbook is global**, Paint has
-**File > Publish to Gallery** (server-hosted, latest 16, `gallery.cursor.land` in IE), and
-**cursorTV** (`tv.cursor.land`) — the whole lobby watches one YouTube video in an IE6
-window via the official iframe API, synced by the server: fair FIFO queue (3/person),
-skip by vote, muted-start with a click-for-sound badge (browser autoplay law).
+window, server-echoed, bot chatter muted online), the **guestbook is global**, and Paint has
+**File > Publish to Gallery** (server-hosted, latest 16). Guestbook and Gallery are their
+own windows since the browser was removed — see the IE entry above. cursorTV is gone.
 
 **Egress, the real constraint on a free tier (2026-08-09).** GCP always-free gives 1 GB
 of North-American egress a month. Uncompressed JSON snapshots measured **10.9 MB per
@@ -268,7 +252,7 @@ rush, ~18.5s the crash dialog, ~27s the recovered arena).
   real `dist/` under the headers **parsed out of `vercel.json` itself** — the policy under
   test cannot drift from the policy that ships — drives it in headless Edge, and fails on any
   violation. It covers the cold boot and login, the live `wss://` game socket, Winamp's
-  data:-URI skin, the Solitaire iframe, cursorTV's YouTube player, and a second origin trying
+  data:-URI skin, the Solitaire iframe, and a second origin trying
   to frame the game. Currently: **0 violations, 0 blocked requests.**
 
   Two things it caught that would otherwise have shipped broken:
@@ -531,17 +515,16 @@ second):
    balloons, prohibit autoplay, always show duel odds, prevent cmd). One shared properties
    sheet, MMC chrome shared by all three consoles. Dev hashes: `#desktop-sys-cmd`,
    `-control`, `-classic`, `-svc`, `-svcprops`, `-dev`, `-gp`, `-gpprops`.
-   Still open: the two remaining items the owner named in the same breath —
-   **cursorTV as a real YouTube embed** with shared clock + queue + takeover, and the
-   **Paint gallery served to everyone** behind a non-sybillable gate.
+   Of the two items the owner named in the same breath, the **Paint gallery served to
+   everyone** shipped; **cursorTV** shipped and was then removed with the browser
+   (2026-08-12, owner decree) — do not propose it again.
 
 1. **The XP applications track — the owner's current priority.** Carbon copies, in depth:
    **Control Panel** (a real applet grid, not a joke box), **cmd.exe** (a real interpreter
    over the C:\ tree `explorer.js` already models — dir/cd/type/echo/ver/tree, plus the
    game's own state as commands), **services.msc**, **Device Manager**, **gpedit.msc**.
-   Then **cursorTV as a real embedded YouTube player** with a shared clock, a queue and
-   paid-or-fair-rotation takeover, and **the Paint gallery served to everyone** behind a
-   non-sybillable gate. `explorer.js` models the filesystem as functions, which is the right
+   Then **the Paint gallery served to everyone** behind a non-sybillable gate. (cursorTV
+   was also on this list; it shipped and was removed with the browser on 2026-08-12.) `explorer.js` models the filesystem as functions, which is the right
    substrate for cmd and Device Manager to read from.
 1. **Design/UX still owed** — a real-device pass on a phone (the keyboard path above is
    unverified on hardware), Paint's Fonts toolbar and Stretch/Skew, IE Favorites editing and
@@ -672,8 +655,7 @@ rng.dll, kernel32.dll, luck.dll, shell32.dll with real sizes. Dev hashes: `#desk
 - Epoch timings (110–195s, 12s shutdown, 5s BSOD) are feel-tuned, not measured
 - Multiplayer beta caveats: session identity is a bearer token at guest trust (play-money
   grade, same as THIN ICE's); the e2-micro box runs both betas (cursors capped at 220MB);
-  cursorTV needs a real YouTube video id pasted (no search — no API key); TV/guestbook/
-  gallery pages still require IE's dial-up first (intended); epoch pace at CORPSES=64 is
+  epoch pace at CORPSES=64 is
   feel-tuned, not measured — tune via systemd env
 - The dial-up ceremony is ~8s and runs once per session, on the first navigation. Charming
   the first time; if playtests find it tiresome, shorten it or remember "connected" in

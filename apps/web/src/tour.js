@@ -38,8 +38,8 @@ export function initTour(deps) {
     ]},
     { t: "The desktop", img: "desktop.png", pts: [
       "Everything opens. It's all real.",
-      "<b>IE</b> → cursorTV: the lobby watches one screen",
-      "<b>MSN</b> = the lobby · <b>Paint</b> → the gallery",
+      "<b>MSN</b> = the lobby, real players",
+      "<b>Paint</b> → the gallery · <b>Hall of Fame</b> = the board",
       "<b>Rakeback tab</b>: 0.002 of every deploy pays the players",
     ]},
   ];

@@ -129,18 +129,38 @@ export const CURFILES = import.meta.glob("./assets/xp/cursors/*", { eager: true,
 /* Paint tool sprites — jspaint (Isaiah Odhner), MIT */
 export const PAINT = { tools: paintTools, transparency: paintTrans, airbrush: paintAir };
 
-import trkMonkeys from "./assets/music/monkeys-spinning-monkeys.mp3";
-import trkSnitch from "./assets/music/sneaky-snitch.mp3";
-import trkDuck from "./assets/music/fluffing-a-duck.mp3";
-import trkElevator from "./assets/music/local-forecast-elevator.mp3";
+/* The playlist is the contents of assets/music/ — drop an .mp3 in that folder
+   and it is in Winamp and in My Music on the next build. No code edit.
+
+   Naming decides what the player shows. "Artist - Title.mp3" splits on the
+   first " - "; anything else becomes the title with the hyphens turned back
+   into spaces. The four house tracks are Kevin MacLeod (CC BY) and their
+   attribution is a licence condition, so it is stated here rather than left to
+   a filename someone might rename. */
+const HOUSE = {
+  "monkeys-spinning-monkeys": { artist: "Kevin MacLeod", title: "Monkeys Spinning Monkeys" },
+  "sneaky-snitch": { artist: "Kevin MacLeod", title: "Sneaky Snitch" },
+  "fluffing-a-duck": { artist: "Kevin MacLeod", title: "Fluffing a Duck" },
+  "local-forecast-elevator": { artist: "Kevin MacLeod", title: "Local Forecast - Elevator" },
+};
+const musicGlob = import.meta.glob("./assets/music/*.mp3", { eager: true, query: "?url", import: "default" });
 
 /* Kevin MacLeod (incompetech.com), CC BY 4.0 — the legally shippable meme canon. */
-export const TRACKS = [
-  { url: trkMonkeys, artist: "Kevin MacLeod", title: "Monkeys Spinning Monkeys" },
-  { url: trkSnitch, artist: "Kevin MacLeod", title: "Sneaky Snitch" },
-  { url: trkDuck, artist: "Kevin MacLeod", title: "Fluffing a Duck" },
-  { url: trkElevator, artist: "Kevin MacLeod", title: "Local Forecast - Elevator" },
-];
+export const TRACKS = Object.entries(musicGlob)
+  .map(([path, url]) => {
+    const stem = path.split("/").pop().replace(/\.mp3$/i, "");
+    if (HOUSE[stem]) return { url, stem, house: 1, ...HOUSE[stem] };
+    const cut = stem.indexOf(" - ");
+    const pretty = t => t.replace(/[-_]+/g, " ").trim();
+    return cut > 0
+      ? { url, stem, house: 0, artist: pretty(stem.slice(0, cut)), title: pretty(stem.slice(cut + 3)) }
+      : { url, stem, house: 0, artist: "", title: pretty(stem) };
+  })
+  /* house tracks first in their written order, then whatever was added, A-Z:
+     a new file must never silently displace the track the tour was shot against */
+  .sort((a, b) => (b.house - a.house)
+    || (a.house ? Object.keys(HOUSE).indexOf(a.stem) - Object.keys(HOUSE).indexOf(b.stem)
+                : a.title.localeCompare(b.title)));
 
 /* Minesweeper sprite set (winXP repo, MIT): digits 13x23, cells 16x16 */
 const mineGlob = import.meta.glob("./assets/xp/mine/*.png", { eager: true, query: "?url", import: "default" });

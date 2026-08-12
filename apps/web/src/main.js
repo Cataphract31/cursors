@@ -11,7 +11,7 @@ import { initHearts } from "./hearts.js";
 import { initSolBounce } from "./solbounce.js";
 import { initPaint } from "./paint.js";
 import { initExplorer } from "./explorer.js";
-import { initIE } from "./ie.js";
+import { initNetPages } from "./netpages.js";
 import { initSysApps } from "./sysapps.js";
 import { initCompanion } from "./companion.js";
 import { initNet } from "./net.js";
@@ -509,19 +509,21 @@ function applyWinRect(el){
   if(s.w) el.style.width=s.w;
   if(s.h) el.style.height=s.h;
 }
-let ie=null;   /* the browser, wired further down; openWin needs the handle */
-let netUp=false;   /* cursor$net dial-up state, published by ie.setNet for ipconfig/ping */
+let netUp=false;   /* legacy local-network flag; the arena socket is the real answer now */
+/* the tray connection light. It used to be lit by a fake 56k modem; the only
+   network this machine has ever really had is the arena socket. */
+function netIco(){
+  const el=document.getElementById("netico");
+  if(el) el.style.display=(typeof MP!=="undefined"&&MP.on)?"":"none";
+}
 /* declared here because boot-time code reads them: `sys` is the XP applications
    module (assigned further down) and these two are local service switches */
 let sys=null, toastsOn=true, clockOn=true, msnAuto=true;
 let readmeText=null;
-/* Windows Update used to steer IE at windowsupdate.microsoft.com, which is a
-   dead address here and answered with "page cannot be displayed" from three
-   different menus. It answers the question instead. */
+/* Windows Update has nowhere to go and never did — the address was dead here
+   even when there was a browser to type it into. */
 function windowsUpdate(){
-  openWin("win-ie");
-  try{ ie.connectNow&&ie.connectNow(); }catch(e){}
-  try{ ie.go("http://windowsupdate.microsoft.com/"); }catch(e){}
+  showError("Windows Update","Windows Update is not available on this computer.",true);
 }
 /* Windows Classic style, straight from the Appearance tab */
 {
@@ -536,7 +538,6 @@ function windowsUpdate(){
   }
 }
 function openWin(id,opts){
-  if(id==="win-ie"&&MP.on&&MP.tv&&MP.tv.now) setTimeout(()=>{ try{ mpTvSync(); }catch(e){} },200);
   if(id==="win-mine"){ try{ mine.resume(); }catch(e){} }
   if(id==="win-hearts"){ try{ hearts.resume(); }catch(e){} }
   if(id==="win-tourxp"&&!tourxp.live()){ try{ tourxp.open(); return; }catch(e){} }
@@ -545,6 +546,8 @@ function openWin(id,opts){
      card was abandoned. */
   if(id==="win-tour"){ try{ tour.open(true); return; }catch(e){} }
   if(id==="win-amp"){ winampApp.open(); return; }
+  /* fill it before it is shown; no return — the normal open path still runs */
+  if(id==="win-fame"||id==="win-guest"||id==="win-gallery") netpages.prepare(id);
   if(id==="win-readme"&&write){
     if(readmeText===null) readmeText=$("#win-readme .paper").textContent;
     write.openNotepad({title:"README.txt",get:()=>readmeText,set:null});
@@ -569,7 +572,6 @@ function openWin(id,opts){
   noteDialog(id,prevFocus);
   focusWin(id);
   if(id==="win-run") setTimeout(()=>{ const i=$("#run-in"); i.value=""; i.focus(); },0);
-  if(id==="win-ie"&&ie) ie.boot();   /* an empty browser dials out on its own */
   if(id==="win-cmd"){ if(sys.policyOn("nocmd")){ closeWin("win-cmd"); showError("Command Prompt","The command prompt has been disabled by your administrator.\n\nPress any key to continue . . ."); return; } sys.cmdOpen(); }
   if(id==="win-control") sys.cplRender();
   if(id==="win-winver") fillWinver();
@@ -629,9 +631,8 @@ function restoreWin(id){
 }
 /* Everything an app must STOP doing the moment it leaves the screen. Quitting
    ran this; the phone's one-sheet-at-a-time switch did not, and a hidden sheet
-   on a phone is as gone as a closed one — so cursorTV kept streaming its audio
-   over the game, Sound Recorder kept the microphone hot, and Minesweeper's
-   clock kept counting against a board nobody could see.
+   on a phone is as gone as a closed one — so Sound Recorder kept the microphone
+   hot and Minesweeper's clock kept counting against a board nobody could see.
    Media players are the deliberate exception, Winamp included: audio that
    keeps playing when you switch away is the behaviour people expect. */
 function suspendApp(id){
@@ -642,7 +643,6 @@ function suspendApp(id){
   if(id==="win-tourxp") tourxp.stop();
   if(id==="win-sndrec"&&snd) snd.stopRecorder();   /* also releases the microphone */
   if(id==="win-pictview"&&write) write.stopViewer();
-  if(id==="win-ie"){ try{ ytPlayer&&ytPlayer.pauseVideo&&ytPlayer.pauseVideo(); }catch(e){} }
 }
 /* the other half of suspendApp: whatever it paused has to come back, or a
    Minesweeper board returned from the taskbar with a stopped clock */
@@ -740,8 +740,8 @@ function maxWin(id){
 }
 /* a "sheet" is a real app window; .fixed dialogs float above the sheet.
    On the phone a sheet fills the screen, so a dialog that falls behind one is
-   not "behind a window", it is gone — which is how the dial-up box vanished
-   the moment you switched apps and came back to Internet Explorer. Dialogs
+   not "behind a window", it is gone — which is how a dialog vanished the moment
+   you switched apps and came back to the window that opened it. Dialogs
    therefore live in their own z-band above every sheet, and they remember
    which sheet opened them so they travel with it. */
 const DLG_Z = 8500;
@@ -914,7 +914,6 @@ const SYSICONS=[
   {id:"cursors",label:"CURSORS.EXE",ico:"@ic-app",app:"win-cursors",sys:1},
   {id:"mine",label:"Minesweeper",ico:"mine32",app:"win-mine",sys:1},
   {id:"paint",label:"Paint",ico:"paint32",app:"win-paint",sys:1},
-  {id:"ie",label:"Internet Explorer",ico:"ie32",app:"win-ie",sys:1},
   {id:"chat",label:"Windows Messenger",ico:"msn32",app:"win-chat",sys:1},
   {id:"amp",label:"Winamp",ico:"amp16",app:"win-amp",sys:1},
   {id:"log",label:"fights.log",ico:"note32",app:"win-log",sys:1},
@@ -1526,7 +1525,7 @@ function scwShow(){
   $("#scw-next").textContent=scwPage===2?"Finish":"Next >";
 }
 /* what a typed location resolves to: known .exe names land on real apps */
-const SCW_APPS={"cursors.exe":"win-cursors","iexplore.exe":"win-ie","mspaint.exe":"win-paint",
+const SCW_APPS={"cursors.exe":"win-cursors","mspaint.exe":"win-paint",
   "winmine.exe":"win-mine","msnmsgr.exe":"win-chat","notepad.exe":"win-readme","cmd.exe":"win-cmd",
   "taskmgr.exe":"win-taskmgr","services.msc":"win-services","gpedit.msc":"win-gpedit","winamp.exe":"win-amp"};
 function scwResolve(loc){
@@ -1953,14 +1952,9 @@ function trayMenu(target){
     {label:"Adjust Audio Properties",action:()=>volOpen(true)},
   ];
   if(target&&target.id==="netico") return [
+    {label:"Status",bold:1,action:()=>showError("Arena connection",
+      MP.on?"Connected to the arena.":"Not connected — the sandbox is running on this computer.",true)},
     {label:"Disable",action:()=>showError("Network Connections","You do not have sufficient privileges to disable this connection.")},
-    {label:"Status",action:()=>openWin("win-dialup")},
-    {label:"Repair",action(){
-      showBalloon("Repairing connection...","cursor$net 56.6 Kbps");
-      setTimeout(()=>showError("Repair Local Area Connection","The following steps of the repair operation completed successfully:\n\nRenewing the IP address.\nFlushing the ARP cache.\nFlushing the NetBIOS name cache.\nFlushing the DNS resolver cache.",true),1400);
-    }},
-    {sep:1},
-    {label:"Open Network Connections",action:()=>openWin("win-dialup")},
   ];
   if(target&&target.dataset&&target.dataset.ico==="trayUsb") return [
     {label:"Safely Remove Hardware",bold:1,action:()=>showError("Safely Remove Hardware",
@@ -2084,7 +2078,6 @@ document.addEventListener("click",e=>{
   if(win.id==="win-taskmgr"){ tmMenu(m.textContent,r.left,r.bottom+2); return; }
   if(win.id==="win-oe"){ const mm=oe.menus(m.textContent); if(mm){ showMenu(mm,r.left,r.bottom+2); return; } }
   if(win.id==="win-eventvwr"||win.id==="win-msinfo"){ showMenu(sysinfo.menus(m.textContent,win.id),r.left,r.bottom+2); return; }
-  if(win.id==="win-ie"){ ie.menu(m.textContent,r.left,r.bottom+2); return; }
   showMenu(menubarMenu(m.textContent,win.id),r.left,r.bottom+2);
 });
 
@@ -2120,7 +2113,9 @@ const paint=initPaint({
     status:$("#pt-status"), st1:$("#pt-st1"), st2:$("#pt-st2"), st3:$("#pt-st3"),
   },
   store, sysSnd, showError, showMenu, showConfirm, isMobile:MOBILE,
-  publish:png=>mpPublishPainting("untitled by "+playerName(),png),
+  /* the name is the picture's alone — the gallery prints "<name> by <who>"
+     itself, and baking the author in here rendered "untitled by a by a" */
+  publish:png=>mpPublishPainting("untitled",png),
   setWallpaperFrom,
   close:()=>closeWin("win-paint"),
   setTitle:name=>{ $("#win-paint .title-bar-text").textContent=name+" - Paint"; renderTaskbar(); },
@@ -2272,7 +2267,19 @@ snd=initSoundApps({$,store,sysSnd,showMenu,showError,openWin,closeWin,hooks:{
 const recWavs=new Map();   /* id -> AudioBuffer, session-lifetime */
 /* System Restore, the System Configuration Utility, Folder Options */
 const tour=initTour({ $, store, openWin, closeWin, sysSnd });
+const netpages=initNetPages({ $, store, sysSnd, openWin, closeWin, showError, hooks:{
+  hall:()=>ieHall(),
+  isOpen:id=>openApps.has(id),
+  playerName:()=>playerName(),
+  hallOfPain:()=>hallOfPain(),
+  netGuests:()=>mpGuestData(),
+  postGuest:(who,txt)=>mpGuestPost(who,txt),
+  openGuests:()=>mpGuestOpen(),
+  netGallery:()=>mpGalleryData(),
+  openGallery:()=>mpGalleryOpen(),
+}});
 tour.init();
+netpages.init();
 /* Tour Windows XP - the Microsoft tour, next to our own How to Play card.
    Its music is a program on this machine, so it rides the mixer: the tour's
    own speaker button is the app switch, Wave is the bus, Volume Control is
@@ -2376,7 +2383,6 @@ const explorer=initExplorer({
     openWin, close:()=>closeWin("win-explorer"),
     playerName:()=>playerNameFull(),
     openStart:()=>startmenu.classList.add("open"),
-    browse:u=>{ openWin("win-ie"); ie.go(u); },
     openIcon:ic=>openIcon(ic),
     desktopFiles:()=>allIcons(),
     sentDocs:()=>store.data.sentDocs||[],
@@ -2386,7 +2392,6 @@ const explorer=initExplorer({
     folderOptions:()=>maint.openFolderOptions(),
     bootIni:()=>maint.bootIniText(),
     openFonts:()=>maint.openFonts(),
-    ieFavs:()=>store.data.ieFavs||[],
     deadCount:()=>binDead.length,
     serverDisk:()=>{ if(!MP.on||!MP.disk) return {
         used:20*1024*1024*1024-(LOCAL_CORPSES-Math.min(localDeaths,LOCAL_CORPSES))*12*1024*1024,
@@ -2403,6 +2408,7 @@ const explorer=initExplorer({
     hallOfPain:()=>hallOfPain(),
     logSize:()=>logpaper.textContent.length||1024,
     tracks:()=>TRACKS,
+    playTrack:i=>winampApp.open(i),
     openText:openTextWindow,
     openPicture:p=>{
       const list=viewerList(), i=list.findIndex(x=>x.name===p.name);
@@ -2600,10 +2606,9 @@ function syncTaskToolbars(){
   $("#tb-links").classList.toggle("on",!!store.data.tbLinks);
   $("#tb-desk").classList.toggle("on",!!store.data.tbDesk);
   if(store.data.tbLinks&&!$("#tb-links-in").children.length){
-    for(const [label,url] of [["cursorTV","http://tv.cursor.land/"],["the gallery","http://gallery.cursor.land/"],
-        ["hall of fame","http://hall.cursor.land/"]]){
+    for(const [label,which] of [["the gallery","gallery"],["the guestbook","guest"],["hall of fame","hall"]]){
       const b=document.createElement("button"); b.className="tbb"; b.textContent=label;
-      b.addEventListener("click",()=>{ sysSnd("nav",.4); openWin("win-ie"); try{ ie.connectNow(); }catch(e){} ie.go(url); });
+      b.addEventListener("click",()=>{ sysSnd("nav",.4); netpages.open(which); });
       $("#tb-links-in").appendChild(b);
     }
   }
@@ -2621,10 +2626,9 @@ function syncTaskToolbars(){
 $("#tb-addr-go").addEventListener("click",()=>{
   const v=$("#tb-addr-in").value.trim(); if(!v) return;
   $("#tb-addr-in").value="";
-  /* the real one took a path, a program name or a URL, in that order */
-  if(/^(https?:|www\.|[\w-]+\.(com|net|org|land))/i.test(v)){
-    openWin("win-ie"); try{ ie.connectNow(); }catch(e){} ie.go(/^https?:/i.test(v)?v:"http://"+v);
-  }else if(!runNamed(v)) showError("Windows",
+  /* the real one took a path, a program name or a URL; there is no browser to
+     hand a URL to any more, so it takes the first two */
+  if(!runNamed(v)) showError("Windows",
     `Cannot find '${v}'. Make sure you typed the name correctly, and then try again.`);
 });
 $("#tb-addr-in").addEventListener("keydown",e=>{ e.stopPropagation(); if(e.key==="Enter") $("#tb-addr-go").click(); });
@@ -2668,7 +2672,9 @@ function closeStart(){ startmenu.classList.remove("open"); }
    too: opening an app promotes it, so the menu reshapes around how you play. */
 const SMAPPS={
   "win-cursors":{label:"CURSORS.EXE",ico:"@ic-app"},
-  "win-ie":{label:"Internet Explorer",ico:"ie32"},
+  "win-fame":{label:"Hall of Fame",ico:"@ic-cursor"},
+  "win-guest":{label:"Guestbook",ico:"note32"},
+  "win-gallery":{label:"Gallery",ico:"paint32"},
   "win-chat":{label:"Windows Messenger",ico:"msn32"},
   "win-amp":{label:"Winamp",ico:"amp16"},
   "win-paint":{label:"Paint",ico:"paint32"},
@@ -2694,7 +2700,7 @@ function smRecent(){
   return r.slice(0,6);
 }
 function smTouch(id){
-  if(!SMAPPS[id]||id==="win-ie") return;   /* Internet is pinned above the line */
+  if(!SMAPPS[id]) return;
   const r=(store.data.recent||[]).filter(x=>x!==id);
   r.unshift(id);
   store.data.recent=r.slice(0,8);
@@ -2757,8 +2763,6 @@ addEventListener("pointerdown",e=>{ if(!e.target.closest("#startmenu,#startbtn")
 addEventListener("keydown",e=>{
   /* F11 is theater mode, and Escape leaves it — the two keys everybody
      already tries on a video that fills the window */
-  if(e.key==="F11"&&ie&&openApps.has("win-ie")){ e.preventDefault(); ie.theater(!ie.isTheater()); return; }
-  if(e.key==="Escape"&&ie&&ie.isTheater()){ ie.theater(false); return; }
   if(e.key==="Escape"){ closeStart(); hideMenu(); }
   if(e.ctrlKey&&e.shiftKey&&e.key==="Escape"){ openWin("win-taskmgr"); }
   else if(e.ctrlKey&&e.key==="Escape"){ e.preventDefault(); sClick(); startmenu.classList.toggle("open"); }
@@ -2853,7 +2857,9 @@ function allProgramsMenu(){
   const only=(id,item)=>has(id)?[item]:[];
   return [
     {label:"CURSORS.EXE",bold:1,action:go("win-cursors")},
-    {label:"Internet Explorer",action:go("win-ie")},
+    {label:"Hall of Fame",action:()=>{ closeStart(); netpages.open("hall"); }},
+    {label:"Guestbook",action:()=>{ closeStart(); netpages.open("guest"); }},
+    {label:"Gallery",action:()=>{ closeStart(); netpages.open("gallery"); }},
     {label:"Outlook Express",action:go("win-oe")},
     ...only("chat",{label:"Windows Messenger",action:go("win-chat")}),
     ...only("amp",{label:"Winamp",action:go("win-amp")}),
@@ -2945,7 +2951,6 @@ const RUNMAP={
   "taskmgr":"win-taskmgr","taskmgr.exe":"win-taskmgr",
   "winamp":"win-amp","winamp.exe":"win-amp",
   "msnmsgr":"win-chat","msmsgs":"win-chat",
-  "iexplore":"win-ie","iexplore.exe":"win-ie",
   "notepad":"win-readme","notepad.exe":"win-readme",
   "winmine":"win-mine","winmine.exe":"win-mine",
   "mspaint":"win-paint","mspaint.exe":"win-paint","paint":"win-paint","pbrush":"win-paint",
@@ -3021,11 +3026,6 @@ function runCommand(){
   if(runNamed(k)) return;
   if(k==="regedit"||k==="regedit.exe"){ depth.openRegedit(); return; }
   if(k==="format c:"||k==="format c"){ showError("Format Local Disk (C:)","The disk is in use by CURSORS.EXE and cannot be formatted."); return; }
-  /* Run took URLs in 2003, and so does this one */
-  if(!/\.(exe|msc|cpl|dll|bat|com|ini|sys|txt|log)$/i.test(k)&&
-     (/^(https?:\/\/|www\.)/i.test(k)||/^[a-z0-9-]+(\.[a-z0-9-]+)+(\/|$)/i.test(k))){
-    sysSnd("nav",.5); openWin("win-ie"); ie.go(v); return;
-  }
   showError("Run","Windows cannot find '"+v+"'. Make sure you typed the name correctly, and then try again.");
 }
 $("#run-ok").addEventListener("click",runCommand);
@@ -3164,10 +3164,16 @@ if(store.data.saver&&["ribbons","bounce"].includes(store.data.saver.t)) store.da
 if(store.data.saver&&!savers.has(store.data.saver.t)&&store.data.saver.t!=="none") store.data.saver.t="pipes";
 const saverCv=$("#saver");
 let saverOn=false, saverRaf=0, saverState=null, saverStartAt=0, lastAct=performance.now();
+/* CAPTURE, not bubble. Every text box in the product stops keydown from
+   propagating so the desktop's own F-keys stay out of it — Notepad, WordPad,
+   the address bars, chat, search, the Run box. Listening on the bubble phase
+   meant those keystrokes never reached this line, so the screensaver came up
+   while you were typing, and the first key back was eaten dismissing it.
+   Capture runs before any of them. */
 ["pointermove","pointerdown","keydown","wheel"].forEach(ev=>addEventListener(ev,()=>{
   lastAct=performance.now();
   if(saverOn&&performance.now()-saverStartAt>450) stopSaver();
-},{passive:true}));
+},{passive:true,capture:true}));
 function startSaver(type){
   if(saverOn) return;
   saverOn=true; saverStartAt=performance.now();
@@ -3680,12 +3686,11 @@ const PROC_BASE=[
   {name:"explorer.exe",pid:1520,mem:14740,critical:1},
 ];
 let killedProcs=new Set();
-const PROC_WIN={"iexplore.exe":"win-ie","mspaint.exe":"win-paint","winmine.exe":"win-mine",
+const PROC_WIN={"mspaint.exe":"win-paint","winmine.exe":"win-mine",
   "msmsgs.exe":"win-chat","cmd.exe":"win-cmd"};
 function liveProcesses(){
   const out=PROC_BASE.filter(p=>!killedProcs.has(p.pid)).map(p=>Object.assign({},p));
   out.push({name:"cursors.exe",pid:9001,mem:34200+curs.length*420,critical:1});
-  if(openApps.has("win-ie")) out.push({name:"iexplore.exe",pid:2244,mem:19860});
   if(openApps.has("win-paint")) out.push({name:"mspaint.exe",pid:2360,mem:8104});
   if(openApps.has("win-mine")) out.push({name:"winmine.exe",pid:2412,mem:2288});
   if(openApps.has("win-chat")) out.push({name:"msmsgs.exe",pid:2488,mem:12560});
@@ -3752,8 +3757,7 @@ sys=initSysApps({
     confirm:(title,body,ok)=>showConfirm(title,body,ok),
     openClock:()=>openClockProps(),
     openVolume:()=>{ $("#sndico").click(); },
-    openIE:()=>openWin("win-ie"),
-    openNetwork:()=>{ if(ie&&ie.dial) ie.dial(); else openWin("win-ie"); },
+    openNetwork:()=>showError("Network Connections","There are no network connections to configure."),
     printers:()=>showError("Printers and Faxes","There are no printers installed on this computer."),
     userAccounts:()=>openWin("win-logoff"),
     accessibility:()=>access.openAccessOptions(),
@@ -3826,7 +3830,16 @@ if(window.fetch){
 
 /* -- the house playlist: real era MP3s, freely licensed --
    Kevin MacLeod (incompetech.com), CC BY — attribution lives in README.txt. */
-const initialAmpTracks=()=>TRACKS.map(t=>({url:t.url,metaData:{artist:t.artist,title:t.title}}));
+/* Winamp's public API can only "play this list from the top", so starting on a
+   chosen song means handing it the list rotated to begin there. The songs after
+   it still follow in order and it wraps around to the ones before — which is
+   what double-clicking a file in My Music should do, and what it did not: it
+   always restarted at track one. */
+const initialAmpTracks=(from=0)=>{
+  const t=TRACKS.map(x=>({url:x.url,metaData:{artist:x.artist,title:x.title}}));
+  const i=(from|0)%(t.length||1);
+  return i>0?t.slice(i).concat(t.slice(0,i)):t;
+};
 
 /* -- lifecycle: Webamp is a normal process-table entry (kind:"webamp").
    #webamp-wrap is OURS (webamp replaces the inner slot only), so hide/show
@@ -3835,12 +3848,14 @@ const initialAmpTracks=()=>TRACKS.map(t=>({url:t.url,metaData:{artist:t.artist,t
 function wampEntry(){
   return {el:null,min:false,kind:"webamp",notab:false,title:"Winamp",icon:`<img src="${IMG.amp16}" alt="">`};
 }
-function openWinamp(){
+function openWinamp(startAt){
+  const jump=Number.isInteger(startAt)&&startAt>0;
   const ex=openApps.get("win-amp");
   if(ex){
     ex.min=false; focusedId="win-amp";
     showWamp();
     try{ webamp.reopen(); }catch(e){ console.error("[winamp] reopen failed:",e); }
+    if(jump){ try{ webamp.setTracksToPlay(initialAmpTracks(startAt)); }catch(e){} }
     renderTaskbar(); return;
   }
   /* the taskbar entry goes in first: the library is a network fetch on first
@@ -3853,7 +3868,7 @@ function openWinamp(){
       if(!openApps.has("win-amp")) return;   /* closed again while it loaded */
       try{
         webamp=new W({
-          initialTracks:initialAmpTracks(),
+          initialTracks:initialAmpTracks(startAt),
           zIndex:4800,
           enableHotkeys:true /* the real Winamp hotkeys, incl. Ctrl+D double-size */
         });
@@ -3886,6 +3901,7 @@ function openWinamp(){
   }
   showWamp();
   try{ webamp.reopen(); }catch(e){}
+  if(jump){ try{ webamp.setTracksToPlay(initialAmpTracks(startAt)); }catch(e){} }
 }
 /* volume = Winamp's own slider x the Wave fader x the master; muted is silent */
 function wampApplyVol(bus){
@@ -3911,9 +3927,9 @@ if(location.hash.indexOf("#desktop")===0)
 return {open:openWinamp,close:closeWinamp,applyVol:wampApplyVol};
 })();
 
-/* ================= Internet Explorer ================= */
-/* the chrome is in index.html, the web it browses is in ie.js. the hall of
-   fame page reads live game state, so the handmade web is not a diorama. */
+/* ================= Hall of Fame / Guestbook / Gallery ================= */
+/* Three windows where there used to be a browser. The hall reads live game
+   state every second it is open, so it is a board, not a diorama. */
 function ieHall(){
   const alive=curs.map(c=>({
     name:c.owner,mine:c.isMine,mult:(c.peak||c.bounty)/ENTRY,
@@ -3929,65 +3945,7 @@ function ieHall(){
     bigBank:stats.bigBank?fmtS(stats.bigBank)+" SOL":"nothing yet",
   };
 }
-ie=initIE({
-  IMG,
-  els:{
-    back:$("#ie-back"), fwd:$("#ie-fwd"), stop:$("#ie-stop"), refresh:$("#ie-refresh"),
-    home:$("#ie-home"), search:$("#ie-search"), favs:$("#ie-favs"), media:$("#ie-media"),
-    hist:$("#ie-hist"), mail:$("#ie-mail"), print:$("#ie-print"),
-    addr:$("#ie-addr"), go:$("#ie-go"), links:$("#ie-links"), page:$("#ie-page"),
-    throb:$("#ie-throb"), prog:$("#ie-prog"), progbar:$("#ie-progbar"), st1:$("#ie-st1"),
-    side:$("#ie-side"), sideBody:$("#ie-side-body"), sideTitle:$("#ie-side-title"), sideX:$("#ie-side-x"),
-    afName:$("#af-name"), afUrl:$("#af-url"), afOk:$("#af-ok"), afCancel:$("#af-cancel"),
-    ofList:$("#of-list"), ofInfo:$("#of-info"), ofRename:$("#of-rename"), ofDelete:$("#of-delete"),
-    ofUp:$("#of-up"), ofDown:$("#of-down"), ofClose:$("#of-close"),
-    ioHome:$("#io-home"), ioCache:$("#io-cache"), ioAdv:$("#io-adv"), ioOk:$("#io-ok"), ioCancel:$("#io-cancel"),
-    ioUseCur:$("#io-usecur"), ioUseDef:$("#io-usedef"), ioUseBlank:$("#io-useblank"),
-    ioDelCookies:$("#io-delcookies"), ioDelFiles:$("#io-delfiles"), ioClearHist:$("#io-clearhist"),
-    ioCerts:$("#io-certs"), ioDialSet:$("#io-dialset"),
-    dlUser:$("#dl-user"), dlConnect:$("#dl-connect"), dlOffline:$("#dl-offline"),
-    dlSettings:$("#dl-settings"),
-    dgText:$("#dg-text"), dgBar:$("#dg-bar"), dgCancel:$("#dg-cancel"),
-  },
-  store, sysSnd, showMenu, showError,
-  snd:{tone,noise:noiseBurst},
-  setTitle:t=>{ $("#win-ie .title-bar-text").textContent=t; renderTaskbar(); },
-  hooks:{
-    openWin, closeWin, wireWindow, desk:desktop,
-    close:()=>closeWin("win-ie"),
-    isOpen:()=>openApps.has("win-ie"),
-    playerName:()=>playerName(),
-    deploy:()=>deploy(false),
-    openLobby:()=>msn.openConv("lobby"),
-    hallOfPain:()=>hallOfPain(),
-    openText:openTextWindow,
-    balloon:(h,t)=>showBalloon(h,t),
-    setNet:on=>{ netUp=on; $("#netico").style.display=on?"":"none"; },
-    hall:ieHall,
-    mpOn:()=>MP.on,
-    netGuests:()=>mpGuestData(),
-    postGuest:(who,txt)=>mpGuestPost(who,txt),
-    netGallery:()=>mpGalleryData(),
-    tvMounted:p=>mpTvMounted(p),
-    tvFit:()=>tvFit(),
-    windowsUpdate:()=>windowsUpdate(),
-    galleryMounted:()=>mpGalleryOpen(),
-    setWallpaperFrom:(u,mode)=>setWallpaperFrom(u,mode),
-  },
-});
-/* the toolbar is the real IE6 button set, same archive as Explorer's */
-$("#ie-backi").src=IMG.navBack;   $("#ie-fwdi").src=IMG.navFwd;
-$("#ie-stopi").src=IMG.navStop;   $("#ie-refreshi").src=IMG.navRefresh;
-$("#ie-homei").src=IMG.navHome;   $("#ie-searchi").src=IMG.navSearch;
-$("#ie-favsi").src=IMG.navFav;    $("#ie-mediai").src=IMG.navMedia;
-$("#ie-histi").src=IMG.navHistory;$("#ie-maili").src=IMG.navMail;
-$("#ie-printi").src=IMG.printer32;$("#ie-linksi").src=IMG.navLinks;
-$("#ie-throbi").src=IMG.ie32;     $("#ie-addrico").src=IMG.ie16;
-$("#ie-zonei").src=IMG.earth16;
 $("#hlp-backi").src=IMG.navBack; $("#hlp-homei").src=IMG.navHome; $("#hlp-searchi").src=IMG.navSearch;
-/* shutting the dial-up box with the X means the same thing as Work Offline */
-$('#win-dialup .title-bar-controls button[aria-label="Close"]').addEventListener("click",()=>$("#dl-offline").click());
-$('#win-dialing .title-bar-controls button[aria-label="Close"]').addEventListener("click",()=>$("#dg-cancel").click());
 
 /* ================= game state ================= */
 const BOTS=["mumu","bobo","clippy","bonk","solja","xp_chad","deg404"].map(n=>({name:n}));
@@ -5393,7 +5351,7 @@ function mpFrame(dt,now){
 /* ---- event handlers: each one re-uses the solo game's FX verbatim ---- */
 function mpWelcome(m){
   if(mpGraceT){ clearTimeout(mpGraceT); mpGraceT=null; log("reconnected"); }
-  MP.on=true; MP.name=m.name;
+  MP.on=true; MP.name=m.name; netIco();
   roundId++;   /* strands the sandbox's pending bot timers, which check it */
   store.data.mpToken=m.token; store.save();
   if(PLAYER!==m.name){ PLAYER=m.name; store.data.userName=m.name; store.save(); syncIdentity(); try{ msn.renderMe(); }catch(e){} }
@@ -5422,10 +5380,7 @@ function mpWelcome(m){
   $("#walletamt").textContent=fmtS(Math.round(wallet))+" SOL";
   renderHud();
   myTickets=m.tickets; globalTickets=m.glob; rakeAccrued=m.rake;
-  if(m.tv&&typeof m.tv.srv==="number") tvSkew=m.tv.srv-Date.now();
-  MP.tv=m.tv||MP.tv;
   tvWatchLast=false;               /* re-announce "watching" on the new socket */
-  try{ mpTvSync(); }catch(e){}     /* the room may have changed videos while we were gone */
   if(!MP.chatSeeded){
     MP.chatSeeded=true;
     for(const e of (m.chat||[])) e.who==="*"?msn.lobbySys(e.text):msn.lobbySay(e.who,e.text);
@@ -5611,7 +5566,7 @@ function netStalled(){ return !!MPURL&&MP.on&&(!net||!net.up()||mpStale); }
    and the signed-in-elsewhere kick, which used to call a function that had
    never existed and threw away its own explanation with the exception */
 function mpDrop(msg){
-  MP.on=false; MP.name=null; mpStale=false;
+  MP.on=false; MP.name=null; mpStale=false; netIco();
   mpPurge(); msn.setHumans([]);
   showBalloon("Offline sandbox",msg||"Server gone. Fake bots, fake money. Reconnects on its own.");
   log("server unreachable — offline sandbox running");
@@ -5653,18 +5608,14 @@ function mpMsg(m){
     case "epoch": if(MP.on) mpEpoch(m); break;
     case "chat": if(MP.on) msn.lobbySay(m.who,m.text); break;
     case "sys": if(MP.on) msn.lobbySys(m.text); break;
-    case "join": if(MP.on&&m.online){ MP.online=m.online; msn.setHumans(m.online); mpTvRenderQueue(); } break;   /* the sys line covers the greeting */
-    case "part": if(MP.on){ msn.lobbySys(`${m.name} signed out`); if(m.online){ MP.online=m.online; msn.setHumans(m.online); mpTvRenderQueue(); } } break;
+    case "join": if(MP.on&&m.online){ MP.online=m.online; msn.setHumans(m.online); } break;   /* the sys line covers the greeting */
+    case "part": if(MP.on){ msn.lobbySys(`${m.name} signed out`); if(m.online){ MP.online=m.online; msn.setHumans(m.online); } } break;
     case "guest": MP.guest=m.list;
-      { const t=document.querySelector("#gb-txt"); if(!t||!t.value.trim()) mpRefreshIe("guest."); }
+      /* don't repaint over a half-typed entry */
+      { const t=document.querySelector("#gb-txt"); if(!t||!t.value.trim()) netpages.refresh("guest"); }
       break;
-    case "gallery": MP.gallery=m.list; mpRefreshIe("gallery"); break;
-    case "galAdd": if(m.item){ MP.gallery=[m.item,...(MP.gallery||[])].slice(0,16); mpRefreshIe("gallery"); } break;
-    case "tv":
-      if(typeof m.srv==="number") tvSkew=m.srv-Date.now();
-      MP.tv={now:m.now,queue:m.queue,skip:m.skip,w:m.w};
-      mpTvSync();
-      break;
+    case "gallery": MP.gallery=m.list; netpages.refresh("gallery"); break;
+    case "galAdd": if(m.item){ MP.gallery=[m.item,...(MP.gallery||[])].slice(0,16); netpages.refresh("gallery"); } break;
     case "err":
       if(m.msg==="signed in elsewhere"){
         /* both tabs share one token: retrying just kicks the other tab back.
@@ -5706,10 +5657,7 @@ document.addEventListener("visibilitychange",()=>{
 });
 addEventListener("online",()=>{ if(net&&!net.up()) try{ net.poke(); }catch(e){} });
 
-/* ---- IE integration: the online guestbook, the gallery, cursorTV ---- */
-function mpRefreshIe(urlPart){
-  if(ie&&ie.url()&&ie.url().indexOf(urlPart)>=0) ie.go(ie.url(),{replace:true});
-}
+/* ---- the guestbook and the gallery, over the game socket ---- */
 const MONS=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 function fmtWhen(at){ const d=new Date(at); return `${d.getDate()} ${MONS[d.getMonth()]} ${d.getFullYear()}`; }
 function mpGuestData(){
@@ -5731,320 +5679,6 @@ function mpPublishPainting(name,png){
   showError("Gallery","Sent to the gallery.",true);
 }
 
-/* ---- cursorTV: the lobby watches one YouTube video together ---- */
-/* Sync model: the server owns {video, startedAt, queue}; every client seeks to
-   the shared elapsed time. Playback starts muted (browser autoplay law) with a
-   click-for-sound overlay. Queue is a fair FIFO, 3 pending per player, skip by
-   vote. This is turntable.fm wearing an IE6 costume. */
-let ytApi=0, ytPlayer=null, tvPage=null;
-/* The room's clock is the SERVER's clock. A phone whose clock is two minutes
-   fast would otherwise seek two minutes ahead of everybody and think the room
-   was wrong, so every tv message carries the server's time and we keep the
-   difference. Old servers do not send it; then the skew is zero and this
-   behaves exactly as it did before. */
-let tvSkew=0, tvLastSeek=0, tvFitObs=null, tvDurSent=null, tvVoted=null, tvWatchLast=false, tvGen=0;
-/* the server cannot see how long a video is; the first screen that can read
-   the duration tells it, and the channel advances on time even if every
-   player is closed when the credits roll */
-function tvReport(vid){
-  if(tvDurSent===vid||!ytPlayer||!ytPlayer.getDuration) return;
-  let d=0; try{ d=ytPlayer.getDuration()||0; }catch(e){}
-  if(d>4){ tvDurSent=vid; mpSend({t:"tvDur",vid,dur:Math.round(d)}); }
-}
-function tvElapsed(){
-  if(!MP.tv.now) return 0;
-  return Math.max(0,(Date.now()+tvSkew-MP.tv.now.startedAt)/1000);
-}
-/* the picture is sized to the window, in both directions. 16:9 inside whatever
-   box IE has: widen the window and it grows, make it taller and it grows. */
-function tvFit(){
-  const stage=document.getElementById("tv-stage");
-  const doc=$("#ie-page");
-  if(!stage||!doc) return;
-  const th=$("#win-ie").classList.contains("theater");
-  const availW=Math.max(160,doc.clientWidth-(th?0:22));
-  /* out of theater, leave the bar and the decks room to exist below it */
-  const availH=Math.max(150,th?doc.clientHeight:doc.clientHeight-150);
-  let w=availW,h=w*9/16;
-  if(h>availH){ h=availH; w=h*16/9; }
-  stage.style.width=Math.round(w)+"px";
-  stage.style.height=Math.round(h)+"px";
-}
-function mpTvMounted(page){
-  tvPage=page;
-  if(!MP.on) return;
-  mpTvRenderQueue();
-  const inp=page.querySelector("#tv-in");
-  const add=()=>{
-    const raw=(inp.value||"").trim();
-    if(!raw){ showError("cursorTV","Paste a YouTube link.",true); return; }
-    if(!MP.on){ showError("cursorTV","Not connected. The channel is shared, so it needs the arena.",true); return; }
-    const m=/([\w-]{11})(?:[?&#/]|$)/.exec(raw.replace(/^\s*<|>\s*$/g,"").replace(/.*(?:v=|youtu\.be\/|shorts\/|embed\/|live\/)/,""));
-    if(!m){ showError("cursorTV","That is not a YouTube link.",true); return; }
-    const vid=m[1]; inp.value="";
-    /* the title travels with the queue entry so every screen shows words, not
-       ids. oEmbed is CORS-open; when a blocker eats it, the id shows. */
-    const ac=new AbortController(); setTimeout(()=>ac.abort(),2500);
-    fetch("https://www.youtube.com/oembed?url=https%3A%2F%2Fyoutu.be%2F"+vid+"&format=json",{signal:ac.signal})
-      .then(r=>r&&r.ok?r.json():null).catch(()=>null)
-      .then(j=>mpSend({t:"tvQueue",vid,title:j&&j.title?String(j.title).slice(0,80):undefined}));
-  };
-  page.querySelector("#tv-add").addEventListener("click",add);
-  inp.addEventListener("keydown",e=>{ e.stopPropagation(); if(e.key==="Enter") add(); });
-  page.querySelector("#tv-skip").addEventListener("click",()=>mpSend({t:"tvSkip"}));
-  const th=page.querySelector("#tv-theater"), ex=page.querySelector("#tv-exit");
-  if(th) th.addEventListener("click",()=>ie.theater(!ie.isTheater()));
-  if(ex) ex.addEventListener("click",()=>ie.theater(false));
-  const live=page.querySelector("#tv-live");
-  if(live){
-    live.textContent="\u25CF LIVE";
-    live.addEventListener("click",()=>tvCatchUp());
-  }
-  tvFit();
-  /* one observer for the life of the page: every way IE can change size —
-     dragged edge, maximize, sidebar, theater, phone rotation — lands here */
-  if(!tvFitObs&&window.ResizeObserver){
-    tvFitObs=new ResizeObserver(()=>tvFit());
-    tvFitObs.observe($("#ie-page"));
-  }
-  const snd=page.querySelector("#tv-sound");
-  if(snd) snd.addEventListener("click",()=>{ try{ ytPlayer.unMute(); snd.style.display="none"; }catch(e){} });
-  if(ytApi===2) mpTvPlayer();
-  else{
-    window.onYouTubeIframeAPIReady=()=>{ ytApi=2; mpTvPlayer(); };
-    if(!ytApi){
-      ytApi=1;
-      const sc=document.createElement("script");
-      sc.src="https://www.youtube.com/iframe_api";
-      sc.onerror=()=>tvFallback(MP.tv.now&&MP.tv.now.vid,-1);
-      document.head.appendChild(sc);
-    }
-    /* a blocked script fires no error in some setups; it simply never runs */
-    setTimeout(()=>{ if(ytApi!==2) tvFallback(MP.tv.now&&MP.tv.now.vid,-1); },12000);
-  }
-}
-function mpTvPlayer(){
-  if(!tvPage||!tvPage.isConnected||!MP.tv.now) return;
-  const gen=++tvGen;
-  let slot=tvPage.querySelector("#tv-slot");
-  if(slot&&ytPlayer){
-    /* fresh mount over a dead player from the last visit */
-    try{ ytPlayer.destroy&&ytPlayer.destroy(); }catch(e){}
-    ytPlayer=null;
-  }
-  if(!slot){
-    /* the slot is gone because a fallback panel took the screen, or because a
-       player is already sitting in it. Either way, clear the stage and build
-       a fresh one: a late-arriving YouTube gets its picture back. */
-    const st=tvPage.querySelector("#tv-stage");
-    if(!st) return;
-    const dead=st.querySelector("[data-failed]"), old=st.querySelector("iframe");
-    if(dead) dead.remove();
-    if(old) old.remove();
-    try{ ytPlayer&&ytPlayer.destroy&&ytPlayer.destroy(); }catch(e){}
-    const badge=tvPage.querySelector("#tv-live");
-    if(badge) badge.style.display="";
-    const sndBtn=tvPage.querySelector("#tv-sound");
-    if(sndBtn) sndBtn.style.display="";
-    slot=document.createElement("div");
-    slot.id="tv-slot";
-    st.insertBefore(slot,st.firstChild);
-  }
-  const vid=MP.tv.now.vid;
-  const elapsed=tvElapsed();
-  let ready=false;
-  tvFit();
-  ytPlayer=new YT.Player(slot,{
-    width:"100%",height:"100%",videoId:vid,
-    /* nocookie is the host that survives the most blockers, and an explicit
-       origin is what the IFrame API asks for when it is embedded */
-    host:"https://www.youtube-nocookie.com",
-    playerVars:{autoplay:1,mute:1,start:Math.floor(elapsed),rel:0,modestbranding:1,
-      playsinline:1,origin:location.origin},
-    events:{
-      onReady:()=>{ ready=true; tvReport(MP.tv.now?MP.tv.now.vid:vid); tvApplyVol(); },
-      onStateChange:e=>{
-        ready=true; tvReport(MP.tv.now?MP.tv.now.vid:vid);
-        /* pressing play after a pause rejoins the broadcast rather than
-           starting a private screening from where you left off */
-        if(e.data===1) tvCatchUp();
-        if(e.data===0) mpSend({t:"tvEnded",vid:MP.tv.now&&MP.tv.now.vid});
-      },
-      /* 2 bad id, 5 html5 error, 100 gone, 101/150 embedding disallowed */
-      onError:e=>{
-        const code=e&&e.data;
-        /* 2/100/101/150 fail for the whole room, not just this screen — an
-           unplayable video must not park the channel, so an erroring screen
-           casts its own skip vote */
-        if([2,100,101,150].indexOf(code)>=0&&tvVoted!==vid){ tvVoted=vid; mpSend({t:"tvSkip"}); }
-        tvFallback(vid,code);
-      },
-    },
-  });
-  /* the embed can also fail without ever telling us — a blocker or a proxy
-     returning something Chrome will not render leaves a dead grey box. If the
-     player has not said a word in eight seconds, say so and offer the link. */
-  setTimeout(()=>{ if(gen===tvGen&&!ready) tvFallback(vid,null); },12000);
-}
-/* what the TV shows when YouTube will not play inside this page */
-function tvFallback(vid,code){
-  if(!tvPage||!tvPage.isConnected) return;
-  const box=tvPage.querySelector("#tv-slot")||tvPage.querySelector("iframe");
-  if(!box||box.dataset.failed) return;
-  const badge=tvPage.querySelector("#tv-live");
-  if(badge) badge.style.display="none";
-  const host=box.parentElement||box;
-  const keep=host.querySelector("#tv-exit");
-  const why=code===-1?"YouTube's player did not load. An ad blocker or a privacy extension will do this."
-    :code===2?"That video id is not a video."
-    :code===100?"That video is gone."
-    :(code===101||code===150)?"The owner does not allow this one to be embedded."
-    :"The video did not load. An ad blocker or a privacy extension will do this to YouTube embeds.";
-  const d=document.createElement("div");
-  d.dataset.failed="1";
-  d.style.cssText="width:100%;height:100%;background:#000;color:#CFCFCF;display:flex;"+
-    "flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;padding:12px";
-  const p1=document.createElement("div"); p1.style.cssText="font-size:12px"; p1.textContent=why;
-  const p2=document.createElement("div"); p2.style.cssText="font-size:11px;color:#8FA8CC";
-  p2.textContent="The lobby is still watching it together. The clock keeps running.";
-  const a=document.createElement("a");
-  a.href="https://www.youtube.com/watch?v="+encodeURIComponent(vid);
-  a.target="_blank"; a.rel="noopener";
-  a.style.cssText="color:#7FB2FF;font-size:12px";
-  a.textContent="Open it on youtube.com";
-  d.appendChild(p1); d.appendChild(p2); d.appendChild(a);
-  host.innerHTML=""; host.appendChild(d);
-  if(keep) host.appendChild(keep);
-}
-/* dev only, behind the same #desktop hash the other probes use: a screenshot
-   cannot show you a clock, a skew or whether two machines are on the same
-   frame of the same video */
-/* dev only: drive any window from a probe, the same door the UI uses */
-if(location.hash.indexOf("#desktop")===0) window.__open=id=>openWin(id);
-if(location.hash.indexOf("#desktop")===0)
-  window.__tv={
-    go:()=>{ openWin("win-ie"); ie.connectNow(); ie.go("http://tv.cursor.land/"); },
-    on:()=>MP.on,
-    now:()=>MP.tv.now,
-    skew:()=>tvSkew,
-    live:()=>tvElapsed(),
-    at:()=>{ try{ return ytPlayer.getCurrentTime(); }catch(e){ return null; } },
-    state:()=>{ try{ return ytPlayer.getPlayerState(); }catch(e){ return null; } },
-    badge:()=>{ const b=tvPage&&tvPage.querySelector("#tv-live"); return b?b.textContent:null; },
-    theater:v=>{ ie.theater(v); return ie.isTheater(); },
-    stage:()=>{ const st=document.getElementById("tv-stage");
-      return st?{w:st.clientWidth,h:st.clientHeight,dw:$("#ie-page").clientWidth,dh:$("#ie-page").clientHeight}:null; },
-    queue:v=>mpSend({t:"tvQueue",vid:v}),
-    fit:()=>tvFit(),
-    pause:()=>{ try{ ytPlayer.pauseVideo(); }catch(e){} },
-    rejoin:()=>tvCatchUp(),
-    drift:()=>tvDrift(),
-  };
-/* No auto-duck: the TV used to drop to 14% whenever any duel was on screen,
-   which with a lobby full of bots meant the volume pumped constantly while
-   you watched and only held still when the tab was hidden (a hidden tab gets
-   no snapshots, so no .dueling class). Volume is the mixer's job:
-   TV = master x Wave, like every other program on this machine. */
-function tvApplyVol(bus){
-  if(!ytPlayer||!ytPlayer.setVolume) return;
-  const wave=bus!=null?bus:(snd&&snd.ampBus?snd.ampBus():1);
-  try{ ytPlayer.setVolume(muted?0:Math.round(100*Math.max(0,Math.min(1,masterVol*wave)))); }catch(e){}
-}
-/* Everyone is watching the same broadcast, so there is one position and the
-   server owns it. If this screen drifts — the tab slept, the phone locked, the
-   window was shut for ten minutes, somebody hit pause — it rejoins the room at
-   the room's position instead of playing a private copy from where it stopped.
-   Time away is time missed, exactly like a television. */
-function tvCatchUp(){
-  if(!ytPlayer||!MP.tv.now||!ytPlayer.getCurrentTime) return;
-  const live=tvElapsed();
-  try{
-    const st=ytPlayer.getPlayerState?ytPlayer.getPlayerState():-1;
-    if(Math.abs((ytPlayer.getCurrentTime()||0)-live)>1.5&&Date.now()-tvLastSeek>4000){ ytPlayer.seekTo(live,true); tvLastSeek=Date.now(); }
-    if(st===2||st===5) ytPlayer.playVideo();
-  }catch(e){}
-}
-function tvDrift(){
-  /* "watching" = the TV page is mounted, the tab visible, IE open */
-  const watching=!!(tvPage&&tvPage.isConnected&&!document.hidden&&openApps.has("win-ie"));
-  if(watching!==tvWatchLast){ tvWatchLast=watching; mpSend({t:"tvWatch",on:watching}); }
-  if(!tvPage||!tvPage.isConnected||!ytPlayer||!MP.tv.now) return;
-  let st=-1,cur=0;
-  try{ st=ytPlayer.getPlayerState?ytPlayer.getPlayerState():-1; cur=ytPlayer.getCurrentTime()||0; }catch(e){ return; }
-  const behind=tvElapsed()-cur;
-  const badge=tvPage.querySelector("#tv-live");
-  const off=st===2||st===-1||Math.abs(behind)>3;
-  if(badge){
-    badge.className=off?"behind":"";
-    badge.textContent=off?"\u25CF BEHIND \u00B7 rejoin":"\u25CF LIVE";
-  }
-  /* only nudge a player that is actually running, and never twice in a row:
-     a seek buffers, and buffering looks like falling behind */
-  if(st===1&&Math.abs(behind)>2.5&&Date.now()-tvLastSeek>4000){
-    try{ ytPlayer.seekTo(tvElapsed(),true); tvLastSeek=Date.now(); }catch(e){}
-  }
-}
-setInterval(tvDrift,2000);
-/* coming back to the tab is coming back to the room */
-document.addEventListener("visibilitychange",()=>{
-  if(!document.hidden) setTimeout(()=>{ try{ mpTvSync(); }catch(e){} },300);
-});
-function mpTvSync(){
-  if(!tvPage||!tvPage.isConnected) return;
-  mpTvRenderQueue();
-  if(!MP.tv.now){ tvDeadAir(); return; }
-  if(ytApi!==2){ return; }
-  try{
-    /* same show, only late: seek, do not reload — reloading restarts the
-       buffer and makes every window focus a black flash */
-    let vid=null;
-    try{ vid=(ytPlayer.getVideoData&&ytPlayer.getVideoData()||{}).video_id||null; }catch(e){}
-    if(ytPlayer&&vid===MP.tv.now.vid){ tvCatchUp(); return; }
-    if(ytPlayer&&ytPlayer.loadVideoById) ytPlayer.loadVideoById(MP.tv.now.vid,tvElapsed());
-    else mpTvPlayer();
-  }catch(e){ mpTvPlayer(); }
-}
-/* nothing queued: tear the player down and say so. stopVideo() alone leaves
-   the last frame parked on screen, which reads as "the skip did nothing". */
-function tvDeadAir(){
-  tvGen++;   /* strand any watchdog belonging to the player we are killing */
-  try{ ytPlayer&&ytPlayer.destroy&&ytPlayer.destroy(); }catch(e){}
-  ytPlayer=null; tvDurSent=null; tvVoted=null;
-  if(!tvPage||!tvPage.isConnected) return;
-  const st=tvPage.querySelector("#tv-stage"); if(!st) return;
-  const keep=st.querySelector("#tv-exit");
-  const badge=tvPage.querySelector("#tv-live"); if(badge) badge.style.display="none";
-  const snd=tvPage.querySelector("#tv-sound"); if(snd) snd.style.display="none";
-  st.innerHTML="";
-  const d=document.createElement("div");
-  d.id="tv-slot";
-  d.style.cssText="width:100%;height:100%;background:#000;color:#9AA8BC;display:flex;"+
-    "flex-direction:column;align-items:center;justify-content:center;gap:6px;text-align:center;padding:12px";
-  const a=document.createElement("div"); a.style.cssText="font-size:13px;color:#CFCFCF"; a.textContent="no signal";
-  const b=document.createElement("div"); b.style.cssText="font-size:11px"; b.textContent="Paste a YouTube link below to start the channel.";
-  d.appendChild(a); d.appendChild(b);
-  st.appendChild(d);
-  if(keep) st.appendChild(keep);
-}
-function tvTitle(){
-  try{ const d=ytPlayer&&ytPlayer.getVideoData&&ytPlayer.getVideoData(); return d&&d.title?d.title:null; }catch(e){ return null; }
-}
-function mpTvRenderQueue(){
-  if(!tvPage||!tvPage.isConnected) return;
-  const nowEl=tvPage.querySelector("#tv-now"), qEl=tvPage.querySelector("#tv-queue");
-  const ttl=tvTitle();
-  if(nowEl) nowEl.innerHTML=MP.tv.now
-    ? `now playing: <b>${esc(MP.tv.now.title||ttl||MP.tv.now.vid)}</b> <font size="1">(queued by ${esc(MP.tv.now.by)})</font>`
-    : `<font size="1">dead air. queue something.</font>`;
-  const wEl=tvPage.querySelector("#tv-watch"), skEl=tvPage.querySelector("#tv-skipn");
-  if(wEl) wEl.textContent=(MP.tv&&MP.tv.w!=null?MP.tv.w:(MP.online&&MP.online.length?MP.online.length:1))+" watching";
-  if(skEl) skEl.textContent=MP.tv.skip&&MP.tv.skip.n?`· skip votes ${MP.tv.skip.n}/${MP.tv.skip.need}`:"";
-  /* the server hands back the order it will ACTUALLY play in — rotated by
-     person, not first-come — so the page shows the deck, not the inbox */
-  if(qEl) qEl.innerHTML=MP.tv.queue.length
-    ? MP.tv.queue.map((q,i)=>`<div${q.by===MP.name?' style="font-weight:bold"':''}>${i+1}. ${esc(q.title||q.vid)} <font size="1" color="#888">&#8212; ${esc(q.by)}${q.by===MP.name?" (you)":""}</font></div>`).join("")
-    : `<font size="1">queue is empty</font>`;
-}
 
 /* ================= Help and Support Center ================= */
 /* The one place in the product that answers questions in plain words instead
@@ -6187,8 +5821,9 @@ const HELP={
     <h1>The rest of the desktop</h1>
     <p>Everything on the desktop actually works. Go poke at it.</p>
     <ul>
-      <li><b>Internet Explorer</b> — a small handmade web, including cursorTV,
-      where the whole lobby watches one video together with a shared queue.</li>
+      <li><b>Hall of Fame</b> — the biggest cursors alive and dead, live.</li>
+      <li><b>Guestbook</b> — sign it. Everyone sees it.</li>
+      <li><b>Gallery</b> — what the lobby painted.</li>
       <li><b>Paint</b> — all sixteen tools, aliased edges. File → Set As
       Background makes wallpaper; File → Publish to Gallery hangs it where every
       player can see it.</li>
@@ -6455,28 +6090,6 @@ if(location.hash.indexOf("#desktop-exp")===0) setTimeout(()=>{ /* dev: capture E
   if(p==="-props"){ explorer.go("C:\\"); setTimeout(()=>explorer.driveProperties(),400); }
   if(p==="-sysprops") setTimeout(()=>{ $("#sp-user").textContent=playerNameFull(); openWin("win-sysprops"); },300);
 },600);
-if(location.hash.indexOf("#desktop-ie")===0) setTimeout(()=>{ /* dev: capture the handmade web */
-  const p=location.hash.replace("#desktop-ie","");
-  if(p!=="-dial"&&p!=="-dialgo") ie.connectNow();   /* skip the handshake unless that is the shot */
-  openWin("win-ie");
-  const to={"-hall":"http://hall.cursor.land/","-guest":"http://guest.cursor.land/",
-    "-gallery":"http://gallery.cursor.land/","-404":"http://www.cursortactics.com/",
-    "-search":"http://search.msn.com/results?q=gallery"};
-  if(to[p]) ie.go(to[p],{replace:true});
-  if(p==="-post") setTimeout(()=>{
-    ie.go("http://guest.cursor.land/",{replace:true});
-    setTimeout(()=>{
-      $("#gb-txt").value="testing the guestbook. if you can read this it saved.";
-      $("#ie-page").querySelector("[data-act=gb-post]").click();
-    },1100);
-  },200);
-  if(p==="-dialgo") setTimeout(()=>$("#dl-connect").click(),200);   /* dev: the handshake, mid-screech */
-  if(p==="-src") setTimeout(()=>{                                    /* dev: View > Source, all the way to Notepad */
-    ie.menu("View",300,120);
-    const it=[...$("#ctx").children].find(c=>c.textContent==="Source");
-    it.dispatchEvent(new PointerEvent("pointerup",{bubbles:true,pointerType:"mouse"}));
-  },1400);
-},700);
 if(location.hash.indexOf("#desktop-mp")===0) setTimeout(()=>{ /* dev: drive the LIVE local server (npm start in server/) */
   PLAYER=PLAYER||("shot"+Math.floor(Math.random()*900+100));
   mpHello();   /* the socket may have opened before the name existed */
@@ -6534,10 +6147,7 @@ if(location.hash.indexOf("#desktop-mp")===0) setTimeout(()=>{ /* dev: drive the 
     c.querySelector("textarea").value="anyone alive in here";
     c.querySelector(".conv-send").click();
   });
-  if(p==="-tv"||p==="-gal"||p==="-guest") when(()=>{
-    ie.connectNow(); openWin("win-ie");
-    ie.go(p==="-tv"?"http://tv.cursor.land/":p==="-gal"?"http://gallery.cursor.land/":"http://guest.cursor.land/",{replace:true});
-  });
+  if(p==="-gal"||p==="-guest") when(()=>netpages.open(p==="-gal"?"gallery":"guest"));
 },700);
 if(location.hash==="#desktop-crash") setTimeout(()=>{ /* dev: fast-forward to the shutdown rush and crash */
   phaseT=Math.min(phaseT,T_SHUT+3);

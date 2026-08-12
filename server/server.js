@@ -122,64 +122,6 @@ setInterval(() => {
   }
 }, 10);
 
-/* ---------- TV: the lobby watches one video together ----------
-   Plain FIFO let one person queue three and play three in a row while everyone
-   else waited, which is the thing turntable.fm and plug.dj exist to prevent.
-   The deck rotates by PERSON: whoever has gone longest without playing goes
-   next, and their oldest submission is what plays. Inside one person's own
-   submissions it is still first-in-first-out. Nobody buys the decks — the
-   owner offered "maybe they pay, maybe it's just a fair queue" and a fair
-   queue is the one that cannot be bought by whoever has the most SOL. */
-const tv = { now: null, queue: [] };
-const djLast = new Map();          /* name -> when they last had the deck */
-function tvOrder() {
-  /* the order the queue will ACTUALLY play in, so the page can show it */
-  const pending = tv.queue.slice();
-  const seen = new Map(), out = [];
-  for (const [k, v] of djLast) seen.set(k, v);
-  while (pending.length) {
-    let best = 0;
-    for (let i = 1; i < pending.length; i++) {
-      const a = seen.get(pending[i].by) || 0, b = seen.get(pending[best].by) || 0;
-      if (a < b) best = i;
-    }
-    const pick = pending.splice(best, 1)[0];
-    seen.set(pick.by, (seen.get(pick.by) || 0) + 1e9 + out.length);
-    out.push(pick);
-  }
-  return out;
-}
-function tvMsg() {
-  const need = conns.size <= 2 ? 1 : Math.ceil(conns.size / 3);
-  /* srv is this box's clock. Clients do not trust their own for playback
-     position: a phone two minutes fast would seek two minutes past the room.
-     w counts screens that actually have the TV page open and visible. */
-  return { t: "tv", now: tv.now, queue: tvOrder(), skip: { n: skipVotes.size, need },
-    srv: Date.now(), w: [...conns].filter(x => x.tvWatch).length };
-}
-let skipVotes = new Set();
-/* the channel advances on the clock even when no player is open to report the
-   end: the first screen that can read the duration phones it in (tvDur) */
-let tvTimer = null;
-function scheduleTvEnd() {
-  clearTimeout(tvTimer);
-  if (!tv.now || !tv.now.dur) return;
-  const vid = tv.now.vid;
-  const ms = tv.now.startedAt + (tv.now.dur + 4) * 1000 - Date.now();
-  tvTimer = setTimeout(() => { if (tv.now && tv.now.vid === vid) tvAdvance(); }, Math.max(1000, ms));
-}
-function tvAdvance() {
-  clearTimeout(tvTimer);
-  const order = tvOrder();
-  const next = order[0];
-  if (next) {
-    tv.queue.splice(tv.queue.indexOf(next), 1);
-    djLast.set(next.by, Date.now());
-    tv.now = { ...next, startedAt: Date.now() };
-  } else tv.now = null;
-  skipVotes = new Set();
-  broadcast(tvMsg());
-}
 
 /* ---------- per-connection protocol ---------- */
 function sanitizeName(raw) {
@@ -227,8 +169,6 @@ function handle(c, m) {
         balance: b.balance, tickets: b.tickets, glob: b.glob, rake: b.rake,
         epoch: sim.welcomeState(), chat: chatLog.slice(-25),
         online: onlineNames(),
-        tv: { now: tv.now, queue: tvOrder(), srv: Date.now(),
-          w: [...conns].filter(x => x.tvWatch).length },
       });
       broadcast({ t: "join", name, online: onlineNames() });
       sys(`${name} signed in — ${conns.size} player${conns.size === 1 ? "" : "s"} online`);
@@ -310,46 +250,6 @@ function handle(c, m) {
       sys(`${sim.players.get(c.key)?.name} published a painting to the gallery`);
       break;
     }
-    case "tvQueue": {
-      const vid = String(m.vid || "");
-      if (!/^[\w-]{11}$/.test(vid)) return send(c, { t: "err", msg: "that is not a youtube video id" });
-      const who = sim.players.get(c.key)?.name || "?";
-      if (tv.queue.filter(q => q.by === who).length >= 3) return send(c, { t: "err", msg: "3 queued max — let it rotate" });
-      const title = String(m.title || "").replace(/[^\S ]+/g, " ").trim().slice(0, 80);
-      tv.queue.push(title ? { vid, by: who, title } : { vid, by: who });
-      if (!tv.now) tvAdvance(); else broadcast(tvMsg());
-      break;
-    }
-    case "tvEnded": {
-      if (!tv.now || tv.now.vid !== m.vid) break;
-      /* with a reported duration, "ended" must agree with the clock;
-         without one, the legacy 20s floor stands */
-      const min = tv.now.dur ? Math.max(20000, (tv.now.dur - 8) * 1000) : 20000;
-      if (now - tv.now.startedAt > min) tvAdvance();
-      break;
-    }
-    case "tvDur": {
-      const d = +m.dur;
-      if (tv.now && tv.now.vid === m.vid && !tv.now.dur && d > 4 && d <= 2 * 3600) {
-        tv.now.dur = Math.round(d);
-        scheduleTvEnd();
-      }
-      break;
-    }
-    case "tvWatch":
-      if (c.tvWatch !== !!m.on && now - (c.lastTvCtl || 0) > 1000) {
-        c.lastTvCtl = now; c.tvWatch = !!m.on; broadcast(tvMsg());
-      }
-      break;
-    case "tvSkip": {
-      if (!tv.now) return;
-      const freshVote = !skipVotes.has(c.key);
-      skipVotes.add(c.key);
-      const need = conns.size <= 2 ? 1 : Math.ceil(conns.size / 3);
-      if (skipVotes.size >= need) { sys("the lobby voted to skip"); tvAdvance(); }
-      else if (freshVote) broadcast(tvMsg());   /* the page shows the count; repeats change nothing */
-      break;
-    }
     case "vis": {
       const on = m.on !== false, was = c.visible;
       c.visible = on;
@@ -411,8 +311,6 @@ wss.on("connection", ws => {
   ws.on("close", () => {
     clearTimeout(c.preT);
     conns.delete(c);
-    if (c.key) skipVotes.delete(c.key);
-    if (c.tvWatch) broadcast(tvMsg());
     if (c.key) {
       clearTimeout(saveTimers.get(c.key)); saveTimers.delete(c.key);
       persistPlayer(c.key);
@@ -443,12 +341,5 @@ process.on("SIGTERM", shutdown);
    forty sessions down with it. */
 process.on("uncaughtException", e => console.error("uncaught:", e));
 process.on("unhandledRejection", e => console.error("unhandled:", e));
-
-/* djLast is fairness memory; names that left the rotation stop being memory */
-setInterval(() => {
-  const active = new Set(tv.queue.map(q => q.by));
-  if (tv.now) active.add(tv.now.by);
-  for (const k of [...djLast.keys()]) if (!active.has(k)) djLast.delete(k);
-}, 3600 * 1000);
 
 http.listen(PORT, () => console.log(`CURSORS.EXE beta server on :${PORT} — epoch ${sim.epochNo()}, ${CORPSES} corpses to a crash`));

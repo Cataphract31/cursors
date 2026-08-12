@@ -93,14 +93,8 @@ export function initExplorer(deps) {
     [HOME]: () => [
       dir("Desktop", { ico: "openfolder32", go: HOME + "\\Desktop" }),
       dir("My Documents", { ico: "docs32", go: DOCS }),
-      dir("Favorites", { go: HOME + "\\Favorites" }),
       f("NTUSER.DAT", { size: 512 * 1024, hidden: 1, ico: "@ic-file",
         act: () => showError("NTUSER.DAT", "Access is denied.\n\nEverything you have ever clicked is in this file.") }),
-    ],
-    [HOME + "\\Favorites"]: () => [
-      /* the browser's actual Favorites list, which the user edits in IE */
-      ...(hooks.ieFavs ? hooks.ieFavs() : []).map(fav =>
-        f(fav.label + ".url", { size: 128, ico: "ie32", tile: "Internet Shortcut", act: () => hooks.browse(fav.u) })),
     ],
     [HOME + "\\Desktop"]: () => hooks.desktopFiles().map(ic => (
       ic.app === "bin"
@@ -119,8 +113,11 @@ export function initExplorer(deps) {
       ...(hooks.sentDocs ? hooks.sentDocs() : []).map(d =>
         f(d.label, { ico: d.ico, size: 4096, act: () => showError(d.label, "This file was sent here from the Desktop.") })),
     ],
-    [DOCS + "\\My Music"]: () => hooks.tracks().map(t =>
-      f(t.title + ".mp3", { size: 3.4 * MB, ico: "music32", act: () => hooks.openWin("win-amp") })),
+    /* opening a song opens that song. It used to open Winamp at the top of the
+       playlist no matter which file was double-clicked. */
+    [DOCS + "\\My Music"]: () => hooks.tracks().map((t, i) =>
+      f(t.title + ".mp3", { size: 3.4 * MB, ico: "music32",
+        act: () => hooks.playTrack ? hooks.playTrack(i) : hooks.openWin("win-amp") })),
     [PICS]: () => {
       const pics = (store.data.pictures || []).map((p, i) =>
         f(p.name, { size: Math.round(p.data.length * .75), ico: "pics32", pic: i, act: () => hooks.openPicture(p) }));
@@ -128,7 +125,6 @@ export function initExplorer(deps) {
     },
     "C:\\Program Files": () => [
       dir("CURSORS.EXE", { ico: "progfolder32", go: "C:\\Program Files\\CURSORS.EXE" }),
-      dir("Internet Explorer", { ico: "progfolder32", act: () => hooks.openWin("win-ie") }),
       dir("Messenger", { ico: "progfolder32", act: () => hooks.openWin("win-chat") }),
       dir("Winamp", { ico: "progfolder32", act: () => hooks.openWin("win-amp") }),
       dir("Windows NT", { ico: "progfolder32", go: "C:\\Program Files\\Windows NT" }),
@@ -437,7 +433,7 @@ export function initExplorer(deps) {
     } else {
       host.appendChild(panel("File and Folder Tasks", [
         { label: "Make a new folder", ico: "folder32", act: () => showError("New Folder", "This disk is read-only to you. Make folders on the Desktop instead.") },
-        { label: "Publish this folder to the Web", ico: "earth32", act: () => showError("Web Publishing Wizard", "The web is one page long and it is already published. See cursor$land.") },
+        { label: "Publish this folder to the Web", ico: "earth32", act: () => showError("Web Publishing Wizard", "There is no web. There is only this computer and the chain.") },
         { label: "Share this folder", ico: "shareddocs32", act: () => showError("Sharing", "Sharing is disabled. Your losses are private and will remain so.") },
       ]));
     }
@@ -653,11 +649,6 @@ export function initExplorer(deps) {
       })),
       { sep: 1 },
       { label: "Refresh", action: () => { render(); sysSnd("nav", .4); } },
-    ], x, y),
-    Favorites: (x, y) => showMenu([
-      { label: "cursor$land", action: () => hooks.openWin("win-ie") },
-      { sep: 1 },
-      { label: "Add to Favorites...", disabled: 1 },
     ], x, y),
     Tools: (x, y) => showMenu([
       { label: "Map Network Drive...", action: () => showError("Map Network Drive", "There is no network. There is only this computer and the chain.") },

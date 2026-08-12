@@ -472,60 +472,13 @@ body.mobile .hlp-doc{padding:10px 12px}
 body.mobile .diskbar{margin:0 4px 4px}
 
 /* ---------- Internet Explorer 6: the chrome ---------- */
-.ie-bar{position:relative;padding-right:36px}
-.ie-throb{position:absolute;right:0;top:0;bottom:0;width:34px;display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg,#F1F0E8,#E5E2D5);border-left:1px solid #D4D0C8}
-.ie-throb img{width:22px;height:22px;opacity:.9}
-.ie-throb.spin img{animation:iespin 1.1s linear infinite}
-@keyframes iespin{to{transform:rotate(360deg)}}
-.ie-links{flex:none;display:flex;align-items:center;gap:9px;padding:2px 6px;background:#ECE9D8;border-bottom:1px solid #D4D0C8;font-size:11px;white-space:nowrap;overflow:hidden}
-.ie-links img{width:16px;height:16px;flex:none}
-.ie-links b{color:#3B3B3B;margin-right:2px}
-.ie-links a{cursor:default;color:#000;padding:1px 4px;border:1px solid transparent;border-radius:3px}
-.ie-links a:hover{border-color:#B6BDD2;background:#EAF0FB;color:#00309C;text-decoration:underline}
-.ie-status .ie-progcell{width:132px;flex:none;padding:1px 3px}
-.ie-status .ie-zone{width:96px;flex:none;display:flex;align-items:center;gap:4px}
-.ie-status .ie-zone img{width:14px;height:14px}
-.ie-prog{display:block;height:11px;background:#fff;border:1px solid #9A9A9A;overflow:hidden}
-.ie-prog i{display:block;height:100%;width:0;background:repeating-linear-gradient(90deg,#3B6EA5 0 7px,#D6E2F0 7px 9px);transition:width .12s linear}
 /* dial-up */
-.dl-grid{display:grid;grid-template-columns:82px 1fr;gap:6px 8px;align-items:center}
-.dl-grid input,.dl-grid select{min-width:0;width:100%}
-.dl-chk{display:flex;align-items:center;gap:5px;line-height:1.3}
-.dl-chk input{width:13px;height:13px;flex:none}
-.dg-bar{height:13px;margin-top:6px;background:#fff;border:1px solid #7F9DB9;overflow:hidden}
-.dg-bar i{display:block;height:100%;width:0;background:repeating-linear-gradient(90deg,#3B6EA5 0 8px,#ECE9D8 8px 10px);transition:width .5s linear}
 
-/* ---------- the handmade web (everything below renders inside .ie-doc) ---------- */
-.ie-doc{flex:1;min-height:0;overflow:auto;background:#fff;color:#000;padding:11px;font:13px "Times New Roman",Times,serif;line-height:1.5}
-.ie-doc h1{font-size:21px;margin:6px 0}
-.ie-doc p{margin:9px 0}
-.ie-doc ul,.ie-doc ol{margin:8px 0;padding-left:26px;text-align:left}
-.ie-doc li{margin:3px 0}
-.ie-doc a{color:#0000EE;text-decoration:underline;cursor:pointer}
-.ie-doc a:hover{color:#EE0000}
-.ie-doc hr{border:0;border-top:1px solid #999;margin:10px 0}
-.ie-doc .ie-doc .ie-doc .ie-doc .ie-doc .badge{display:inline-block;margin:2px 0;padding:2px 6px;border:1px outset #BBB;background:#DDD;color:#000;font:9px Tahoma,sans-serif;letter-spacing:.3px}
-.ie-doc .ie-doc .ie-doc .gbin{font:12px Tahoma,sans-serif;border:1px solid #7F9DB9;padding:2px 3px;width:100%;box-sizing:border-box}
-.ie-doc .hit{margin:0 0 13px;text-align:left}
-.ie-doc .hit a{color:#0000CC;font-size:14px}
 
 /* MSN Search */
-.ie-doc.srch{background:#fff;font-family:Verdana,Arial,sans-serif;font-size:12px}
 
 /* "The page cannot be displayed", carbon copy */
-.ie-doc.err{font-family:"Times New Roman",Times,serif}
-.ie-doc .err404{max-width:640px}
-.ie-doc .err404 h1{font-size:20px;font-weight:normal;margin:2px 0 10px}
-.ie-doc .err404 ul{padding-left:22px}
-.ie-doc .err404 li{margin:6px 0}
 
-body.mobile .ie-links{display:none}
-body.mobile .ie-throb{display:none}
-body.mobile .ie-bar{padding-right:4px;overflow-x:auto}
-body.mobile .ie-status .ie-progcell{width:76px}
-body.mobile .ie-status .ie-zone{display:none}
-body.mobile .ie-doc{padding:7px;font-size:12px}
-body.mobile .ie-doc table{max-width:100%}
 
 /* ---------- balloon (XP notification) ---------- */
 #balloon{position:fixed;right:calc(14px + var(--rail) + var(--sar));bottom:calc(var(--tb) + var(--hud) + var(--sab) + 18px);width:236px;background:#FFFFE1;border:1px solid #000;border-radius:7px;padding:9px 22px 9px 11px;display:none;z-index:9600;box-shadow:2px 3px 8px rgba(0,0,0,.35);line-height:1.45}
@@ -1244,22 +1197,6 @@ body.typing,body.typing *{cursor:none!important}
 #arena.rot .cur.dueling img.curskin{animation:shakeRot .13s infinite}
 
 /* ---------- IE: the Explorer bar, Find, Internet Options ---------- */
-.ie-main{flex:1;display:flex;min-height:0}
-.ie-main .ie-doc{flex:1}
-.ie-side{width:184px;flex:none;background:#EFF3FB;border-right:1px solid #ACA899;display:flex;flex-direction:column;min-height:0}
-.ie-side-h{display:flex;justify-content:space-between;align-items:center;padding:4px 7px;font-weight:bold;background:linear-gradient(180deg,#F8FBFF,#DCE9FB 60%,#C9DCF6);border-bottom:1px solid #ACA899}
-#ie-side-x{font-style:normal;cursor:pointer;padding:0 2px}
-.ie-side-body{flex:1;overflow:auto;padding:4px 0}
-.ie-side-it{padding:3px 9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:default}
-.ie-side-it:hover b{color:#1B5FAE;text-decoration:underline}
-.ie-side-it.on{background:#316AC5;color:#fff}
-.ie-side-tools{padding:3px 8px 6px;border-bottom:1px solid #D6DFF0;margin-bottom:3px}
-.ie-side-tools a{color:#1B5FAE;text-decoration:underline;margin-right:9px;cursor:default}
-.ie-side-group{padding:3px 8px;font-weight:bold;color:#215DC6}
-.ie-findbar{display:flex;gap:6px;align-items:center;padding:4px 7px;background:#ECE9D8;border-bottom:1px solid #ACA899;flex:none}
-.ie-findbar input{flex:1}
-.ie-doc mark{background:#316AC5;color:#fff}
-.ie-doc.noimg img{display:none}
 .io-advgroup{font-weight:bold;padding:3px 2px 1px}
 .io-advrow{display:flex;gap:6px;align-items:flex-start;padding:1px 2px 1px 14px;font-size:11px}
 .ex-tb.on{background:#fff;border-color:#ACA899;box-shadow:inset 1px 1px 2px rgba(0,0,0,.12)}
@@ -1778,34 +1715,6 @@ body.mobile .sv32-brow{display:none}
 body.mobile .sv32-mute span{display:none}
 body.mobile .sv32-vrow input{min-height:110px}
 
-/* ---------- cursorTV: the picture is the page ---------- */
-/* The stage is sized in JS (16:9 inside whatever box IE has, both directions),
-   so everything here is only the frame around it. */
-#tv-stage{position:relative;margin:0 auto 5px;width:100%;max-width:100%;height:220px;
-  background:#000;border:1px solid #000;overflow:hidden}
-#tv-slot,#tv-stage iframe{display:block;width:100%;height:100%;border:0}
-#tv-bar{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:8px;margin:0 0 6px}
-#tv-live{font:bold 10px Tahoma,sans-serif;letter-spacing:.4px;padding:1px 5px;
-  border:1px solid #444;background:#111;color:#4F4}
-#tv-live.behind{color:#FC4;cursor:pointer}
-#tv-exit{display:none;position:absolute;top:6px;right:6px;width:22px;height:22px;
-  line-height:22px;text-align:center;font-style:normal;font:11px Tahoma,sans-serif;
-  color:#fff;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.35);cursor:pointer;z-index:2}
-#tv-exit:hover{background:rgba(0,0,0,.85)}
-
-/* theater mode: every piece of chrome IE owns steps out of the way */
-#win-ie.theater .menubar,#win-ie.theater .ie-bar,#win-ie.theater .ex-addrbar,
-#win-ie.theater .ie-links,#win-ie.theater .ie-status,#win-ie.theater .ie-side{display:none !important}
-#win-ie.theater .win-body{padding:0}
-#win-ie.theater .ie-doc{background:#000;padding:0;overflow:hidden;display:flex;
-  align-items:center;justify-content:center}
-#win-ie.theater .ie-doc>center{width:100%;display:flex;align-items:center;justify-content:center}
-/* only the TV page blanks itself down to the picture; on any other page
-   theater mode is just IE without its furniture */
-#win-ie.theater .ie-doc.tv>center>*{display:none}
-#win-ie.theater .ie-doc.tv>center>#tv-stage{display:block;margin:0;border:0}
-#win-ie.theater #tv-exit{display:block}
-
 /* ---- audit pass: phone targets and drag ergonomics ---- */
 body.mobile .cx-tab{padding:8px 12px 7px;font-size:12px}
 body.mobile .task-tab{height:30px}
@@ -1866,19 +1775,6 @@ body.mobile .wp-bar button{min-height:26px}
 .um-row span i{color:#666;font-style:normal}
 
 /* ---- Windows Update, 2003 green ---- */
-.ie-doc.wu{background:#FFFFFF;font-family:Verdana,Arial,sans-serif;font-size:11px;text-align:left;padding:0}
-.ie-doc.wu .wu-head{background:#316AC5;color:#fff;font-size:17px;padding:8px 14px}
-.ie-doc.wu .wu-head b{font-weight:bold}
-.ie-doc.wu .wu-cols{display:flex;min-height:300px}
-.ie-doc.wu .wu-side{flex:0 0 168px;background:#EBF3E2;border-right:1px solid #B8CCA0;padding:8px 0}
-.ie-doc.wu .wu-nav{padding:5px 12px;color:#2A5D0C;cursor:pointer}
-.ie-doc.wu .wu-nav:hover{text-decoration:underline}
-.ie-doc.wu .wu-nav.dim{color:#7A8A6A;margin-top:8px;cursor:default}
-.ie-doc.wu .wu-nav.dim:hover{text-decoration:none}
-.ie-doc.wu .wu-main{flex:1;padding:12px 18px}
-.ie-doc.wu h2{color:#2A5D0C;font-size:14px;margin:4px 0 10px}
-.ie-doc.wu p{margin:7px 0;line-height:1.5}
-.ie-doc.wu .wu-note{color:#666;font-size:10px}
 
 /* ---------------- Outlook Express ---------------- */
 .oe-win{background:#ECE9D8;display:flex;flex-direction:column;padding:0;overflow:hidden}
@@ -2308,3 +2204,46 @@ body.mobile.land .txp-copy{margin-top:8px;padding:7px 10px 8px}
 body.mobile.land .txp-headrow h2{font-size:13px}
 body.mobile.land .txp-pts li{font-size:11px;line-height:1.38}
 body.mobile.land .txp-foot{padding:5px 10px}
+
+/* ---------- Hall of Fame / Guestbook / Gallery ---------- */
+/* Three plain windows where a browser used to be. XP chrome outside, flat
+   and readable inside — the same rule the thumb bar follows. */
+.np{display:flex;flex-direction:column;gap:6px;min-height:0}
+.np-scroll{flex:1;min-height:0;overflow:auto;background:#fff;border:1px solid #7F9DB9;padding:6px}
+.np-foot{flex:none;display:flex;align-items:center;justify-content:space-between;gap:8px;
+  font-size:11px;color:#333;min-height:22px}
+.np-actions{flex:none;display:flex;justify-content:flex-end}
+.np .empty{color:#777;text-align:center;padding:14px 6px;margin:0}
+
+.npt{width:100%;border-collapse:collapse;font-size:12px}
+.npt th{text-align:left;font-weight:bold;color:#333;border-bottom:1px solid #ACA899;padding:3px 5px;font-size:11px}
+.npt td{padding:3px 5px;border-bottom:1px solid #EDEDED;vertical-align:top}
+.npt td.n{width:20px;color:#888}
+.npt td.mult{width:56px;text-align:right;font-variant-numeric:tabular-nums;font-weight:bold}
+.npt td.note{color:#555;font-size:11px}
+.npt tr.me td{background:#FFF6E0}
+.npt tr.me td.who{font-weight:bold}
+.npt td.empty{color:#777;text-align:center;padding:14px}
+.npt i{font-style:normal;color:#C60}
+
+.np-sign{flex:none;display:grid;grid-template-columns:1fr 74px;gap:4px;align-items:start}
+.np-sign input,.np-sign textarea{font:12px Tahoma,sans-serif;border:1px solid #7F9DB9;padding:3px 4px;
+  width:100%;box-sizing:border-box;resize:none}
+.np-sign input{grid-column:1}
+.np-sign textarea{grid-column:1;grid-row:2}
+.np-sign .xbtn{grid-column:2;grid-row:1/3;align-self:stretch}
+.gbe{padding:5px 4px;border-bottom:1px solid #EDEDED;font-size:12px}
+.gbe:last-child{border-bottom:0}
+.gbe i{font-style:normal;color:#888;font-size:11px}
+.gbe div{margin-top:2px;white-space:pre-wrap;word-break:break-word}
+
+.gal-grid{display:flex;flex-wrap:wrap;gap:8px;align-content:flex-start}
+figure.gal{margin:0;width:150px;border:1px solid #ACA899;background:#F7F7F7;padding:4px}
+figure.gal img{display:block;width:100%;height:104px;object-fit:contain;background:#fff}
+figure.gal figcaption{font-size:11px;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+figure.gal i{font-style:normal;color:#888}
+
+body.mobile .np-sign{grid-template-columns:1fr 64px}
+body.mobile .np-sign .xbtn{min-height:44px}
+body.mobile figure.gal{width:calc(50% - 4px)}
+body.mobile .npt td.note{display:none}

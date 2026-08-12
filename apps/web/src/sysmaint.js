@@ -697,7 +697,6 @@ export function initSysMaint(deps) {
     [".png", "Bitmap Image", "pics32", "Windows Picture and Fax Viewer"],
     [".sys", "System file", "@ic-file", "(none)"],
     [".txt", "Text Document", "note32", "Notepad"],
-    [".url", "Internet Shortcut", "ie32", "Internet Explorer"],
     [".wav", "Wave Sound", "wavdoc16", "Windows Media Player"],
   ];
   let ftSel = FILETYPES[11];
@@ -820,8 +819,6 @@ export function initSysMaint(deps) {
   const PROGRAMS = [
     { id: "cursors", n: "CURSORS.EXE", win: "win-cursors", ico: "@ic-app", mb: 1.2, pub: "the house",
       lock: "CURSORS.EXE is installed and updated by the server. It cannot be removed from this computer." },
-    { id: "ie", n: "Internet Explorer 6 SP1", win: "win-ie", ico: "ie32", mb: 14.7, pub: "Microsoft Corporation",
-      lock: "Internet Explorer is required by CURSORS.EXE and cannot be removed." },
     { id: "chat", n: "Windows Messenger 4.7", win: "win-chat", ico: "msn32", mb: 4.6, pub: "Microsoft Corporation" },
     { id: "wmp", n: "Windows Media Player 9 Series", win: "win-wmp", ico: "wmp32", mb: 12.4, pub: "Microsoft Corporation" },
     { id: "amp", n: "Winamp 2.95", win: "win-amp", ico: "amp16", mb: 2.9, pub: "Nullsoft" },
@@ -982,7 +979,6 @@ export function initSysMaint(deps) {
     box.appendChild(el("div", "aw-compgroup", "Programs"));
     for (const c of COMPONENTS.filter(x => x.grp === "top"))
       line(c.n, installed(c.id), c.mb, v => toggleComponent(c, v), null, 1);
-    line("Internet Explorer", true, 14.7, null, "Provides Internet browsing. Required by CURSORS.EXE for cursorTV.", 1);
     line("CURSORS.EXE", true, 1.2, null, "Installed by the server.", 1);
     main.appendChild(box);
     const used = COMPONENTS.filter(c => installed(c.id)).reduce((s, c) => s + c.mb, 0) + 15.9;

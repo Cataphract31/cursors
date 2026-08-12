@@ -232,7 +232,7 @@ export function initSysApps(deps) {
       cmdWrite("        Subnet Mask . . . . . . . . . . . : " + (n.up ? "255.255.255.255" : "0.0.0.0"));
       cmdWrite("        Default Gateway . . . . . . . . . : " + (n.up ? n.gw : ""));
       cmdWrite("");
-      if (!n.up) cmdWrite("Media disconnected. Dial cursor$net from Internet Explorer.");
+      if (!n.up) cmdWrite("Media disconnected. The arena socket is the only network on this machine.");
     },
     ping(a) {
       const host = (a || "").trim().split(/\s+/)[0];
@@ -793,7 +793,7 @@ export function initSysApps(deps) {
       },
     },
     { name: "Monitors", items: () => [{ n: "Plug and Play Monitor" }] },
-    { name: "Network adapters", items: () => [{ n: "cursor$net Dial-Up Adapter", warn: () => !hooks.netInfo().up, note: () => hooks.netInfo().up ? "Connected at 56.6 Kbps." : "This device is not connected. Dial from Internet Explorer." }] },
+    { name: "Network adapters", items: () => [{ n: "cursor$net Dial-Up Adapter", warn: () => !hooks.netInfo().up, note: () => hooks.netInfo().up ? "Connected to the arena." : "This device is not connected." }] },
     { name: "Ports (COM & LPT)", items: () => [{ n: "Communications Port (COM1)" }, { n: "Printer Port (LPT1)" }] },
     { name: "Sound, video and game controllers", items: () => [{ n: "Audio Codecs" }, { n: "Legacy Audio Drivers" }, { n: "cursor$land Wave Device" }] },
     { name: "System devices", items: () => [{ n: "ACPI Fixed Feature Button" }, { n: "System CMOS/real time clock" }, { n: "hopium.sys", warn: true, note: "This device is not working properly because Windows cannot load the drivers required for this device. (Code 31)" }, { n: "copium.drv", warn: true, note: "Windows cannot verify the digital signature for the drivers required for this device. (Code 52)" }] },
