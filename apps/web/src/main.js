@@ -3841,10 +3841,20 @@ if(window.fetch){
    it still follow in order and it wraps around to the ones before — which is
    what double-clicking a file in My Music should do, and what it did not: it
    always restarted at track one. */
-const initialAmpTracks=(from=0)=>{
+/* A fresh order every time Winamp is opened. Webamp's public API can only
+   "play this list from the top", so a shuffle is a shuffled list rather than a
+   mode — which also means picking a song in My Music still works: that track
+   goes to the front and the other nineteen are shuffled behind it. */
+const initialAmpTracks=(from)=>{
   const t=TRACKS.map(x=>({url:x.url,metaData:{artist:x.artist,title:x.title}}));
-  const i=(from|0)%(t.length||1);
-  return i>0?t.slice(i).concat(t.slice(0,i)):t;
+  const pickAt=Number.isInteger(from)&&from>=0&&from<t.length?from:-1;
+  const first=pickAt>=0?t[pickAt]:null;
+  const rest=pickAt>=0?t.filter((_,i)=>i!==pickAt):t;
+  for(let i=rest.length-1;i>0;i--){          /* Fisher-Yates, unbiased */
+    const j=Math.floor(Math.random()*(i+1));
+    const tmp=rest[i]; rest[i]=rest[j]; rest[j]=tmp;
+  }
+  return first?[first,...rest]:rest;
 };
 
 /* -- lifecycle: Webamp is a normal process-table entry (kind:"webamp").
@@ -3855,7 +3865,7 @@ function wampEntry(){
   return {el:null,min:false,kind:"webamp",notab:false,title:"Winamp",icon:`<img src="${IMG.amp16}" alt="">`};
 }
 function openWinamp(startAt){
-  const jump=Number.isInteger(startAt)&&startAt>0;
+  const jump=Number.isInteger(startAt)&&startAt>=0;
   const ex=openApps.get("win-amp");
   if(ex){
     ex.min=false; focusedId="win-amp";
@@ -3907,7 +3917,14 @@ function openWinamp(startAt){
   }
   showWamp();
   try{ webamp.reopen(); }catch(e){}
-  if(jump){ try{ webamp.setTracksToPlay(initialAmpTracks(startAt)); }catch(e){} }
+  /* the instance outlives a close, so re-opening has to re-deal the list.
+     setTracksToPlay always starts playing; pause straight back unless the
+     player was opened by picking a specific song, so opening Winamp to change
+     the volume does not blast the room. */
+  try{
+    webamp.setTracksToPlay(initialAmpTracks(jump?startAt:undefined));
+    if(!jump) webamp.pause();
+  }catch(e){}
 }
 /* volume = Winamp's own slider x the Wave fader x the master; muted is silent */
 function wampApplyVol(bus){
