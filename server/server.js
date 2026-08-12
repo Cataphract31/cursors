@@ -201,6 +201,26 @@ function handle(c, m) {
       broadcast({ t: "chat", who, text });
       break;
     }
+    case "dm": {
+      /* one player to one player. Social only, by design — nothing said here
+         can move A/(A+B), so there is no alliance to buy. Delivered to the
+         recipient only; the sender's own window already shows what they typed. */
+      if (!c.key) break;
+      const to = sanitizeName(m.to), txt = String(m.text || "").slice(0, 300).trim();
+      if (!to || !txt) break;
+      if (now - (c.lastDm || 0) < 500) break;
+      c.lastDm = now;
+      const me = sim.players.get(c.key);
+      if (!me || me.name === to) break;
+      let target = null;
+      for (const x of conns) {
+        const p = x.key && sim.players.get(x.key);
+        if (p && p.name === to) { target = x; break; }
+      }
+      if (!target) { send(c, { t: "dmFail", to }); break; }
+      send(target, { t: "dm", from: me.name, text: txt });
+      break;
+    }
     case "guest":
       if (now - (c.lastGuestGet || 0) < 3000) return;
       c.lastGuestGet = now;

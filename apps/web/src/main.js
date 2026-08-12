@@ -3626,6 +3626,10 @@ const msn=initMessenger({
   isOpen:id=>openApps.has(id)&&!openApps.get(id).min,
   showMenu, showError, desk:desktop,
   lobbyNet:t=>{ if(!MP.on) return false; mpSend({t:"chat",text:t}); return true; },
+  /* a direct message to one player. The buddy list only lists people who are
+     connected, so "offline" here means they left between the render and the
+     send — the server says so and the window prints it. */
+  dmNet:(to,text)=>{ if(!MP.on||netStalled()) return false; mpSend({t:"dm",to,text}); return true; },
   /* Online, the buddy list is real people and the bots are programs. Programs
      do not make small talk, and scripted chatter in a room with real players in
      it is just noise pretending to be company. */
@@ -5607,6 +5611,8 @@ function mpMsg(m){
     case "crash": if(MP.on) mpCrash(m); break;
     case "epoch": if(MP.on) mpEpoch(m); break;
     case "chat": if(MP.on) msn.lobbySay(m.who,m.text); break;
+    case "dm": if(MP.on&&m.from&&m.text) msn.dmIn(m.from,m.text); break;
+    case "dmFail": if(MP.on&&m.to) msn.dmSys(m.to,`${m.to} is not signed in — that message was not delivered.`); break;
     case "sys": if(MP.on) msn.lobbySys(m.text); break;
     case "join": if(MP.on&&m.online){ MP.online=m.online; msn.setHumans(m.online); } break;   /* the sys line covers the greeting */
     case "part": if(MP.on){ msn.lobbySys(`${m.name} signed out`); if(m.online){ MP.online=m.online; msn.setHumans(m.online); } } break;

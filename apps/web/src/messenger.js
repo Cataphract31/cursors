@@ -82,6 +82,7 @@ export function initMessenger(deps) {
     EMO, IMG, $, store, sysSnd, playerName, wireWindow,
     openWin, closeWin, isOpen, showMenu, showError, desk, rnd,
     lobbyNet,   /* (text)=>bool — true means the beta server took it */
+    dmNet,      /* (toName,text)=>bool — a direct message to a real player */
     netLive,    /* ()=>bool — connected to the beta server */
   } = deps;
   /* When the server is live the contacts marked "bot" are exactly that: they
@@ -92,7 +93,14 @@ export function initMessenger(deps) {
   const pick = a => a[Math.floor(Math.random() * a.length)];
   const rand = (a, b) => a + Math.random() * (b - a);
   const LOBBY = { id: "lobby", name: "everyone", dp: "messenger", group: null };
-  const byId = id => (id === "lobby" ? LOBBY : CONTACTS.find(c => c.id === id));
+  /* Three kinds of conversation live side by side: the lobby, a bot, and a real
+     player. A player's id is "u:" + their name — they have no CONTACTS row
+     because they exist only while they are connected. */
+  const isUser = id => typeof id === "string" && id.slice(0, 2) === "u:";
+  const userName = id => id.slice(2);
+  const byId = id => id === "lobby" ? LOBBY
+    : isUser(id) ? { id, name: userName(id), psm: "real person", human: 1 }
+    : CONTACTS.find(c => c.id === id);
 
   const state = {};              /* per-contact status */
   for (const c of CONTACTS) state[c.id] = "online";
@@ -125,7 +133,12 @@ export function initMessenger(deps) {
   }
 
   /* ---------- conversation windows ---------- */
-  function convId(id) { return "win-conv-" + id; }
+  /* a player name may contain a space, a dot or a $, none of which belong in a
+     DOM id — escape everything outside [A-Za-z0-9_] to "-<code36>", which is
+     one-to-one, so two different names can never land on the same window */
+  function convId(id) {
+    return "win-conv-" + String(id).replace(/[^A-Za-z0-9_]/g, c => "-" + c.charCodeAt(0).toString(36));
+  }
 
   function buildConv(c) {
     const id = convId(c.id);
@@ -192,6 +205,12 @@ export function initMessenger(deps) {
       rec.input.value = "";
       /* online, the lobby is real people: the server echoes it back to everyone */
       if (c.id === "lobby" && lobbyNet && lobbyNet(t)) return;
+      /* a real player is not a bot: nothing here may invent a reply */
+      if (c.human) {
+        say(c.id, playerName(), t, true);
+        if (!(dmNet && dmNet(c.name, t))) sys(c.id, "Not connected — that message was not sent.");
+        return;
+      }
       say(c.id, playerName(), t, true);
       if (quiet()) { botSilence(c.id); return; }
       if (c.id === "lobby") { if (Math.random() < .55) scheduleLobbyReply(); }
@@ -300,7 +319,8 @@ export function initMessenger(deps) {
     sysSnd("msnNudge", .6);
     sys(id, "You have just sent a nudge.");
     shake(conv(id).el);
-    if (id !== "lobby" && !quiet() && Math.random() < .5)
+    /* a bot may nudge you back; a real player is not here to be impersonated */
+    if (id !== "lobby" && !isUser(id) && !quiet() && Math.random() < .5)
       setTimeout(() => { sys(id, byId(id).name + " has just sent a nudge."); shake(conv(id).el); sysSnd("msnNudge", .5); }, rand(1800, 3200));
   }
   function shake(el) { el.classList.remove("nudged"); void el.offsetWidth; el.classList.add("nudged"); }
@@ -408,7 +428,7 @@ export function initMessenger(deps) {
         row.innerHTML = `<img class="msn-st" src="${IMG.msn16}" alt=""><span class="msn-nm"></span><span class="msn-psm"> - real person</span>`;
         row.querySelector(".msn-nm").textContent = n;
         row.title = `${n} — connected to the beta server right now`;
-        row.addEventListener("dblclick", () => openConv("lobby"));
+        row.addEventListener("dblclick", () => openConv("u:" + n));
         g.appendChild(row);
       }
       host.appendChild(g);
@@ -546,6 +566,9 @@ export function initMessenger(deps) {
     incoming: (id, text) => say(id, byId(id).name, text, false),
     place: (id, x, y) => { const r = conv(id); r.el.style.left = x + "px"; r.el.style.top = y + "px"; },
     openConv, lobbySys, lobbySay, botChat, setHumans,
+    /* a real player messaged you — opens nothing, but toasts if the window is shut */
+    dmIn: (from, text) => say("u:" + from, from, text, false),
+    dmSys: (who, text) => { if (convs["u:" + who]) sys("u:" + who, text); },
     nudgeLobby: () => nudge("lobby"),
     renderList, renderMe,
     convIdFor: convId,
