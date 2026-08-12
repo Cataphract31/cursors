@@ -21,8 +21,8 @@
 // cannot drift from the policy that ships — and then exercises the parts of
 // the app that actually touch the network: the cold boot and login, the live
 // game websocket, Winamp's data:-URI skin, the same-origin Solitaire iframe
-// (which gets a <style> injected into it), and the TV (a script from
-// youtube.com, an oembed fetch, a youtube-nocookie iframe). Every
+// (which gets a <style> injected into it), and the media files Winamp and
+// Media Player load at runtime. Every
 // securitypolicyviolation, every blocked request and every security log entry
 // is collected and printed.
 //
@@ -125,7 +125,7 @@ const send = (method, params = {}) => new Promise((res, rej) => {
 const violations = [];     // the policy stopped the page from doing something
 const blocked = [];        // a request never left the browser
 const requestUrl = new Map();
-const thirdParty = [];   // youtube/ytimg responses, for diagnosing an unverified TV leg
+const seenHosts = [];      // every host the app actually contacted
 let loadFired = () => {};
 ws.addEventListener("message", ev => {
   const m = JSON.parse(ev.data);
@@ -144,14 +144,14 @@ ws.addEventListener("message", ev => {
   if (m.method === "Log.entryAdded" &&
       /Content Security Policy|Refused to/i.test(m.params.entry.text || ""))
     violations.push("log: " + m.params.entry.text.replace(/\s+/g, " ").slice(0, 200));
-  // keep the third-party traffic, so an unverified TV leg can say whether
-  // YouTube answered badly or never answered at all
-  if (m.method === "Network.responseReceived" && /youtube|ytimg/i.test(m.params.response.url))
-    thirdParty.push(m.params.response.status + " " + m.params.response.url.slice(0, 78));
-  if (m.method === "Network.loadingFailed" && requestUrl.get(m.params.requestId) &&
-      /youtube|ytimg/i.test(requestUrl.get(m.params.requestId)))
-    thirdParty.push("FAILED(" + (m.params.errorText || m.params.blockedReason) + ") " +
-      requestUrl.get(m.params.requestId).slice(0, 70));
+  /* every host the page reaches for, so a policy that quietly permits a third
+     party the app no longer uses shows up here instead of in a code review */
+  if (m.method === "Network.responseReceived") {
+    try {
+      const h = new URL(m.params.response.url).host;
+      if (h && !seenHosts.includes(h)) seenHosts.push(h);
+    } catch (e) {}
+  }
   if (m.method === "Network.loadingFailed" && m.params.blockedReason)
     blocked.push(m.params.blockedReason + ": " + m.params.type + " " +
       (requestUrl.get(m.params.requestId) || "?").slice(0, 90));
@@ -161,7 +161,6 @@ await new Promise(res => ws.addEventListener("open", res));
 const evaluate = async expression =>
   (await send("Runtime.evaluate", { expression, returnByValue: true, awaitPromise: true })).result?.value;
 const sleep = ms => new Promise(r => setTimeout(r, ms));
-let ytVerified = true;   // set false if the TV leg could not be exercised
 
 try {
   await send("Page.enable");
@@ -222,88 +221,41 @@ try {
   console.log("  " + mounted.subresources + " subresources, " + mounted.sheets +
     " stylesheets applied, desktop reached");
 
-  /* --- pass 1b: the TV, which is only reachable with the live socket up --- */
-  // cursorTV renders only when multiplayer is connected, so reaching #tv-in is
-  // itself the proof that connect-src let the wss:// through — and that leg
-  // cannot be done behind #desktop, which deliberately returns a null socket.
-  // The YouTube half (script-src, frame-src, the oembed connect-src) is then
-  // proved by fetching those resources directly, WITHOUT queueing anything:
-  // the deck is shared with every live player and a test must not broadcast.
-  console.log("\npass 1b — cursorTV over the live socket: youtube.com script, oembed fetch, nocookie iframe");
-  await evaluate('document.querySelector(\'#startmenu [data-app="win-ie"]\').click()');
-  await sleep(2500);
-  await evaluate('document.getElementById("dl-connect").click()');
-  await sleep(12000);      // the dial-up handshake is 8.1s of theatre, then it navigates home
-  const tvUp = await evaluate('(()=>({ input: !!document.getElementById("tv-in"),' +
-    'stage: !!document.getElementById("tv-stage"),' +
-    'page: (document.getElementById("ie-page")||{}).textContent?.slice(0,40) }))()');
-  console.log("  tv page: " + JSON.stringify(tvUp));
-  if (!tvUp.input)
-    bail("FAILED: cursorTV never came up, so the websocket never connected — connect-src is " +
-      "blocking wss://, or the beta server is down. Either way the YouTube paths went untested.", 1);
+  /* --- pass 1b: the live socket, and the media the policy now has to allow --- */
+  // cursorTV used to carry this pass: the TV page only rendered with multiplayer
+  // up, so reaching it proved connect-src let the wss:// through. The browser and
+  // the TV are both gone, so the socket is asserted directly — and media-src
+  // takes the YouTube legs' place, because music and video are now the only
+  // sizeable things the app fetches at runtime, and they are plain files rather
+  // than bundled assets. A policy that forgot media-src would leave Winamp and
+  // Media Player with nothing to play, silently.
+  console.log("");
+  console.log("pass 1b — the live wss:// socket, and same-origin media under media-src");
+  const sock = await evaluate('(()=>{ const n=document.getElementById("netico");' +
+    'return { trayLit: !!n && getComputedStyle(n).display !== "none" }; })()');
+  console.log("  socket: " + JSON.stringify(sock));
+  if (!sock.trayLit)
+    bail("FAILED: the arena socket never connected — connect-src is blocking wss://, " +
+      "or the beta server is down. Nothing that needs a live socket got tested.", 1);
 
-  // NEVER queue into the deck here. cursorTV is one shared channel: a harness
-  // that submits a video broadcasts it to every player online, and this one
-  // rickrolled the live lobby for real. The policy legs this pass exists for —
-  // script-src youtube.com, frame-src nocookie, connect-src for the oembed —
-  // are all provable by pulling the same resources ourselves, with no message
-  // on the wire. If a video happens to be playing already, the page's own
-  // player exercises the identical paths and this only adds redundancy.
-  await evaluate('(()=>{' +
-    'window.__cspYt={oembed:null};' +
-    'const s=document.createElement("script");' +
-    's.src="https://www.youtube.com/iframe_api";' +          /* script-src */
-    'document.head.appendChild(s);' +
-    'const f=document.createElement("iframe");' +
-    'f.id="csp-yt-frame";f.style.cssText="position:fixed;left:-9999px;width:320px;height:180px";' +
-    'f.src="https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?autoplay=0&mute=1";' +   /* frame-src */
-    'document.body.appendChild(f);' +
-    'fetch("https://www.youtube.com/oembed?url=https%3A%2F%2Fyoutu.be%2FdQw4w9WgXcQ&format=json")' +
-    '.then(r=>{window.__cspYt.oembed=r.ok?"ok":("http "+r.status);})' +
-    '.catch(e=>{window.__cspYt.oembed="failed: "+e.message;});' +   /* connect-src */
-    '})()');
-  // poll rather than sleep a fixed span: the oembed round trip, the api script
-  // and the player iframe are three real network hops, and a fixed wait that is
-  // merely usually long enough turns a pass/fail gate into a coin toss
-  const probeYt = '(()=>({ api: typeof window.YT,' +
-    'apiScript: !!document.querySelector(\'script[src*="youtube.com/iframe_api"]\'),' +
-    'frames: [...document.querySelectorAll("iframe")].map(f=>(f.src||("#"+f.id)).slice(0,56)) }))()';
-  let yt;
-  for (let i = 0; i < 30; i++) {
-    await sleep(1000);
-    yt = await evaluate(probeYt);
-    if (yt.api === "object" && yt.frames.some(f => f.indexOf("youtube-nocookie.com") >= 0)) break;
+  // one same-origin clip is enough: music sits in the same origin under the same
+  // directive, so if this loads the whole playlist is covered too
+  await evaluate('(()=>{ window.__cspMedia = "pending";' +
+    'const v = document.createElement("video"); v.preload = "metadata"; v.muted = true;' +
+    'v.onloadedmetadata = () => { window.__cspMedia = v.videoWidth > 0 ? "ok" : "zero-size"; };' +
+    'v.onerror = () => { window.__cspMedia = "blocked"; };' +
+    'v.src = "video/i-am-a-pc.webm"; })()');
+  let media = "pending";
+  for (let i = 0; i < 20; i++) {
+    await sleep(700);
+    media = await evaluate("window.__cspMedia");
+    if (media !== "pending") break;
   }
-  const oem = await evaluate('(window.__cspYt||{}).oembed');
-  console.log("  youtube: " + JSON.stringify(yt) + " oembed=" + oem);
-  if (typeof oem === "string" && oem.indexOf("failed") === 0) {
-    const blockedFetch = [...violations, ...blocked].some(x => /oembed|youtube\.com/i.test(x || ""));
-    if (blockedFetch) bail("FAILED: connect-src blocked the oembed request the TV uses for titles.", 1);
-    console.warn("  UNVERIFIED: the oembed fetch failed with no CSP objection (" + oem + ")");
-  }
+  console.log("  media: " + media);
+  if (media !== "ok")
+    bail("FAILED: a same-origin clip did not load (" + media + ") — media-src is blocking " +
+      "the files Winamp and Media Player exist to play.", 1);
 
-  // This leg leans on a third party that sometimes just does not answer inside
-  // the 12s the app itself allows before it gives up. Failing the *policy* for
-  // that would make the gate cry wolf, and a gate that cries wolf gets ignored
-  // — which costs more than it ever saves. So split the two cases on evidence:
-  // if the browser said it blocked something YouTube-shaped, the policy is
-  // wrong and this fails. If it said nothing and YouTube simply never showed
-  // up, the leg is unverified — say so, loudly, and do not call it a pass.
-  const ytEvidence = [...violations, ...blocked].filter(s => /youtube|ytimg/i.test(s || ""));
-  const ytOk = yt.api === "object" && yt.frames.some(f => f.indexOf("youtube-nocookie.com") >= 0);
-  if (!ytOk && ytEvidence.length)
-    bail("FAILED: the policy blocked the TV's YouTube traffic —\n    " + ytEvidence.join("\n    "), 1);
-  if (!yt.apiScript) {
-    ytVerified = false;
-    console.warn("  UNVERIFIED: the TV never requested youtube.com/iframe_api at all, so this run " +
-      "did not reach the code path script-src and frame-src exist for.");
-  } else if (!ytOk) {
-    ytVerified = false;
-    console.warn("  UNVERIFIED: youtube.com/iframe_api was requested and the browser reported no " +
-      "CSP objection, but window.YT never initialised. The policy is not implicated; this leg " +
-      "simply went untested. What YouTube actually returned:");
-    for (const t of [...new Set(thirdParty)]) console.warn("      " + t);
-  }
 
   /* --- pass 2: the network-touching apps, behind the #desktop dev hash --- */
   console.log("\npass 2 — Winamp (data: skin, blob: icons) and Solitaire (same-origin iframe + injected <style>)");
@@ -405,8 +357,6 @@ if (v.length || b.length) {
   console.error("\nFAILED: the policy that ships breaks the app that ships.");
   process.exit(1);
 }
-console.log("OK — every header in vercel.json served, 0 violations, 0 blocked requests, app mounted and styled." +
-  (ytVerified ? "" : "\nNOTE: green everywhere it looked, but the YouTube leg above went unverified — " +
-    "script-src https://www.youtube.com and frame-src https://www.youtube-nocookie.com are unproven " +
-    "by THIS run. Re-run before trusting them."));
+console.log("hosts contacted: " + (seenHosts.join(", ") || "(none)"));
+console.log("OK — every header in vercel.json served, 0 violations, 0 blocked requests, app mounted and styled.");
 process.exit(0);
