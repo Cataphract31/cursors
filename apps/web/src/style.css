@@ -2259,6 +2259,16 @@ body.mobile .npt td.note{display:none}
   100%{filter:none;transform:scale(1)}
 }
 .cur.promote>svg,.cur.promote>img.curskin{animation:promote .5s ease-out}
+/* Portrait phones counter-rotate the sprite, and an animation that sets
+   transform overwrites that rotation for its whole duration — a promoting
+   cursor spun to point up-RIGHT for half a second. Same reason .dueling has
+   shakeRot; promote needs its own rotated twin. */
+@keyframes promoteRot{
+  0%{filter:none;transform:rotate(-90deg) scale(1)}
+  35%{filter:drop-shadow(0 0 6px #ffd75e) drop-shadow(0 0 14px #ffb020);transform:rotate(-90deg) scale(1.22)}
+  100%{filter:none;transform:rotate(-90deg) scale(1)}
+}
+#arena.rot .cur.promote>svg,#arena.rot .cur.promote>img.curskin{animation:promoteRot .5s ease-out}
 @media (prefers-reduced-motion:reduce){ .cur.promote>svg,.cur.promote>img.curskin{animation:none} }
 
 

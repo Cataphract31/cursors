@@ -99,7 +99,10 @@ export function initMouse(deps) {
       if (!a.steps.length) return;
       let i = 0;
       const tick = () => {
-        if (!img.isConnected && img._started) return;   /* dropped from the DOM: stop */
+        /* stop when it is gone OR merely not rendered: closeWin only hides the
+           dialog, so isConnected stayed true and nine .ani chains kept decoding
+           frames for the life of the page — a real battery cost on a phone */
+        if (img._started && (!img.isConnected || !img.getClientRects().length)) { img._started = 0; return; }
         img._started = 1;
         img.src = a.steps[i].u;
         const ms = Math.max(30, a.steps[i].ms);

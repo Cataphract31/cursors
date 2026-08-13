@@ -4062,6 +4062,45 @@ const mayFight=(a,b)=>{const big=a.bounty>=b.bounty?a:b,small=big===a?b:a;
    Properties still dresses your own desktop pointer; it stopped dressing your
    cursors out there when the arrow had to start meaning your size, which it
    cannot do while also meaning which scheme you like. */
+/* A .cur is a 32x32 canvas with the arrow parked in its top-left corner, so
+   sizing the <img> to the SVG's 17x26 box did two wrong things at once: it
+   squashed a square source into a 0.65 aspect, and it drew the visible arrow
+   at about a third of the size of an UNSKINNED one. The weight-class ladder
+   inverted at the first promotion — a x4 cursor rendered narrower than a x1.
+   So measure the opaque box once per scheme and scale so the GLYPH fills the
+   intended box. Size then means bounty and art means rank, which is the whole
+   point of having both. */
+const glyphBox={};                     /* url -> {sx,sy,sw,sh,W,H} */
+function withGlyphBox(url,cb){
+  if(glyphBox[url]) return cb(glyphBox[url]);
+  const im=new Image();
+  im.onload=()=>{
+    const W=im.naturalWidth||32, H=im.naturalHeight||32;
+    let box={sx:0,sy:0,sw:W,sh:H,W,H};
+    try{
+      const cv=document.createElement("canvas"); cv.width=W; cv.height=H;
+      const cx=cv.getContext("2d",{willReadFrequently:true});
+      cx.drawImage(im,0,0);
+      const d=cx.getImageData(0,0,W,H).data;
+      let x0=W,y0=H,x1=-1,y1=-1;
+      for(let y=0;y<H;y++) for(let x=0;x<W;x++)
+        if(d[(y*W+x)*4+3]>24){ if(x<x0)x0=x; if(x>x1)x1=x; if(y<y0)y0=y; if(y>y1)y1=y; }
+      if(x1>=x0&&y1>=y0) box={sx:x0,sy:y0,sw:x1-x0+1,sh:y1-y0+1,W,H};
+    }catch(e){}                        /* tainted canvas: fall back to the whole sheet */
+    glyphBox[url]=box; cb(box);
+  };
+  im.onerror=()=>cb(null);
+  im.src=url;
+}
+/* size a sprite so its GLYPH fills w x h, keeping the glyph's own aspect, and
+   pull the canvas back so the glyph's corner sits where the svg's did */
+function sizeSprite(sv,w,h){
+  const g=sv._gbox;
+  if(!g){ sv.style.width=w+"px"; sv.style.height=h+"px"; sv.style.margin=""; return; }
+  const k=Math.min(w/g.sw,h/g.sh);
+  sv.style.width=(g.W*k)+"px"; sv.style.height=(g.H*k)+"px";
+  sv.style.marginLeft=(-g.sx*k)+"px"; sv.style.marginTop=(-g.sy*k)+"px";
+}
 function skinCurEl(el,skin){
   if(!mouse) return;
   if(!skin){                                                 /* back to the plain arrow */
@@ -4079,6 +4118,14 @@ function skinCurEl(el,skin){
     if(old.style.width) img.style.width=old.style.width;     /* keep the bounty/cmag size */
     if(old.style.height) img.style.height=old.style.height;
     old.replaceWith(img);
+    /* the real size lands once the glyph box is known; until then it wears the
+       svg's box, which is the old behaviour and only lasts one decode */
+    /* The decode lands a frame or two later, so re-apply the size then. The
+       target box is stashed on the container by updateTag rather than looked
+       up through curs[], because static sprites (the #desktop-ranks chart)
+       legitimately live outside the cursor list and still need sizing. */
+    withGlyphBox(u,g=>{ if(!g||!img.isConnected) return; img._gbox=g;
+      sizeSprite(img, el._tw||17, el._th||26); });
   });
 }
 /* A promotion is the moment of the round, so it has to be visible the instant
@@ -4087,8 +4134,12 @@ function skinCurEl(el,skin){
 function tierSkin(c){
   const t=tierOf(c.bounty);
   if(c.tier===t) return;
+  /* first classification is not a promotion. Without this, joining or
+     resyncing mid-epoch flared every cursor the server described above
+     plankton — and forced one synchronous layout per cursor while doing it. */
+  const first=c.tier===undefined;
   c.tier=t; skinCurEl(c.el,TIER_SKINS[t]);
-  if(t>0&&c.el) { c.el.classList.remove("promote"); void c.el.offsetWidth; c.el.classList.add("promote"); }
+  if(!first&&t>0&&c.el){ c.el.classList.remove("promote"); void c.el.offsetWidth; c.el.classList.add("promote"); }
 }
 function makeCur(owner,isMine){
   const el=document.createElement("div");
@@ -4139,7 +4190,8 @@ function updateTag(c){
      in the layer but before the caller could take ownership of it. The result
      was an untracked arrow parked at the layer origin forever. */
   const sv=c.el.querySelector("svg,.curskin");
-  if(sv){ sv.style.width=(17*v)+"px"; sv.style.height=(26*v)+"px"; }
+  c.el._tw=17*v; c.el._th=26*v;      /* the async skin swap re-reads these */
+  if(sv) sizeSprite(sv,17*v,26*v);
   const tag=c.el.querySelector(".tag");
   /* rotated view: the tag's anchor maps (screenX,screenY)=(−top,+left), so
      these offsets land it just under the counter-rotated sprite */
