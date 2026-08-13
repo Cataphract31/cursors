@@ -26,16 +26,16 @@ Second game alongside **THIN ICE** (`c:\ZINC`), the owner's other Solana casino 
 
 | | |
 |---|---|
-| Repo | `C:\CURSORS` (own git repo, branch `master`) |
+| Repo | `C:\CURSORS` (own git repo, branch `main`) |
 | App | `apps/web` — npm workspace, Vite |
 | Dev | `npm run dev` in `C:\CURSORS` → http://localhost:5173 |
-| Build | `npm run build` → smoke test → Vite → `apps/web/dist/` → mirrored into `upload/cursors/` |
-| Deploy | `upload/cursors/` — committed build output, served by the owner's Vercel project (Root Directory = `upload/cursors`, **no build step**; see the README in that folder). **Claude artifacts are deprecated** (owner, 2026-08-09) — do not publish them |
+| Build | `npm run build` → smoke test → Vite → `apps/web/dist/` (multi-file; nothing built is committed) |
+| Deploy | **Push to `main`.** Vercel builds this repo itself: root `vercel.json` runs `npm run build` and serves `apps/web/dist`. There is no `upload/` mirror any more, and no committed build output. **Claude artifacts are deprecated** (owner, 2026-08-09) — do not publish the game as one |
 | Server | `server/` — the beta multiplayer server (Node 22, `ws`, node:sqlite). Live at `wss://cursors.34-70-75-204.sslip.io` on the THIN ICE GCP box (separate service/port/host — see `server/DEPLOY.md`). Local dev: `cd server && FAST=1 node server.js`, client hash `#desktop-mp` |
 | Sibling repo | `c:\ZINC` = THIN ICE. **Copy from it, never edit it.** |
 
 Source layout (`apps/web/src/`):
-- `main.js` (~1800 lines) — shell, window manager, desktop, game sim, boot/login
+- `main.js` (~6000 lines) — shell, window manager, desktop, game sim, boot/login
 - `minesweeper.js`, `messenger.js`, `paint.js`, `explorer.js` — self-contained app modules,
   **import-free on purpose**
   (the build's smoke runner executes them in node; main.js injects assets + shell hooks)
@@ -72,12 +72,23 @@ Source layout (`apps/web/src/`):
 
 ## 4. Design decisions locked
 
-- **Auto-battler, NOT steerable.** You command from a dashboard: ATTACK (hunt nearest),
-  DEFEND (evade + regroup), RECALL (3s fixed-tick bank). Owner reversed steering because
-  same-speed cursors + direct control = kiting forever. Three verbs also fit a thumb.
+- **Auto-battler, NOT steerable.** Owner reversed steering because same-speed cursors +
+  direct control = kiting forever. **Two verbs now: DEPLOY and RECALL** (3s fixed-tick
+  bank). ATTACK/DEFEND were cut 2026-08-13 when the food chain landed — DEFEND existed to
+  let a small cursor refuse a hopeless fight, and a 4x engagement rule refuses it for them.
+- **The food chain (2026-08-13).** A cursor only fights inside **4x** its own size; outside
+  that they pass through each other. It decides which fights HAPPEN, never how they resolve,
+  so duels are still `A/(A+B)` and the ladder still prices xN at 1/N. Weight classes are the
+  visible half: one rank per 4x step (plain / 3D-White / 3D-Bronze / Dinosaur), a real XP
+  pointer scheme each, swapped live mid-round. `FOOD_CHAIN`, `canFight`, `tierOf` in
+  `server/sim.js`, mirrored in `main.js`.
 - **Rounds**: join 10s → battle 60s (shutdown last 12s) → results 6s. **Deploys stay open
   the entire battle** — death is a re-buy prompt, not a bench.
-- **Fixed logical arena: 1280×800 units, scaled to fit.** Not "your window size" — that was
+- **The field is sized to the crowd** at each epoch start (~32k px2 per cursor, 16:10,
+  capped at 3x), announced with the seed commit and carried in the snapshot and welcome. The
+  fairness rule is that everyone in a ROUND shares one field — it was never "1280x800 for
+  all time". 1280x800 is now the BASE size, used at low population and offline.
+- **Fixed logical arena: base 1280×800 units, scaled to fit.** Not "your window size" — that was
   a fairness bug (different-sized battlefields = different EV). Client only scales it.
   Sprites counter-magnify below ~0.52 scale; collision radii stay logical, so zoom is cosmetic.
 - **One global 0.1 SOL room.** Liquidity beats stake tiers at launch traffic.
@@ -144,7 +155,7 @@ authoritative: `server/` runs the same sim (a faithful port of main.js's rules �
 movement, same a/(a+b) duels, same fees) as the single authority over every balance.
 Play money: every visitor gets 5.000 SOL, a beta faucet refills anyone who busts, the
 7 bots play server-side as full economic participants. The client becomes a display
-when connected (deploys/stances/recalls are requests; positions arrive as 10Hz snapshots,
+when connected (deploys/recalls are requests; positions arrive as 10Hz snapshots,
 lerped client-side; deaths/banks arrive as events and reuse the solo FX paths verbatim) and
 falls back to the untouched offline sandbox when the server is unreachable — dev hashes
 always stay offline, `#desktop-mp*` forces localhost, `?server=` overrides. Names are
@@ -226,7 +237,7 @@ red at 92%. The tray chip, the gauge and Explorer's C: pie chart all read from o
 labelled *Bots (they play for real money too)*. Knowing whether anyone else is in the lobby
 is the most useful thing a multiplayer beta can show, and the bots stay honestly labelled.
 
-**The game** — deploy/recall/stances, duels with odds display, gold bursts, kill streaks,
+**The game** — deploy/recall, duels with odds display, gold bursts, kill streaks,
 BSOD on losing your last cursor, rakeback tracking, autoplay. Every death writes a
 certificate (`certify()` in main.js) that the Recycle Bin renders.
 
@@ -353,7 +364,7 @@ rush, ~18.5s the crash dialog, ~27s the recovered arena).
 - **Mobile check**: `--window-size=390,844`. Mobile is expected to be the majority playerbase.
 - Commits: one-line summary in plain language saying what changed and why, then detail.
   End with `Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>`.
-- Owner plays every build — `npm run build` refreshes `upload/cursors/`; commit and push,
+- Owner plays every build — commit and push,
   Vercel redeploys automatically. Say what to look at. Do **not** publish Claude artifacts.
 - **The build is multi-file, and that is deliberate** (changed 2026-08-09 once artifacts
   were dropped). It used to be one inlined HTML file because the artifact host demanded it,
@@ -363,7 +374,7 @@ rush, ~18.5s the crash dialog, ~27s the recovered arena).
   content-hashed filenames + `vercel.json` cache headers make redeploys re-download almost
   nothing. First paint ≈ **0.5 MB gzipped**. Do not reintroduce `vite-plugin-singlefile`.
 - Testing the shipped folder needs a **web server**, not `file://` — ES modules are blocked
-  by CORS on file URLs. `cd upload/cursors && python -m http.server 8099`, then point
+  by CORS on file URLs. `cd apps/web/dist && python -m http.server 8099`, then point
   shot.mjs at `http://localhost:8099/index.html`. Add `?server=off` for the offline sandbox
   or `?server=wss://…` to aim at a server.
 
@@ -507,7 +518,7 @@ second):
    `TREE` Explorer walks (`explorer.list(path)`): cd/dir/tree/type resolve real paths and
    real sizes, plus ver/vol/date/time/echo/color/cls/hostname/ipconfig/ping/systeminfo/
    tasklist/taskkill/net start/sc query/start, and the game as commands — `ARENA`,
-   `ARENA /LIST`, `ARENA /DISK`, `CURSOR /DEPLOY|/RECALL|/STANCE|/LIST`. Destructive verbs
+   `ARENA /LIST`, `ARENA /DISK`, `CURSOR /DEPLOY|/RECALL|/LIST`. Destructive verbs
    answer "Access is denied." Keyboard comes through a hidden input so a phone raises its
    on-screen keyboard and `--kb` lifts the window. **Control Panel** has XP's category view
    (eight categories, task lists, blue side pane) and classic view, persisted; applets open
@@ -640,13 +651,32 @@ rng.dll, kernel32.dll, luck.dll, shell32.dll with real sizes. Dev hashes: `#desk
   clamp moved from 6px to 24px inside the field. Edge-hugging cursor-frames **1.31 -> 0.32**.
 - *"me and another cursor just draw circles in a loop"* - turn radius is speed/turn-rate:
   ~100px/s at 2.6 rad/s is a 38px circle and contact needs 20px, so an attacker could orbit
-  its target forever. Inside 130px the turn rate triples, **and attacking is 12% faster while
-  defending is 10% slower**, so a hunt terminates. DEFEND still buys time; it is no longer
-  immortality. Duel odds are untouched, so EV does not move. Kills went **45.7 -> 48/min**.
+  its target forever. Inside 130px the turn rate triples, so a hunt terminates. Duel odds are
+  untouched, so EV does not move. Kills went **45.7 -> 48/min**. *(The +12% chase / -10% flee
+  pair that shipped alongside this was removed 2026-08-13 with the stances — with nobody
+  fleeing it was a bonus everyone held at once.)*
 - *"i seem to always deploy from the same place"* - correct, and it was the same place for
   every player: humans spawned in a 120px band at bottom-centre. The edge is sampled properly
-  now and the emptiest of eight candidates wins. Recall glides out through your own nearest
-  edge point instead of every recall funnelling to (40, AH).
+  now and the emptiest of eight candidates wins. *(Superseded 2026-08-13: every human still
+  spawned along the BOTTOM edge, which put 87% of the field and 96% of all deaths in the
+  bottom quarter. Each player now draws a taskbar edge per epoch and recalls out through
+  the same wall.)*
+
+**Arena rules, 2026-08-13 — the food chain (see §4):**
+- Cursors only fight inside **4x** their own size, so a fresh deploy cannot be eaten by a
+  whale and a whale has to find something its own size. Farming of fresh deploys 83% -> 0%.
+- **Weight classes**: one rank per 4x step, each a real XP pointer scheme, swapped live
+  mid-round. Rank steps are 4x *because* that is the rule's reach — 2x ranks were tried and
+  reverted, since a step that does not line up with the rule is just a colour change.
+- **Stances removed.** DEPLOY and RECALL are the only verbs now.
+- **Spawn edges** per player per epoch, drawn from the epoch seed; recall exits the same wall.
+- **The field scales with the crowd** (~32k px2/cursor, 16:10, cap 3x), announced with the
+  seed commit and carried in the snapshot and welcome.
+- Cursors grow harder: `s = min(4, 1 + .5*log2(m))`, was `min(2.6, 1 + .35*log2(m))`.
+- Measured no-ops, do not re-propose: a winnings cap (whales are fungible — retire one and
+  the next grows into the vacancy) and a stronger fat-is-slow penalty.
+- Tooling: `scripts/tourshot.mjs` clips a capture to an element box (How to Play slides) and
+  does mid-session `ROTATE=WxH`. Dev fixture `#desktop-ranks` stages the weight-class chart.
 - **xp.css draws checkboxes through an ADJACENT label** (the input is `position:fixed;
   opacity:0`). Every checkbox in this app is wrapped *inside* its label, so all of them had
   been rendering as bare text with nothing to tick - "Save this user name and password", the
@@ -720,7 +750,7 @@ The full plan is `docs/xp-fidelity-plan.md`; phases 0–6 shipped in order, one 
   writes refused with the real error). Reachable via Run, All Programs, system32.
 
 Server deployed twice (skin field, tvMsg) — `cursors` and `thinice` both verified
-active after each. `upload/cursors/` rebuilt and committed with every phase.
+active after each.
 First paint 2.42 → 2.56 MB across the whole sweep (the cursor set and all four MP3s
 stay out of it).
 

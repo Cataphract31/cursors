@@ -383,7 +383,7 @@ export function initSysApps(deps) {
         ["Registered Owner", i.owner],
         ["System Up Time", i.uptime],
         ["System Manufacturer", "cursor$land"],
-        ["System Model", "ARENA-1280x800"],
+        ["System Model", "ARENA-16:10"],
         ["Total Physical Memory", i.memTotal],
         ["Available Physical Memory", i.memFree],
         ["Page File Location(s)", "C:\\pagefile.sys"],
@@ -493,7 +493,6 @@ export function initSysApps(deps) {
         cmdWrite("CURSOR /LIST                   Your cursors.");
         cmdWrite("CURSOR /DEPLOY [n]             Deploy n cursors, 0.1 SOL each.");
         cmdWrite("CURSOR /RECALL                 Bank everything you have out.");
-        cmdWrite("CURSOR /STANCE ATTACK|DEFEND   Standing order for all of them.");
         return;
       }
       if (sub === "/LIST") {
@@ -512,13 +511,6 @@ export function initSysApps(deps) {
         return;
       }
       if (sub === "/RECALL") { hooks.recall(); cmdWrite("Recall order issued. Banking takes three seconds."); return; }
-      if (sub === "/STANCE") {
-        const st = (parts[1] || "").toLowerCase();
-        if (st !== "attack" && st !== "defend") { cmdWrite("Usage: CURSOR /STANCE ATTACK|DEFEND"); return; }
-        hooks.stance(st);
-        cmdWrite("Standing order: " + st.toUpperCase());
-        return;
-      }
       cmdWrite("Invalid switch. Type CURSOR /? for usage.");
     },
   };

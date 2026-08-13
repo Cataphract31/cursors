@@ -89,7 +89,7 @@ const angDiff = a => { while (a > Math.PI) a -= 2 * Math.PI; while (a < -Math.PI
 export function createSim(opts) {
   /* per-sim, not per-module: two sims in one process (the test rig does this)
      must not share a field size */
-  let AW = BASE_AW, AH = BASE_AH;
+  let AW = BASE_AW, AH = BASE_AH, ARENA_K = 1;
   const emit = opts.emit;                       /* (evt) => void — server forwards */
   const CORPSES = opts.corpses || 900;          /* deaths that fill the disk */
   /* The rush is a short dramatic window, not a fraction of the round. It used
@@ -109,16 +109,23 @@ export function createSim(opts) {
   let simClock = 0;
   let rushAt = null, crashUntil = 0, deploysOpen = false;
   let R = null;
-  let botQueue = [], botTimer = 0, peakCurs = 0;
+  let botQueue = [], botTimer = 0, liveSum = 0, liveN = 0, arenaN = 0;
   let platformFees = 0;
 
-  const now = () => Date.now();
+  /* Sim time, not wall time. Motion integrates on a fixed dt, so anything that
+     gates on a clock has to use the same one or the round stops being a
+     function of the seed: a 17ms event-loop hiccup used to change which cursor
+     won a duel thousands of ticks later, which makes the commit/reveal
+     ceremony a decoration. Ticket decay is the one real-time thing here (a
+     45-day half-life is wall-clock by definition), so it keeps Date.now. */
+  const now = () => simClock;
+  const wallNow = () => Date.now();
   const rand = (a, b) => a + rng.next() * (b - a);
   const pick = a => a[Math.floor(rng.next() * a.length)];
 
   /* ---------- players & money ---------- */
   function decayTickets(p) {
-    const t = now();
+    const t = wallNow();
     if (p.tickets > 0 && p.ticketsAt) {
       p.tickets *= Math.pow(2, -(t - p.ticketsAt) / HALF_LIFE_MS);
       if (p.tickets < 0.01) p.tickets = 0;
@@ -130,7 +137,7 @@ export function createSim(opts) {
     if (p) { p.name = name; return p; }
     p = Object.assign({
       key, name, bot: !!bot, balance: bot ? BOT_REFILL : 5000,
-      tickets: 0, ticketsAt: now(), rake: 0, skin: "",
+      tickets: 0, ticketsAt: wallNow(), rake: 0, skin: "",
       epochIn: 0, epochOut: 0, totIn: 0, totOut: 0,
     }, persisted || {});
     p.key = key; p.name = name; p.bot = !!bot;
@@ -183,7 +190,7 @@ export function createSim(opts) {
       const { x, y } = edgePoint(side);
       const d = nearestCurDist2(x, y);
       if (d > bestD) { bestD = d; best = { x, y, side }; }
-      if (d > 200 * 200) break;                            /* far enough, stop looking */
+      if (d > (200 * ARENA_K) ** 2) break;                  /* far enough, stop looking */
     }
     return best;
   }
@@ -195,7 +202,7 @@ export function createSim(opts) {
       bounty: ENTRY, mode: "roam", prevMode: "roam", recallT: 0,
       graceUntil: now() + GRACE_MS, riskAt: 1.5 + rng.next() * 5,
       s: 1, r: 10, kills: 0, peak: ENTRY, born: now(), epoch: epochNo,
-      duelUntil: 0, duelPA: 0, duelFoe: 0,
+      duelUntil: 0, duelFoe: 0,
     };
     curs.push(c);
     return c;
@@ -230,6 +237,16 @@ export function createSim(opts) {
     money(p);
     return null;
   }
+  /* undeploy: spawn grace means it cannot have fought, so there is nothing to
+     game and the whole stake comes back */
+  function refundCur(p, c) {
+    p.balance += STAKE;
+    decayTickets(p); p.tickets = Math.max(0, p.tickets - TICKETS_PER_DEPLOY);
+    p.epochIn -= STAKE; p.totIn -= STAKE;
+    R.pot -= ENTRY; R.deploys--; platformFees -= FEE_PLAT;
+    removeCur(c);
+    emit({ t: "refund", id: c.id, owner: c.owner });
+  }
   function requestRecall(key) {
     /* one verb, two meanings, exactly like the client: cursors still inside
        spawn grace undeploy for a full refund (they cannot have fought yet,
@@ -237,21 +254,21 @@ export function createSim(opts) {
     const p = players.get(key); if (!p) return;
     let refunded = 0;
     for (const c of [...cursOf(key)]) {
-      if (graced(c) && c.mode === "roam") {
-        p.balance += STAKE;
-        decayTickets(p); p.tickets = Math.max(0, p.tickets - TICKETS_PER_DEPLOY);
-        p.epochIn -= STAKE; p.totIn -= STAKE;
-        R.pot -= ENTRY; R.deploys--; platformFees -= FEE_PLAT;
-        removeCur(c);
-        emit({ t: "refund", id: c.id, owner: c.owner });
-        refunded++;
-      } else if (c.mode === "roam" || c.mode === "duel") forceRecall(c);
+      if (graced(c) && c.mode === "roam") { refundCur(p, c); refunded++; }
+      else if (c.mode === "roam" || c.mode === "duel") forceRecall(c);
     }
     if (refunded) money(p);
   }
   function recallOne(key, id) {
+    const p = players.get(key); if (!p) return;
     const c = curs.find(c => c.id === id && c.key === key);
-    if (c && (c.mode === "roam" || c.mode === "duel") && !graced(c)) forceRecall(c);
+    if (!c) return;
+    /* This used to drop a graced cursor on the floor — no refund, no recall, no
+       reply — while RECALL ALL refunded the very same cursor. The client then
+       latched the slot for six seconds, by which time grace had lapsed and the
+       retry banked 0.097 instead of refunding 0.100. One tap, one meaning. */
+    if (graced(c) && c.mode === "roam") { refundCur(p, c); money(p); return; }
+    if (c.mode === "roam" || c.mode === "duel") forceRecall(c);
   }
   function cancelRecall(key) {
     /* changed your mind inside the 3s glide. Recalling cursors stay
@@ -333,7 +350,7 @@ export function createSim(opts) {
          38px circle, and contact needs 20px — so an attacker could literally
          orbit its target forever without touching it. Close in, turn hard. */
       if (bd < 130 * 130) turn *= 2.8;
-      if (bd < 520 * 520) { tx = best.x; ty = best.y; }
+      if (bd < (520 * ARENA_K) ** 2) { tx = best.x; ty = best.y; }
     }
     /* Your own cursors regroup, but they must never stack. They cannot fight
        each other, so a pile of them reads as a bug — two arrows sitting in the
@@ -386,7 +403,10 @@ export function createSim(opts) {
        the cursor is against a wall, so mirror the heading off it. A bounce
        cannot get stuck the way a slow turn can. */
     const ux = c.x + Math.cos(c.h) * sp * dt, uy = c.y + Math.sin(c.h) * sp * dt;
-    c.x = clamp(ux, 24, AW - 24); c.y = clamp(uy, 24, AH - 24);
+    /* keep the BODY inside the field, not just the centre: the size curve took
+       r from 26 to 40 and a whale was drawn half-outside the wall */
+    const pad = Math.max(24, c.r);
+    c.x = clamp(ux, pad, AW - pad); c.y = clamp(uy, pad, AH - pad);
     if (c.x !== ux) c.h = Math.PI - c.h;
     if (c.y !== uy) c.h = -c.h;
   }
@@ -398,7 +418,6 @@ export function createSim(opts) {
     a.duelUntil = b.duelUntil = now() + DUEL_MS;
     a.duelFoe = b.id; b.duelFoe = a.id;
     const pA = a.bounty / (a.bounty + b.bounty);
-    a.duelPA = pA; b.duelPA = 1 - pA;
     emit({ t: "duel", a: a.id, b: b.id, pA: Math.round(100 * pA) });
   }
   function certify(l, w, pLose) {
@@ -434,7 +453,13 @@ export function createSim(opts) {
   /* ---------- epoch lifecycle ---------- */
   function startRush() {
     rushAt = now();
-    for (const c of curs) if (c.mode !== "duel") forceRecall(c);
+    /* every cursor, duellists included — forceRecall has a branch for exactly
+       that case (it arms prevMode so resolveDuel restores into the glide).
+       Filtering them out here meant a cursor that happened to be mid-duel when
+       the rush fired came back to "roam" and hunted a field of defenceless
+       gliding cursors for the rest of the shutdown: 90% of all rush-window
+       kills were made by cursors this sweep forgot. */
+    for (const c of curs) forceRecall(c);
     emit({ t: "rush", secs: RUSH_MS / 1000 });
   }
   function crash() {
@@ -452,7 +477,7 @@ export function createSim(opts) {
         if (p.tickets > 0) { p.rake += pool * (p.tickets / totalT); money(p); }
     const receipt = {
       no: epochNo, up: Math.round(upT - epochStart), pot: R.pot, deploys: R.deploys,
-      deaths: R.deaths, top: R.bigBank, seed: seedHex, commit,
+      deaths: R.deaths, top: R.bigBank, seed: seedHex, commit, fees: platformFees,
     };
     phase = "crash"; crashUntil = now() + CRASH_MS; rushAt = null; deploysOpen = false;
     emit({ t: "crash", ...receipt });
@@ -467,12 +492,23 @@ export function createSim(opts) {
     const want = Math.max(1, n) * PX2_PER_CUR;
     const k = clamp(Math.sqrt(want / (BASE_AW * BASE_AH)), 1, ARENA_MAX);
     AW = Math.round(BASE_AW * k); AH = Math.round(BASE_AH * k);
+    /* Sensing has to scale with the field or the point is lost: on a 3x field
+       with an absolute 520px acquisition radius, cursors wander blind and a
+       round takes 2.4x longer instead of playing the same. */
+    ARENA_K = k;
   }
   function startEpoch() {
     epochNo++;
-    sizeArena(peakCurs);
-    peakCurs = 0;
-    seedHex = newSeedHex(); commit = commitOf(seedHex);
+    /* an average over the epoch, then smoothed across epochs — peak made one
+       busy tick decide the next round's whole field */
+    const avg = liveN ? liveSum / liveN : 0;
+    arenaN = arenaN ? arenaN * .5 + avg * .5 : avg;
+    liveSum = 0; liveN = 0;
+    sizeArena(arenaN);
+    /* opts.seed pins every epoch to one seed. Replay verification needs this
+       (see the engine track), and it is how the suite proves a round is a
+       function of the seed rather than of event-loop jitter. */
+    seedHex = opts.seed || newSeedHex(); commit = commitOf(seedHex);
     rng = rngFromSeedHex(seedHex);
     R = { pot: 0, deploys: 0, deaths: 0, banked: 0, bigBank: null };
     epochDeaths = 0; epochStart = upT; rushAt = null;
@@ -490,7 +526,7 @@ export function createSim(opts) {
   /* ---------- the loop ---------- */
   function tick(dt) {
     upT += dt; simClock += dt * 1000;
-    if (curs.length > peakCurs) peakCurs = curs.length;
+    liveSum += curs.length; liveN++;
     if (phase === "crash") {
       if (now() >= crashUntil) startEpoch();
       return;
@@ -572,7 +608,7 @@ export function createSim(opts) {
     tick, snapshot, welcomeState,
     registerPlayer, requestDeploy, requestRecall, recallOne, cancelRecall,
     players, cursCount: () => curs.length,
-    diskUsed, DISK_TOTAL, CORPSES,
+    diskUsed, DISK_TOTAL, CORPSES, fees: () => platformFees,
     arena: () => ({ aw: AW, ah: AH }),
     epochNo: () => epochNo, phase: () => phase,
     claimRake: key => {

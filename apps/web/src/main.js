@@ -3047,7 +3047,7 @@ function showBalloon(head,text){
   try{ access.narrate&&access.narrate(String(head)+". "+String(text)); }catch(e){}
   if(!toastsOn||(sys&&sys.policyOn("nobal"))) return;   /* Messenger service / policy */
   $("#balloon-h").textContent=head||"Take a tour of CURSORS.EXE";
-  $("#balloon-t").textContent=text||"auto-battler. deploy any time. attack or defend from the dashboard. bank before shutdown.";
+  $("#balloon-t").textContent=text||"auto-battler. deploy any time. you only fight your own weight class. bank before shutdown.";
   $("#balloon").style.display="block"; sBalloon();
   clearTimeout(balloonT);
   balloonT=setTimeout(()=>{ $("#balloon").style.display="none"; },8500);
@@ -4249,7 +4249,7 @@ function fmtUp(s){
 }
 /* The disk is the round clock now, so it gets a real gauge instead of a
    percentage buried in a status line. Offline there is no epoch budget, so the
-   sandbox counts its own dead against the same nominal 64. */
+   sandbox counts its own dead against LOCAL_CORPSES. */
 let lastDisk=-1;
 function diskPct(){
   const cap=MP.on?(MP.corpses||900):LOCAL_CORPSES;
@@ -4349,7 +4349,11 @@ function recallAll(){
        the click played, nothing was sent, and the player believed they had
        banked while their cursors kept fighting */
     if(netStalled()){ log("reconnecting — recall not sent"); renderPhase(); updatePanel(); return; }
-    const rc=[...mpCurs.values()].some(c=>c.isMine&&c.mode==="recall");
+    const mine=[...mpCurs.values()].filter(c=>c.isMine);
+    /* grace wins, exactly as the label and the offline path decide it: a
+       graced cursor means this click is an undeploy, not a cancel */
+    const rc=!mine.some(c=>c.grace>0)&&
+      mine.some(c=>c.mode==="recall"||(c.mode==="duel"&&c.prevMode==="recall"));
     mpSend({t:rc?"recallCancel":"recall"}); sClick(); return;
   }
   /* tapping again inside the 3s glide = changed your mind */
@@ -4366,6 +4370,7 @@ function recallAll(){
       /* the misclick window: spawn protection means it cannot have fought yet,
          so undeploying inside it refunds in full with nothing to game */
       wallet+=STAKE; myTickets-=200; R.myIn-=STAKE; R.pot-=ENTRY; R.deploys--;
+      stats.deploys--; stats.tIn-=STAKE;   /* deploy() counted these; a refund un-counts them */
       removeCur(c); refunded++;
     }else if(c.mode==="roam"||c.mode==="duel"){ forceRecall(c); recalled++; }
   }
@@ -4599,7 +4604,7 @@ function move(c,dt){
     const ex=e===0?18:e===1?AW-18:clamp(c.x,60,AW-60);
     const ey=e===2?18:e===3?AH-18:clamp(c.y,60,AH-60);
     const dx=ex-c.x, dy=ey-c.y, dist=Math.hypot(dx,dy);
-    if(c.recallT<=0){ bank(c,false); return; }
+    if(c.recallT<=0){ bank(c,shutFired); return; }
     const sp=dist/Math.max(.2,c.recallT);
     c.x+=dx/Math.max(1,dist)*sp*dt; c.y+=dy/Math.max(1,dist)*sp*dt;
     c.el.style.transform=`translate(${c.x-8}px,${c.y-4}px)`;
@@ -4608,8 +4613,11 @@ function move(c,dt){
   if(c.mode==="hold"){ tx=c.ax; ty=c.ay; turn=2.0; }
   else{
     const {best,bd}=nearestEnemy(c);
-    /* aggression ramps across the epoch: calm after a restart, frenzy before the crash */
-    const aggr=phase==="battle"?(.7+1.5*clamp((epochLen-phaseT)/epochLen,0,1)):1;
+    /* Aggression ramps with the DISK, matching server sim.js: calm on a fresh
+       drive, frenzy near full. This read epochLen/phaseT until the disk replaced
+       the timer, at which point epochLen became 1e9 and the ramp sat flat at .7
+       for the whole round — live syntax over dead arithmetic. */
+    const aggr=phase==="battle"?(.7+1.5*clamp(localDeaths/LOCAL_CORPSES,0,1)):1;
     turn=2.6*aggr;
     if(best){
       if(bd<130*130) turn*=2.8;   /* close in: a 38px turn radius cannot reach a 20px contact */
@@ -4623,7 +4631,7 @@ function move(c,dt){
       if(o===c||o.owner!==c.owner) continue;
       const dx=c.x-o.x, dy=c.y-o.y, d2=dx*dx+dy*dy;
       if(d2>SEP*SEP) continue;
-      if(d2<1){ const a=(curs.indexOf(c)%8)/8*Math.PI*2; rx+=Math.cos(a)*SEP; ry+=Math.sin(a)*SEP; continue; }
+      if(d2<1){ const a=(c.id%8)/8*Math.PI*2; rx+=Math.cos(a)*SEP; ry+=Math.sin(a)*SEP; continue; }
       const d=Math.sqrt(d2);
       rx+=dx/d*(SEP-d); ry+=dy/d*(SEP-d);
     }
@@ -4651,8 +4659,6 @@ function move(c,dt){
   if(c.y>arena.y1-M) wy-=(c.y-(arena.y1-M))/M;
   if(wx||wy) c.h+=clamp(angDiff(Math.atan2(wy,wx)-c.h),-1,1)*WT*dt*Math.min(1,Math.hypot(wx,wy));
   const weight=1+.25*(c.s-1);
-  /* attacking is 12% faster, defending 10% slower, so a hunt can actually end
-     instead of the two of them orbiting forever. Duel odds never move. */
   const sp=c.spd*(c.mode==="hold"?.5:1)/weight;
   const ux=c.x+Math.cos(c.h)*sp*dt, uy=c.y+Math.sin(c.h)*sp*dt;
   c.x=clamp(ux,arena.x0+24,arena.x1-24); c.y=clamp(uy,arena.y0+24,arena.y1-24);
@@ -4677,7 +4683,12 @@ function startDuel(a,b){
   setTimeout(()=>{ fx.remove(); resolveDuel(a,b); },DUEL_MS);
 }
 function resolveDuel(a,b){
-  if(a.dead||b.dead) return;
+  if(a.dead||b.dead){
+    /* the survivor still has to come out of "duel", or it is stuck in a mode
+       nothing targets, nothing collides with, and forceRecall refuses */
+    for(const c of [a,b]) if(!c.dead){ c.el.classList.remove("dueling"); c.mode=c.prevMode; }
+    return;
+  }
   a.el.classList.remove("dueling"); b.el.classList.remove("dueling");
   if(phase!=="battle"){ a.mode=a.prevMode; b.mode=b.prevMode; return; }
   const pA=a.bounty/(a.bounty+b.bounty);
@@ -5150,6 +5161,15 @@ function recallCursor(id){
     if(c._bankReq) return;                      /* already on its way home */
     c._bankReq=true; c._bankAt=Date.now();
     mpSend({t:"recallOne",id:c.id});
+  }else if(c.grace>0&&c.mode==="roam"){
+    /* one tap, one meaning — matches sim.js recallOne: inside spawn grace the
+       cursor cannot have fought, so a slot tap undeploys it for the full stake
+       rather than gliding it home for 0.097 */
+    wallet+=STAKE; myTickets-=200; R.myIn-=STAKE; R.pot-=ENTRY; R.deploys--;
+    stats.deploys--; stats.tIn-=STAKE;
+    removeCur(c);
+    log(`undeployed cursor #${id} in grace — refunded in full`);
+    sClick(); haptic("recall"); updatePanel(); return;
   }else if(c.mode==="roam"||c.mode==="duel"){
     forceRecall(c);
   }else return;
@@ -5466,6 +5486,7 @@ function mpResync(e){
   R.pot=e.pot; R.deploys=e.deploys; R.deaths=e.deaths;
   upT=e.up; epochStart=upT-(e.eup||0); phase=e.phase; shutFired=e.rush!=null; phaseT=shutFired?e.rush:999;
   MP.fill=e.fill; MP.disk=e.disk; MP.corpses=e.corpses||MP.corpses;
+  setArena(e.aw,e.ah);   /* resync exists to be "here is right now" — field included */
   for(const sc of e.curs){
     const c=mpMakeCur(sc.id,sc.owner,sc.x,sc.y,sc.bounty,sc.grace,sc.skin);
     c.mode=MPMODE[sc.mode]||"roam";
@@ -5620,6 +5641,7 @@ function mpDrop(msg){
   showBalloon("Offline sandbox",msg||"Server gone. Fake bots, fake money. Reconnects on its own.");
   log("server unreachable — offline sandbox running");
   bsodEl.style.display="none";   /* the server died mid-crash-screen */
+  setArena(1280,800);            /* the sandbox is one player: back to base size */
   startEpoch();
   renderPhase(); updatePanel();
 }

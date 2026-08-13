@@ -11,7 +11,8 @@
        make a dropped order look honoured. Every recall test excludes shut. */
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { rig, untilMyDuel, ENTRY, STAKE, MAXCUR, SIM } from "./harness.mjs";
+import { rig, untilMyDuel, ENTRY, STAKE, MAXCUR, SIM, DT, advance, CLOCK_SKIP } from "./harness.mjs";
+const { createSim } = SIM;
 
 /* ---------------- orders survive every state a cursor can be in ------------- */
 
@@ -333,4 +334,95 @@ test("a crowded epoch is played on a bigger field", () => {
   const snap = r.sim.snapshot();
   assert.equal(snap.aw, ep.aw, "snapshot and epoch disagree about the field");
   assert.equal(r.sim.welcomeState().aw, ep.aw, "welcome and epoch disagree about the field");
+});
+
+test("RECALL ALL with a graced cursor and a gliding one does both jobs", () => {
+  /* The client picks one verb for the whole stack, so it has to know which one
+     wins when you hold both states at once. The label and both client paths now
+     give grace precedence and send "recall"; this pins what that means here —
+     the graced cursor refunds in full and the glide already running is NOT
+     disturbed. Before this was pinned, one client path sent recallCancel
+     instead, which refunded nothing and cancelled a bank in progress. */
+  const r = rig({ corpses: 4000 });
+  const glider = r.deployLive();                 /* out of grace, roaming */
+  r.sim.recallOne(r.key, glider);
+  r.step();
+  assert.equal(r.cur(glider).mode, "c", "the first cursor is not gliding");
+
+  const before = r.bal();
+  assert.equal(r.sim.requestDeploy(r.key), null);
+  const fresh = r.mine().find(c => c.id !== glider && c.grace > 0);
+  assert.ok(fresh, "no graced cursor to test with");
+
+  r.sim.requestRecall(r.key);                    /* the one verb, both states */
+  r.step();
+  assert.equal(r.evs("refund").length, 1, "the graced cursor did not refund");
+  assert.equal(r.bal(), before, "the refund did not return the full stake");
+  const g = r.cur(glider);
+  assert.ok(!g || g.mode === "c", "the glide already in flight was disturbed");
+});
+
+/* ------------------------- the fairness ceremony --------------------------- */
+
+test("the shutdown sweep leaves nobody hunting", () => {
+  /* The rush recalls the field. It used to skip any cursor that happened to be
+     mid-duel, and resolveDuel then restored it to "roam" — so it spent the
+     whole shutdown hunting cursors that were gliding home defenceless. 90% of
+     all rush-window kills came from cursors this sweep forgot. */
+  const r = rig({ corpses: 40 });
+  for (let i = 0; i < 6; i++) {
+    const k = "sweep" + i;
+    r.sim.registerPlayer(k, k, false, false);
+    r.sim.players.get(k).balance = 1e9;
+  }
+  const t = r.until(() => {
+    for (let i = 0; i < 6; i++) r.sim.requestDeploy("sweep" + i);
+    return r.evs("rush").length > 0;
+  }, 900);
+  assert.ok(t >= 0, "no shutdown rush inside 15 minutes");
+
+  /* Watch every tick from the sweep to the crash rather than looking once
+     afterwards: the crash empties the field, so a single late sample passes
+     vacuously against a build that still has the bug. */
+  let seenLive = 0;
+  const everRoamed = [];
+  for (let i = 0; i < 30 * 20 && !r.evs("crash").length; i++) {
+    r.step();
+    const live = r.sim.welcomeState().curs;
+    seenLive = Math.max(seenLive, live.length);
+    for (const c of live) if (c.mode === "r" && c.grace <= 0) everRoamed.push(c.id);
+  }
+  assert.ok(seenLive > 0, "the field was empty for the whole rush — nothing was observed");
+  assert.deepEqual([...new Set(everRoamed)], [],
+    `${everRoamed.length} cursor-frames were still hunting after the shutdown sweep`);
+});
+
+test("a round is a function of its seed, not of the wall clock", () => {
+  /* Motion integrates on a fixed dt, so every window the sim gates on — grace,
+     the 700ms duel, the rush, bot re-entry — has to read the same clock or the
+     commit/reveal ceremony means nothing. It used to read Date.now(), and a
+     17ms event-loop hiccup thousands of ticks earlier changed who won duels
+     and moved real balances. */
+  const SEED = "0123456789abcdef0123456789abcdef";
+  const play = stallMs => {
+    const events = [];
+    const sim = createSim({ corpses: 40, seed: SEED, emit: e => events.push(JSON.stringify(e)) });
+    for (const k of ["x", "y"]) { sim.registerPlayer(k, k, false, false); sim.players.get(k).balance = 1e9; }
+    for (let i = 0; i < 30 * 240; i++) {
+      advance();
+      if (i === 900) CLOCK_SKIP(stallMs);          /* the event loop hiccups */
+      sim.tick(DT);
+      for (const k of ["x", "y"]) sim.requestDeploy(k);
+      if (events.some(e => e.includes('"t":"crash"'))) break;
+    }
+    return { events, bal: ["x", "y"].map(k => sim.players.get(k).balance) };
+  };
+  const base = play(0);
+  assert.ok(base.events.length > 50, "the control round barely played");
+  for (const ms of [17, 500, 5000]) {
+    const r = play(ms);
+    assert.deepEqual(r.bal, base.bal, `a ${ms}ms stall moved player balances`);
+    assert.equal(r.events.length, base.events.length, `a ${ms}ms stall changed the event count`);
+    assert.equal(r.events.join("|"), base.events.join("|"), `a ${ms}ms stall changed the round`);
+  }
 });

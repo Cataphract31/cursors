@@ -139,7 +139,7 @@ export function initExplorer(deps) {
     ],
     "C:\\Program Files\\CURSORS.EXE": () => [
       f("cursors.exe", { size: 1.2 * MB, ico: "@ic-app", act: () => hooks.openWin("win-cursors") }),
-      f("arena.dll", { size: 284 * 1024, ico: "@ic-file", act: () => showError("arena.dll", "1280 x 800 logical units. Every player gets the same battlefield.\nThis file is the reason that is true.") }),
+      f("arena.dll", { size: 284 * 1024, ico: "@ic-file", act: () => showError("arena.dll", "16:10 logical units, sized to the crowd at the start of every epoch.\nEveryone in a round gets the same battlefield.\nThis file is the reason that is true.") }),
       f("rng.dll", { size: 96 * 1024, ico: "@ic-file", act: () => showError("rng.dll", "128-bit seed, sfc32, tagged sub-streams.\nCommitted before the round, revealed after. You can check.") }),
       f("house_edge.ini", { size: 96, act: () => txt("house_edge.ini", "[fees]\nplatform=0.001\nrakeback=0.002\narena=0.097\n\n[truth]\nrtp=0.99\nedge_on_any_single_touch=0.00\n") }),
       f("fights.log", { size: hooks.logSize(), act: () => hooks.openWin("win-log") }),

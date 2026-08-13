@@ -11,6 +11,9 @@ Date.now = () => CLOCK;
 
 export const DT = 1 / 30, STEP = Math.round(1000 * DT);
 export const advance = () => { CLOCK += STEP; };
+/* jump the WALL clock without ticking the sim — how the suite reproduces an
+   event-loop stall, which must not change a round. */
+export const CLOCK_SKIP = ms => { CLOCK += ms; };
 
 /* SIM=<path> points the suite at another copy of the sim — how you confirm a
    new test actually fails against the build that had the bug. */

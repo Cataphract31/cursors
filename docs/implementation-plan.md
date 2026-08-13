@@ -4,7 +4,7 @@ The mandate (owner, 2026-08-09): **reference-grade fidelity or don't ship the co
 
 Standing rules for every phase:
 - **REVERSED by owner (2026-08-09): carbon copy, not homage.** "I don't want a resemblance, I want a carbon copy… find assets online if you have to… this is just crypto slop, not professional, no legal issues or whatever." Default to the genuine artifact: real open-source recreations (Webamp for Winamp, xp.css/98.css-grade chrome, archived icon/sound sets), real found assets, pixel-identical layouts. Hand-recreating what a library already does 1:1 is the failure mode. One line held: no shipping copyrighted music files — the owner's own MP3s come in via drag-and-drop.
-- Every phase ends: syntax check → artifact republish → commit → owner plays it.
+- Every phase ends: syntax check → `npm run build` → server tests → commit → push (Vercel redeploys) → owner plays it. Artifact publishing is retired.
 - Right-click anywhere must be OURS (no browser context menu, no 4th wall).
 - Each component gets: its sounds, its context menus, its easter eggs, its mobile behavior, its keyboard shortcuts.
 - Owner reshuffles phase order at will; default order below.
@@ -67,7 +67,7 @@ Evidence first (headless screenshots at 390×844 and 844×390): the desktop meta
 **Step 2 — the mobile shell (NOT a responsive desktop; a different shell over the same engine).** Below ~760px:
 - **Apps go full-screen, one at a time** — no dragging, no overlap, no resize. The title bar keeps its Luna look but gains a big back/close target. Windows are already state-driven, so this is a layout mode on the existing process table, not a second app.
 - **The taskbar becomes an app switcher** with thumb-sized targets; Start becomes a full-screen launcher grid (which is also where Control Panel, Paint, Minesweeper etc. live, so adding apps costs no screen space — the owner's "adding more stuff only lowers visibility" worry disappears once apps stop being tiled windows).
-- **The game HUD leaves its window and becomes a permanent bottom bar** in the thumb zone: wallet + round timer on top, then DEPLOY / ATTACK / DEFEND / RECALL as large buttons. It is never covered by an app, because apps are sheets *above* the arena but *below* the HUD. This is the payoff of the auto-battler decision — three verbs fit a phone; steering never would.
+- **The game HUD leaves its window and becomes a permanent bottom bar** in the thumb zone: wallet + round clock on top, the per-cursor slot strip, then DEPLOY and RECALL as large buttons with real dead space between them (they are opposites — one spends, one banks). It is never covered by an app, because apps are sheets *above* the arena but *below* the HUD. This is the payoff of the auto-battler decision — two verbs fit a phone; steering never would. *(Was DEPLOY / ATTACK / DEFEND / RECALL until stances were cut 2026-08-13.)*
 - **Long-press = right-click** for every context menu.
 - Per-app mobile behaviour: Minesweeper beginner fits natively (9×9×16px = 144px); Intermediate/Expert get pinch/scroll inside their frame. Messenger conversations are full-screen sheets with the DP column dropped (already done in CSS). Paint gets a touch-first toolbar when built. Notepad/Explorer are trivially full-screen.
 - Keep the desktop shell untouched above the breakpoint — this is additive, and the arena is now identical on both.
@@ -156,7 +156,7 @@ Own module (`src/messenger.js`, import-free so the smoke runner executes it). **
 
 The game app rebuilt as a proper XP application (mechanics already proven in prototype):
 
-- Menu bar (Game · View · Help), panes: **Play** (deploy/stances/recall, pot odometer, live field list sorted by bounty), **Stats** (session + lifetime, charts), **Rakeback** (tickets, share, accrued, half-life explainer), **History** (every round, every duel, browseable), **Verify** (the seven-receipt fairness page, THIN ICE style).
+- Menu bar (Game · View · Help), panes: **Play** (deploy/recall, pot odometer, live field list sorted by bounty), **Stats** (session + lifetime, charts), **Rakeback** (tickets, share, accrued, half-life explainer), **History** (every round, every duel, browseable), **Verify** (the seven-receipt fairness page, THIN ICE style).
 - Game-layer render upgrade: cursors move to canvas (trails, soft shadows, chunkier explosions, duel lock-on effect), DOM only for windows.
 - Moments: bank ≥×10 gets a full celebration sequence; BSOD variants; first-run tutorial styled as a Found New Hardware wizard.
 - Spectate UX for between-deploys.
