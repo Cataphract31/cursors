@@ -1342,10 +1342,14 @@ body.tb-auto.tb-peek #taskbar{transform:none}
 .sr-btns{display:flex;gap:4px;justify-content:center}
 .sr-btns .xbtn{min-width:44px;height:26px}
 .wmp-body{background:#10151d!important;color:#dfe7f2}
-#wmp-viz{flex:none;width:100%;background:#000;border-bottom:1px solid #2b3a52}
+/* the picture is the app: it takes every pixel the window is not using for
+   the transport and the list, so maximising the player maximises the clip.
+   The playlist keeps a fixed strip at the bottom instead of eating the growth,
+   which is what it used to do. */
+#wmp-viz{flex:1 1 auto;min-height:90px;width:100%;background:#000;border-bottom:1px solid #2b3a52}
 /* a clip takes the visualiser slot: same box, same border, one of the two
    is shown at a time so the layout never moves */
-#wmp-video{flex:none;display:none;width:100%;height:200px;background:#000;
+#wmp-video{flex:1 1 auto;display:none;min-height:90px;width:100%;background:#000;
   border-bottom:1px solid #2b3a52;object-fit:contain}
 #win-wmp.playing-video #wmp-viz{display:none}
 #win-wmp.playing-video #wmp-video{display:block}
@@ -1357,7 +1361,7 @@ body.tb-auto.tb-peek #taskbar{transform:none}
 .wmp-big{width:40px!important;height:32px!important;border-radius:16px!important}
 .wmp-time{font-size:10px;color:#9fb4d0;flex:1;text-align:center}
 .wmp-ctl input{width:80px}
-.wmp-list{flex:1;min-height:0;overflow:auto;background:#0b0f16;border-top:1px solid #2b3a52;padding:4px 0}
+.wmp-list{flex:0 0 116px;min-height:0;overflow:auto;background:#0b0f16;border-top:1px solid #2b3a52;padding:4px 0}
 .wmp-row{padding:3px 10px;cursor:default}
 .wmp-row:hover{background:#1b2a40}
 .wmp-row.on{background:#265088;color:#fff}
@@ -2158,8 +2162,10 @@ body.mobile .oe-fbar .xbtn{min-height:30px;padding:3px 12px}
    screen and pushed the transport — volume knob first — off the side and out
    the bottom. Cap the picture, wrap the row, and let the volume have a line of
    its own in portrait, which is the one place there is no room beside it. */
-body.mobile #wmp-viz,body.mobile #wmp-video{height:150px}
-body.mobile.land #wmp-viz,body.mobile.land #wmp-video{height:92px}
+/* on a sheet the picture still grows into the window, but it starts from a
+   floor rather than a fixed height so the transport keeps its row */
+body.mobile #wmp-viz,body.mobile #wmp-video{min-height:150px}
+body.mobile.land #wmp-viz,body.mobile.land #wmp-video{min-height:92px}
 body.mobile .wmp-ctl{flex-wrap:wrap;gap:8px;padding:8px 9px}
 body.mobile .wmp-ctl button{min-width:0;width:44px;height:38px;flex:none;font-size:13px}
 body.mobile .wmp-big{width:52px !important;height:38px !important;border-radius:19px !important}
@@ -2168,7 +2174,7 @@ body.mobile .wmp-ctl input[type=range]{width:auto;flex:1 1 100px;min-width:90px}
 body.mobile:not(.land) .wmp-ctl input[type=range]{flex:1 0 100%}
 body.mobile .wmp-seek,body.mobile #wmp-vol{min-height:26px}
 body.mobile .wmp-row{padding:7px 11px}
-body.mobile .wmp-list{min-height:96px}
+body.mobile .wmp-list{flex:0 0 96px}
 
 /* ---- Sound Recorder ---- */
 /* 150px of transport, like the mixer: a sheet only gave it 550px of empty

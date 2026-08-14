@@ -133,12 +133,22 @@ const RECALL_SECS=3, DUEL_MS=700;
 let AC=null, muted=false, masterVol=.7;   /* the tray slider, 0..1 — see volFlyout() */
 let snd=null;   /* the sndvol32 module, once booted — its Wave slider scales everything below */
 const waveF=()=>snd?snd.factor("wave"):1;
-/* every oscillator on this machine is the software synthesiser, so SW Synth is
-   its fader: the dial-up handshake, the deploy sweep, the kill chirp. Sampled
-   sounds are Wave. That is exactly the split sndvol32 was drawing. */
+/* Wave is the line every sound this machine makes rides on — sampled or
+   generated. SW Synth is the trim on the oscillators underneath it (the
+   dial-up handshake, the deploy sweep, the kill chirp), which is why the
+   synth gain is wave x synth and not synth alone: pulling Wave down used to
+   leave the whole game chirping at full volume. The music players are the
+   other line — they ride CD Audio. */
 const synthF=()=>snd?snd.factor("synth"):1;
 const vol=v=>(v==null?.55:v)*masterVol*waveF();
 function ac(){ if(!AC) AC=new (window.AudioContext||window.webkitAudioContext)(); return AC; }
+/* dev only, same #desktop hash the Winamp probe uses: a fader that scales a
+   sound nobody is currently playing cannot be seen in a screenshot, so the
+   two bus factors and the gain a game tone would be given are readable here.
+   A kill chirp is worth 0.05 x master x wave x synth. */
+if(location.hash.indexOf("#desktop")===0)
+  window.__bus={wave:()=>waveF(),synth:()=>synthF(),master:()=>masterVol,
+    toneGain:(v)=>(v||.05)*masterVol*waveF()*synthF(),sampleGain:(v)=>vol(v)};
 function tone(f,dur,type,v,delay,slide){
   if(muted) return;
   try{
@@ -146,7 +156,7 @@ function tone(f,dur,type,v,delay,slide){
     const o=c.createOscillator(),g=c.createGain();
     o.type=type||"square"; o.frequency.setValueAtTime(f,t);
     if(slide) o.frequency.exponentialRampToValueAtTime(Math.max(30,f+slide),t+dur);
-    g.gain.setValueAtTime((v||.05)*masterVol*synthF(),t);
+    g.gain.setValueAtTime((v||.05)*masterVol*waveF()*synthF(),t);
     g.gain.exponentialRampToValueAtTime(.0001,t+dur);
     o.connect(g).connect(c.destination); o.start(t); o.stop(t+dur+.03);
   }catch(e){}
@@ -190,7 +200,7 @@ function noiseBurst(dur,v,delay){
     const d=b.getChannelData(0);
     for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*(1-i/d.length);
     const n=c.createBufferSource(); n.buffer=b;
-    const g=c.createGain(); g.gain.value=v*masterVol*synthF();   /* generated noise: synth bus */
+    const g=c.createGain(); g.gain.value=v*masterVol*waveF()*synthF();   /* generated noise: synth trim under Wave */
     n.connect(g).connect(c.destination); n.start(t);
   }catch(e){}
 }
@@ -2248,7 +2258,6 @@ snd=initSoundApps({$,store,sysSnd,showMenu,showError,openWin,closeWin,hooks:{
   /* the mixer reaches Winamp through the app object: wampApplyVol lives
      inside its closure, and the mixer can be touched before it exists */
   ampVolume:bus=>{ try{ winampApp.applyVol(bus); }catch(e){} },
-  tvVolume:bus=>{ try{ tvApplyVol(bus); }catch(e){} },
   tourVolume:bus=>{ try{ tourxp.setVol(bus); }catch(e){} },
   getMuted:()=>muted,
   setMaster:v=>{ masterVol=clamp(v,0,1); volSync(); },
@@ -2290,7 +2299,7 @@ const tourxp=initTourXP({ $, store, sysSnd, openWin, closeWin, IMG, CURFILES,
   hooks:{
     getMaster:()=>masterVol,
     getMuted:()=>muted,
-    waveBus:()=>(snd&&snd.ampBus?snd.ampBus():1),
+    waveBus:()=>(snd?snd.factor("wave"):1),
   }});
 tourxp.init();
 const maint=initSysMaint({$,store,sysSnd,showError,showConfirm,openWin,closeWin,icoNode,hooks:{
@@ -3893,7 +3902,7 @@ function openWinamp(startAt){
         showError("winamp.exe","WINAMP caused a General Protection Fault in module LOADER.DLL. Reboot (F5) and try again.");
         return;
       }
-      /* the tray master and the mixer's Wave fader really move Winamp: its own
+      /* the tray master and the mixer's CD Audio fader really move Winamp: its own
          slider stays where the user left it and we scale the output gain under
          it, re-applied after every store change because webamp resets that gain
          from its own state on a track change and on a seek */
@@ -3925,7 +3934,9 @@ function openWinamp(startAt){
     if(!jump) webamp.pause();
   }catch(e){}
 }
-/* volume = Winamp's own slider x the Wave fader x the master; muted is silent */
+/* volume = Winamp's own slider x the CD Audio fader x the master; muted is
+   silent. Winamp plays the library, so it sits on the same line Media Player
+   does — Wave is the game's own noise. */
 function wampApplyVol(bus){
   if(!webamp||!webamp.media||!webamp.media.setVolume) return;
   let own=100;
@@ -6361,7 +6372,7 @@ if(location.hash.indexOf("#desktop-sys")===0) setTimeout(()=>{ /* dev: the XP ap
 if(location.hash==="#desktop-mouse") setTimeout(()=>mouse.open(),300); /* dev: Mouse Properties */
 if(location.hash==="#desktop-solitaire") setTimeout(()=>solitaireOpen(),400); /* dev: the classic deck */
 if(location.hash==="#desktop-sound") setTimeout(()=>{ /* dev: mixer + recorder + WMP */
-  snd.openMixer(); snd.openRecorder(); snd.openWmp();
+  snd.openMixer(); snd.openRecorder(); snd.openWmp(false);   /* a screenshot does not need the clip rolling */
 },400);
 if(location.hash==="#desktop-write") setTimeout(()=>{ /* dev: all four writing apps */
   write.openNotepad({title:"session.LOG",get:()=>".LOG\nfirst entry",set:null});

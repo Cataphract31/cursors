@@ -11,7 +11,7 @@
    over CSS gradients, so the tour costs one mp3 and nothing else.
 
    The music is a program on this machine, so it goes through the mixer like
-   one: setVol(bus) is the same arithmetic as wampApplyVol and tvApplyVol, and
+   one: setVol(bus) is the same arithmetic as wampApplyVol, and
    the speaker button in the tour's own chrome is the app's switch above it.
 
    Import-free like the other app modules; main.js injects the shell. Nothing
@@ -177,8 +177,7 @@ export function initTourXP(deps) {
   let audio = null;
 
   /* ---------- music ---------- */
-  /* Same arithmetic as wampApplyVol and tvApplyVol: the mixer's Wave fader is
-     the bus, Volume Control is the master over it, Mute is silence — with the
+  /* Same arithmetic as wampApplyVol: the mixer's Wave fader is the bus, Volume Control is the master over it, Mute is silence — with the
      tour's own speaker button as the app's switch above all three. */
   function setVol(bus) {
     if (!audio) return;
