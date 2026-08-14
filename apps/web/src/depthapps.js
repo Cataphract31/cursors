@@ -323,7 +323,7 @@ export function initDepthApps(deps) {
             "PlayerName": g.name, "Wallet": g.wallet, "Kills": String(g.kills), "Deaths": String(g.deaths),
             "PersonalMessage": store.data.msnPsm || "",
             "PointerScheme": g.scheme || "(default)",
-            "RTP": "0.99", "Edge": "0.001 (the platform fee)",
+            "RTP": "0.98", "Edge": "0.002 (the entry fee)",
           },
           "Microsoft": { "Windows": { "CurrentVersion": { "Run": { "cursors": "C:\\Program Files\\CURSORS.EXE\\cursors.exe" } } } },
         },

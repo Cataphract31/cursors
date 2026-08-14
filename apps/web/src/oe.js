@@ -51,7 +51,7 @@ export function initOE(deps) {
   const {
     $, IMG, store, sysSnd, playerName, wireWindow,
     openWin, closeWin, showMenu, showError, showConfirm, desk,
-    hooks, /* {wallet,rake,tickets,deploys,staked,banked,epoch,contacts} — read-only getters */
+    hooks, /* {wallet,deploys,staked,banked,epoch,contacts} — read-only getters */
   } = deps;
 
   const sol = u => ((u < 0 ? "-" : "") + (Math.abs(u) / 1000).toFixed(3));
@@ -74,8 +74,6 @@ User: ${playerName()}
 Generated: ${when(new Date())}
 
 Wallet balance        ${sol(h.wallet())} SOL
-Rakeback accrued      ${(h.rake() / 1000).toFixed(4)} SOL
-Rakeback tickets      ${h.tickets().toLocaleString()}
 Deploys this session  ${h.deploys()}
 Total staked          ${sol(h.staked())} SOL
 Total banked          ${sol(h.banked())} SOL

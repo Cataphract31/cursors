@@ -122,7 +122,6 @@
       <div class="cx-tabs">
         <span class="cx-tab on" data-cx="cx-play">Play</span>
         <span class="cx-tab" data-cx="cx-stats">Stats</span>
-        <span class="cx-tab" data-cx="cx-rake">Rakeback</span>
         <span class="cx-tab" data-cx="cx-hist">History</span>
         <span class="cx-tab" data-cx="cx-verify">Verify</span>
       </div>
@@ -130,7 +129,7 @@
         <div class="walletrow"><span>WALLET</span><span class="amt" id="walletamt">5.000 SOL</span></div>
         <div class="hr"></div>
         <button class="xbtn big" id="btn-deploy">▸ DEPLOY 0.1 SOL</button>
-        <div class="small dim" style="margin-top:4px">0.097 arena · 0.001 fee · 0.002 rakeback</div>
+        <div class="small dim" style="margin-top:4px">0.098 arena · 0.002 fee</div>
         <div class="small" style="margin-top:4px">live <b id="livecount">0</b>/5 · in play <b class="mono" id="liveval">0.000</b></div>
         <div class="striprow">
           <span class="lb" id="strip-hint">click a cursor to recall it</span>
@@ -142,11 +141,9 @@
         <div class="aprow"><span class="lb">keep live</span><span class="chiprow" style="flex:1;margin:0"><button class="xbtn chip apc" data-c="1">1</button><button class="xbtn chip apc on" data-c="3">3</button><button class="xbtn chip apc" data-c="5">5</button></span></div>
         <div class="aprow"><span class="lb">bank at</span><span class="chiprow" style="flex:1;margin:0"><button class="xbtn chip apb on" data-b="2">×2</button><button class="xbtn chip apb" data-b="5">×5</button><button class="xbtn chip apb" data-b="0">ride</button></span></div>
         <div class="hr"></div>
-        <div class="small mono" id="rakeline">rakeback: 0 tk · 0.00% · +0.0000 SOL</div>
         <div class="statline mono" id="statline">kills 0 · deaths 0 · best ×0.0 · P/L +0.000</div>
       </div>
       <div class="cx-pane" id="cx-stats"></div>
-      <div class="cx-pane" id="cx-rake"></div>
       <div class="cx-pane" id="cx-hist"></div>
       <div class="cx-pane" id="cx-verify"></div>
     </div>
@@ -217,12 +214,9 @@ THE GAME
   full. nothing is confiscated.
 
 THE MONEY
-· 0.100 = 0.097 arena
-        + 0.001 house
-        + 0.002 rakeback
-· RTP 99%. P(reach ×N) = 1/N.
-· 200 tickets per deploy,
-  45-day half-life.
+· 0.100 = 0.098 arena
+        + 0.002 house
+· RTP 98%. P(reach ×N) = 1/N.
 
 play money prototype. chain later.
 

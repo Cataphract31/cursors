@@ -327,7 +327,6 @@ export function initSysInfo(deps) {
     ["Messenger", "Started"],
     ["Plug and Play", "Started"],
     ["Print Spooler", "Started"],
-    ["Rakeback Ticket Ledger", "Started"],
     ["Remote Access Connection Manager", "Started"],
     ["Remote Procedure Call (RPC)", "Started"],
     ["Task Scheduler", "Started"],

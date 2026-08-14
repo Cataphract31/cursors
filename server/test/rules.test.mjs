@@ -122,7 +122,7 @@ test("a cursor that never fights banks entry, and the fee is the whole edge", ()
   if (!b) return;                                /* it was caught on the way out */
   /* the wallet gets exactly what was banked, whatever that turned out to be */
   assert.equal(r.bal(), before - STAKE + b.amt, "the wallet and the bank receipt disagree");
-  assert.equal(STAKE - ENTRY, 3, "the locked 1+2 milli-SOL fee moved");
+  assert.equal(STAKE - ENTRY, 2, "the locked 2 milli-SOL entry fee moved");
   /* a recall is still killable, so it can win a fight on the way out and bank
      more than it took in. Only the untouched case owes exactly entry back. */
   const won = r.evs("kill").filter(k => k.w === id).reduce((s, k) => s + k.pot, 0);

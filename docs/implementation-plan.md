@@ -133,7 +133,7 @@ Own module (`src/messenger.js`, import-free so the smoke runner executes it). **
 
 - **Explorer windows**: address bar, toolbar (Back/Forward/Up/Views), XP task pane sidebar, icon/list/details views.
 - **Fake C:\ drive**: My Documents, Program Files (app shortcuts that actually launch apps), WINDOWS (joke system files), file associations — .txt → Notepad, .mp3 → player, .cur → cursor properties.
-- **Properties dialogs everywhere**: files (size/created/attributes), Drive C: with the pie chart (disk usage = live game stats: wagered, banked, rake returned), **System Properties** (General tab: "CURSORS XP · 2003 · 1 cursor @ 3.2 GHz · 512 MB RAM · Registered to: Administrator").
+- **Properties dialogs everywhere**: files (size/created/attributes), Drive C: with the pie chart (disk usage = live game stats: wagered, banked, in play), **System Properties** (General tab: "CURSORS XP · 2003 · 1 cursor @ 3.2 GHz · 512 MB RAM · Registered to: Administrator").
 - Live lobby stats stay here (cursors online, pot, biggest bounty) presented as system monitors.
 - Easter eggs: hidden folder, "DO NOT OPEN" folder (opening it is its own reward), defrag.exe that "defragments" the desktop icons.
 
@@ -156,7 +156,7 @@ Own module (`src/messenger.js`, import-free so the smoke runner executes it). **
 
 The game app rebuilt as a proper XP application (mechanics already proven in prototype):
 
-- Menu bar (Game · View · Help), panes: **Play** (deploy/recall, pot odometer, live field list sorted by bounty), **Stats** (session + lifetime, charts), **Rakeback** (tickets, share, accrued, half-life explainer), **History** (every round, every duel, browseable), **Verify** (the seven-receipt fairness page, THIN ICE style).
+- Menu bar (Game · View · Help), panes: **Play** (deploy/recall, pot odometer, live field list sorted by bounty), **Stats** (session + lifetime, charts), **History** (every round, every duel, browseable), **Verify** (the seven-receipt fairness page, THIN ICE style).
 - Game-layer render upgrade: cursors move to canvas (trails, soft shadows, chunkier explosions, duel lock-on effect), DOM only for windows.
 - Moments: bank ≥×10 gets a full celebration sequence; BSOD variants; first-run tutorial styled as a Found New Hardware wizard.
 - Spectate UX for between-deploys.

@@ -258,7 +258,7 @@ export function initSysMaint(deps) {
     main.appendChild(el("p", "sr-p", "This computer will be returned to the state it was in on the date and time listed above."));
     const warn = el("div", "sr-warn");
     warn.appendChild(el("div", "sr-warnh", "Important: Save and close all open programs before continuing."));
-    warn.appendChild(el("div", "sr-warnp", "System Restore rewrites the desktop settings on this computer. Your wallet, your deployed cursors, your rakeback and the corpses in the Recycle Bin are held by the server and are not affected by anything on this screen."));
+    warn.appendChild(el("div", "sr-warnp", "System Restore rewrites the desktop settings on this computer. Your wallet, your deployed cursors and the corpses in the Recycle Bin are held by the server and are not affected by anything on this screen."));
     main.appendChild(warn);
     foot.appendChild(btn("< Back", () => { srScreen = srPick.undo ? "home" : "pick"; srRender(); }, 84));
     foot.appendChild(btn("Next >", () => { srScreen = "working"; srRender(); }, 84));
@@ -1084,7 +1084,7 @@ export function initSysMaint(deps) {
     }
     host.appendChild(el("div", "fv-rule"));
     for (const size of [12, 18, 24, 36, 48, 60, 72]) {
-      const line = el("div", "fv-line", size + "  The quick brown fox jumps over the lazy dog. 0.097");
+      const line = el("div", "fv-line", size + "  The quick brown fox jumps over the lazy dog. 0.098");
       line.style.fontFamily = fam;
       line.style.fontSize = size + "px";
       host.appendChild(line);

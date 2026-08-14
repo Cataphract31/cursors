@@ -579,11 +579,11 @@ export function initSysApps(deps) {
      theme, your notifications — so you may stop them and the only person
      affected is you.
 
-     Everything else belongs to the house: the arena, the ledger, the fairness
-     provider, the plumbing they sit on. This is a live multiplayer game played
-     for money. A control that appears to stop the rakeback ledger is a lie
-     even when it is only lying to you, so those services refuse with the error
-     a real managed machine gives you, and the properties sheet greys out. */
+     Everything else belongs to the house: the arena, the fairness provider,
+     the plumbing they sit on. This is a live multiplayer game played for
+     money. A control that appears to stop the arena is a lie even when it is
+     only lying to you, so those services refuse with the error a real managed
+     machine gives you, and the properties sheet greys out. */
   const SERVICES = [
     { name: "AudioSrv", display: "Windows Audio", state: "Started", start: "Automatic", logon: "Local System", local: 1, ctl: "audio",
       desc: "Manages audio devices for Windows-based programs. Stopping it mutes this computer.",
@@ -625,9 +625,6 @@ export function initSysApps(deps) {
     { name: "Arena", display: "CURSORS.EXE Arena Service", state: "Started", start: "Automatic", logon: "Local System",
       desc: "Runs the cursor arena and writes a 12 MB corpse for every death. This service runs on the game server, not on this computer, and cannot be controlled from here.",
       path: "\\\\CURSORS-BETA\\arena.dll" },
-    { name: "Rake", display: "Rakeback Ticket Ledger", state: "Started", start: "Automatic", logon: "Local System",
-      desc: "Mints 200 tickets per deploy and decays every balance on a 45-day half-life. Runs on the game server. Your rakeback accrues whether this computer is on or not.",
-      path: "\\\\CURSORS-BETA\\ledger.dll" },
     { name: "Fairness", display: "Commit-Reveal Fairness Provider", state: "Started", start: "Automatic", logon: "Local System",
       desc: "Publishes sha256(seed) before each epoch and reveals the seed at the crash. Runs on the game server, where nobody with a keyboard can turn it off.",
       path: "\\\\CURSORS-BETA\\rng.dll" },

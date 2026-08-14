@@ -260,7 +260,7 @@ body.mobile .ex-tb span{display:none}
 .cx-pane{display:none;overflow-y:auto}
 .cx-pane.on{display:block;flex:none}   /* flex-basis would collapse the fixed heights below */
 /* the data panes hold the window at the Play pane's height instead of reflowing it */
-#cx-stats.on,#cx-rake.on,#cx-hist.on,#cx-verify.on{height:368px}
+#cx-stats.on,#cx-hist.on,#cx-verify.on{height:368px}
 body.mobile .cx-pane.on{height:auto !important;flex:1;min-height:0}   /* sheets size themselves */
 .cx-kv{display:flex;align-items:baseline;gap:8px;padding:2.5px 0;font-size:11px}
 .cx-kv span{width:110px;flex:none;color:#5A5648}

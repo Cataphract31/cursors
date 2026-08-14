@@ -28,13 +28,13 @@ Winamp is the real one — [Webamp](https://github.com/captbaritone/webamp) from
 
 ## Economics (agreed so far)
 
-- Fixed entry: 0.100 SOL per cursor = 0.097 arena + 0.001 platform fee (1%) + 0.002 rakeback pool (2%).
+- Fixed entry: 0.100 SOL per cursor = 0.098 arena + 0.002 house fee (2%), taken at the door.
 - Up to 5 cursors per player per round; own cursors cluster, never fight each other.
 - Duel: P(A wins) = A/(A+B), winner takes both bounties. P(ever reaching ×N) = 1/N.
 - **The food chain**: a cursor only fights inside **4×** its own size. This decides which fights happen, never how they resolve, so every duel is still A/(A+B) and the ladder still prices ×N at 1/N. Measured against the free-for-all: whale-farming of fresh deploys 83% → 0%, "new player eaten by something enormous" 35.8% → 3.3%, per-deploy variance −35%, right tail unchanged.
 - **Weight classes** are worn, not chosen: one rank per 4× step (plain, 3D-White at 4×, 3D-Bronze at 16×, Dinosaur at 64×), each a real XP pointer scheme, swapped live when you cross a boundary. A rank step is exactly the reach of the rule, so "can I fight that" reads off the arrow.
 - **Two verbs: DEPLOY and RECALL.** Stances were cut once the food chain made every reachable fight close to even.
-- Each deploy mints 200 rakeback tickets, 45-day half-life; ticket share pays the 2% pool. Effective RTP 99%.
+- RTP 98%. The 2% entry fee is the whole edge — nothing is taken from a fight or from a bank.
 - Round shape: deploys open → battle → the disk fills → shutdown rush → BSOD → results. There is no clock: **every death writes a 12 MB corpse to C:, and a full disk is the crash.** Nothing is confiscated; the crash banks everyone in full.
 - The field is sized to the crowd at each epoch start (~32k px² per cursor, 16:10, capped at 3×) and announced with the seed commit, so it is fixed for the round and identical for everyone in it.
 

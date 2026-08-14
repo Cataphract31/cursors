@@ -59,14 +59,13 @@ Source layout (`apps/web/src/`):
 
 ## 3. Economics — LOCKED, do not redesign
 
-- Entry **0.100 SOL fixed** = 0.097 arena + 0.001 platform (1%) + 0.002 rakeback (2%)
+- Entry **0.100 SOL fixed** = 0.098 arena + 0.002 house fee (2%), taken at the door
 - Duel: **P(A wins) = A/(A+B)** by bounty, winner takes all → every collision is EV-neutral
 - **P(ever reaching ×N) = 1/N**, exactly. Variance is chosen by *when you bank*, never by bet size
-- Effective **RTP 99%** via rakeback; 200 tickets per deploy, 45-day half-life
+- **RTP 98%.** The entry fee is the whole edge — nothing is taken from a duel or a bank
 - Max 5 cursors per player per round; own cursors never fight each other
 - No jackpot — the chain ladder *is* the lottery tail, honestly priced
 - Under 2 distinct wallets the round refunds in full, fee included
-- These constants **match THIN ICE's audited config exactly** → lift its ledger unchanged
 
 ---
 
@@ -211,9 +210,9 @@ promoted by `openWin`), which is what XP actually did. All Programs grew the rea
 Accessories with Accessibility/System Tools submenus (Disk Cleanup and System Information
 open the real windows), Games, Startup, Help and Support, Windows Update. And there is a
 real **Help and Support Center** (`win-help`) in XP's blue-header two-column shape, with
-Back/Home/Search — eight topics that state the game plainly and without jokes: what it is,
-the odds (with the 1/N table and the −1% expectation stated outright), why the computer
-crashes, the multiplayer beta and its bots, how to check the commit-reveal, rakeback, the
+Back/Home/Search — seven topics that state the game plainly and without jokes: what it is,
+the odds (with the 1/N table and the −2% expectation stated outright), why the computer
+crashes, the multiplayer beta and its bots, how to check the commit-reveal, the
 certificates, and the rest of the desktop. It quotes the live disk fill. This is the
 first-run explanation the game never had.
 
@@ -238,7 +237,7 @@ labelled *Bots (they play for real money too)*. Knowing whether anyone else is i
 is the most useful thing a multiplayer beta can show, and the bots stay honestly labelled.
 
 **The game** — deploy/recall, duels with odds display, gold bursts, kill streaks,
-BSOD on losing your last cursor, rakeback tracking, autoplay. Every death writes a
+BSOD on losing your last cursor, autoplay. Every death writes a
 certificate (`certify()` in main.js) that the Recycle Bin renders.
 
 **Continuous play (owner-directed, 2026-08-09).** The join→battle→results loop is gone.
@@ -476,10 +475,9 @@ the handmade web stays as it is; do not add pages to it.
    Every surface that asks `icoNode` for a bin gets it — desktop, My Computer, the task pane.
    Dev hash: `#desktop-disk-<pct>`.
 5. ~~CURSORS.EXE production pass~~ **SHIPPED 2026-08-09.** Menu bar (Game/View/Help) and
-   five panes: **Play** (the dashboard), **Stats** (session P/L, deploys/banks, lost-to-deaths,
-   with the honest footnote: expected P/L is −1% of stake, everything else is variance),
-   **Rakeback** (tickets, share, accrued, a working CLAIM button, the 45-day half-life
-   explainer), **History** (per-epoch table written at each crash), **Verify** (the fairness
+   four panes: **Play** (the dashboard), **Stats** (session P/L, deploys/banks, lost-to-deaths,
+   with the honest footnote: expected P/L is −2% of stake, everything else is variance),
+   **History** (per-epoch table written at each crash), **Verify** (the fairness
    ceremony: a real random seed is committed via real SHA-256 before each epoch and revealed
    at the crash — honestly labelled: duels still draw browser RNG until the server wires the
    seed in). Also: ×10 banks trigger the **VHS jackpot** (2s full-screen: CSS scanlines, a
@@ -492,7 +490,7 @@ the handmade web stays as it is; do not add pages to it.
    **Clean boot per owner:** desktop boots with only CURSORS.EXE open; Messenger/log are one
    click away and toasts/balloons work with them closed. Not done: first-run wizard (clean
    boot made it less urgent), cursor trails (DOM perf risk, skipped deliberately).
-   Dev hashes: `#desktop-cx-stats/-rake/-hist/-verify` (stats/hist seed a fixture),
+   Dev hashes: `#desktop-cx-stats/-hist/-verify` (stats/hist seed a fixture),
    `#desktop-cx-death` (last-cursor death → certificate).
 6. ~~IE + handmade web~~ **SHIPPED 2026-08-09.** See §5. The load-bearing page is
    `cursor.land/odds.html`: the whole fairness argument, in the ugliest possible clothes,
@@ -525,13 +523,13 @@ second):
    the real dialogs. **Services** is split in two tiers and the line between them is
    load-bearing: `local:1` services touch only your own machine (audio, themes, toast
    notifications, the tray clock, spooler, scheduler...) and you may stop them; everything
-   the house owns — the Arena service, the Rakeback Ticket Ledger, the fairness provider,
+   the house owns — the Arena service, the fairness provider,
    Plug and Play, RPC, Event Log — refuses with the real error ("Could not stop the X
    service on Local Computer. Error 5: Access is denied.") and greys its properties sheet.
    **This was corrected the same day after an owner catch and the reasoning matters:** the
-   first version let you stop the ledger and logged "the edge is 3% until you start it",
-   which was *false* (the server owns rakeback) — a lie told to a gambler about their own
-   edge. A switch that appears to change the economics is a trust bug even when it only
+   first version let you stop a house service and logged a changed house edge while it was
+   stopped, which was *false* (the server owns all of it) — a lie told to a gambler about
+   their own edge. A switch that appears to change the economics is a trust bug even when it only
    deceives the person who flipped it, and one that really changed them would be an
    exploit. Rule for anything added to these consoles: **local presentation only, never
    shared state and never anything that reads as economic.** Same rule for Group Policy —
@@ -558,7 +556,7 @@ second):
    unverified on hardware), Paint's Fonts toolbar and Stretch/Skew, IE Favorites editing and
    an IE-specific right-click menu.
 2. **Prove the invariants offline** — the server asserts pot conservation every crash, but
-   nothing yet proves EV per deploy = stake × 0.97 for *every* strategy (hunter, camper,
+   nothing yet proves EV per deploy = stake × 0.98 for *every* strategy (hunter, camper,
    instant banker, chain rider, autoplay). This is how THIN ICE caught its wipe leak, and
    it is the last thing between the beta and real money. **Parked by the owner until the
    design is done — do not start it unprompted.**
@@ -567,7 +565,7 @@ second):
 4. Then: Phantom wallet at the login tile, real custody, real DMs.
 
 **Parallel engine track (blocks real money, not UI):** port THIN ICE's sim skeleton and
-**prove the invariants** — pot conservation, and EV per deploy = stake × 0.97 for *every*
+**prove the invariants** — pot conservation, and EV per deploy = stake × 0.98 for *every*
 strategy (hunter, camper, instant banker, chain rider, autoplay). This is how THIN ICE
 caught its wipe leak. Then: server, Phantom wallet connect at the login tile, real DMs.
 
@@ -576,8 +574,7 @@ caught its wipe leak. Then: server, Phantom wallet connect at the login tile, re
 ## 8. THIN ICE reuse (full detail in `docs/reuse-from-thinice.md`)
 
 **Copy as-is:** `rng.ts` (audited 128-bit seed → sfc32, tagged sub-streams),
-`ledger.ts → RevShareLedger` (**highest-value file for us** — rakeback with 45d half-life,
-contains two audited non-obvious fixes), `chain.ts` (custodial deposits/withdrawals; the
+`chain.ts` (custodial deposits/withdrawals; the
 sign-record-send-then-ask-the-chain pattern), fail-loud config reader, ws socket hardening.
 
 **Retrofit:** `fairness.ts` commit-reveal ceremony, `db.ts` (~70%, keep the one-transaction

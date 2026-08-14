@@ -45,7 +45,6 @@ export function initTour(deps) {
       "Everything opens. It's all real.",
       "<b>MSN</b> = the lobby, real players",
       "<b>Paint</b> → the gallery · <b>Hall of Fame</b> = the board",
-      "<b>Rakeback tab</b>: 0.002 of every deploy pays the players",
     ]},
   ];
 

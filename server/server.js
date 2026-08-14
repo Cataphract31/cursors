@@ -57,9 +57,7 @@ function onlineNames() {
 }
 function balMsg(key) {
   const p = sim.players.get(key); if (!p) return null;
-  let glob = 0;
-  for (const o of sim.players.values()) if (o !== p) glob += o.tickets;
-  return { t: "bal", balance: p.balance, tickets: Math.round(p.tickets), glob: Math.round(glob), rake: p.rake };
+  return { t: "bal", balance: p.balance };
 }
 function schedSave(key) {
   if (key.startsWith("bot:")) return;
@@ -68,8 +66,8 @@ function schedSave(key) {
 }
 function persistPlayer(key) {
   const p = sim.players.get(key); if (!p || p.bot) return;
-  db.savePlayer({ token: key, name: p.name, balance: p.balance, tickets: p.tickets,
-    ticketsAt: p.ticketsAt, rake: p.rake, totIn: p.totIn, totOut: p.totOut,
+  db.savePlayer({ token: key, name: p.name, balance: p.balance,
+    totIn: p.totIn, totOut: p.totOut,
     published: p.published, created: p.created });
 }
 
@@ -151,8 +149,8 @@ function handle(c, m) {
       const persisted = db.loadPlayer(token);
       const name = uniqueName(m.name || (persisted && persisted.name), token);
       const p = sim.registerPlayer(token, name, false, persisted ? {
-        balance: persisted.balance, tickets: persisted.tickets, ticketsAt: persisted.ticketsAt,
-        rake: persisted.rake, totIn: persisted.totIn, totOut: persisted.totOut, created: persisted.created,
+        balance: persisted.balance,
+        totIn: persisted.totIn, totOut: persisted.totOut, created: persisted.created,
         published: persisted.published,
       } : null);
       p.name = name;
@@ -166,7 +164,7 @@ function handle(c, m) {
       const b = balMsg(token);
       send(c, {
         t: "welcome", token, name,
-        balance: b.balance, tickets: b.tickets, glob: b.glob, rake: b.rake,
+        balance: b.balance,
         epoch: sim.welcomeState(), chat: chatLog.slice(-25),
         online: onlineNames(),
       });
@@ -190,7 +188,6 @@ function handle(c, m) {
     case "recall": sim.requestRecall(c.key); break;
     case "recallOne": if (Number.isInteger(m.id)) sim.recallOne(c.key, m.id); break;
     case "recallCancel": sim.cancelRecall(c.key); break;
-    case "rake": sim.claimRake(c.key); break;
     case "chat": {
       const text = String(m.text || "").slice(0, 200).trim();
       if (!text || now - c.lastChat < 1200) return;

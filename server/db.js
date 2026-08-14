@@ -15,9 +15,6 @@ export function openDb(path) {
       token     TEXT PRIMARY KEY,
       name      TEXT NOT NULL,
       balance   REAL NOT NULL,
-      tickets   REAL NOT NULL DEFAULT 0,
-      ticketsAt INTEGER NOT NULL DEFAULT 0,
-      rake      REAL NOT NULL DEFAULT 0,
       totIn     REAL NOT NULL DEFAULT 0,
       published INTEGER NOT NULL DEFAULT 0,
       totOut    REAL NOT NULL DEFAULT 0,
@@ -64,11 +61,10 @@ export function openDb(path) {
   const q = {
     getPlayer: db.prepare("SELECT * FROM players WHERE token = ?"),
     upsertPlayer: db.prepare(`
-      INSERT INTO players (token,name,balance,tickets,ticketsAt,rake,totIn,totOut,published,created,lastSeen)
-      VALUES (?,?,?,?,?,?,?,?,?,?,?)
+      INSERT INTO players (token,name,balance,totIn,totOut,published,created,lastSeen)
+      VALUES (?,?,?,?,?,?,?,?)
       ON CONFLICT(token) DO UPDATE SET
-        name=excluded.name, balance=excluded.balance, tickets=excluded.tickets,
-        ticketsAt=excluded.ticketsAt, rake=excluded.rake,
+        name=excluded.name, balance=excluded.balance,
         totIn=excluded.totIn, totOut=excluded.totOut, published=excluded.published,
         lastSeen=excluded.lastSeen`),
     nameTaken: db.prepare("SELECT token FROM players WHERE lower(name) = lower(?) AND token <> ?"),
@@ -100,7 +96,7 @@ export function openDb(path) {
   return {
     loadPlayer: token => q.getPlayer.get(token) || null,
     savePlayer: p => q.upsertPlayer.run(
-      p.token, p.name, p.balance, p.tickets, p.ticketsAt, p.rake,
+      p.token, p.name, p.balance,
       p.totIn, p.totOut, p.published || 0, p.created || Date.now(), Date.now()),
     nameTaken: (name, token) => !!q.nameTaken.get(name, token),
     guestList: () => q.guestList.all(),

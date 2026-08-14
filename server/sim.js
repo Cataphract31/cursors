@@ -16,8 +16,8 @@
 
 import { rngFromSeedHex, newSeedHex, commitOf } from "./rng.js";
 
-/* economics — LOCKED, matches the client and THIN ICE's audited config */
-export const STAKE = 100, ENTRY = 97, FEE_PLAT = 1, FEE_RAKE = 2;
+/* economics — LOCKED, and the client mirrors these exactly */
+export const STAKE = 100, ENTRY = 98, FEE = 2;
 export const MAXCUR = 5, BOT_MAXCUR = 3;
 
 /* The food chain. A cursor only fights inside 4x its own size — sharks stop
@@ -56,8 +56,6 @@ export const skinOf = bounty => TIER_SKINS[tierOf(bounty)];
    and so the client mirror has one definition to copy rather than two. */
 export const canFight = (aBounty, bBounty) =>
   Math.max(aBounty, bBounty) <= FOOD_CHAIN * Math.min(aBounty, bBounty);
-const TICKETS_PER_DEPLOY = 200;
-const HALF_LIFE_MS = 45 * 24 * 3600 * 1000;   /* rakeback tickets, 45-day half-life */
 
 /* arena + feel constants, verbatim from the client */
 /* The arena's BASE size. The field the epoch actually runs on is derived from
@@ -110,34 +108,23 @@ export function createSim(opts) {
   let rushAt = null, crashUntil = 0, deploysOpen = false;
   let R = null;
   let botQueue = [], botTimer = 0, liveSum = 0, liveN = 0, arenaN = 0;
-  let platformFees = 0;
+  let houseFees = 0;
 
   /* Sim time, not wall time. Motion integrates on a fixed dt, so anything that
      gates on a clock has to use the same one or the round stops being a
      function of the seed: a 17ms event-loop hiccup used to change which cursor
      won a duel thousands of ticks later, which makes the commit/reveal
-     ceremony a decoration. Ticket decay is the one real-time thing here (a
-     45-day half-life is wall-clock by definition), so it keeps Date.now. */
+     ceremony a decoration. */
   const now = () => simClock;
-  const wallNow = () => Date.now();
   const rand = (a, b) => a + rng.next() * (b - a);
   const pick = a => a[Math.floor(rng.next() * a.length)];
 
   /* ---------- players & money ---------- */
-  function decayTickets(p) {
-    const t = wallNow();
-    if (p.tickets > 0 && p.ticketsAt) {
-      p.tickets *= Math.pow(2, -(t - p.ticketsAt) / HALF_LIFE_MS);
-      if (p.tickets < 0.01) p.tickets = 0;
-    }
-    p.ticketsAt = t;
-  }
   function registerPlayer(key, name, bot, persisted) {
     let p = players.get(key);
     if (p) { p.name = name; return p; }
     p = Object.assign({
-      key, name, bot: !!bot, balance: bot ? BOT_REFILL : 5000,
-      tickets: 0, ticketsAt: wallNow(), rake: 0, skin: "",
+      key, name, bot: !!bot, balance: bot ? BOT_REFILL : 5000, skin: "",
       epochIn: 0, epochOut: 0, totIn: 0, totOut: 0,
     }, persisted || {});
     p.key = key; p.name = name; p.bot = !!bot;
@@ -229,9 +216,8 @@ export function createSim(opts) {
     if (cursOf(key).length >= (p.bot ? BOT_MAXCUR : MAXCUR)) return "max live";
     if (p.balance < STAKE) { faucet(p); if (p.balance < STAKE) return "insufficient"; }
     p.balance -= STAKE;
-    decayTickets(p); p.tickets += TICKETS_PER_DEPLOY;
     p.epochIn += STAKE; p.totIn += STAKE;
-    R.pot += ENTRY; R.deploys++; platformFees += FEE_PLAT;
+    R.pot += ENTRY; R.deploys++; houseFees += FEE;
     const c = spawnCur(p);
     emit({ t: "spawn", id: c.id, owner: c.owner, skin: skinOf(c.bounty), x: Math.round(c.x), y: Math.round(c.y), bounty: c.bounty, grace: GRACE_MS / 1000 });
     money(p);
@@ -241,9 +227,8 @@ export function createSim(opts) {
      game and the whole stake comes back */
   function refundCur(p, c) {
     p.balance += STAKE;
-    decayTickets(p); p.tickets = Math.max(0, p.tickets - TICKETS_PER_DEPLOY);
     p.epochIn -= STAKE; p.totIn -= STAKE;
-    R.pot -= ENTRY; R.deploys--; platformFees -= FEE_PLAT;
+    R.pot -= ENTRY; R.deploys--; houseFees -= FEE;
     removeCur(c);
     emit({ t: "refund", id: c.id, owner: c.owner });
   }
@@ -266,7 +251,7 @@ export function createSim(opts) {
     /* This used to drop a graced cursor on the floor — no refund, no recall, no
        reply — while RECALL ALL refunded the very same cursor. The client then
        latched the slot for six seconds, by which time grace had lapsed and the
-       retry banked 0.097 instead of refunding 0.100. One tap, one meaning. */
+       retry banked 0.098 instead of refunding 0.100. One tap, one meaning. */
     if (graced(c) && c.mode === "roam") { refundCur(p, c); money(p); return; }
     if (c.mode === "roam" || c.mode === "duel") forceRecall(c);
   }
@@ -468,16 +453,9 @@ export function createSim(opts) {
        everything that entered the arena this epoch must have left it as banks */
     if (R.pot !== R.banked)
       console.error(`INVARIANT VIOLATION epoch ${epochNo}: pot in ${R.pot} != banked ${R.banked}`);
-    /* rakeback: this epoch's pool splits by ticket share, decayed to now */
-    const pool = R.deploys * FEE_RAKE;
-    let totalT = 0;
-    for (const p of players.values()) { decayTickets(p); totalT += p.tickets; }
-    if (pool > 0 && totalT > 0)
-      for (const p of players.values())
-        if (p.tickets > 0) { p.rake += pool * (p.tickets / totalT); money(p); }
     const receipt = {
       no: epochNo, up: Math.round(upT - epochStart), pot: R.pot, deploys: R.deploys,
-      deaths: R.deaths, top: R.bigBank, seed: seedHex, commit, fees: platformFees,
+      deaths: R.deaths, top: R.bigBank, seed: seedHex, commit, fees: houseFees,
     };
     phase = "crash"; crashUntil = now() + CRASH_MS; rushAt = null; deploysOpen = false;
     emit({ t: "crash", ...receipt });
@@ -608,13 +586,8 @@ export function createSim(opts) {
     tick, snapshot, welcomeState,
     registerPlayer, requestDeploy, requestRecall, recallOne, cancelRecall,
     players, cursCount: () => curs.length,
-    diskUsed, DISK_TOTAL, CORPSES, fees: () => platformFees,
+    diskUsed, DISK_TOTAL, CORPSES, fees: () => houseFees,
     arena: () => ({ aw: AW, ah: AH }),
     epochNo: () => epochNo, phase: () => phase,
-    claimRake: key => {
-      const p = players.get(key); if (!p || p.rake <= 0) return 0;
-      const amt = p.rake; p.rake = 0; p.balance += amt; money(p);
-      return amt;
-    },
   };
 }

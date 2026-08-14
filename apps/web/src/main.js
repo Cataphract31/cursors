@@ -116,7 +116,7 @@ if(MOBILE&&window.visualViewport){
 }
 
 /* ---- money: integer units, 1 unit = 0.001 SOL ---- */
-const STAKE=100, FEE_PLAT=1, FEE_RAKE=2, ENTRY=97, MAXCUR=5;
+const STAKE=100, FEE=2, ENTRY=98, MAXCUR=5;
 const fmtS=u=>((u<0?"-":"")+(Math.abs(u)/1000).toFixed(3));
 const fmtSign=u=>(u<0?"-":"+")+(Math.abs(u)/1000).toFixed(3);
 
@@ -2024,7 +2024,7 @@ function menubarMenu(label,id){
   if(id==="win-calc"&&depth.calcMenus){ const m=depth.calcMenus(label); if(m) return m; }
   if((id==="win-chat"||id.indexOf("win-conv")===0)&&msn.menus){ const m=msn.menus(label,id); if(m) return m; }
   if(id==="win-cursors"){
-    const P={Play:"cx-play",Stats:"cx-stats",Rakeback:"cx-rake",History:"cx-hist",Verify:"cx-verify"};
+    const P={Play:"cx-play",Stats:"cx-stats",History:"cx-hist",Verify:"cx-verify"};
     if(label==="Game") return [
       {label:"Deploy 0.1 SOL",bold:1,action:()=>deploy(false)},
       {label:"Recall All",action:recallAll},
@@ -2041,7 +2041,7 @@ function menubarMenu(label,id){
       {label:"Verify fairness",action:()=>cxShow("cx-verify")},
       {sep:1},
       {label:"About CURSORS.EXE",action:()=>showError("About CURSORS.EXE",
-        "CURSORS.EXE\nVersion 5.1 (Build 2600)\n\nRTP 99% · P(A wins) = A/(A+B)\nFee 0.001 · rakeback 0.002 per deploy\n\nThis product is licensed to:\n"+playerNameFull(),true)}];
+        "CURSORS.EXE\nVersion 5.1 (Build 2600)\n\nRTP 98% · P(A wins) = A/(A+B)\nFee 0.002 per deploy\n\nThis product is licensed to:\n"+playerNameFull(),true)}];
   }
   switch(label){
     case "File": return [
@@ -3658,8 +3658,6 @@ const oe=initOE({
   /* read-only getters — the statement mail reads these at display time */
   hooks:{
     wallet:()=>wallet,
-    rake:()=>rakeAccrued,
-    tickets:()=>myTickets,
     deploys:()=>stats.deploys,
     staked:()=>stats.tIn,
     banked:()=>stats.tOut,
@@ -3790,11 +3788,11 @@ sys=initSysApps({
 sys.init();
 
 /* A stopped service changes THIS computer and nothing else.
-   The arena, the rakeback ledger and the fairness provider run on the game
-   server, so they are not in here at all — Services refuses to touch them and
-   tells you why. This is a live game played for money: a switch that appears
-   to stop the ledger would be a lie even if it only lied to the person who
-   flipped it, and a switch that actually stopped it would be an exploit. */
+   The arena and the fairness provider run on the game server, so they are not
+   in here at all — Services refuses to touch them and tells you why. This is a
+   live game played for money: a switch that appears to stop the arena would be
+   a lie even if it only lied to the person who flipped it, and a switch that
+   actually stopped it would be an exploit. */
 function applyService(ctl,on){
   if(ctl==="audio"){ muted=!on||$("#vf-mute").checked; volSync(); }
   if(ctl==="themes") document.body.classList.toggle("classic-theme",!on);
@@ -3987,7 +3985,6 @@ let wallet=5000, walletShown=5000;
 let plBase=5000, plBaseSet=false;
 let stats={kills:0,deaths:0,best:0,deploys:0,banks:0,bigBank:0,tIn:0,tOut:0};
 let curs=[], binDead=[];
-let myTickets=0, globalTickets=1437200, rakeAccrued=0;
 /* The autoplay dials were module state, so a reload — which on a phone is a
    background tab being evicted, not a deliberate act — silently reset them.
    They persist now. Autoplay itself deliberately does NOT persist: coming back
@@ -4270,8 +4267,6 @@ function crashSystem(){
     "The computer has rebooted from a bugcheck. The bugcheck was: 0x0000007b. The disk filled with dead cursors. All live cursors were banked in full.");
   for(const c of [...curs]) if(!c.dead) bank(c,true);
   closeWin("win-shutdown",{silent:true});
-  const share=myTickets>0?myTickets/(globalTickets+myTickets):0;
-  rakeAccrued+=share*R.deploys*FEE_RAKE;
   /* the epoch goes into the History pane before R is reset */
   epochHist.unshift({no:roundNo,up:fmtUp(upT-epochStart),pot:R.pot,deploys:R.deploys,
     deaths:R.deaths,top:R.bigBank,net:R.myOut-R.myIn,myIn:R.myIn});
@@ -4383,7 +4378,6 @@ function deploy(silent){
   }
   if(wallet<STAKE) return;
   wallet-=STAKE;
-  myTickets+=200;
   R.myIn+=STAKE; stats.deploys++; stats.tIn+=STAKE;
   R.pot+=ENTRY; R.deploys++;
   const c=makeCur(playerName(),true);
@@ -4403,7 +4397,6 @@ function botDeploy(name){
   c.mode="roam"; c.prevMode="roam";
   curs.push(c);
   R.pot+=ENTRY; R.deploys++;
-  globalTickets+=200;
   updatePanel();
 }
 function recallAll(){
@@ -4432,7 +4425,7 @@ function recallAll(){
     if(c.grace>0){
       /* the misclick window: spawn protection means it cannot have fought yet,
          so undeploying inside it refunds in full with nothing to game */
-      wallet+=STAKE; myTickets-=200; R.myIn-=STAKE; R.pot-=ENTRY; R.deploys--;
+      wallet+=STAKE; R.myIn-=STAKE; R.pot-=ENTRY; R.deploys--;
       stats.deploys--; stats.tIn-=STAKE;   /* deploy() counted these; a refund un-counts them */
       removeCur(c); refunded++;
     }else if(c.mode==="roam"||c.mode==="duel"){ forceRecall(c); recalled++; }
@@ -4479,7 +4472,6 @@ function cxShow(id){
 $$("#win-cursors .cx-tab").forEach(t=>t.addEventListener("click",()=>{ sClick(); cxShow(t.dataset.cx); }));
 function renderCx(){
   if($("#cx-stats").classList.contains("on")) renderCxStats();
-  else if($("#cx-rake").classList.contains("on")) renderCxRake();
   else if($("#cx-hist").classList.contains("on")) renderCxHist();
   else if($("#cx-verify").classList.contains("on")) renderCxVerify();
 }
@@ -4498,28 +4490,8 @@ function renderCxStats(){
     cxKV("best multiplier","×"+stats.best.toFixed(1))+
     cxKV("biggest bank",stats.bigBank?fmtS(stats.bigBank)+" SOL":"—")+
     cxKV("live right now",`${myCurs().length} cursor${myCurs().length===1?"":"s"} · ${fmtS(liveVal)} SOL`)+
-    `<div class="cx-note">expected P/L: −1% (the fee). the rest is variance.</div>`;
+    `<div class="cx-note">expected P/L: −2% (the fee). the rest is variance.</div>`;
 }
-function renderCxRake(){
-  const share=myTickets>0?100*myTickets/(globalTickets+myTickets):0;
-  $("#cx-rake").innerHTML=
-    cxKV("your tickets",myTickets.toLocaleString())+
-    cxKV("global tickets",globalTickets.toLocaleString())+
-    cxKV("your share",share.toFixed(4)+"%")+
-    cxKV("accrued",(rakeAccrued/1000).toFixed(4)+" SOL",rakeAccrued>0?"pos":"")+
-    `<button class="xbtn big" id="rk-claim" style="margin-top:6px"${rakeAccrued>0?"":" disabled"}>CLAIM ${(rakeAccrued/1000).toFixed(4)} SOL</button>`+
-    `<div class="cx-note">every deploy pays 0.002 SOL to the pool + 200 tickets to its owner.
-     your payout = your ticket share. tickets halve every 45 days.</div>`;
-}
-$("#cx-rake").addEventListener("click",e=>{
-  if(e.target.id!=="rk-claim"||rakeAccrued<=0) return;
-  if(MP.on){ mpSend({t:"rake"}); sysSnd("tada",.4); return; }
-  wallet+=rakeAccrued;
-  log(`rakeback claimed: ${(rakeAccrued/1000).toFixed(4)} SOL`);
-  rakeAccrued=0;
-  sysSnd("tada",.4);
-  renderCxRake(); updatePanel();
-});
 function renderCxHist(){
   const rows=epochHist.map(h=>
     `<tr><td>${h.no}</td><td>${h.up}</td><td class="n">${fmtS(h.pot)}</td><td class="n">${h.deploys}</td><td class="n">${h.deaths}</td>`+
@@ -4548,7 +4520,7 @@ function renderCxVerify(){
   $("#cx-verify").innerHTML=
     cxKV("duel odds","P(A wins) = A / (A + B)")+
     cxKV("reach ×N","P = 1/N. exactly.")+
-    cxKV("house edge","the 1% entry fee. nothing else.")+
+    cxKV("house edge","the 2% entry fee. nothing else.")+
     `<div class="hr"></div>`+
     cxKV(`epoch ${roundNo} commitment`,"published while play is live")+
     `<div class="cx-seed">sha256: ${commitHex||"computing…"}</div>`+
@@ -5227,8 +5199,8 @@ function recallCursor(id){
   }else if(c.grace>0&&c.mode==="roam"){
     /* one tap, one meaning — matches sim.js recallOne: inside spawn grace the
        cursor cannot have fought, so a slot tap undeploys it for the full stake
-       rather than gliding it home for 0.097 */
-    wallet+=STAKE; myTickets-=200; R.myIn-=STAKE; R.pot-=ENTRY; R.deploys--;
+       rather than gliding it home for 0.098 */
+    wallet+=STAKE; R.myIn-=STAKE; R.pot-=ENTRY; R.deploys--;
     stats.deploys--; stats.tIn-=STAKE;
     removeCur(c);
     log(`undeployed cursor #${id} in grace — refunded in full`);
@@ -5323,8 +5295,6 @@ function updatePanel(){
   rec.textContent=graced?"◂ UNDEPLOY (refund)":recalling?"◂ CANCEL RECALL":`◂ RECALL ALL (${RECALL_SECS}s)`;
   $("#livecount").textContent=mine.length;
   $("#liveval").textContent=fmtS(liveVal);
-  const share=myTickets>0?100*myTickets/(globalTickets+myTickets):0;
-  $("#rakeline").textContent=`rakeback: ${myTickets.toLocaleString()} tk · ${share.toFixed(2)}% · +${(rakeAccrued/1000).toFixed(4)} SOL`;
   const pl=wallet+liveVal-plBase;
   $("#statline").textContent=`kills ${stats.kills} · deaths ${stats.deaths} · best ×${stats.best.toFixed(1)} · P/L ${fmtSign(pl)}`;
   /* the thumb bar shows the same state in fewer letters */
@@ -5358,7 +5328,6 @@ $("#btn-logoff-yes").addEventListener("click",()=>{
   renderHud();
   stats={kills:0,deaths:0,best:0,deploys:0,banks:0,bigBank:0,tIn:0,tOut:0};
   epochHist=[];
-  myTickets=0; rakeAccrued=0;
   binDead=[]; binFiles=[]; renderBin();
   logpaper.textContent="";
   log("session reset. welcome back.");
@@ -5510,7 +5479,6 @@ function mpWelcome(m){
   if(!plBaseSet){ plBase=wallet; plBaseSet=true; }
   $("#walletamt").textContent=fmtS(Math.round(wallet))+" SOL";
   renderHud();
-  myTickets=m.tickets; globalTickets=m.glob; rakeAccrued=m.rake;
   tvWatchLast=false;               /* re-announce "watching" on the new socket */
   if(!MP.chatSeeded){
     MP.chatSeeded=true;
@@ -5735,7 +5703,7 @@ function mpMsg(m){
     case "kill": if(MP.on) mpKill(m); break;
     case "bank": if(MP.on) mpBank(m); break;
     case "refund": if(MP.on){ const c=mpCurs.get(m.id); if(c&&c.isMine){ R.myIn-=STAKE; stats.deploys--; stats.tIn-=STAKE; log("undeployed in grace — refunded in full"); } mpRemove(c); updatePanel(); } break;
-    case "bal": if(MP.on){ wallet=m.balance; myTickets=m.tickets; globalTickets=m.glob; rakeAccrued=m.rake; updatePanel(); } break;
+    case "bal": if(MP.on){ wallet=m.balance; updatePanel(); } break;
     case "rush": if(MP.on){ shutFired=true; phaseT=m.secs; if(!MOBILE) openWin("win-shutdown",{silent:true}); sShut(); renderPhase(); updatePanel(); } break;
     case "resync": if(MP.on) mpResync(m.epoch); break;
     case "crash": if(MP.on) mpCrash(m); break;
@@ -5867,13 +5835,12 @@ const HELP={
       <tr><td>×100</td><td>1 in 100 &nbsp;(1%)</td></tr>
     </table>
     <h2>Where the house edge is</h2>
-    <p>Entry is 0.100 SOL: <b>0.097</b> goes into the arena, <b>0.001</b> to the
-    platform, <b>0.002</b> back to players as rakeback. That fee is the entire
-    edge — about <b>1%</b>, giving an RTP of <b>99%</b>. Nothing else in this
-    game takes anything from you.</p>
-    <div class="hlp-note">Expected profit is −1% of everything you stake. Every
+    <p>Entry is 0.100 SOL: <b>0.098</b> goes into the arena and <b>0.002</b> to
+    the house. That fee is the entire edge — <b>2%</b>, giving an RTP of
+    <b>98%</b>. Nothing else in this game takes anything from you.</p>
+    <div class="hlp-note">Expected profit is −2% of everything you stake. Every
     other number you see — your streak, your best multiplier, your worst beat —
-    is variance. Running better than −1% is luck, not skill. Running worse is
+    is variance. Running better than −2% is luck, not skill. Running worse is
     also luck.</div>
     <p>Bet size cannot change your variance, because every cursor costs the
     same. Only your banking discipline can. Cash at ×2 often and you win small
@@ -5939,17 +5906,6 @@ const HELP={
     <div class="hlp-note">We would rather tell you exactly how far the proof
     goes than let you assume it goes further.</div>`},
 
-  rake:{t:"Rakeback, and why it exists",group:"Fairness",body:()=>`
-    <h1>Rakeback, and why it exists</h1>
-    <p>Every deploy — yours or anyone else's — pays <b>0.002 SOL</b> into a
-    rakeback pool and mints the person who deployed <b>200 tickets</b>.</p>
-    <p>Your share of every future pool equals your share of all live tickets.
-    Tickets decay with a <b>45-day half-life</b>, so the payroll always belongs
-    to whoever is playing now rather than to whoever showed up first.</p>
-    <p>That 0.002 is two-thirds of the 0.003 fee, which is what turns a 3% take
-    into a <b>1% house edge</b> and a 99% RTP. Claim it from
-    <b>CURSORS.EXE → Rakeback</b> whenever it is worth claiming.</p>`},
-
   bin:{t:"The Recycle Bin and death certificates",group:"The desktop",body:()=>`
     <h1>The Recycle Bin and death certificates</h1>
     <p>Every dead cursor files a certificate: what it was carrying, its peak
@@ -5977,7 +5933,7 @@ const HELP={
     </ul>
     <p>Right-click almost anything. Most of it does what XP did.</p>`},
 };
-const HELP_ORDER=["start","odds","disk","multi","verify","rake","bin","apps"];
+const HELP_ORDER=["start","odds","disk","multi","verify","bin","apps"];
 let helpAt="start", helpHist=[];
 function renderHelp(){
   const side=$("#hlp-side"); side.innerHTML="";
@@ -6221,7 +6177,7 @@ if(location.hash.indexOf("#desktop-help")===0) setTimeout(()=>{ /* dev: Help and
 },450);
 if(location.hash==="#desktop-logfill") setTimeout(()=>{ /* dev: does a long log blow the window out? */
   openWin("win-log");
-  for(let i=0;i<60;i++) log("mumu > bobo  +0.097   (line "+i+")");
+  for(let i=0;i<60;i++) log("mumu > bobo  +0.098   (line "+i+")");
 },500);
 if(location.hash.indexOf("#desktop-msn")===0) setTimeout(()=>{ /* dev: capture messenger in use */
   const conv=id=>document.getElementById(msn.convIdFor(id));
@@ -6328,7 +6284,7 @@ if(location.hash==="#desktop-crash") setTimeout(()=>{ /* dev: fast-forward to th
 if(location.hash.indexOf("#desktop-cx")===0) setTimeout(()=>{ /* dev: capture a CURSORS.EXE pane */
   openWin("win-cursors");   /* the phone boots to a bare desktop */
   const p=location.hash.replace("#desktop-cx-","");
-  if(["stats","rake","hist","verify"].indexOf(p)>=0) cxShow("cx-"+p);
+  if(["stats","hist","verify"].indexOf(p)>=0) cxShow("cx-"+p);
   if(p==="hist"||p==="stats"){ /* fake a played session so the pane has flesh */
     stats={kills:4,deaths:2,best:6.2,deploys:11,banks:6,bigBank:601,tIn:1100,tOut:1289};
     epochHist=[

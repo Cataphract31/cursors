@@ -5,9 +5,9 @@ Running record of what's locked, what's adopted-pending-prototype, and what's op
 ## Locked (agreed with the owner)
 
 - **Rounds, not continuous.** Join → battle → results. Chosen so THIN ICE's round machinery ports and the BSOD works as a moment.
-- **Fixed entry, proportional resolution.** Every cursor deploys at exactly 0.100 SOL (0.097 arena + 0.001 platform + 0.002 rakeback). Duels resolve at P(A wins) = A/(A+B), winner takes all. Every collision is EV-neutral; P(ever reaching ×N) = 1/N; effective RTP 99% via rakeback. Size is earned mid-round, never bought — this is the whale-balance answer.
+- **Fixed entry, proportional resolution.** Every cursor deploys at exactly 0.100 SOL (0.098 arena + 0.002 house fee). Duels resolve at P(A wins) = A/(A+B), winner takes all. Every collision is EV-neutral; P(ever reaching ×N) = 1/N; RTP 98%. Size is earned mid-round, never bought — this is the whale-balance answer.
 - **Up to 5 cursors per player**, cluster together, never fight each other. No EV effect; texture and exposure scaling only.
-- **Rakeback**: 200 tickets per deploy, 45-day half-life, ticket share pays the 2% pool (THIN ICE's `RevShareLedger` unchanged).
+- **One fee, one place**: 2% is taken at entry and nothing is taken after it — not from a duel, not from a bank, not from the crash sweep.
 - **Autoplay**: auto-deploy N per round + bank-at-target. Provably not-worse than manual play (nothing can create edge), boosts volume.
 - **No separate jackpot at launch.** The chain ladder IS the jackpot — unbounded right tail priced at exactly 1/N. (THIN ICE's bonanza study: its jackpot was 89% of player variance for marketing's sake; here the core game supplies that tail natively.)
 - **Cursors grow with bounty** (log scale), slightly slower when fat — target on the back.

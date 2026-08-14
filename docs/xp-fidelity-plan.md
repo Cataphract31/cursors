@@ -468,7 +468,7 @@ sibling module, wired through `main.js`).
   A restore genuinely reverts: wallpaper (incl. the Paint-set one and its mode), screen
   saver and wait, pointer scheme, the CRT switch, Control Panel view, desktop icon
   arrangement switches, taskbar switches, Explorer view, Folder Options and the startup
-  list. **The snapshot has no money in it** — no wallet, no cursors, no bin, no rakeback.
+  list. **The snapshot has no money in it** — no wallet, no cursors, no bin.
   Those are the server's and this window cannot touch them, which is the whole selection
   rule for what goes in a restore point.
 - **MSConfig** (`msconfig`, Administrative Tools): six tabs. General's three startup
@@ -610,8 +610,8 @@ apps, cheap) → **11** (games; Pinball is the flagship shock) → **10** (noise
 
 ## Standing constraints (unchanged)
 
-Real assets only, never drawn. System apps stay cosmetic — nothing touches money,
-rakeback, or another player. Copy stays flat and terse. Every phase ships with
+Real assets only, never drawn. System apps stay cosmetic — nothing touches money
+or another player. Copy stays flat and terse. Every phase ships with
 a push to GitHub (Vercel builds `apps/web` from source), and anything that grows first
 paint gets routed to `media/`.
 
