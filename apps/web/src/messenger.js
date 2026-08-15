@@ -252,7 +252,11 @@ export function initMessenger(deps) {
     d.textContent = who + " says:";
     rec.msgs.appendChild(d);
   }
-  function say(id, who, text, mine) {
+  /* `quiet` is history being replayed at sign-in. It renders identically and
+     announces nothing: a toast and an alert mean "this just arrived", and
+     firing twenty-five of them at the moment you connect is how the lobby
+     used to greet you. */
+  function say(id, who, text, mine, quiet) {
     const rec = conv(id);
     stamp(rec, who, mine);
     const d = document.createElement("div");
@@ -261,7 +265,7 @@ export function initMessenger(deps) {
     rec.msgs.appendChild(d);
     trim(rec);
     rec.msgs.scrollTop = rec.msgs.scrollHeight;
-    if (!mine) {
+    if (!mine && !quiet) {
       if (!isOpen(convId(id))) toast(byId(id), text, id);
       sysSnd("msnAlert", .4);
     }
@@ -568,6 +572,9 @@ export function initMessenger(deps) {
     openConv, lobbySys, lobbySay, botChat, setHumans,
     /* a real player messaged you — opens nothing, but toasts if the window is shut */
     dmIn: (from, text) => say("u:" + from, from, text, false),
+    /* the same two lines, replayed from the server's copy at sign-in */
+    lobbySeed: (who, text) => say("lobby", who, text, who === playerName(), true),
+    dmSeed: (who, text, mine) => say("u:" + who, mine ? playerName() : who, text, mine, true),
     dmSys: (who, text) => { if (convs["u:" + who]) sys("u:" + who, text); },
     nudgeLobby: () => nudge("lobby"),
     renderList, renderMe,

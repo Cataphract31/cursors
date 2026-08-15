@@ -91,6 +91,12 @@ body.mobile .icon .lbl{font-size:10px}
 .phaseline.battle{background:#FFE9E0;border-color:#E08A5A}
 .walletrow{display:flex;justify-content:space-between;align-items:baseline}
 .walletrow .amt{font:bold 17px "Lucida Console",Consolas,monospace}
+/* what is banked and what is still on the desktop, in one place. The
+   unrealized figure only exists while cursors are out, so an idle wallet
+   reads exactly as it always did. */
+.wamt{display:flex;flex-direction:column;align-items:flex-end;line-height:1.15}
+.unreal{font-size:11px;color:#0A6B2E}
+.unreal:empty{display:none}
 .statline{color:#555;margin-top:7px}
 .aprow{display:flex;align-items:center;gap:6px;margin:4px 0}
 .aprow .lb{width:70px;color:#555}
@@ -794,8 +800,10 @@ body.mobile #mhud{display:flex}
    sits at the 11px money floor rather than under it */
 .mh-phase{background:#FFF7DE;color:#000;border:1px solid #E0C05A;border-radius:2px;padding:0 5px;font-size:11px;line-height:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1 1 auto;min-width:0;text-align:center}
 .mh-phase.battle{background:#FFE9E0;border-color:#E08A5A}
-.mh-live{color:#FFFFFF;font-size:11px;white-space:nowrap;flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis}
 .mh-wallet{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis}
+/* what is still on the desktop and not yours yet, next to what is */
+.mh-live{font-size:11px;font-weight:bold;white-space:nowrap;flex:none;color:#9FF0BC}
+.mh-live:empty{display:none}
 /* am I up? the one number this audience checks, and it used to live three taps
    away behind a sheet and a tab */
 .mh-pl{font-size:12px;font-weight:bold;white-space:nowrap;flex:none;color:#CFE0FF}

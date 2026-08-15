@@ -68,7 +68,12 @@ const BASE_AW = 1280, BASE_AH = 800;
    all-edge spawns: ~24k px2 per cursor is a meat grinder, ~35k breathes.
    Hold the number and the game plays the same at 10 cursors or 400. */
 const PX2_PER_CUR = 32000, ARENA_MAX = 3;
-const GRACE_MS = 1400, RECALL_SECS = 3, DUEL_MS = 700, RUSH_MS = 12000, CRASH_MS = 5000;
+/* RUSH_MS is a CEILING, not a duration: the rush ends the moment the field
+   is empty, which with a 3s glide is 3-4 seconds. It used to run the full
+   clock, so every epoch ended with everyone banked and eight seconds of
+   nothing to watch, which is where people left. The ceiling only matters
+   if a duel keeps resolving into new glides. */
+const GRACE_MS = 1400, RECALL_SECS = 3, DUEL_MS = 700, RUSH_MS = 6000, CRASH_MS = 3000;
 
 /* The disk, which is the round clock. A 20 GB drive is what an XP box actually
    shipped with, and at 12 MB a corpse it holds enough dead cursors to make a
@@ -276,12 +281,23 @@ export function createSim(opts) {
     if (c.mode === "duel") { c.prevMode = "recall"; c.recallT = RECALL_SECS; return; }
     if (c.mode !== "recall") { c.mode = "recall"; c.prevMode = "recall"; c.recallT = RECALL_SECS; }
   }
+  /* A cursor the shutdown sweep takes that never had a fight paid to enter a
+     round it did not get to play. bounty === ENTRY and no kills is exactly
+     that: a win moves the bounty, a loss removes the cursor. Nobody can see
+     the crash coming or opt out of it, so the house hands its cut back and
+     the deploy costs nothing. The arena still returns exactly what it took
+     (R.banked counts ENTRY either way, so pot conservation is untouched) —
+     the extra 0.002 comes off the house, not out of the pot. */
+  const unplayed = c => c.kills === 0 && c.bounty === ENTRY;
   function bank(c, atShutdown) {
     const p = players.get(c.key);
+    const refund = !!atShutdown && unplayed(c);
+    const paid = refund ? STAKE : c.bounty;
     if (!R.bigBank || c.bounty > R.bigBank.amt) R.bigBank = { owner: c.owner, amt: c.bounty };
-    if (p) { p.balance += c.bounty; p.epochOut += c.bounty; p.totOut += c.bounty; }
+    if (p) { p.balance += paid; p.epochOut += paid; p.totOut += paid; }
     R.banked += c.bounty;
-    emit({ t: "bank", id: c.id, owner: c.owner, amt: c.bounty, mult: c.bounty / ENTRY, shut: !!atShutdown });
+    if (refund) houseFees -= FEE;
+    emit({ t: "bank", id: c.id, owner: c.owner, amt: paid, mult: c.bounty / ENTRY, shut: !!atShutdown, refund });
     removeCur(c);
     if (p) { money(p); faucet(p); }
   }
@@ -541,8 +557,9 @@ export function createSim(opts) {
       if (!c.bot || c.mode !== "roam") continue;
       if (c.bounty / ENTRY >= c.riskAt && rng.next() < dt * .5) forceRecall(c);
     }
-    /* the rush can also end by clock: a disk mid-write jams, the crash comes anyway */
-    if (rushAt && now() - rushAt >= RUSH_MS) crash();
+    /* The sweep is done when the field is empty — every cursor is banked and
+       there is nothing left to look at. The clock is only the backstop. */
+    if (rushAt && (!curs.length || now() - rushAt >= RUSH_MS)) crash();
   }
 
   /* ---------- views ---------- */

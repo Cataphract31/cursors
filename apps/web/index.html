@@ -126,11 +126,11 @@
         <span class="cx-tab" data-cx="cx-verify">Verify</span>
       </div>
       <div class="cx-pane on" id="cx-play">
-        <div class="walletrow"><span>WALLET</span><span class="amt" id="walletamt">5.000 SOL</span></div>
+        <div class="walletrow"><span>WALLET</span><div class="wamt"><span class="amt" id="walletamt">5.000 SOL</span><span class="unreal mono" id="walletlive"></span></div></div>
         <div class="hr"></div>
         <button class="xbtn big" id="btn-deploy">▸ DEPLOY 0.1 SOL</button>
         <div class="small dim" style="margin-top:4px">0.098 arena · 0.002 fee</div>
-        <div class="small" style="margin-top:4px">live <b id="livecount">0</b>/5 · in play <b class="mono" id="liveval">0.000</b></div>
+        <div class="small" style="margin-top:4px">live <b id="livecount">0</b>/5</div>
         <div class="striprow">
           <span class="lb" id="strip-hint">click a cursor to recall it</span>
           <div class="curstrip" id="cx-strip"></div>
@@ -1871,6 +1871,7 @@ icons/sounds: winXP (MIT)</div>
 <div id="mhud">
   <div class="mh-top" id="mh-info">
     <span class="mh-wallet mono" id="mh-wallet">5.000 SOL</span>
+    <span class="mh-live mono" id="mh-live"></span>
     <span class="mh-pl mono" id="mh-pl"></span>
     <span class="mh-phase mono" id="mh-phase">BOOT</span>
     <span class="mh-auto" id="mh-auto">AUTO</span>

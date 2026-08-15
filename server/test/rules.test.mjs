@@ -159,14 +159,68 @@ test("an epoch banks out exactly what it took in", () => {
   const r = rig({ corpses: 30 });
   const t = r.until(() => r.evs("crash").length > 0, 900);
   assert.ok(t >= 0, "no crash inside 15 minutes of sim time");
-  let inPot = 0, out = 0;
+  let inPot = 0, out = 0, fromHouse = 0;
   for (const e of r.events) {
     if (e.t === "spawn") inPot += ENTRY;
     else if (e.t === "refund") inPot -= ENTRY;
-    else if (e.t === "bank") out += e.amt;
+    /* a swept cursor that never fought is handed back the whole stake, and
+       the 2% over the arena share is the house's money, not the pot's */
+    else if (e.t === "bank") { out += e.amt; if (e.refund) fromHouse += STAKE - ENTRY; }
     else if (e.t === "crash") break;
   }
-  assert.equal(out, inPot, "the arena did not pay out everything it was given");
+  assert.equal(out - fromHouse, inPot, "the arena did not pay out everything it was given");
+});
+
+test("a cursor the shutdown sweep takes without a fight pays no fee", () => {
+  /* You cannot see the crash coming and cannot opt out of it, so a deploy
+     that never got a fight must cost nothing at all — not even the rake. */
+  const r = rig({ corpses: 30 });
+  const t = r.until(() => {
+    if (r.mine().length < MAXCUR) r.sim.requestDeploy(r.key);
+    return r.evs("crash").length > 0;
+  }, 900);
+  assert.ok(t >= 0, "no crash inside 15 minutes of sim time");
+
+  /* Read 'never fought' off the receipt rather than off the new flag, so this
+     fails on the money against a build that does not have the rule: a win adds
+     the loser's bounty, so mult === 1 on a live cursor means it never had one. */
+  const banks = r.evs("bank");
+  const unplayed = banks.filter(b => b.shut && b.mult === 1);
+  assert.ok(unplayed.length > 0, "the sweep took nobody who had not fought — test proves nothing");
+  for (const b of unplayed) {
+    assert.equal(b.amt, STAKE, "an unplayed cursor got back less than it paid to enter");
+    assert.equal(b.refund, true, "the receipt does not say it was a refund");
+  }
+  /* and the concession is narrow: anything that fought banks its bounty */
+  for (const b of banks) {
+    if (b.refund) continue;
+    assert.ok(b.amt !== STAKE || b.mult !== 1,
+      "a cursor banked the full stake without being marked a refund");
+  }
+});
+
+test("the sweep ends when the field is empty, not when the clock runs out", () => {
+  /* The rush used to run its full ceiling every time, so every epoch ended
+     with everyone already banked and seconds of empty desktop to watch. */
+  const r = rig({ corpses: 30 });
+  const t = r.until(() => {
+    if (r.mine().length < MAXCUR) r.sim.requestDeploy(r.key);
+    return r.evs("rush").length > 0;
+  }, 900);
+  assert.ok(t >= 0, "no shutdown rush inside 15 minutes of sim time");
+  const ceiling = r.evs("rush")[0].secs;
+
+  let secsToCrash = 0, emptyFor = 0;
+  for (let i = 0; i < Math.round(ceiling * 30) + 60; i++) {
+    r.step(); secsToCrash += DT;
+    if (r.evs("crash").length > 0) break;
+    if (r.sim.cursCount() === 0) emptyFor += DT;
+  }
+  assert.ok(r.evs("crash").length > 0, "the sweep never crashed");
+  assert.ok(secsToCrash < ceiling,
+    `the sweep ran the full ceiling (${secsToCrash.toFixed(2)}s of ${ceiling}s) instead of ending with the field`);
+  assert.ok(emptyFor < 0.5,
+    `${emptyFor.toFixed(2)}s of empty desktop before the crash — the sweep is meant to end with the last bank`);
 });
 
 test("no cursor ever leaves without a receipt", () => {

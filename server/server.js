@@ -26,7 +26,7 @@ const CORPSES = process.env.FAST ? 8 : +(process.env.CORPSES || 900);
 const db = openDb(DB_PATH);
 const conns = new Set();          /* live sockets with a completed hello */
 const byKey = new Map();          /* token -> conn (latest wins) */
-const chatLog = [];               /* ring buffer of {who,text,at} */
+
 const saveTimers = new Map();
 
 /* ---------- broadcast plumbing ---------- */
@@ -49,7 +49,15 @@ function broadcastSnap(msg) {
 }
 function broadcast(msg) { const s = JSON.stringify(msg); for (const c of conns) if (c.ws.readyState === 1 && !lagging(c)) c.ws.send(s); }
 function sys(text) { pushChat("*", text); broadcast({ t: "sys", text }); }
-function pushChat(who, text) { chatLog.push({ who, text, at: Date.now() }); if (chatLog.length > 40) chatLog.shift(); }
+/* History is what PLAYERS said. The room's own announcements — signed in,
+   signed out, the epoch crashed — are broadcast live and then forgotten:
+   they are the loudest thing in the room (a crash every epoch, a line per
+   arrival) and holding them in the same buffer pushed every real message
+   out of it long before anyone reconnected. */
+function pushChat(who, text) { if (who !== "*") { try { db.chatPost(who, text); } catch (e) {} } }
+function chatHistory() {
+  return db.chatList().slice(-25).map(r => ({ who: r.who, text: r.txt, at: r.at }));
+}
 
 function onlineNames() {
   return [...byKey.values()].filter(c => c.hello)
@@ -165,7 +173,14 @@ function handle(c, m) {
       send(c, {
         t: "welcome", token, name,
         balance: b.balance,
-        epoch: sim.welcomeState(), chat: chatLog.slice(-25),
+        epoch: sim.welcomeState(), chat: chatHistory(),
+        /* every conversation this token is part of, including anything said
+           to it while it was away — a DM to someone offline is now kept, not
+           dropped on the floor */
+        dms: db.dmFor(token).map(d => ({
+          who: d.fromTok === token ? d.toName : d.fromName,
+          text: d.txt, at: d.at, mine: d.fromTok === token,
+        })),
         online: onlineNames(),
       });
       broadcast({ t: "join", name, online: onlineNames() });
@@ -208,12 +223,18 @@ function handle(c, m) {
       c.lastDm = now;
       const me = sim.players.get(c.key);
       if (!me || me.name === to) break;
-      let target = null;
+      let target = null, toTok = null;
       for (const x of conns) {
         const p = x.key && sim.players.get(x.key);
-        if (p && p.name === to) { target = x; break; }
+        if (p && p.name === to) { target = x; toTok = x.key; break; }
       }
-      if (!target) { send(c, { t: "dmFail", to }); break; }
+      /* Names are unique across live players AND the players table, so an
+         offline recipient still resolves to exactly one token. The message
+         is stored either way and handed over at their next sign-in. */
+      if (!toTok) toTok = db.tokenForName(to);
+      if (!toTok) { send(c, { t: "dmFail", to, kept: false }); break; }
+      try { db.dmPost({ fromTok: c.key, toTok, fromName: me.name, toName: to, txt }); } catch (e) {}
+      if (!target) { send(c, { t: "dmFail", to, kept: true }); break; }
       send(target, { t: "dm", from: me.name, text: txt });
       break;
     }

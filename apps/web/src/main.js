@@ -126,7 +126,9 @@ const fmtSign=u=>(u<0?"-":"+")+(Math.abs(u)/1000).toFixed(3);
    but the player never sees a round end — they see the system CRASH, bank
    everyone in full, and come straight back. Length is randomized so the
    crash cannot be camped by the clock. */
-const T_SHUT=12, T_CRASH=5, EPOCH_MIN=110, EPOCH_MAX=195;
+/* T_SHUT is a ceiling, not a duration — the sweep ends with the last bank,
+   which a 3s glide makes 3-4 seconds. Mirrors RUSH_MS/CRASH_MS in sim.js. */
+const T_SHUT=6, T_CRASH=3, EPOCH_MIN=110, EPOCH_MAX=195;
 const RECALL_SECS=3, DUEL_MS=700;
 
 /* ================= audio ================= */
@@ -4285,7 +4287,10 @@ function phaseTick(dt){
   if(phase==="battle"){
     if(!shutFired&&phaseT<=T_SHUT) startShutdownRush();
     if(shutFired) $("#shuttimer").textContent="0:"+String(Math.max(0,Math.ceil(phaseT))).padStart(2,"0");
-    if(phaseT<=0) crashSystem();
+    /* nothing left on the desktop means the sweep is done — waiting out the
+       rest of the ceiling is a countdown over an empty field */
+    if(shutFired&&!curs.length) crashSystem();
+    else if(phaseT<=0) crashSystem();
   }
   else if(phase==="crash"&&phaseT<=0){
     bsodEl.style.display="none";
@@ -4441,22 +4446,31 @@ $("#btn-recall").addEventListener("click",recallAll);
 $("#mh-deploy").addEventListener("click",()=>deploy(false));
 $("#mh-recall").addEventListener("click",recallAll);
 $("#mh-info").addEventListener("click",()=>openWin("win-cursors"));
+/* A cursor the shutdown sweep takes that never had a fight paid to enter a
+   round it did not get to play — and a crash is not something you can see
+   coming or opt out of. The house hands its cut back, so that deploy costs
+   nothing at all. bounty === ENTRY with no kills is exactly "never fought":
+   a win moves the bounty, a loss removes the cursor. Mirrors sim.js. */
+const unplayed=c=>c.kills===0&&c.bounty===ENTRY;
 function bank(c,atShutdown){
   const m=(c.bounty/ENTRY).toFixed(1);
+  const refund=atShutdown&&unplayed(c);
+  const paid=refund?STAKE:c.bounty;
   if(!R.bigBank||c.bounty>R.bigBank.amt) R.bigBank={owner:c.owner,amt:c.bounty};
   if(c.isMine){
-    wallet+=c.bounty; R.myOut+=c.bounty;
+    wallet+=paid; R.myOut+=paid;
     stats.best=Math.max(stats.best,c.bounty/ENTRY);
-    stats.banks++; stats.tOut+=c.bounty; stats.bigBank=Math.max(stats.bigBank,c.bounty);
+    stats.banks++; stats.tOut+=paid; stats.bigBank=Math.max(stats.bigBank,c.bounty);
     if(c.bounty>=ENTRY*10){
       /* the ×10: 1-in-10 exactly, and it should feel like it */
       sysSnd("tada",.6);
       for(let i=0;i<3;i++) setTimeout(()=>goldBurst(c.x+rand(-44,44),c.y+rand(-30,30)),i*170);
       jackpot(c.bounty);
     }else sBank();
-    float(fmtSign(c.bounty)+" ×"+m,c.x,c.y,false);
+    float(fmtSign(paid)+(refund?" refund":" ×"+m),c.x,c.y,false);
     goldBurst(c.x,c.y);
-    log(`you banked ${fmtS(c.bounty)} (×${m})${atShutdown?" at shutdown":""}`);
+    log(refund?`the crash caught cursor #${c.id} before its first fight — ${fmtS(paid)} refunded in full`
+              :`you banked ${fmtS(c.bounty)} (×${m})${atShutdown?" at shutdown":""}`);
   }else{
     if(c.bounty>=ENTRY*2){ log(`${c.owner} banked ${fmtS(c.bounty)} (×${m})`); botChat("bank",{n:c.owner}); }
   }
@@ -4490,7 +4504,12 @@ function renderCxStats(){
     cxKV("best multiplier","×"+stats.best.toFixed(1))+
     cxKV("biggest bank",stats.bigBank?fmtS(stats.bigBank)+" SOL":"—")+
     cxKV("live right now",`${myCurs().length} cursor${myCurs().length===1?"":"s"} · ${fmtS(liveVal)} SOL`)+
-    `<div class="cx-note">expected P/L: −2% (the fee). the rest is variance.</div>`;
+    /* This used to read "expected P/L: −2%", directly under a session P/L that
+   is almost never −2% — so it read as a promise the game was breaking
+   rather than as the fee. State what is taken; the swing is the game, and
+   Help and Support has the long version. */
+    `<div class="cx-note">the house takes 2% at each deploy. every other number
+     here is the draw, not a fee.</div>`;
 }
 function renderCxHist(){
   const rows=epochHist.map(h=>
@@ -5262,6 +5281,9 @@ function renderHud(){
   /* walletShown, not wallet: the frame loop rolls the figure toward its new
      value and writing the raw number here would fight that animation */
   $("#mh-wallet").textContent=fmtS(Math.round(walletShown))+" SOL";
+  /* the thumb bar has one line, so the same two numbers ride it: banked,
+     then what is still out there and not yours yet */
+  $("#mh-live").textContent=liveVal?"+"+fmtS(liveVal):"";
   const pl=walletShown+liveVal-plBase;
   const plEl=$("#mh-pl");
   plEl.textContent=fmtSign(pl);
@@ -5294,7 +5316,11 @@ function updatePanel(){
   rec.disabled=phase==="crash"||!(recalling||mine.some(c=>c.mode==="roam"||c.mode==="duel"||c.grace>0));
   rec.textContent=graced?"◂ UNDEPLOY (refund)":recalling?"◂ CANCEL RECALL":`◂ RECALL ALL (${RECALL_SECS}s)`;
   $("#livecount").textContent=mine.length;
-  $("#liveval").textContent=fmtS(liveVal);
+  /* Money you are still playing is not money you have. It sits under the
+     balance rather than in a stats line three rows down, because "wallet
+     5.000" while 0.294 of it is on the desktop is the wrong number to read
+     at a glance — the pair is the position. */
+  $("#walletlive").textContent=liveVal?`+${fmtS(liveVal)} in play`:"";
   const pl=wallet+liveVal-plBase;
   $("#statline").textContent=`kills ${stats.kills} · deaths ${stats.deaths} · best ×${stats.best.toFixed(1)} · P/L ${fmtSign(pl)}`;
   /* the thumb bar shows the same state in fewer letters */
@@ -5344,7 +5370,7 @@ $("#btn-logoff-yes").addEventListener("click",()=>{
    positions arrive as 10Hz snapshots we interpolate, deaths and banks arrive
    as events and reuse the exact solo FX paths. Offline (no server, dev
    hashes, file://) the local sandbox sim runs untouched. */
-const MP={on:false,name:null,fill:0,disk:null,guest:null,gallery:null,tv:{now:null,queue:[]},chatSeeded:false};
+const MP={on:false,name:null,fill:0,disk:null,guest:null,gallery:null,chatSeeded:false};
 function mpUrl(){
   try{
     const q=new URLSearchParams(location.search).get("server");
@@ -5479,10 +5505,24 @@ function mpWelcome(m){
   if(!plBaseSet){ plBase=wallet; plBaseSet=true; }
   $("#walletamt").textContent=fmtS(Math.round(wallet))+" SOL";
   renderHud();
-  tvWatchLast=false;               /* re-announce "watching" on the new socket */
   if(!MP.chatSeeded){
     MP.chatSeeded=true;
-    for(const e of (m.chat||[])) e.who==="*"?msn.lobbySys(e.text):msn.lobbySay(e.who,e.text);
+    /* The server keeps both sides of this now, so signing in restores the
+       room and every conversation instead of handing you an empty window.
+       Seeded quietly — see msn.say: a replayed line must not toast. */
+    for(const e of (m.chat||[])) e.who==="*"?msn.lobbySys(e.text):msn.lobbySeed(e.who,e.text);
+    const dms=m.dms||[];
+    for(const d of dms) msn.dmSeed(d.who,d.text,d.mine);
+    /* one balloon for the whole backlog, not one per message: anything said
+       to you since this browser last had a session open */
+    const since=+(store.data.dmSeen||0);
+    const missed=dms.filter(d=>!d.mine&&d.at>since);
+    if(missed.length){
+      const who=[...new Set(missed.map(d=>d.who))];
+      showBalloon("Messenger",`${missed.length} message${missed.length===1?"":"s"} while you were away — from ${who.join(", ")}.`);
+      sysSnd("msnAlert",.4);
+    }
+    if(dms.length){ store.data.dmSeen=Math.max(since,...dms.map(d=>d.at)); store.save(); }
   }
   mpSend({t:"guest"});
   MP.online=m.online;
@@ -5617,9 +5657,10 @@ function mpBank(m){
       for(let i=0;i<3;i++) setTimeout(()=>goldBurst(x+rand(-44,44),y+rand(-30,30)),i*170);
       jackpot(m.amt);
     }else sBank();
-    float(fmtSign(m.amt)+" ×"+m.mult.toFixed(1),x,y,false);
+    float(fmtSign(m.amt)+(m.refund?" refund":" ×"+m.mult.toFixed(1)),x,y,false);
     goldBurst(x,y);
-    log(`you banked ${fmtS(m.amt)} (×${m.mult.toFixed(1)})${m.shut?" at shutdown":""}`);
+    log(m.refund?`the crash caught cursor #${m.id} before its first fight — ${fmtS(m.amt)} refunded in full`
+                :`you banked ${fmtS(m.amt)} (×${m.mult.toFixed(1)})${m.shut?" at shutdown":""}`);
   }else if(m.amt>=ENTRY*2) log(`${m.owner} banked ${fmtS(m.amt)} (×${m.mult.toFixed(1)})`);
   if(c) mpRemove(c);
   updatePanel();
@@ -5709,8 +5750,10 @@ function mpMsg(m){
     case "crash": if(MP.on) mpCrash(m); break;
     case "epoch": if(MP.on) mpEpoch(m); break;
     case "chat": if(MP.on) msn.lobbySay(m.who,m.text); break;
-    case "dm": if(MP.on&&m.from&&m.text) msn.dmIn(m.from,m.text); break;
-    case "dmFail": if(MP.on&&m.to) msn.dmSys(m.to,`${m.to} is not signed in — that message was not delivered.`); break;
+    case "dm": if(MP.on&&m.from&&m.text){ msn.dmIn(m.from,m.text); store.data.dmSeen=Date.now(); store.save(); } break;
+    case "dmFail": if(MP.on&&m.to) msn.dmSys(m.to,m.kept
+      ?`${m.to} is not signed in. The message is waiting for them.`
+      :`There is no player called ${m.to}.`); break;
     case "sys": if(MP.on) msn.lobbySys(m.text); break;
     case "join": if(MP.on&&m.online){ MP.online=m.online; msn.setHumans(m.online); } break;   /* the sys line covers the greeting */
     case "part": if(MP.on){ msn.lobbySys(`${m.name} signed out`); if(m.online){ MP.online=m.online; msn.setHumans(m.online); } } break;
