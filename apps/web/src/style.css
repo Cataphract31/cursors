@@ -570,6 +570,23 @@ body.mobile #arena{transition:opacity .18s ease-out}
   pointer-events:none;
 }
 .cur.grace{opacity:.55}
+/* Leaving is a state you have to be able to read across a crowded desktop,
+   and it was the only one with no treatment at all — a gliding cursor looked
+   exactly like a roaming one, which is a poor thing to be unsure about when
+   it is your money crossing the field. Green because it is a bank in
+   progress, and deliberately not red: red is a duel.
+
+   Filter and opacity only, NO transform — see .promote for why. A keyframe
+   that sets transform overwrites the -90deg counter-rotation the portrait
+   view depends on, which is why .dueling needs a rotated twin and this
+   does not. */
+.cur.recalling svg,.cur.recalling img.curskin{
+  filter:drop-shadow(0 0 3px #2ECC57) drop-shadow(0 0 8px rgba(46,204,87,.6));
+  animation:recallpulse .55s ease-in-out infinite alternate}
+@keyframes recallpulse{from{opacity:.6}to{opacity:1}}
+@media (prefers-reduced-motion:reduce){
+  .cur.recalling svg,.cur.recalling img.curskin{animation:none;opacity:.85} }
+/* a duel outranks the glide: a cursor caught on its way out is fighting */
 .cur.dueling svg{animation:shake .13s infinite;filter:drop-shadow(0 0 3px #FF3B20) drop-shadow(0 0 7px rgba(255,40,20,.55))}
 @keyframes shake{0%{transform:translate(0,0)}25%{transform:translate(-1.5px,1px)}50%{transform:translate(1.5px,-1px)}75%{transform:translate(-1px,-1.5px)}100%{transform:translate(1px,1px)}}
 /* portrait phones show the arena rotated 90° (the sim is untouched); every

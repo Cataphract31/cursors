@@ -117,6 +117,8 @@ if(MOBILE&&window.visualViewport){
 
 /* ---- money: integer units, 1 unit = 0.001 SOL ---- */
 const STAKE=100, FEE=2, ENTRY=98, MAXCUR=5;
+/* left<->right, top<->bottom — recall runs for the far wall. Mirrors sim.js. */
+const OPP_EDGE=[1,0,3,2];
 const fmtS=u=>((u<0?"-":"")+(Math.abs(u)/1000).toFixed(3));
 const fmtSign=u=>(u<0?"-":"+")+(Math.abs(u)/1000).toFixed(3);
 
@@ -4650,11 +4652,16 @@ function nearestEnemy(c){
 }
 function move(c,dt){
   if(c.grace>0){ c.grace-=dt; if(c.grace<=0) c.el.classList.remove("grace"); }
+  /* a cursor on its way out is the one state you have to be able to read at a
+     glance, and it was the only one with no treatment at all */
+  c.el.classList.toggle("recalling",c.mode==="recall"||(c.mode==="duel"&&c.prevMode==="recall"));
   let tx=null,ty=null,turn=2.4;
   if(c.mode==="recall"){
     c.recallT-=dt;
-    /* out through the wall you came up from — one shared edge is one long scrum */
-    const e=c.edge===undefined?3:c.edge;
+    /* out through the FAR wall: the glide is time-boxed either way, so crossing
+       the field costs no extra exposure and makes leaving unmistakable.
+       Mirrors OPP_EDGE in sim.js. */
+    const e=OPP_EDGE[c.edge===undefined?3:c.edge];
     const ex=e===0?18:e===1?AW-18:clamp(c.x,60,AW-60);
     const ey=e===2?18:e===3?AH-18:clamp(c.y,60,AH-60);
     const dx=ex-c.x, dy=ey-c.y, dist=Math.hypot(dx,dy);
@@ -5498,6 +5505,7 @@ function mpWelcome(m){
     const c=mpMakeCur(sc.id,sc.owner,sc.x,sc.y,sc.bounty,sc.grace,sc.skin);
     c.mode=MPMODE[sc.mode]||"roam";
     if(c.mode==="duel") c.el.classList.add("dueling");
+    if(c.mode==="recall") c.el.classList.add("recalling");
   }
   wallet=m.balance; walletShown=wallet;
   /* "Session P/L" measured against a hardcoded 5000, so for anyone whose real
@@ -5562,6 +5570,7 @@ function mpResync(e){
     const c=mpMakeCur(sc.id,sc.owner,sc.x,sc.y,sc.bounty,sc.grace,sc.skin);
     c.mode=MPMODE[sc.mode]||"roam";
     if(c.mode==="duel") c.el.classList.add("dueling");
+    if(c.mode==="recall") c.el.classList.add("recalling");
   }
   updatePanel(); renderPhase();
 }
@@ -5579,6 +5588,8 @@ function mpSnap(m){
     if(mode!==c.mode){
       c.mode=mode;
       c.el.classList.toggle("dueling",mode==="duel");
+      /* the server owns the mode online, so the glide reads off the snapshot */
+      c.el.classList.toggle("recalling",mode==="recall");
       if(mode!=="duel") c._bankReq=false;
     }
   }

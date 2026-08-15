@@ -480,3 +480,46 @@ test("a round is a function of its seed, not of the wall clock", () => {
     assert.equal(r.events.join("|"), base.events.join("|"), `a ${ms}ms stall changed the round`);
   }
 });
+
+test("a recall runs for the far wall, not the one it came up from", () => {
+  /* The glide is time-boxed at RECALL_SECS either way, so crossing the field
+     buys no extra exposure — it buys speed, which is what makes leaving
+     readable. This pins the direction: a cursor that spawned on the left must
+     bank out through the right. */
+  const wallOf = (x, y, aw, ah) => {
+    const d = [x, aw - x, y, ah - y];                 /* left, right, top, bottom */
+    return d.indexOf(Math.min(...d));
+  };
+  const OPP = [1, 0, 3, 2];
+  const r = rig({ corpses: 400 });
+  let checked = 0;
+
+  for (let attempt = 0; attempt < 25 && checked < 5; attempt++) {
+    const id = r.deployLive();
+    if (id == null) break;
+    const { aw, ah } = r.sim.arena();
+    /* the SPAWN EVENT, not the cursor now: deployLive waits out spawn grace,
+       and 1.6s of roaming is enough drift to make the nearest wall a lie */
+    const born = r.evs("spawn").find(e => e.id === id);
+    if (!born) continue;
+    const from = wallOf(born.x, born.y, aw, ah);
+
+    r.sim.recallOne(r.key, id);
+    let last = null;
+    for (let i = 0; i < 30 * 4; i++) {
+      const c = r.cur(id);
+      if (!c) break;                                   /* banked, or killed en route */
+      if (c.mode === "c") last = { x: c.x, y: c.y };
+      r.step();
+    }
+    /* Only a glide that actually finished says anything about where it was
+       headed. One that was killed or caught mid-field stopped somewhere
+       arbitrary, and judging its position is judging the interruption. */
+    if (!last || !r.bankOf(id)) continue;
+    /* sampled on the last gliding tick, so it is where the cursor was headed */
+    assert.equal(wallOf(last.x, last.y, aw, ah), OPP[from],
+      `a cursor that came up on wall ${from} left through the wrong one`);
+    checked++;
+  }
+  assert.ok(checked >= 3, `only ${checked} clean glides observed — test proves little`);
+});
