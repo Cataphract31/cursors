@@ -171,16 +171,28 @@ export function createSim(opts) {
   /* Which wall you come up from. Everyone used to deploy along the bottom, and
      since a fresh cursor rarely lives long enough to travel, 87% of the field
      and 96% of all deaths happened in the bottom quarter — a 1280x200 arena
-     with a large decorative area above it. Now each player gets a taskbar edge
-     for the epoch, the way a real XP taskbar docks to any side. It is drawn
+     with a large decorative area above it. That was fixed by giving each
+     PLAYER a wall for the epoch. It is drawn
      from the epoch's own seeded stream, not chosen, because a choice with no
      mechanical advantage still ends with everyone copying one wall. */
-  function edgeOf(p) {
-    if (p.edgeEpoch !== epochNo) { p.edge = Math.floor(rng.next() * 4); p.edgeEpoch = epochNo; }
-    return p.edge;
-  }
   function spawnPoint(p) {
-    const fixed = p.bot ? -1 : edgeOf(p);                  /* bots use the whole rim */
+    /* EVERY deploy picks its own wall, players and bots alike. A per-player
+       wall meant your five arrived stacked on one edge and then spent half
+       their lives inside touching distance of a cursor they can never fight
+       — measured at 49.4% of squad-cursor time within 60px of a squadmate,
+       39.9% once spawns are spread. It never was an EV edge and the ladder
+       could not have given it one: every duel is A/(A+B), so no arrangement
+       of cursors bends the average, and 2174 head-to-head duels between a
+       5-cursor player and a 1-cursor player moved 747 SOL for a net of
+       +8.62 SOL to the squad — inside a +-16 SOL noise floor, and it flips
+       sign between arms. What it was, was five arrows in a heap looking like
+       a gang, which is its own problem in a game played for money.
+
+       They still regroup once they are out (see the centroid pull in move),
+       so a squad is still a squad — it just has to cross the field to become
+       one, and it arrives from four directions instead of one. Round length,
+       cursor lifetime and fights per cursor are all unchanged. */
+    const fixed = -1;
     let best = null, bestD = -1;
     for (let i = 0; i < 8; i++) {
       const side = fixed < 0 ? Math.floor(rand(0, 4)) : fixed;

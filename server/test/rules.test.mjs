@@ -523,3 +523,40 @@ test("a recall runs for the far wall, not the one it came up from", () => {
   }
   assert.ok(checked >= 3, `only ${checked} clean glides observed — test proves little`);
 });
+
+test("your five do not all come up on the same wall", () => {
+  /* A per-player wall put a whole squad on one edge, where they spent half
+     their lives inside touching distance of cursors they can never fight. It
+     was never an EV edge — every duel is A/(A+B), so no arrangement bends the
+     average — but five arrows arriving in a heap reads as a gang, and this is
+     played for money. Each deploy picks its own wall now. */
+  const wallOf = (x, y, aw, ah) => {
+    const d = [x, aw - x, y, ah - y];                 /* left, right, top, bottom */
+    return d.indexOf(Math.min(...d));
+  };
+  const r = rig({ corpses: 400 });
+  const { aw, ah } = r.sim.arena();
+  const wall = new Map();                             /* cursor id -> spawn wall */
+  let seen = 0;
+  const samples = [];
+
+  r.until(() => {
+    if (r.mine().length < MAXCUR) r.sim.requestDeploy(r.key);
+    for (const e of r.evs("spawn").slice(seen)) wall.set(e.id, wallOf(e.x, e.y, aw, ah));
+    seen = r.evs("spawn").length;
+    const live = r.mine();
+    if (live.length === MAXCUR) {
+      const walls = live.map(c => wall.get(c.id)).filter(w => w !== undefined);
+      if (walls.length === MAXCUR) samples.push(new Set(walls).size);
+    }
+    return samples.length >= 400;
+  }, 1800);
+
+  assert.ok(samples.length >= 100, `only ${samples.length} full squads observed`);
+  const mean = samples.reduce((a, b) => a + b, 0) / samples.length;
+  const allOne = samples.filter(n => n === 1).length / samples.length;
+  /* five independent draws from four walls average ~3.05 distinct; one wall
+     for the whole squad is what the old rule produced, every single time */
+  assert.ok(mean > 2, `a squad of five spans only ${mean.toFixed(2)} walls on average`);
+  assert.ok(allOne < 0.05, `${(100 * allOne).toFixed(1)}% of squads came up on a single wall`);
+});

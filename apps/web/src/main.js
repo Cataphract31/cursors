@@ -4060,7 +4060,6 @@ let R=null, epochHist=[];
 function newRoundRecord(){ return {pot:0,deploys:0,myIn:0,myOut:0,myKills:0,bigBank:null,deaths:0}; }
 
 let localCurId=0;   /* the offline sandbox numbers its cursors too — Device Manager lists them by id */
-let myEdge;         /* which wall your cursors come up from this round (see makeCur) */
 const CURSVG=`<svg viewBox="0 0 14 22"><use href="#ic-cursor"/></svg>`;
 /* Mirrors server/sim.js — FOOD_CHAIN, tierOf and the size curve must agree with
    the server exactly or the local prediction disagrees with the authority. */
@@ -4163,11 +4162,13 @@ function makeCur(owner,isMine){
      existing scrum is the arena choosing your fight for you (see server sim) */
   let x,y,ax,ay,edge;
   { let bd=-1;
-    /* your taskbar edge for this round. Everyone deploying along the bottom put
-       87% of the field into the bottom quarter of the arena — see server sim. */
-    const mine=isMine?(myEdge===undefined?(myEdge=Math.floor(rand(0,4))):myEdge):-1;
+    /* Every deploy picks its own wall. A per-player wall put your five on one
+       edge in a heap; they regroup on their own once they are out. Everyone
+       deploying along the BOTTOM was the original bug — 87% of the field into
+       the bottom quarter — and picking per deploy spreads them further than
+       per player did, not less. Mirrors server sim. */
     for(let i=0;i<8;i++){
-      const side=mine<0?Math.floor(rand(0,4)):mine;
+      const side=Math.floor(rand(0,4));
       const cx=side===0?arena.x0+22:side===1?arena.x1-22:rand(arena.x0+50,arena.x1-50);
       const cy=side===2?arena.y0+22:side===3?arena.y1-22:rand(arena.y0+50,arena.y1-50);
       let d=1e9;
@@ -4221,7 +4222,6 @@ const myCurs=()=>curs.filter(c=>c.isMine&&!c.dead);
 function setPhase(p,t){ phase=p; phaseT=t; renderPhase(); }
 function startEpoch(){
   roundNo++; roundId++;
-  myEdge=undefined;   /* a fresh taskbar edge each round, like the server draws */
   R=newRoundRecord();
   /* no clock: the disk decides. phaseT only becomes meaningful once the
      shutdown rush starts and caps it at T_SHUT seconds. */
