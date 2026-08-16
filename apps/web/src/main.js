@@ -6225,6 +6225,14 @@ const walletAcct=new Wallet(({address})=>{
   $("#w-name").textContent=address?shortAddress(address):"Connect wallet";
   $("#w-sub").textContent=address?"click to log on":"Phantom, Solflare or Backpack";
   $("#tile-wallet").classList.toggle("connected",Boolean(address));
+  $("#w-off").hidden=!address;
+});
+/* The tile's click already means "log on", so the way out cannot be a second
+   press on it the way it is everywhere else in the arcade -- it is its own
+   small red control at the tile's edge, and it only exists while connected. */
+$("#w-off").addEventListener("click",e=>{
+  e.stopPropagation();
+  void walletAcct.disconnect();
 });
 function walletLogon(){
   /* deliberately NOT written to store.data.userName: the wallet and the typed

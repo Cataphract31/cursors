@@ -716,6 +716,13 @@ body.mobile #bsod{font-size:11px;padding:16px 14px}
    photograph -- Solana's own gradient behind a mark, which reads as an
    account picture at 52px and as a brand at any size */
 .lg-ava.wallet{background:linear-gradient(160deg,#9945FF,#14F195);font:30px Tahoma;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.4)}
+/* The way out. The tile's own click is spoken for -- it logs you on -- so the
+   exit is its own control at the tile's edge, and it exists only while there
+   is a connection to end. */
+.lg-off{align-self:center;margin-left:6px;padding:3px 8px;border:1px solid #00000066;border-radius:3px;
+  background:linear-gradient(180deg,#d24b4b,#8f2020);color:#fff;font:11px Tahoma;cursor:pointer}
+.lg-off:hover{filter:brightness(1.12)}
+.lg-off[hidden]{display:none}
 .lg-tile.connected .lg-ava.wallet{box-shadow:1px 2px 5px rgba(0,0,0,.35),0 0 0 2px #14F195}
 .lg-tile.shake{animation:nudge .4s}
 .lg-inputrow{display:flex;gap:5px;margin-top:7px}
