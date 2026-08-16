@@ -712,6 +712,11 @@ body.mobile #bsod{font-size:11px;padding:16px 14px}
 .lg-ava{width:52px;height:52px;flex:none;border:2px solid #fff;border-radius:5px;background:#fff;overflow:hidden;display:grid;place-items:center;box-shadow:1px 2px 5px rgba(0,0,0,.35)}
 .lg-ava img{width:100%;height:100%;display:block}
 .lg-ava.guest{background:linear-gradient(160deg,#9AA6BC,#5A6478);font:bold 24px Tahoma;color:#fff}
+/* the wallet tile: XP never had one, so it gets the one avatar that is not a
+   photograph -- Solana's own gradient behind a mark, which reads as an
+   account picture at 52px and as a brand at any size */
+.lg-ava.wallet{background:linear-gradient(160deg,#9945FF,#14F195);font:30px Tahoma;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.4)}
+.lg-tile.connected .lg-ava.wallet{box-shadow:1px 2px 5px rgba(0,0,0,.35),0 0 0 2px #14F195}
 .lg-tile.shake{animation:nudge .4s}
 .lg-inputrow{display:flex;gap:5px;margin-top:7px}
 .lg-inputrow input{flex:1;min-width:60px;width:130px}

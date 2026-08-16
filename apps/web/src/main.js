@@ -24,6 +24,7 @@ import { initSysMaint } from "./sysmaint.js";
 import { initTour } from "./tour.js";
 import { initTourXP } from "./tourxp.js";
 import { initAccess } from "./access.js";
+import { Wallet, shortAddress } from "./wallet.js";
 /* Webamp is ~870 KB — a third of the first-paint budget, paid by every phone
    whether or not its owner ever opens Winamp. It loads on first launch now. */
 let Webamp = null;
@@ -282,6 +283,7 @@ store.load();
 addEventListener("pagehide",()=>store.flush());
 /* identity lives up here: the Messenger reads it while it boots */
 let PLAYER=store.data.userName||null;
+let GUEST=false;   /* and so does the guest flag, for the same reason */
 
 /* ================= real XP assets into the static shell ================= */
 /* The Recycle Bin icon is a gauge. The vendored winXP set only has the empty
@@ -6162,11 +6164,17 @@ function showBootThenLogin(){
   const bt=setTimeout(toLogin,wait);
   $("#boot").addEventListener("pointerdown",()=>{ clearTimeout(bt); toLogin(); },{once:true});
 }
-/* ---- user identity: picked at the login screen, Phantom wallet later ---- */
-function playerName(){ return PLAYER||"admin"; }
-function playerNameFull(){ return PLAYER||"Administrator"; }
+/* ---- user identity: an address, a typed name, or Guest ---- */
+/* Three tiles, three answers to the one question this screen asks. GUEST is
+   its own flag rather than "PLAYER is null" because the shell has to be able
+   to say Guest out loud; a guest that shows up as Administrator is a lie the
+   start menu would be telling all session. */
+function playerName(){ return PLAYER||(GUEST?"guest":"admin"); }
+function playerNameFull(){ return PLAYER||(GUEST?"Guest":"Administrator"); }
 function syncIdentity(){
-  $("#lg-name").textContent=playerNameFull();
+  /* the admin tile is the TYPED name and stays that even for a wallet or a
+     guest session -- it is the account, not the current identity */
+  $("#lg-name").textContent=PLAYER||"Administrator";
   $("#sm-user").textContent=playerNameFull();
   $("#lg-sub").textContent=PLAYER?"click to log on":"click to begin";
 }
@@ -6206,11 +6214,51 @@ $("#tile-admin").addEventListener("click",e=>{
 $("#lg-go").addEventListener("click",commitUserName);
 $("#lg-user").addEventListener("keydown",e=>{ if(e.key==="Enter") commitUserName(); });
 syncIdentity();
+/* ---- the wallet tile ---- */
+/* The address is a NAME here and nothing more -- the long note is in
+   wallet.js. It sits on the login screen because that is where this machine
+   asks who you are, and it is answered the same way on every other world in
+   the arcade, off one cookie, so connecting once is connecting everywhere. */
+/* `wallet` in this file is already the balance, and these two must never be
+   confused: one is a number that goes up and down, the other is a name. */
+const walletAcct=new Wallet(({address})=>{
+  $("#w-name").textContent=address?shortAddress(address):"Connect wallet";
+  $("#w-sub").textContent=address?"click to log on":"Phantom, Solflare or Backpack";
+  $("#tile-wallet").classList.toggle("connected",Boolean(address));
+});
+function walletLogon(){
+  /* deliberately NOT written to store.data.userName: the wallet and the typed
+     name are two identities, and overwriting one with the other would mean a
+     player who connects once can never get their own name back */
+  PLAYER=shortAddress(walletAcct.address);
+  GUEST=false;
+  mpHello(); logon();
+}
+$("#tile-wallet").addEventListener("click",async()=>{
+  if(walletAcct.address){ walletLogon(); return; }
+  $("#w-sub").textContent="check your wallet…";
+  try{
+    await walletAcct.connect();
+    walletLogon();
+  }catch(err){
+    const t=$("#tile-wallet");
+    t.classList.remove("shake"); void t.offsetWidth; t.classList.add("shake");
+    $("#w-sub").textContent=err&&err.code==="NO_WALLET"?"no wallet here — install Phantom"
+      :err&&err.code==="CANCELLED"?"cancelled — click to try again"
+      :"that wallet would not connect";
+    sError();
+  }
+});
+if(!walletAcct.available) $("#w-sub").textContent="no wallet here — install Phantom";
+void walletAcct.resume();
 $("#tile-guest").addEventListener("click",()=>{
-  const t=$("#tile-guest");
-  t.classList.remove("shake"); void t.offsetWidth; t.classList.add("shake");
-  $("#guest-sub").textContent="gambling requires conviction";
-  sError();
+  /* Guest is open while this is a beta, and it is also the honest answer for
+     somebody who only came to watch. No name goes to the server, so no hello
+     is sent, so the field runs in the sandbox: everything is visible, nothing
+     is staked. */
+  GUEST=true; PLAYER=null;
+  $("#guest-sub").textContent="signing in…";
+  logon();
 });
 $("#lg-off").addEventListener("click",()=>{ sysSnd("shutdown",.55); $("#login").style.display="none"; $("#shutdown").style.display="grid"; });
 if(location.hash.indexOf("#desktop")===0) sessionStorage.setItem("cxp.booted","1"); /* dev: skip boot/login */
