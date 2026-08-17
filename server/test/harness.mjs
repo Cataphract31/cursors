@@ -21,17 +21,52 @@ const SIM = await import(process.env.SIM || "../sim.js");
 const { createSim, ENTRY, STAKE, MAXCUR } = SIM;
 export { ENTRY, STAKE, MAXCUR, SIM };
 
-/* One rig per test: its own sim, its own event log, its own player. */
-export function rig({ corpses = 40, balance = 1000000, name = "tester", key = "me" } = {}) {
+/*
+ * One rig per test: its own sim, its own event log, its own player -- and now
+ * its own OPPONENTS.
+ *
+ * The suite used to get those for free. Seven house bots deployed on their own
+ * every 1.8 seconds, so any test that needed a fight simply waited for one.
+ * The bots are gone: they held balances and refilled themselves when broke,
+ * which is a money printer, and it may not exist near a real ledger.
+ *
+ * So the rig fields its own sparring partners, and they are ordinary funded
+ * players rather than a privileged kind. That is a better test than what it
+ * replaces -- the arena is now exercised by exactly the sort of participant
+ * production will actually have.
+ */
+export function rig({ corpses = 40, balance = 1000000, name = "tester", key = "me", opponents = 8 } = {}) {
   const events = [];
   const sim = createSim({ corpses, emit: e => events.push(e) });
   sim.registerPlayer(key, name, false, false);
   sim.players.get(key).balance = balance;
 
+  /* Funded humans standing in for the old bot population. */
+  const foes = [];
+  for (let i = 0; i < opponents; i++) {
+    const fkey = `foe${i}`;
+    sim.registerPlayer(fkey, `foe${i}`, false, false);
+    sim.players.get(fkey).balance = balance;
+    foes.push(fkey);
+  }
+
   const bal = () => sim.players.get(key).balance;
   const mine = () => sim.welcomeState().curs.filter(c => c.owner === name);
   const cur = id => mine().find(c => c.id === id);
-  const step = (n = 1) => { for (let i = 0; i < n; i++) { advance(); sim.tick(DT); } };
+  /*
+   * Keep the field populated, then tick. The bots' population maintenance did
+   * this inside the sim; it belongs to the TEST now, because the sim should
+   * not be in the business of inventing players.
+   */
+  const fieldFoes = () => {
+    const live = sim.welcomeState().curs;
+    for (const fkey of foes) {
+      if (live.filter(c => c.key === fkey).length === 0) sim.requestDeploy(fkey);
+    }
+  };
+  const step = (n = 1) => {
+    for (let i = 0; i < n; i++) { fieldFoes(); advance(); sim.tick(DT); }
+  };
   const secs = s => step(Math.round(s * 30));
 
   /* Run until pred() is truthy, one tick at a time. Returns the tick it fired
@@ -52,7 +87,7 @@ export function rig({ corpses = 40, balance = 1000000, name = "tester", key = "m
   const evs = t => events.filter(e => e.t === t);
   const bankOf = id => evs("bank").find(e => e.id === id);
 
-  return { sim, key, name, events, evs, bal, mine, cur, step, secs, until, deployLive, bankOf };
+  return { sim, key, name, foes, events, evs, bal, mine, cur, step, secs, until, deployLive, bankOf };
 }
 
 /* Play a rig forward until one of the player's cursors is mid-duel, then hand

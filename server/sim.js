@@ -88,8 +88,17 @@ const GRACE_MS = 1400, RECALL_SECS = 3, DUEL_MS = 700, RUSH_MS = 6000, CRASH_MS 
 export const MB = 1024 * 1024, GB = 1024 * MB;
 export const DISK_TOTAL = 20 * GB, CORPSE_BYTES = 12 * MB;
 
-export const BOT_NAMES = ["mumu", "bobo", "clippy", "bonk", "solja", "xp_chad", "deg404"];
-const BOT_REFILL = 50000;   /* play-money bots refill quietly when broke */
+/*
+ * NO BOTS. There were seven, and they were economic participants: they held
+ * balances, paid stakes and took pots, and when one went broke it silently
+ * refilled itself to 50.000. That is a money printer, and it may not exist in
+ * an arcade about to hold real deposits -- their winnings would have been
+ * indistinguishable from money somebody actually paid in.
+ *
+ * The list stays, empty, because the name check still reads it to stop a
+ * player claiming a name the arena once used.
+ */
+export const BOT_NAMES = [];
 
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
 const angDiff = a => { while (a > Math.PI) a -= 2 * Math.PI; while (a < -Math.PI) a += 2 * Math.PI; return a; };
@@ -117,7 +126,7 @@ export function createSim(opts) {
   let simClock = 0;
   let rushAt = null, crashUntil = 0, deploysOpen = false;
   let R = null;
-  let botQueue = [], botTimer = 0, liveSum = 0, liveN = 0, arenaN = 0;
+  let liveSum = 0, liveN = 0, arenaN = 0;
   let houseFees = 0;
 
   /* Sim time, not wall time. Motion integrates on a fixed dt, so anything that
@@ -134,7 +143,7 @@ export function createSim(opts) {
     let p = players.get(key);
     if (p) { p.name = name; return p; }
     p = Object.assign({
-      key, name, bot: !!bot, balance: bot ? BOT_REFILL : 5000, skin: "",
+      key, name, bot: !!bot, balance: 0, skin: "",
       epochIn: 0, epochOut: 0, totIn: 0, totOut: 0,
     }, persisted || {});
     p.key = key; p.name = name; p.bot = !!bot;
@@ -142,15 +151,12 @@ export function createSim(opts) {
     return p;
   }
   function money(p) { emit({ t: "money", key: p.key }); }
-  /* the beta faucet: play money testers should never be locked out */
-  function faucet(p) {
-    if (p.bot) { if (p.balance < STAKE) p.balance = BOT_REFILL; return; }
-    if (p.balance < STAKE && !curs.some(c => c.key === p.key)) {
-      p.balance = 5000;
-      emit({ t: "sys", text: `beta faucet: ${p.name} refilled to 5.000` });
-      money(p);
-    }
-  }
+  /*
+   * THE BETA FAUCET STOOD HERE. It refilled any broke player back to
+   * 5.000 so that a tester could never be locked out. Harmless while the
+   * money was points; a mint the moment it is not. A player with nothing
+   * now has nothing, and deploys are refused rather than funded.
+   */
 
   /* ---------- cursors ---------- */
   /* Where a cursor lands matters. Every human used to deploy at the bottom
@@ -236,7 +242,7 @@ export function createSim(opts) {
     const p = players.get(key); if (!p) return "no such player";
     if (!canDeploy()) return "deploys closed";
     if (cursOf(key).length >= (p.bot ? BOT_MAXCUR : MAXCUR)) return "max live";
-    if (p.balance < STAKE) { faucet(p); if (p.balance < STAKE) return "insufficient"; }
+    if (p.balance < STAKE) return "insufficient";
     p.balance -= STAKE;
     p.epochIn += STAKE; p.totIn += STAKE;
     R.pot += ENTRY; R.deploys++; houseFees += FEE;
@@ -316,7 +322,7 @@ export function createSim(opts) {
     if (refund) houseFees -= FEE;
     emit({ t: "bank", id: c.id, owner: c.owner, amt: paid, mult: c.bounty / ENTRY, shut: !!atShutdown, refund });
     removeCur(c);
-    if (p) { money(p); faucet(p); }
+    if (p) money(p);
   }
 
   /* ---------- movement (verbatim port) ---------- */
@@ -472,8 +478,6 @@ export function createSim(opts) {
     removeCur(l);
     epochDeaths++; R.deaths++;
     emit({ t: "kill", w: w.id, l: l.id, wOwner: w.owner, lOwner: l.owner, pot, cert, fill: epochDeaths / CORPSES });
-    const lp = players.get(l.key);
-    if (lp) faucet(lp);
     /* the disk just grew a corpse; a full drive is a crash */
     if (epochDeaths >= CORPSES && phase === "battle") crash();
     else if (!rushAt && epochDeaths >= CORPSES - RUSH_MARGIN) startRush();
@@ -535,13 +539,6 @@ export function createSim(opts) {
     R = { pot: 0, deploys: 0, deaths: 0, banked: 0, bigBank: null };
     epochDeaths = 0; epochStart = upT; rushAt = null;
     phase = "battle"; deploysOpen = true;
-    /* the bots pile back in over the first ten seconds, like nothing happened */
-    botQueue = [];
-    for (const name of BOT_NAMES) {
-      const n = pick([1, 1, 2, 2, 3]);
-      for (let i = 0; i < n; i++) botQueue.push({ key: "bot:" + name, at: now() + rand(600, 9500) });
-    }
-    botQueue.sort((a, b) => a.at - b.at);
     emit({ t: "epoch", no: epochNo, commit, corpses: CORPSES, aw: AW, ah: AH });
   }
 
@@ -552,19 +549,6 @@ export function createSim(opts) {
     if (phase === "crash") {
       if (now() >= crashUntil) startEpoch();
       return;
-    }
-    /* bots: queued re-entries, then population maintenance every 1.8s */
-    while (botQueue.length && botQueue[0].at <= now()) requestDeploy(botQueue.shift().key);
-    botTimer += dt;
-    if (botTimer >= 1.8) {
-      /* population maintenance: hold a live bot floor so there is always
-         someone to fight; the target wobbles per epoch so the field breathes */
-      botTimer = 0;
-      if (canDeploy()) {
-        const botCurs = curs.filter(c => c.bot).length;
-        const target = 7 + (epochNo * 3) % 5;
-        if (botCurs < target || rng.next() < .15) requestDeploy("bot:" + BOT_NAMES[Math.floor(rng.next() * BOT_NAMES.length)]);
-      }
     }
     /* move everyone not frozen mid-duel */
     for (const c of [...curs]) if (c.mode !== "duel") move(c, dt);
@@ -619,12 +603,7 @@ export function createSim(opts) {
     };
   }
 
-  /* boot the bots as economic participants, then open the arena */
-  for (const name of BOT_NAMES) registerPlayer("bot:" + name, name, true);
-  /* the bots picked pointer schemes, because they are players and players do */
-  for (const [bn, sk] of [["mumu", "bronze"], ["deg404", "inv"], ["xp_chad", "black"], ["clippy", "std-l"], ["bonk", "variations"]]) {
-    const bp = players.get("bot:" + bn); if (bp) bp.skin = sk;
-  }
+  /* the arena opens empty: every cursor on it belongs to somebody */
   startEpoch();
 
   return {

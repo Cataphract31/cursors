@@ -38,7 +38,11 @@ test("an order about a cursor that already banked is ignored", () => {
 });
 
 test("orders from a session the server never saw do nothing", () => {
-  const r = rig();
+  /* An EMPTY field on purpose: this test is about a ghost session, not about
+     combat, and an opponent that pulls our cursor into a duel changes the mode
+     out from under the assertion below for reasons having nothing to do with
+     the ghost. */
+  const r = rig({ opponents: 0 });
   const id = r.deployLive();
   const before = r.bal();
   const minesBefore = r.mine().map(c => c.id);
@@ -46,8 +50,7 @@ test("orders from a session the server never saw do nothing", () => {
   r.sim.requestRecall("ghost");
   r.sim.cancelRecall("ghost");
   assert.equal(r.sim.requestDeploy("ghost"), "no such player");
-  /* one tick only: the bot population grows on its own, so the field size is
-     not a fixture — our own cursors are */
+  /* one tick only, and our own cursors are the fixture */
   r.step();
   assert.equal(r.bal(), before, "an unknown session moved our money");
   assert.deepEqual(r.mine().map(c => c.id), minesBefore, "an unknown session changed our cursors");
