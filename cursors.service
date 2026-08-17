@@ -26,7 +26,12 @@ Wants=network-online.target gielinor.service
 [Service]
 Type=simple
 User=cursors
-WorkingDirectory=/opt/cursors
+# /opt/cursors is a CLONE OF THIS REPOSITORY, and the server lives one level
+# down in it. It used to be a flat copy of server/ with no .git, which meant the
+# deploy was an scp somebody remembered the shape of -- there was no way to ask
+# the box what it was running. `git pull` is the deploy now, the same as the
+# arcade's.
+WorkingDirectory=/opt/cursors/server
 ExecStart=/usr/bin/node server.js
 Restart=always
 RestartSec=3
