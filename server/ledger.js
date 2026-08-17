@@ -32,6 +32,8 @@
  * cursor is deployed.
  */
 
+import { randomBytes } from "node:crypto";
+
 /** What the ledger calls this game in every row it writes. */
 const GAME = "cursors";
 
@@ -104,18 +106,37 @@ export function createLedger({
     return parsed;
   }
 
-  /**
-   * The ref for one cursor's stake.
+  /*
+   * THIS BOOT, SO A REF IS UNIQUE FOREVER AND NOT MERELY THIS RUN.
    *
-   * Every mutating call carries a ref the caller chooses, unique forever;
-   * asking twice with the same ref returns the first answer instead of moving
-   * money twice. That is what makes this safe over HTTP, which retries, and
-   * across a crash, which replays.
+   * A ref must never repeat: the ledger treats a repeat as the SAME move and
+   * answers with the first result instead of moving money again. That is the
+   * property that makes retries and crashes safe, and it is also a trap,
+   * because this game's counters restart from scratch on every boot --
+   * `nextCurId = 1`, `epochNo = 0`, neither persisted. Two runs would both file
+   * `cursors:e1:c1`, and the second one is refused with REF_CONFLICT: a server
+   * that cannot take a single stake until somebody works out why.
    *
-   * A cursor id is unique for the life of the process and a round id pins the
-   * epoch, so together they name exactly one stake.
+   * Which is exactly what happened, and only showed up when the arcade was
+   * pointed at a FILE instead of :memory:. An in-memory ledger forgets between
+   * runs, so every test passed and production would have broken on its first
+   * restart.
+   *
+   * Idempotency is not weakened by this. A retry within a process still lands
+   * on the same ref, and a hold never has to survive a restart: `sweep()` at
+   * boot releases everything the previous run left open, which is the whole
+   * design for crash recovery.
    */
-  const refFor = (roundId, cursorId) => `${GAME}:e${roundId}:c${cursorId}`;
+  const boot = randomBytes(4).toString("hex");
+
+  /**
+   * The ref for one cursor's stake: this boot, this epoch, this cursor.
+   *
+   * Every mutating call carries a ref the caller chooses; asking twice with the
+   * same one returns the first answer instead of moving money twice. That is
+   * what makes this safe over HTTP, which retries.
+   */
+  const refFor = (roundId, cursorId) => `${GAME}:${boot}:e${roundId}:c${cursorId}`;
 
   return {
     enabled,

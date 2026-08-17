@@ -29,7 +29,19 @@ function boot() {
     });
     let out = "";
     p.stdout.on("data", d => { out += d; if (out.includes("beta server on")) res(p); });
-    p.stderr.on("data", d => { const t = String(d); if (!/Experimental|trace-warnings/.test(t)) rej(new Error(t)); });
+    /*
+     * Node's own noise, and one warning of ours, are not failures.
+     *
+     * This test boots a real server to prove chat survives a restart, and it
+     * boots it WITHOUT a ledger key -- correctly, since it never deploys. The
+     * server says so on stderr, loudly and on purpose: a box that cannot take a
+     * stake should not be quiet about it. That is the right behaviour and the
+     * wrong thing to fail a chat test over.
+     */
+    p.stderr.on("data", d => {
+      const t = String(d);
+      if (!/Experimental|trace-warnings|NO LEDGER_KEY/.test(t)) rej(new Error(t));
+    });
     setTimeout(() => rej(new Error("server did not boot in 10s")), 10000);
   });
 }

@@ -105,7 +105,7 @@ test("an order refused mid-glide is not an order lost", () => {
 test("undeploy inside spawn grace is exactly free", () => {
   const r = rig();
   const before = r.bal();
-  assert.equal(r.sim.requestDeploy(r.key), null);
+  assert.equal(r.deploy(r.key), null);
   r.sim.requestRecall(r.key);                    /* still graced: refund, not recall */
   assert.equal(r.evs("refund").length, 1);
   assert.equal(r.bal(), before, "a misclick cost money");
@@ -138,7 +138,7 @@ test("every duel conserves the money on the table", () => {
   for (let i = 0; i < 30000 && checked < 200; i++) {
     for (const c of r.sim.welcomeState().curs) bounty.set(c.id, c.bounty);
     const seen = r.evs("kill").length;
-    if (r.mine().length < MAXCUR && i % 12 === 0) r.sim.requestDeploy(r.key);
+    if (r.mine().length < MAXCUR && i % 12 === 0) r.deploy(r.key);
     r.step();
     for (const k of r.evs("kill").slice(seen)) {
       const wBefore = bounty.get(k.w), lBefore = bounty.get(k.l);
@@ -176,7 +176,7 @@ test("a cursor the shutdown sweep takes without a fight pays no fee", () => {
      that never got a fight must cost nothing at all — not even the rake. */
   const r = rig({ corpses: 30 });
   const t = r.until(() => {
-    if (r.mine().length < MAXCUR) r.sim.requestDeploy(r.key);
+    if (r.mine().length < MAXCUR) r.deploy(r.key);
     return r.evs("crash").length > 0;
   }, 900);
   assert.ok(t >= 0, "no crash inside 15 minutes of sim time");
@@ -204,7 +204,7 @@ test("the sweep ends when the field is empty, not when the clock runs out", () =
      with everyone already banked and seconds of empty desktop to watch. */
   const r = rig({ corpses: 30 });
   const t = r.until(() => {
-    if (r.mine().length < MAXCUR) r.sim.requestDeploy(r.key);
+    if (r.mine().length < MAXCUR) r.deploy(r.key);
     return r.evs("rush").length > 0;
   }, 900);
   assert.ok(t >= 0, "no shutdown rush inside 15 minutes of sim time");
@@ -231,7 +231,7 @@ test("no cursor ever leaves without a receipt", () => {
      Together with the pot check above, this is the whole conservation law. */
   const r = rig({ corpses: 30 });
   const t = r.until(() => {
-    if (r.mine().length < MAXCUR) r.sim.requestDeploy(r.key);
+    if (r.mine().length < MAXCUR) r.deploy(r.key);
     return r.evs("crash").length > 0;
   }, 900);
   assert.ok(t >= 0, "no crash inside 15 minutes of sim time");
@@ -255,9 +255,9 @@ test("no cursor ever leaves without a receipt", () => {
 
 test("five cursors is five cursors", () => {
   const r = rig();
-  for (let i = 0; i < 9; i++) r.sim.requestDeploy(r.key);
+  for (let i = 0; i < 9; i++) r.deploy(r.key);
   assert.ok(r.mine().length <= MAXCUR, `${r.mine().length} cursors live`);
-  assert.equal(r.sim.requestDeploy(r.key), "max live");
+  assert.equal(r.deploy(r.key), "max live");
 });
 
 test("nobody else's cursor answers your orders", () => {
@@ -324,7 +324,7 @@ test("nothing is ever eaten by something outside its weight class", () => {
   const seen = () => r.evs("kill").length;
   let done = seen();
   r.until(() => {
-    if (r.mine().length < MAXCUR) r.sim.requestDeploy(r.key);
+    if (r.mine().length < MAXCUR) r.deploy(r.key);
     const live = r.sim.welcomeState().curs;
     for (const k of r.evs("kill").slice(done)) {
       const w = live.find(c => c.id === k.w);
@@ -350,7 +350,7 @@ test("deploys do not all come up from the same wall", () => {
   r.until(() => {
     if (r.mine().length < MAXCUR) {
       const before = new Set(r.mine().map(c => c.id));
-      if (!r.sim.requestDeploy(r.key)) {
+      if (!r.deploy(r.key)) {
         const c = r.mine().find(x => !before.has(x.id));
         if (c) ys.push(c.y);
       }
@@ -374,8 +374,8 @@ test("a crowded epoch is played on a bigger field", () => {
     r.sim.players.get(k).balance = 1e9;
   }
   const t = r.until(() => {
-    for (let i = 0; i < 14; i++) r.sim.requestDeploy("crowd" + i);
-    r.sim.requestDeploy(r.key);
+    for (let i = 0; i < 14; i++) r.deploy("crowd" + i);
+    r.deploy(r.key);
     return r.evs("epoch").length >= 2;      /* the one after the first crash */
   }, 900);
   assert.ok(t >= 0, "no second epoch inside 15 minutes");
@@ -404,7 +404,7 @@ test("RECALL ALL with a graced cursor and a gliding one does both jobs", () => {
   assert.equal(r.cur(glider).mode, "c", "the first cursor is not gliding");
 
   const before = r.bal();
-  assert.equal(r.sim.requestDeploy(r.key), null);
+  assert.equal(r.deploy(r.key), null);
   const fresh = r.mine().find(c => c.id !== glider && c.grace > 0);
   assert.ok(fresh, "no graced cursor to test with");
 
@@ -430,7 +430,7 @@ test("the shutdown sweep leaves nobody hunting", () => {
     r.sim.players.get(k).balance = 1e9;
   }
   const t = r.until(() => {
-    for (let i = 0; i < 6; i++) r.sim.requestDeploy("sweep" + i);
+    for (let i = 0; i < 6; i++) r.deploy("sweep" + i);
     return r.evs("rush").length > 0;
   }, 900);
   assert.ok(t >= 0, "no shutdown rush inside 15 minutes");
@@ -460,16 +460,30 @@ test("a round is a function of its seed, not of the wall clock", () => {
   const SEED = "0123456789abcdef0123456789abcdef";
   const play = stallMs => {
     const events = [];
-    const sim = createSim({ corpses: 40, seed: SEED, emit: e => events.push(JSON.stringify(e)) });
-    for (const k of ["x", "y"]) { sim.registerPlayer(k, k, false, false); sim.players.get(k).balance = 1e9; }
+    // The sim holds no balance any more, so the money is mirrored here on the
+    // same events server.js settles on. Strictly weaker than the event-stream
+    // comparison below, and kept because "a stall moved player balances" is the
+    // sentence this test exists to be able to say.
+    const wallets = new Map([["x", 1e9], ["y", 1e9]]);
+    const sim = createSim({ corpses: 40, seed: SEED, emit: e => {
+      events.push(JSON.stringify(e));
+      if (e.t === "bank") wallets.set(e.key, (wallets.get(e.key) || 0) + e.amt);
+      else if (e.t === "refund") wallets.set(e.key, (wallets.get(e.key) || 0) + STAKE);
+    } });
+    for (const k of ["x", "y"]) sim.registerPlayer(k, k, false, false);
+    const buy = (k) => {
+      if (sim.checkDeploy(k) || (wallets.get(k) || 0) < STAKE) return;
+      wallets.set(k, wallets.get(k) - STAKE);
+      if (!sim.commitDeploy(k, sim.reserveCursorId())) wallets.set(k, wallets.get(k) + STAKE);
+    };
     for (let i = 0; i < 30 * 240; i++) {
       advance();
       if (i === 900) CLOCK_SKIP(stallMs);          /* the event loop hiccups */
       sim.tick(DT);
-      for (const k of ["x", "y"]) sim.requestDeploy(k);
+      for (const k of ["x", "y"]) buy(k);
       if (events.some(e => e.includes('"t":"crash"'))) break;
     }
-    return { events, bal: ["x", "y"].map(k => sim.players.get(k).balance) };
+    return { events, bal: ["x", "y"].map(k => wallets.get(k)) };
   };
   const base = play(0);
   assert.ok(base.events.length > 50, "the control round barely played");
@@ -541,7 +555,7 @@ test("your five do not all come up on the same wall", () => {
   const samples = [];
 
   r.until(() => {
-    if (r.mine().length < MAXCUR) r.sim.requestDeploy(r.key);
+    if (r.mine().length < MAXCUR) r.deploy(r.key);
     for (const e of r.evs("spawn").slice(seen)) wall.set(e.id, wallOf(e.x, e.y, aw, ah));
     seen = r.evs("spawn").length;
     const live = r.mine();

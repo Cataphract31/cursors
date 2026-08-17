@@ -148,7 +148,7 @@ export function createSim(opts) {
     let p = players.get(key);
     if (p) { p.name = name; return p; }
     p = Object.assign({
-      key, name, balance: 0, skin: "",
+      key, name, skin: "",
       epochIn: 0, epochOut: 0, totIn: 0, totOut: 0,
     }, persisted || {});
     p.key = key; p.name = name;
@@ -214,10 +214,10 @@ export function createSim(opts) {
     }
     return best;
   }
-  function spawnCur(p) {
+  function spawnCur(p, id) {
     const { x, y, side } = spawnPoint(p);
     const c = {
-      id: nextCurId++, key: p.key, owner: p.name, skin: skinOf(ENTRY),
+      id, key: p.key, owner: p.name, skin: skinOf(ENTRY),
       x, y, edge: side, h: rand(0, Math.PI * 2), spd: rand(78, 124),
       bounty: ENTRY, mode: "roam", prevMode: "roam", recallT: 0,
       graceUntil: now() + GRACE_MS,
@@ -243,27 +243,66 @@ export function createSim(opts) {
 
   /* ---------- deploy / recall / bank ---------- */
   function canDeploy() { return phase === "battle" && deploysOpen && !rushAt; }
-  function requestDeploy(key) {
+  /*
+   * DEPLOY IS TWO HALVES NOW, WITH THE MONEY BETWEEN THEM.
+   *
+   * It used to be one synchronous function: check the balance, subtract it,
+   * spawn. The balance lives in the arcade's ledger now and is an HTTP call
+   * away, so the check and the spawn cannot happen in the same instant.
+   *
+   * The order is forced and it is this way round: EVERY CHECK THE SIM OWNS
+   * FIRST, then the money, then the spawn. A cursor that appears before its
+   * stake is confirmed is a free entry into the pot, so the spawn is last and
+   * happens only on a confirmed hold. The cost is that the phase can change
+   * while the hold is in flight -- which `commitDeploy` re-checks, and the
+   * caller releases the hold when it does.
+   */
+  /*
+   * CLAIM THE ID BEFORE THE MONEY, NOT AFTER.
+   *
+   * The stake is filed in the arcade's books under a ref built from the epoch
+   * and the cursor id, and the same ref has to be the one that settles when
+   * that cursor banks. Reading `nextCurId` and hoping it is still free when the
+   * hold comes back is a race: two deploys in flight together would file two
+   * holds against one id, and the second bank would settle a ref that was never
+   * opened.
+   *
+   * So the id is TAKEN here, before the hold, and handed to commitDeploy. An id
+   * burned by a deploy that failed is simply never used, which costs nothing --
+   * they are process-lifetime counters, not a scarce resource.
+   */
+  function reserveCursorId() { return nextCurId++; }
+
+  function checkDeploy(key) {
     const p = players.get(key); if (!p) return "no such player";
     if (!canDeploy()) return "deploys closed";
     if (cursOf(key).length >= MAXCUR) return "max live";
-    if (p.balance < STAKE) return "insufficient";
-    p.balance -= STAKE;
+    return null;
+  }
+
+  /**
+   * Spawn a paid-for cursor. Returns the cursor, or null if the round moved on
+   * while the money was in flight -- in which case the caller owes a release.
+   */
+  function commitDeploy(key, id) {
+    const p = players.get(key); if (!p) return null;
+    if (checkDeploy(key) !== null) return null;
     p.epochIn += STAKE; p.totIn += STAKE;
     R.pot += ENTRY; R.deploys++; houseFees += FEE;
-    const c = spawnCur(p);
+    const c = spawnCur(p, id);
     emit({ t: "spawn", id: c.id, owner: c.owner, skin: skinOf(c.bounty), x: Math.round(c.x), y: Math.round(c.y), bounty: c.bounty, grace: GRACE_MS / 1000 });
     money(p);
-    return null;
+    return c;
   }
   /* undeploy: spawn grace means it cannot have fought, so there is nothing to
      game and the whole stake comes back */
   function refundCur(p, c) {
-    p.balance += STAKE;
     p.epochIn -= STAKE; p.totIn -= STAKE;
     R.pot -= ENTRY; R.deploys--; houseFees -= FEE;
     removeCur(c);
-    emit({ t: "refund", id: c.id, owner: c.owner });
+    // `key` and `epoch` ride on the event because the stake is released in the
+    // arcade's books by the server, and a ref needs both to name this cursor.
+    emit({ t: "refund", id: c.id, owner: c.owner, key: c.key, epoch: c.epoch });
   }
   function requestRecall(key) {
     /* one verb, two meanings, exactly like the client: cursors still inside
@@ -322,10 +361,11 @@ export function createSim(opts) {
     const refund = !!atShutdown && unplayed(c);
     const paid = refund ? STAKE : c.bounty;
     if (!R.bigBank || c.bounty > R.bigBank.amt) R.bigBank = { owner: c.owner, amt: c.bounty };
-    if (p) { p.balance += paid; p.epochOut += paid; p.totOut += paid; }
+    if (p) { p.epochOut += paid; p.totOut += paid; }
     R.banked += c.bounty;
     if (refund) houseFees -= FEE;
-    emit({ t: "bank", id: c.id, owner: c.owner, amt: paid, mult: c.bounty / ENTRY, shut: !!atShutdown, refund });
+    emit({ t: "bank", id: c.id, owner: c.owner, amt: paid, mult: c.bounty / ENTRY,
+           shut: !!atShutdown, refund, key: c.key, epoch: c.epoch });
     removeCur(c);
     if (p) money(p);
   }
@@ -608,7 +648,8 @@ export function createSim(opts) {
 
   return {
     tick, snapshot, welcomeState,
-    registerPlayer, requestDeploy, requestRecall, recallOne, cancelRecall,
+    registerPlayer, checkDeploy, commitDeploy, reserveCursorId,
+    requestRecall, recallOne, cancelRecall,
     players, cursCount: () => curs.length,
     diskUsed, DISK_TOTAL, CORPSES, fees: () => houseFees,
     arena: () => ({ aw: AW, ah: AH }),

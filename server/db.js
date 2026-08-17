@@ -14,7 +14,6 @@ export function openDb(path) {
     CREATE TABLE IF NOT EXISTS players (
       token     TEXT PRIMARY KEY,
       name      TEXT NOT NULL,
-      balance   REAL NOT NULL,
       totIn     REAL NOT NULL DEFAULT 0,
       published INTEGER NOT NULL DEFAULT 0,
       totOut    REAL NOT NULL DEFAULT 0,
@@ -82,13 +81,29 @@ export function openDb(path) {
   };
   addColumn("players", "published", "INTEGER NOT NULL DEFAULT 0");
 
+  /*
+   * THE BALANCE COLUMN GOES, AND IT HAS TO GO RATHER THAN JUST STOP BEING USED.
+   *
+   * Money lives in the arcade's double-entry ledger now (see ledger.js). Left
+   * in the file it would be a second answer to "what does this player own",
+   * stale from the first deploy and readable by anyone who writes the obvious
+   * query -- and it was a REAL, a float, which cannot hold money exactly in the
+   * first place. Two sources of truth is the disease being cured; a disused one
+   * is worse than an active one because nothing keeps it honest.
+   *
+   * Existing files are playtest data with no real money behind them, so the
+   * column is dropped rather than reconciled.
+   */
+  const cols = db.prepare("PRAGMA table_info(players)").all();
+  if (cols.some(c => c.name === "balance")) db.exec("ALTER TABLE players DROP COLUMN balance");
+
   const q = {
     getPlayer: db.prepare("SELECT * FROM players WHERE token = ?"),
     upsertPlayer: db.prepare(`
-      INSERT INTO players (token,name,balance,totIn,totOut,published,created,lastSeen)
-      VALUES (?,?,?,?,?,?,?,?)
+      INSERT INTO players (token,name,totIn,totOut,published,created,lastSeen)
+      VALUES (?,?,?,?,?,?,?)
       ON CONFLICT(token) DO UPDATE SET
-        name=excluded.name, balance=excluded.balance,
+        name=excluded.name,
         totIn=excluded.totIn, totOut=excluded.totOut, published=excluded.published,
         lastSeen=excluded.lastSeen`),
     nameTaken: db.prepare("SELECT token FROM players WHERE lower(name) = lower(?) AND token <> ?"),
@@ -137,7 +152,7 @@ export function openDb(path) {
   return {
     loadPlayer: token => q.getPlayer.get(token) || null,
     savePlayer: p => q.upsertPlayer.run(
-      p.token, p.name, p.balance,
+      p.token, p.name,
       p.totIn, p.totOut, p.published || 0, p.created || Date.now(), Date.now()),
     nameTaken: (name, token) => !!q.nameTaken.get(name, token),
     guestList: () => q.guestList.all(),

@@ -37,20 +37,59 @@ export { ENTRY, STAKE, MAXCUR, SIM };
  */
 export function rig({ corpses = 40, balance = 1000000, name = "tester", key = "me", opponents = 8 } = {}) {
   const events = [];
-  const sim = createSim({ corpses, emit: e => events.push(e) });
+
+  /*
+   * THE BOOKS, STANDING IN FOR THE ARCADE'S.
+   *
+   * The sim no longer holds a balance -- money lives in the arcade's ledger and
+   * server.js moves it: hold on deploy, settle on bank, release on an in-grace
+   * refund. These tests are about the ECONOMICS of the arena, so they still
+   * need a balance to assert against, and it has to move on exactly the same
+   * events the real server moves on. So this mirrors the server's three verbs
+   * rather than reaching into the sim for a number that is no longer there.
+   *
+   * If this and server.js ever disagree about when money moves, that is a real
+   * disagreement worth failing over -- which is the point of modelling it here
+   * instead of stubbing it out.
+   */
+  const wallets = new Map();
+  const settle = (e) => {
+    if (e.t === "bank") wallets.set(e.key, (wallets.get(e.key) || 0) + e.amt);
+    else if (e.t === "refund") wallets.set(e.key, (wallets.get(e.key) || 0) + STAKE);
+  };
+
+  const sim = createSim({ corpses, emit: e => { events.push(e); settle(e); } });
   sim.registerPlayer(key, name, false, false);
-  sim.players.get(key).balance = balance;
+  wallets.set(key, balance);
 
   /* Funded humans standing in for the old bot population. */
   const foes = [];
   for (let i = 0; i < opponents; i++) {
     const fkey = `foe${i}`;
     sim.registerPlayer(fkey, `foe${i}`, false, false);
-    sim.players.get(fkey).balance = balance;
+    wallets.set(fkey, balance);
     foes.push(fkey);
   }
 
-  const bal = () => sim.players.get(key).balance;
+  /**
+   * Buy a cursor the way server.js does: check, take the stake, then spawn --
+   * and give the stake back if the round moved on before the spawn landed.
+   * Returns the sim's refusal string, or null on success.
+   */
+  const deploy = (who) => {
+    const why = sim.checkDeploy(who);
+    if (why) return why;
+    if ((wallets.get(who) || 0) < STAKE) return "insufficient";
+    wallets.set(who, wallets.get(who) - STAKE);
+    const id = sim.reserveCursorId();
+    if (!sim.commitDeploy(who, id)) {
+      wallets.set(who, wallets.get(who) + STAKE);
+      return "deploys closed";
+    }
+    return null;
+  };
+
+  const bal = () => wallets.get(key) || 0;
   const mine = () => sim.welcomeState().curs.filter(c => c.owner === name);
   const cur = id => mine().find(c => c.id === id);
   /*
@@ -61,7 +100,7 @@ export function rig({ corpses = 40, balance = 1000000, name = "tester", key = "m
   const fieldFoes = () => {
     const live = sim.welcomeState().curs;
     for (const fkey of foes) {
-      if (live.filter(c => c.key === fkey).length === 0) sim.requestDeploy(fkey);
+      if (live.filter(c => c.key === fkey).length === 0) deploy(fkey);
     }
   };
   const step = (n = 1) => {
@@ -79,7 +118,7 @@ export function rig({ corpses = 40, balance = 1000000, name = "tester", key = "m
   /* Deploy and wait out spawn grace, so the cursor is a real combatant. */
   const deployLive = () => {
     const before = new Set(mine().map(c => c.id));
-    if (sim.requestDeploy(key)) return null;
+    if (deploy(key)) return null;
     const c = mine().find(x => !before.has(x.id));
     secs(1.6);
     return c ? c.id : null;
@@ -87,7 +126,7 @@ export function rig({ corpses = 40, balance = 1000000, name = "tester", key = "m
   const evs = t => events.filter(e => e.t === t);
   const bankOf = id => evs("bank").find(e => e.id === id);
 
-  return { sim, key, name, foes, events, evs, bal, mine, cur, step, secs, until, deployLive, bankOf };
+  return { sim, key, name, foes, events, evs, bal, wallets, deploy, mine, cur, step, secs, until, deployLive, bankOf };
 }
 
 /* Play a rig forward until one of the player's cursors is mid-duel, then hand
@@ -95,7 +134,7 @@ export function rig({ corpses = 40, balance = 1000000, name = "tester", key = "m
    This is the state that used to swallow orders, so most tests start here. */
 export function untilMyDuel(r, maxSecs = 120) {
   for (let i = 0; i < Math.round(maxSecs * 30); i++) {
-    if (r.mine().length < MAXCUR && i % 12 === 0) r.sim.requestDeploy(r.key);
+    if (r.mine().length < MAXCUR && i % 12 === 0) r.deploy(r.key);
     r.step();
     const d = r.mine().find(c => c.mode === "d");
     if (d) return d.id;

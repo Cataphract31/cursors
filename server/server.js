@@ -18,10 +18,78 @@ const GALLERY_DEPLOYS = 10;
 const SKIN_IDS = new Set(["", "std-l", "std-xl", "black", "black-l", "black-xl", "inv", "inv-l", "inv-xl",
   "magnified", "animated", "bronze", "white", "dinosaur", "hands", "conductor", "oldfashioned", "variations"]);
 import { openDb } from "./db.js";
+import { createLedger, LedgerError } from "./ledger.js";
 
 const PORT = +(process.env.PORT || 8788);
 const DB_PATH = process.env.DB_PATH || "./cursors.db";
 const CORPSES = process.env.FAST ? 8 : +(process.env.CORPSES || 900);
+
+/*
+ * MONEY, AND THE UNITS IT IS COUNTED IN.
+ *
+ * The sim prices everything in whole play units -- STAKE 100, ENTRY 98, FEE 2 --
+ * which is a good way to keep a game's arithmetic exact and no way at all to
+ * hold real money. The arcade's ledger counts whole lamports and refuses
+ * anything that is not an integer, so the two meet here and nowhere else.
+ *
+ * A deploy costs 0.001 SOL, which is the minimum bet across the rest of the
+ * arcade. 100 units to 1,000,000 lamports makes one unit 10,000 lamports, and
+ * every bounty in this game is a whole number of units, so every conversion is
+ * exact. No floats touch money on either side of this line.
+ */
+const LAMPORTS_PER_UNIT = 10_000;
+const toLamports = (units) => Math.round(units) * LAMPORTS_PER_UNIT;
+
+const ledger = createLedger();
+if (!ledger.enabled) {
+  console.warn("NO LEDGER_KEY: nobody can deploy. Every attempt will be refused.");
+}
+
+/** Where the arcade will say who a session token belongs to. Loopback only. */
+const ARCADE_AUTH_URL = process.env.ARCADE_AUTH_URL || "http://127.0.0.1:8080/api/auth/me";
+
+/**
+ * The wallet behind an arcade session token, or null.
+ *
+ * The arcade collected the signature; this asks it who signed. Deliberately
+ * the only way a wallet identity enters this process -- a client claiming to
+ * be an address proves nothing, and a game that believed one could be told to
+ * spend somebody else's balance.
+ */
+async function arcadeWallet(token) {
+  try {
+    const res = await fetch(ARCADE_AUTH_URL, {
+      headers: { authorization: `Bearer ${token}` },
+      signal: AbortSignal.timeout(4000),
+    });
+    if (!res.ok) return null;
+    const body = await res.json();
+    return typeof body?.wallet === "string" && body.wallet ? body.wallet : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * What the books last said about a wallet. DISPLAY ONLY.
+ *
+ * Nothing decides anything from this: a deploy is admitted or refused by
+ * `ledger.hold`, atomically, where the money is. Refreshed whenever the ledger
+ * answers, and on sign-in.
+ */
+const balances = new Map();
+async function refreshBalance(wallet) {
+  if (!wallet || !isWallet(wallet)) return;
+  try {
+    const b = await ledger.balanceOf(wallet);
+    balances.set(wallet, b.freeLamports);
+    const conn = byKey.get(wallet);
+    if (conn) send(conn, { t: "bal", balance: b.freeLamports / 1e9 });
+  } catch { /* the screen keeps what it last knew; no decision rests on it */ }
+}
+
+/** A wallet is base58 and 32-44 characters; a spectator token is neither. */
+const isWallet = (id) => /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(String(id || ""));
 
 const db = openDb(DB_PATH);
 const conns = new Set();          /* live sockets with a completed hello */
@@ -63,9 +131,16 @@ function onlineNames() {
   return [...byKey.values()].filter(c => c.hello)
     .map(c => sim.players.get(c.key)?.name).filter(Boolean);
 }
+/** 4+4 of an address, which is how every other game in this arcade shows one. */
+function shortWallet(w) {
+  return `${String(w).slice(0, 4)}..${String(w).slice(-4)}`;
+}
+
 function balMsg(key) {
   const p = sim.players.get(key); if (!p) return null;
-  return { t: "bal", balance: p.balance };
+  // Lamports out of the books, SOL on the wire, and zero for a spectator --
+  // who has no account and therefore nothing to show.
+  return { t: "bal", balance: (balances.get(key) || 0) / 1e9 };
 }
 function schedSave(key) {
   clearTimeout(saveTimers.get(key));
@@ -73,7 +148,7 @@ function schedSave(key) {
 }
 function persistPlayer(key) {
   const p = sim.players.get(key); if (!p) return;
-  db.savePlayer({ token: key, name: p.name, balance: p.balance,
+  db.savePlayer({ token: key, name: p.name,
     totIn: p.totIn, totOut: p.totOut,
     published: p.published, created: p.created });
 }
@@ -87,6 +162,32 @@ const sim = createSim({
         const c = byKey.get(evt.key);
         if (c) { const m = balMsg(evt.key); if (m) send(c, m); }
         schedSave(evt.key);
+        break;
+      }
+      /*
+       * SETTLEMENT, FIRED FROM THE SIM'S OWN EVENTS AND NOT AWAITED.
+       *
+       * A bank happens inside the simulation loop, which runs on a clock every
+       * player is watching; awaiting an HTTP call in there would put the
+       * arcade's latency into the game's tick. It is safe to fire because the
+       * ref makes it exactly-once -- the same cursor settled twice is one move
+       * -- and the startup sweep releases anything a crash left open.
+       */
+      case "bank": {
+        broadcast(evt);
+        if (!isWallet(evt.key)) break;
+        ledger.settle(evt.epoch, evt.id, toLamports(evt.amt))
+          .then(() => refreshBalance(evt.key))
+          .catch((e) => console.error(`settle deferred e${evt.epoch}c${evt.id}: ${e.message}`));
+        break;
+      }
+      case "refund": {
+        broadcast(evt);
+        if (!isWallet(evt.key)) break;
+        // Idempotent, so the sweep finding this hold later costs nothing.
+        ledger.release(evt.epoch, evt.id, "recalled inside spawn grace")
+          .then(() => refreshBalance(evt.key))
+          .catch((e) => console.error(`release deferred e${evt.epoch}c${evt.id}: ${e.message}`));
         break;
       }
       case "crash": {
@@ -142,6 +243,54 @@ function uniqueName(want, token) {
   return (base + "-" + randomBytes(2).toString("hex")).slice(0, 14);
 }
 
+/**
+ * Buy a cursor: every check the sim owns, then the money, then the spawn.
+ *
+ * The spawn is last on purpose -- a cursor on the field before its stake is
+ * confirmed is a free entry into the pot. And if the round moves on while the
+ * hold is in flight, the stake goes straight back rather than buying a place
+ * in an epoch that has already started.
+ */
+async function deploy(c) {
+  const why = sim.checkDeploy(c.key);
+  // "deploys closed" and "max live" are the normal texture of a live round and
+  // were never reported; that is unchanged.
+  if (why) { if (why !== "deploys closed" && why !== "max live") send(c, { t: "err", msg: why }); return; }
+
+  if (!isWallet(c.key)) {
+    send(c, { t: "err", msg: "connect a wallet to deploy — a guest login holds no money" });
+    return;
+  }
+
+  // The id is claimed before the money so the ref the stake is held under is
+  // the ref the cursor will settle under. See reserveCursorId in sim.js.
+  const epoch = sim.epochNo();
+  const cursorId = sim.reserveCursorId();
+  try {
+    const held = await ledger.hold(c.key, toLamports(STAKE), epoch, cursorId);
+    balances.set(c.key, held.freeLamports);
+  } catch (err) {
+    const e = err instanceof LedgerError ? err : null;
+    if (e && e.isBroke) send(c, { t: "err", msg: "insufficient" });
+    else if (e && e.isNotAWallet) send(c, { t: "err", msg: "connect a wallet to deploy" });
+    else {
+      console.error(`hold failed for ${c.key}: ${e ? e.code : err.message}`);
+      send(c, { t: "err", msg: "the books are unreachable — nothing was staked" });
+    }
+    return;
+  }
+
+  const cur = sim.commitDeploy(c.key, cursorId);
+  if (!cur) {
+    // The epoch closed under us. Give it back; the release is idempotent.
+    ledger.release(epoch, cursorId, "round closed before the cursor spawned")
+      .catch((e) => console.error(`release after failed commit: ${e.message}`));
+    void refreshBalance(c.key);
+    return;
+  }
+  void refreshBalance(c.key);
+}
+
 function handle(c, m) {
   const now = Date.now();
   switch (m.t) {
@@ -156,7 +305,6 @@ function handle(c, m) {
       const persisted = db.loadPlayer(token);
       const name = uniqueName(m.name || (persisted && persisted.name), token);
       const p = sim.registerPlayer(token, name, persisted ? {
-        balance: persisted.balance,
         totIn: persisted.totIn, totOut: persisted.totOut, created: persisted.created,
         published: persisted.published,
       } : null);
@@ -189,6 +337,50 @@ function handle(c, m) {
     /* "max live" and "deploys closed" are states the client's own button
        already shows; balloon-ing them turns a fast double-tap into a stream of
        notifications about something the player can see for themselves. */
+    /*
+     * SIGN IN WITH THE ARCADE, WHICH IS THE ONLY WAY TO BE A WALLET HERE.
+     *
+     * The `hello` above still mints a local token, and that is deliberate:
+     * CURSORS puts you at a login screen before you see anything, so a visitor
+     * needs an identity to watch and chat with. What a local token cannot do
+     * any more is hold money -- the arcade's books have no account for one, and
+     * a deploy is refused with a message saying exactly that.
+     *
+     * This swaps the socket's key for the wallet the arcade says signed. It is
+     * the only route by which a wallet identity enters this process: a client
+     * claiming to be an address proves nothing, and believing one would let
+     * anybody spend somebody else's balance.
+     */
+    case "arcade": {
+      if (!c.hello) return;
+      const token = String(m.token || "");
+      if (!token) { send(c, { t: "err", msg: "no arcade session" }); return; }
+      void (async () => {
+        const wallet = await arcadeWallet(token);
+        if (!wallet) { send(c, { t: "err", msg: "arcade session rejected" }); return; }
+        const old = byKey.get(wallet);
+        if (old && old !== c) { send(old, { t: "err", msg: "signed in elsewhere" }); old.ws.close(); }
+        // The spectator identity this socket arrived with is dropped rather
+        // than merged: it owns no money and no cursors it could carry over.
+        byKey.delete(c.key);
+        c.key = wallet;
+        byKey.set(wallet, c);
+        const persisted = db.loadPlayer(wallet);
+        const name = uniqueName((persisted && persisted.name) || shortWallet(wallet), wallet);
+        const p = sim.registerPlayer(wallet, name, persisted ? {
+          totIn: persisted.totIn, totOut: persisted.totOut,
+          created: persisted.created, published: persisted.published,
+        } : null);
+        p.name = name;
+        persistPlayer(wallet);
+        await refreshBalance(wallet);
+        send(c, { t: "welcome", token: wallet, name, balance: (balances.get(wallet) || 0) / 1e9,
+                  epoch: sim.welcomeState(), chat: chatHistory(), dms: [], online: onlineNames(), wallet });
+        broadcast({ t: "join", name, online: onlineNames() });
+      })();
+      return;
+    }
+
     case "skin": {
       /* cosmetic identity: which XP pointer scheme this player's cursors wear.
          whitelisted ids only; affects future spawns, never economics. */
@@ -198,7 +390,7 @@ function handle(c, m) {
       }
       break;
     }
-    case "deploy": { const err = sim.requestDeploy(c.key); if (err && err !== "deploys closed" && err !== "max live") send(c, { t: "err", msg: err }); break; }
+    case "deploy": { void deploy(c); break; }
     case "recall": sim.requestRecall(c.key); break;
     case "recallOne": if (Number.isInteger(m.id)) sim.recallOne(c.key, m.id); break;
     case "recallCancel": sim.cancelRecall(c.key); break;
@@ -377,5 +569,28 @@ process.on("SIGTERM", shutdown);
    forty sessions down with it. */
 process.on("uncaughtException", e => console.error("uncaught:", e));
 process.on("unhandledRejection", e => console.error("unhandled:", e));
+
+/*
+ * STRANDED STAKES GO BACK BEFORE ANYTHING NEW IS TAKEN.
+ *
+ * A crash mid-epoch leaves holds open in the arcade's books -- cursors that
+ * were paid for and never banked or refunded. Holds outlive the process that
+ * made them, which is the point of them: money in flight is the only money a
+ * crash can lose, so it is the only money that is never merely in flight.
+ *
+ * Idempotent, so a restart loop cannot refund anything twice, and it runs
+ * before the socket opens so no new stake races the cleanup.
+ */
+if (ledger.enabled) {
+  try {
+    const released = await ledger.sweep();
+    if (released > 0) console.log(`released ${released} stranded stakes back to their wallets`);
+  } catch (e) {
+    // Not fatal: refusing to boot would take the arena down for a ledger
+    // hiccup, and the holds stay open for the next restart to find. Loud,
+    // because money in escrow with no cursor behind it is a thing to see.
+    console.error(`COULD NOT SWEEP STRANDED STAKES: ${e.message}`);
+  }
+}
 
 http.listen(PORT, () => console.log(`CURSORS.EXE beta server on :${PORT} — epoch ${sim.epochNo()}, ${CORPSES} corpses to a crash`));

@@ -49,7 +49,7 @@ test("orders from a session the server never saw do nothing", () => {
   r.sim.recallOne("ghost", id);
   r.sim.requestRecall("ghost");
   r.sim.cancelRecall("ghost");
-  assert.equal(r.sim.requestDeploy("ghost"), "no such player");
+  assert.equal(r.deploy("ghost"), "no such player");
   /* one tick only, and our own cursors are the fixture */
   r.step();
   assert.equal(r.bal(), before, "an unknown session moved our money");
@@ -92,7 +92,7 @@ test("the shutdown rush cannot be cancelled", () => {
   const t = r.until(() => r.evs("rush").length > 0, 900);
   assert.ok(t >= 0, "no rush inside 15 minutes of sim time");
   const mine = r.mine().map(c => c.id);
-  for (let i = 0; i < 200; i++) { r.sim.cancelRecall(r.key); r.sim.requestDeploy(r.key); r.step(); }
+  for (let i = 0; i < 200; i++) { r.sim.cancelRecall(r.key); r.deploy(r.key); r.step(); }
   for (const id of mine) {
     const c = r.cur(id);
     if (c) assert.notEqual(c.mode, "r", `cursor ${id} dodged the rush`);
@@ -104,7 +104,7 @@ test("nothing moves money once the machine has crashed", () => {
   const t = r.until(() => r.sim.phase() === "crash", 900);
   assert.ok(t >= 0, "never reached the crash");
   const before = r.bal();
-  assert.equal(r.sim.requestDeploy(r.key), "deploys closed");
+  assert.equal(r.deploy(r.key), "deploys closed");
   r.sim.requestRecall(r.key);
   r.sim.recallOne(r.key, 1);
   r.sim.cancelRecall(r.key);
@@ -120,6 +120,6 @@ test("a new epoch starts everyone at zero cursors and keeps their money", () => 
   assert.equal(r.mine().length, 0, "cursors survived the reboot");
   assert.equal(r.bal(), banked, "the reboot changed a balance");
   /* and the new epoch actually accepts play */
-  assert.equal(r.sim.requestDeploy(r.key), null);
+  assert.equal(r.deploy(r.key), null);
   assert.equal(r.bal(), banked - STAKE);
 });
