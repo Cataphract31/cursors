@@ -1,0 +1,68 @@
+# CURSORS.EXE, on the box.
+#
+#   sudo cp cursors.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl restart cursors
+#   journalctl -fu cursors
+#
+# This unit was hand-written on the machine and existed nowhere else, which
+# meant a box rebuild lost it and nobody could review what the live server was
+# actually being told. It is in the repository now.
+#
+# Its Description used to end "(play money)". It did, in a `players.balance`
+# REAL column moved single-sided by `p.balance -= STAKE`. That column is gone
+# and the money is the arcade's; the description would otherwise be the only
+# thing on the box still saying otherwise.
+
+[Unit]
+Description=CURSORS.EXE -- deploy-and-bank server
+# The arcade holds the books this game moves money in, and this process fails
+# closed without them: it wants gielinor up, but does not require it, because a
+# ledger that is briefly down should mean "no deploys for a minute" and not "the
+# game server is also down and takes a manual restart".
+After=network-online.target gielinor.service
+Wants=network-online.target gielinor.service
+
+[Service]
+Type=simple
+User=cursors
+WorkingDirectory=/opt/cursors
+ExecStart=/usr/bin/node server.js
+Restart=always
+RestartSec=3
+# A 1 GB box running three services. The corpse ring is the memory this game
+# actually spends, and CORPSES is the lever if this cap is ever hit.
+MemoryMax=220M
+
+Environment=NODE_ENV=production
+Environment=PORT=8788
+Environment=DB_PATH=/var/lib/cursors/cursors.db
+Environment=CORPSES=900
+
+# -- the arcade's books ------------------------------------------------------
+#
+# LEDGER_KEY, ARCADE_LEDGER_URL and ARCADE_AUTH_URL, in ONE file shared with
+# gielinor.service and thinice.service. See the long note in gielinor.service:
+# the key is the whole authority to move anybody's money on this box, and three
+# copies of it is not a filing problem but a rotation hazard.
+#
+# ARCADE_AUTH_URL is what turns a session token into the wallet that signed for
+# it. It is the ONLY route a wallet identity enters this process -- a client
+# claiming to be an address proves nothing, so server.js asks the arcade and
+# believes only the answer.
+#
+# THE URLS ARE LOOPBACK AND MUST STAY LOOPBACK: server/ledger.js refuses to
+# start if LEDGER_KEY is set and the ledger URL is not on 127.0.0.1.
+#
+# No `-` prefix: a missing file must stop this unit rather than bring up a
+# server that looks healthy and refuses every deploy.
+EnvironmentFile=/etc/arcade/arcade.env
+
+# The database is this game's own -- cursors, epochs, chat. Not money.
+StateDirectory=cursors
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target
