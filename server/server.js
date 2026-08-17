@@ -11,7 +11,7 @@
 import { createServer } from "node:http";
 import { randomBytes } from "node:crypto";
 import { WebSocketServer } from "ws";
-import { createSim, BOT_NAMES, STAKE } from "./sim.js";
+import { createSim, STAKE } from "./sim.js";
 /* deploys per gallery frame — the anti-sybil wall, priced in real stake */
 const GALLERY_DEPLOYS = 10;
 /* the XP pointer schemes a cursor may wear on the field — ids, not files */
@@ -68,12 +68,11 @@ function balMsg(key) {
   return { t: "bal", balance: p.balance };
 }
 function schedSave(key) {
-  if (key.startsWith("bot:")) return;
   clearTimeout(saveTimers.get(key));
   saveTimers.set(key, setTimeout(() => { saveTimers.delete(key); persistPlayer(key); }, 2000));
 }
 function persistPlayer(key) {
-  const p = sim.players.get(key); if (!p || p.bot) return;
+  const p = sim.players.get(key); if (!p) return;
   db.savePlayer({ token: key, name: p.name, balance: p.balance,
     totIn: p.totIn, totOut: p.totOut,
     published: p.published, created: p.created });
@@ -135,8 +134,8 @@ function sanitizeName(raw) {
 }
 function uniqueName(want, token) {
   const base = sanitizeName(want) || "guest";
-  const taken = n => BOT_NAMES.includes(n.toLowerCase())
-    || [...sim.players.values()].some(p => p.key !== token && p.name.toLowerCase() === n.toLowerCase())
+  const taken = n =>
+    [...sim.players.values()].some(p => p.key !== token && p.name.toLowerCase() === n.toLowerCase())
     || db.nameTaken(n, token);
   if (!taken(base)) return base;
   for (let i = 2; i <= 9; i++) if (!taken(base + i)) return base + i;
@@ -156,7 +155,7 @@ function handle(c, m) {
       c.key = token;
       const persisted = db.loadPlayer(token);
       const name = uniqueName(m.name || (persisted && persisted.name), token);
-      const p = sim.registerPlayer(token, name, false, persisted ? {
+      const p = sim.registerPlayer(token, name, persisted ? {
         balance: persisted.balance,
         totIn: persisted.totIn, totOut: persisted.totOut, created: persisted.created,
         published: persisted.published,

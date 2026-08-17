@@ -18,7 +18,7 @@ import { rngFromSeedHex, newSeedHex, commitOf } from "./rng.js";
 
 /* economics — LOCKED, and the client mirrors these exactly */
 export const STAKE = 100, ENTRY = 98, FEE = 2;
-export const MAXCUR = 5, BOT_MAXCUR = 3;
+export const MAXCUR = 5;
 
 /* The food chain. A cursor only fights inside 4x its own size — sharks stop
    bothering with plankton, and a fresh deploy cannot be eaten by the whale it
@@ -89,16 +89,21 @@ export const MB = 1024 * 1024, GB = 1024 * MB;
 export const DISK_TOTAL = 20 * GB, CORPSE_BYTES = 12 * MB;
 
 /*
- * NO BOTS. There were seven, and they were economic participants: they held
- * balances, paid stakes and took pots, and when one went broke it silently
- * refilled itself to 50.000. That is a money printer, and it may not exist in
- * an arcade about to hold real deposits -- their winnings would have been
+ * NO BOTS, AND NOTHING LEFT THAT COULD BECOME ONE.
+ *
+ * There were seven, and they were economic participants: they held balances,
+ * paid stakes and took pots, and when one went broke it silently refilled
+ * itself to 50.000. That is a money printer, and it may not exist in an arcade
+ * about to hold real deposits -- their winnings would have been
  * indistinguishable from money somebody actually paid in.
  *
- * The list stays, empty, because the name check still reads it to stop a
- * player claiming a name the arena once used.
+ * A first pass deleted the spawning and left the scaffolding: an empty name
+ * list, a `bot` flag on every player, a lower cursor cap for bots, and a risk
+ * loop that recalled them. Empty scaffolding is worse than none, because it
+ * reads as a feature that is merely switched off and invites somebody to
+ * switch it back on. It is all gone. A cursor in this arena has an owner who
+ * paid for it.
  */
-export const BOT_NAMES = [];
 
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
 const angDiff = a => { while (a > Math.PI) a -= 2 * Math.PI; while (a < -Math.PI) a += 2 * Math.PI; return a; };
@@ -139,14 +144,14 @@ export function createSim(opts) {
   const pick = a => a[Math.floor(rng.next() * a.length)];
 
   /* ---------- players & money ---------- */
-  function registerPlayer(key, name, bot, persisted) {
+  function registerPlayer(key, name, persisted) {
     let p = players.get(key);
     if (p) { p.name = name; return p; }
     p = Object.assign({
-      key, name, bot: !!bot, balance: 0, skin: "",
+      key, name, balance: 0, skin: "",
       epochIn: 0, epochOut: 0, totIn: 0, totOut: 0,
     }, persisted || {});
-    p.key = key; p.name = name; p.bot = !!bot;
+    p.key = key; p.name = name;
     players.set(key, p);
     return p;
   }
@@ -212,10 +217,10 @@ export function createSim(opts) {
   function spawnCur(p) {
     const { x, y, side } = spawnPoint(p);
     const c = {
-      id: nextCurId++, key: p.key, owner: p.name, bot: p.bot, skin: skinOf(ENTRY),
+      id: nextCurId++, key: p.key, owner: p.name, skin: skinOf(ENTRY),
       x, y, edge: side, h: rand(0, Math.PI * 2), spd: rand(78, 124),
       bounty: ENTRY, mode: "roam", prevMode: "roam", recallT: 0,
-      graceUntil: now() + GRACE_MS, riskAt: 1.5 + rng.next() * 5,
+      graceUntil: now() + GRACE_MS,
       s: 1, r: 10, kills: 0, peak: ENTRY, born: now(), epoch: epochNo,
       duelUntil: 0, duelFoe: 0,
     };
@@ -241,7 +246,7 @@ export function createSim(opts) {
   function requestDeploy(key) {
     const p = players.get(key); if (!p) return "no such player";
     if (!canDeploy()) return "deploys closed";
-    if (cursOf(key).length >= (p.bot ? BOT_MAXCUR : MAXCUR)) return "max live";
+    if (cursOf(key).length >= MAXCUR) return "max live";
     if (p.balance < STAKE) return "insufficient";
     p.balance -= STAKE;
     p.epochIn += STAKE; p.totIn += STAKE;
@@ -563,11 +568,6 @@ export function createSim(opts) {
       if (!mayFight(a, b)) continue;
       const rr = a.r + b.r;
       if ((a.x - b.x) ** 2 + (a.y - b.y) ** 2 < rr * rr) startDuel(a, b);
-    }
-    /* bot risk appetite: each bot cursor has a multiple it came to get */
-    for (const c of curs) {
-      if (!c.bot || c.mode !== "roam") continue;
-      if (c.bounty / ENTRY >= c.riskAt && rng.next() < dt * .5) forceRecall(c);
     }
     /* The sweep is done when the field is empty — every cursor is banked and
        there is nothing left to look at. The clock is only the backstop. */
