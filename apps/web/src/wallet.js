@@ -66,11 +66,31 @@ const SESSION_COOKIE = "zinc_session";
    game socket a few lines up in main.js, same hard-coded origin, and localhost
    is exempt by hostname so a local run does not sign in against production. */
 const ARCADE = "https://gielinor.34-70-75-204.sslip.io";
+/*
+ * THE OVERRIDE IS A LOCAL-ONLY TOOL, and that is a money decision.
+ *
+ * `?arcade=` used to be honoured on ANY host. That made one link a way to
+ * point somebody else's session at a server of the sender's choosing: the
+ * page would ask it for a sign-in challenge and, worse, ask it to PREPARE A
+ * DEPOSIT -- and a prepare is what decides the destination of the transfer the
+ * wallet is about to be asked to approve. A crafted link therefore ended with
+ * the player's own wallet popping up a transfer to the attacker's address.
+ * The wallet does render that address truthfully, which is the last line of
+ * defence and the only one there was; a flow whose whole design teaches people
+ * to press Approve should not be leaning on it.
+ *
+ * It is honoured on localhost only, which is where the workflow it exists for
+ * actually happens. arcade/web/origin.js in the arcade repo made this same
+ * change for the same reason and its note is the longer version.
+ */
 export const arcadeUrl = (path) => {
   try {
-    const q = new URLSearchParams(location.search).get("arcade");
-    if (q) return q.replace(/\/+$/, "") + path;
-    if (/^(localhost|127\.)/.test(location.hostname)) return path;
+    const local = /^(localhost|127\.)/.test(location.hostname);
+    if (local) {
+      const q = new URLSearchParams(location.search).get("arcade");
+      if (q) return q.replace(/\/+$/, "") + path;
+      return path;
+    }
   } catch (e) { /* no location; fall through to the deployed box */ }
   return ARCADE + path;
 };
