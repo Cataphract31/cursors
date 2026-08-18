@@ -621,4 +621,4 @@ if (ledger.enabled) {
   }
 }
 
-http.listen(PORT, () => console.log(`CURSORS.EXE beta server on :${PORT} — epoch ${sim.epochNo()}, ${CORPSES} corpses to a crash`));
+http.listen(PORT, () => console.log(`CURSORS.EXE server on :${PORT} — epoch ${sim.epochNo()}, ${CORPSES} corpses to a crash, 0.1 SOL a deploy`));

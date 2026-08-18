@@ -28,7 +28,7 @@ function boot() {
       stdio: ["ignore", "pipe", "pipe"],
     });
     let out = "";
-    p.stdout.on("data", d => { out += d; if (out.includes("beta server on")) res(p); });
+    p.stdout.on("data", d => { out += d; if (out.includes("server on :")) res(p); });
     /*
      * Node's own noise, and one warning of ours, are not failures.
      *
