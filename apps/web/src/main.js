@@ -4605,9 +4605,11 @@ $$(".apb").forEach(b=>b.addEventListener("click",()=>{ sClick(); auto.bankAt=+b.
    values the panel has to be told which one is actually selected */
 $$(".apc").forEach(x=>x.classList.toggle("on",+x.dataset.c===auto.count));
 $$(".apb").forEach(x=>x.classList.toggle("on",+x.dataset.b===auto.bankAt));
-/* liquidity: the arena keeps a live bot population instead of coin-flipping.
-   The target wobbles per epoch so the field breathes; play-money only — the
-   real-money bot policy is a disclosed design still owed (see HANDOFF). */
+/* The OFFLINE SANDBOX keeps a synthetic field so a guest has something to look
+   at. There are no bots in the live arena and there is no longer any code that
+   could grow one: they were economic participants that refilled themselves when
+   broke, which is a money printer, and it may not exist in a game holding real
+   deposits. See the note at the top of server/sim.js. */
 setInterval(()=>{
   /* check against the previous stamps, then refresh: the run that discovers a
      two-hour gap must see it before it erases it */
@@ -5311,7 +5313,14 @@ function updatePanel(){
   const mine=myCurs();
   const liveVal=mine.reduce((s,c)=>s+c.bounty,0);
   const dep=$("#btn-deploy");
-  const broke=wallet<STAKE&&!MP.on;   /* online, the server faucets the busted */
+  /*
+   * INSUFFICIENT FUNDS IS NOW TRUE ONLINE TOO. This used to be `&& !MP.on`,
+   * justified by "online, the server faucets the busted" -- there is no faucet
+   * any more, so the button stayed lit for a player with nothing and the only
+   * feedback was the server refusing the deploy after they pressed it. The
+   * hold is still the authority; this is only the button agreeing with it.
+   */
+  const broke=wallet<STAKE;
   dep.disabled=!canDeploy()||mine.length>=MAXCUR||broke;
   dep.textContent=broke?"▸ INSUFFICIENT FUNDS"
     :mine.length>=MAXCUR?"▸ MAX 5 CURSORS LIVE"
@@ -5373,7 +5382,7 @@ $("#btn-logoff-yes").addEventListener("click",()=>{
 });
 
 /* ================= multiplayer ================= */
-/* The beta server (server/ in this repo) is the single authority: it runs the
+/* The server (server/ in this repo) is the single authority: it runs the
    same sim, owns every balance, and commits its RNG seed before each epoch.
    Online, this client is a display — deploys and recalls are requests,
    positions arrive as 10Hz snapshots we interpolate, deaths and banks arrive
@@ -5549,8 +5558,8 @@ function mpWelcome(m){
   mpSend({t:"guest"});
   MP.online=m.online;
   msn.setHumans(m.online);
-  log(`connected to the beta arena as ${MP.name} — epoch ${roundNo}, ${m.online.length} online`);
-  showBalloon("Connected",`Play money beta. You are ${MP.name} · ${m.online.length} online.`);
+  log(`connected to the arena as ${MP.name} — epoch ${roundNo}, ${m.online.length} online`);
+  showBalloon("Connected",`You are ${MP.name} · ${m.online.length} online. Deploys are real SOL.`);
   updatePanel(); renderPhase();
 }
 /* Server clock -> local clock. Timestamping samples with their arrival time
@@ -5795,7 +5804,7 @@ function mpMsg(m){
         try{ net.stop(); }catch(e){}
         if(mpGraceT){ clearTimeout(mpGraceT); mpGraceT=null; }
         mpDrop("You signed in from another tab. This one is a sandbox now.");
-        showBalloon("beta server","You signed in from another tab. This one went offline — reload it to take over.");
+        showBalloon("CURSORS","You signed in from another tab. This one went offline — reload it to take over.");
       }else if(m.msg==="arcade session rejected"){
         /* A REFUSED SESSION IS A DEAD SESSION. Keeping the cookie means every
            reconnect from now on re-sends the same rejected token and this
@@ -5803,8 +5812,8 @@ function mpMsg(m){
            rather than as a sign-in that lapsed. Dropped, so the next press of
            the wallet tile mints a fresh one. */
         carrySession(null);
-        showBalloon("beta server","Your arcade sign-in expired. Click the wallet tile to sign in again.");
-      }else if(m.msg) showBalloon("beta server",m.msg);
+        showBalloon("CURSORS","Your arcade sign-in expired. Click the wallet tile to sign in again.");
+      }else if(m.msg) showBalloon("CURSORS",m.msg);
       break;
   }
 }
@@ -5946,19 +5955,24 @@ const HELP={
     <p>The gauge under the CURSORS.EXE menu bar is that number. So is the pie
     chart in <b>My Computer → Local Disk (C:) → Properties</b>.</p>`;}},
 
-  multi:{t:"The multiplayer beta",group:"Start here",body:()=>`
-    <h1>The multiplayer beta</h1>
-    <p>This is a <b>play-money beta</b>. Every player starts with 5.000 SOL that
-    is not real and cannot be withdrawn. If you go broke, the faucet refills you.
-    Nothing here touches a wallet or a chain.</p>
+  multi:{t:"The arena",group:"Start here",body:()=>`
+    <h1>The arena</h1>
+    <p>This plays for <b>real SOL</b>. A cursor costs <b>0.1 SOL</b> to deploy,
+    what it banks is yours, and what it loses is gone. There is no faucet and no
+    practice balance — the play-money beta this game opened with is over.</p>
+    <p>Your balance is the arcade's: one balance across every game here, funded
+    by depositing to the arcade and taken out the same way. Press <b>BANK</b> at
+    the top left of the screen to do either. Sign in with your wallet first —
+    the guest tile still works, but it runs a local sandbox where nothing is
+    staked and nothing is won.</p>
     <p>The arena is shared: the cursors you see belong to other people who are
     connected right now. Open <b>Windows Messenger</b> to see who is here — real
     players are listed above the bots.</p>
-    <h2>About the bots</h2>
-    <p>Seven bots play continuously so the arena is never empty. They are full
-    economic participants under identical rules — same entry, same duel odds, no
-    special information. They are listed as bots in the buddy list because
-    pretending otherwise would be the one lie this game does not tell.</p>
+    <h2>Who else is out there</h2>
+    <p>Only people. This arena ran on seven bots during the play-money beta and
+    they are gone — they refilled themselves when they went broke, which is fine
+    when nothing is real and a money printer when it is. Every cursor on the
+    field was paid for by somebody.</p>
     <h2>If the connection drops</h2>
     <p>The status line says <b>RECONNECTING</b> and the arena holds still. If the
     server does not come back, you drop into a local offline sandbox — same game,
@@ -6280,10 +6294,12 @@ $("#tile-wallet").addEventListener("click",async()=>{
 if(!walletAcct.available) $("#w-sub").textContent="no wallet here — install Phantom";
 void walletAcct.resume();
 $("#tile-guest").addEventListener("click",()=>{
-  /* Guest is open while this is a beta, and it is also the honest answer for
-     somebody who only came to watch. No name goes to the server, so no hello
-     is sent, so the field runs in the sandbox: everything is visible, nothing
-     is staked. */
+  /* Guest is the honest answer for somebody who only came to watch, and it is
+     the only way to see this game without risking money. No name goes to the
+     server, so no hello is sent, so the field runs in the SANDBOX: everything
+     is visible, nothing is staked and nothing can be won. That separation is
+     load-bearing now that the arena plays for real SOL -- a guest must never
+     be one accidental code path away from a hold on somebody's balance. */
   GUEST=true; PLAYER=null;
   $("#guest-sub").textContent="signing in…";
   logon();

@@ -81,9 +81,9 @@ export function initMessenger(deps) {
   const {
     EMO, IMG, $, store, sysSnd, playerName, wireWindow,
     openWin, closeWin, isOpen, showMenu, showError, desk, rnd,
-    lobbyNet,   /* (text)=>bool — true means the beta server took it */
+    lobbyNet,   /* (text)=>bool — true means the server took it */
     dmNet,      /* (toName,text)=>bool — a direct message to a real player */
-    netLive,    /* ()=>bool — connected to the beta server */
+    netLive,    /* ()=>bool — connected to the server */
   } = deps;
   /* When the server is live the contacts marked "bot" are exactly that: they
      play with real (play) money under the same rules, and they do not talk.
@@ -401,7 +401,7 @@ export function initMessenger(deps) {
 
   /* ---------- contact list ---------- */
   function statusClass(s) { return "st-" + s; }
-  /* Real people, when there are any. On the beta server the buddy list leads
+  /* Real people, when there are any. Online, the buddy list leads
      with whoever is actually connected — the single most useful thing a
      multiplayer lobby can tell you is whether anyone else is in it. The bots
      stay below, honestly labelled, because they are the liquidity floor and
@@ -431,7 +431,7 @@ export function initMessenger(deps) {
         row.className = "msn-row on";
         row.innerHTML = `<img class="msn-st" src="${IMG.msn16}" alt=""><span class="msn-nm"></span><span class="msn-psm"> - real person</span>`;
         row.querySelector(".msn-nm").textContent = n;
-        row.title = `${n} — connected to the beta server right now`;
+        row.title = `${n} — in the arena right now`;
         row.addEventListener("dblclick", () => openConv("u:" + n));
         g.appendChild(row);
       }

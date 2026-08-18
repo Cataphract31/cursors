@@ -1,9 +1,13 @@
-/* CURSORS.EXE beta server — one Node process, same shape as THIN ICE's:
+/* CURSORS.EXE server — one Node process, same shape as THIN ICE's:
    built-in node:sqlite, a ws server, no external database, single writer.
-   Play money only: every visitor gets 5.000 SOL, bots are full economic
-   participants, and the faucet refills anyone who busts. The sim (sim.js) is
-   the single authority; this file is sockets, persistence, chat, the
-   guestbook, the gallery, and the TV queue.
+
+   REAL SOL. Balances are the arcade's, one per wallet across every game
+   (arcade/money/ledger.js, reached over the loopback with LEDGER_KEY); a
+   deploy is a hold and a bank is a settle. There is no faucet, no starting
+   balance and no bot -- all three existed in the play-money beta and all three
+   were money printers the moment deposits became real. The sim (sim.js) is the
+   single authority; this file is sockets, persistence, chat, the guestbook,
+   the gallery, and the TV queue.
 
    Run: PORT=8788 DB_PATH=/var/lib/cursors/cursors.db node server.js
    Env: CORPSES=64 (deaths per epoch — the disk), FAST=1 (tiny epochs, dev) */
@@ -32,13 +36,37 @@ const CORPSES = process.env.FAST ? 8 : +(process.env.CORPSES || 900);
  * hold real money. The arcade's ledger counts whole lamports and refuses
  * anything that is not an integer, so the two meet here and nowhere else.
  *
- * A deploy costs 0.001 SOL, which is the minimum bet across the rest of the
- * arcade. 100 units to 1,000,000 lamports makes one unit 10,000 lamports, and
- * every bounty in this game is a whole number of units, so every conversion is
- * exact. No floats touch money on either side of this line.
+ * A DEPLOY COSTS 0.1 SOL, the same entry as Thin Ice. One unit is 0.001 SOL, so
+ * the 100-unit stake is 0.1 and every bounty in this game is a whole number of
+ * units -- every conversion is exact and no floats touch money on either side
+ * of this line.
+ *
+ * THIS USED TO BE 10,000 AND THE CLIENT NEVER AGREED WITH IT. The screen has
+ * always priced a unit at 0.001 SOL (`fmtS` is units/1000, and the deploy
+ * button has always read "DEPLOY 0.1 SOL"), while the server charged 10,000
+ * lamports a unit -- a hundredth of that. The button said one price and the
+ * books took another, which is the worst possible direction for a disagreement
+ * about money to run. The client is the side a player can read, so the client
+ * is the side that wins.
  */
-const LAMPORTS_PER_UNIT = 10_000;
+const LAMPORTS_PER_UNIT = 1_000_000;
 const toLamports = (units) => Math.round(units) * LAMPORTS_PER_UNIT;
+
+/*
+ * AND BACK, FOR THE SCREEN ONLY.
+ *
+ * The wire used to carry SOL here (`freeLamports / 1e9`) into a client that
+ * renders units, so a real balance arrived a thousand times too small and then
+ * went through Math.round, which flattened everything under one unit to zero.
+ * A player with half a SOL was shown "0.001 SOL".
+ *
+ * FLOOR, not round: this is what you can actually deploy with, and rounding a
+ * partial unit up would draw a balance that buys one more cursor than it does.
+ * Nothing decides anything from this number -- `ledger.hold` does, atomically,
+ * where the money is -- but a screen that overstates is still a screen that
+ * lies.
+ */
+const toUnits = (lamports) => Math.floor((lamports || 0) / LAMPORTS_PER_UNIT);
 
 const ledger = createLedger();
 if (!ledger.enabled) {
@@ -84,7 +112,7 @@ async function refreshBalance(wallet) {
     const b = await ledger.balanceOf(wallet);
     balances.set(wallet, b.freeLamports);
     const conn = byKey.get(wallet);
-    if (conn) send(conn, { t: "bal", balance: b.freeLamports / 1e9 });
+    if (conn) send(conn, { t: "bal", balance: toUnits(b.freeLamports) });
   } catch { /* the screen keeps what it last knew; no decision rests on it */ }
 }
 
@@ -138,9 +166,9 @@ function shortWallet(w) {
 
 function balMsg(key) {
   const p = sim.players.get(key); if (!p) return null;
-  // Lamports out of the books, SOL on the wire, and zero for a spectator --
-  // who has no account and therefore nothing to show.
-  return { t: "bal", balance: (balances.get(key) || 0) / 1e9 };
+  // Lamports out of the books, whole play UNITS on the wire, and zero for a
+  // spectator -- who has no account and therefore nothing to show.
+  return { t: "bal", balance: toUnits(balances.get(key)) };
 }
 function schedSave(key) {
   clearTimeout(saveTimers.get(key));
@@ -374,7 +402,7 @@ function handle(c, m) {
         p.name = name;
         persistPlayer(wallet);
         await refreshBalance(wallet);
-        send(c, { t: "welcome", token: wallet, name, balance: (balances.get(wallet) || 0) / 1e9,
+        send(c, { t: "welcome", token: wallet, name, balance: toUnits(balances.get(wallet)),
                   epoch: sim.welcomeState(), chat: chatHistory(), dms: [], online: onlineNames(), wallet });
         broadcast({ t: "join", name, online: onlineNames() });
       })();

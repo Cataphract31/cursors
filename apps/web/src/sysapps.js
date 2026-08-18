@@ -476,7 +476,7 @@ export function initSysApps(deps) {
         return;
       }
       cmdWrite("");
-      cmdWrite(padR("Epoch:", 24) + s.epoch + (s.net ? "  (beta server)" : "  (offline sandbox)"));
+      cmdWrite(padR("Epoch:", 24) + s.epoch + (s.net ? "  (live arena)" : "  (offline sandbox)"));
       cmdWrite(padR("Phase:", 24) + s.phase);
       cmdWrite(padR("Uptime:", 24) + s.uptime);
       cmdWrite(padR("Cursors on field:", 24) + s.cursors.length);
