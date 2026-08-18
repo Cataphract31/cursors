@@ -33,6 +33,13 @@
    Nothing here approves a TRANSACTION. Signing a sentence proves a key is
    yours; it moves nothing, and the sentence the wallet displays says so.
 
+   ONE THING DOES APPROVE A TRANSACTION NOW, AND IT IS NOT SIGNING IN. A
+   deposit is a real transfer out of the player's own wallet, so somewhere a
+   real transaction has to be approved -- see `approve` at the bottom of this
+   file, and bank.js, which is the only caller. Kept apart from connect() on
+   purpose: logging on must never be the gesture that moves money, or the
+   habit this file's header is worried about is the habit we taught.
+
    ONE CONNECTION FOR THE WHOLE ARCADE
    This machine lives on cursors.voidsolana.com, beside a portal and three
    other worlds on their own hosts under the same registrable domain. A cookie
@@ -59,7 +66,7 @@ const SESSION_COOKIE = "zinc_session";
    game socket a few lines up in main.js, same hard-coded origin, and localhost
    is exempt by hostname so a local run does not sign in against production. */
 const ARCADE = "https://gielinor.34-70-75-204.sslip.io";
-const arcadeUrl = (path) => {
+export const arcadeUrl = (path) => {
   try {
     const q = new URLSearchParams(location.search).get("arcade");
     if (q) return q.replace(/\/+$/, "") + path;
@@ -275,4 +282,87 @@ export class Wallet {
     carrySession(null);
     this.#set(null);
   }
+}
+
+
+/**
+ * Headers for a call the arcade must attribute to somebody, or nothing.
+ *
+ * Sending no header at all when signed out is deliberate: the box answers
+ * "sign in first" to an anonymous call and 403s a garbage token, and the
+ * second of those is an error somebody has to go and read a log about.
+ */
+export function authHeaders() {
+  const token = sessionToken();
+  return token ? { authorization: `Bearer ${token}` } : {};
+}
+
+/**
+ * APPROVE AND BROADCAST A TRANSFER THE ARCADE BUILT. The one call in this file
+ * that moves money.
+ *
+ * WHY THE BYTES COME FROM THE BOX AND NOT FROM HERE. A System Program transfer
+ * is about sixty bytes laid out in one exact order, and the arcade already has
+ * a tested implementation of it that its withdrawal signer builds against.
+ * Writing a second one here -- in a browser, in the least testable place in
+ * the system -- is the mistake tools/signer-core.mjs in the arcade repo exists
+ * to warn about: two implementations agree until they do not, and the day they
+ * stop, money goes somewhere nobody meant.
+ *
+ * WHAT STOPS THIS BEING "SIGN WHATEVER THE SERVER SENDS", which is the shape
+ * of every drainer. Two things, and neither of them is trust in the server:
+ *
+ *   1. The WALLET decodes the transaction and shows what it does -- who is
+ *      paid and how much -- before anybody presses anything. That readout is
+ *      rendered by the wallet, not by this page, so a lying arcade would be
+ *      lying in a box it does not control.
+ *   2. The arcade's own route will not build anything else. `to` is custody's
+ *      address and `from` is the wallet the session proved; there is no
+ *      destination field to poison. See createCustodyRoutes.
+ *
+ * So the honest summary is: this asks a wallet to pay the arcade, the wallet
+ * says so out loud, and the player decides.
+ *
+ * ONE METHOD, NO ADAPTER. `request({ method: "signAndSendTransaction" })` with
+ * a base58 message is the injected-provider RPC underneath every wallet
+ * adapter, and taking it directly is what keeps @solana/web3.js out of a repo
+ * with two runtime dependencies. A wallet that does not answer it gets the
+ * NO_TX_API code and the panel falls back to showing the address, which is
+ * how every deposit worked until now.
+ *
+ * @param {object} provider an injected Solana provider
+ * @param {string} message base58, straight from /api/custody/deposit/prepare
+ * @returns {Promise<string>} the transaction signature
+ */
+export async function approve(provider, message) {
+  if (typeof provider?.request !== "function") {
+    const no = new Error("This wallet cannot be asked to send a transaction from a page.");
+    no.code = "NO_TX_API";
+    throw no;
+  }
+  let out;
+  try {
+    out = await provider.request({ method: "signAndSendTransaction", params: { message } });
+  } catch (err) {
+    /* 4001 is the wallet standard's "user rejected". Not an error worth a red
+       line: they read what it was going to do and said no, which is the whole
+       reason they were shown it. */
+    if (err?.code === 4001) {
+      const no = new Error("Deposit cancelled.");
+      no.code = "CANCELLED";
+      throw no;
+    }
+    /* -32601 is JSON-RPC "no such method"; some wallets say it in words
+       instead. Either way the fallback is the same screen, so it gets the
+       same code. */
+    if (err?.code === -32601 || /unsupported|not supported|unknown method/i.test(String(err?.message ?? ""))) {
+      const no = new Error("This wallet cannot be asked to send a transaction from a page.");
+      no.code = "NO_TX_API";
+      throw no;
+    }
+    throw err;
+  }
+  const signature = typeof out === "string" ? out : out?.signature;
+  if (!signature) throw new Error("the wallet approved it but gave back no transaction id");
+  return String(signature);
 }

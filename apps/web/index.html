@@ -87,6 +87,22 @@
       <path d="M20.4 23 l1.8 1.9 3.6 -3.9" fill="none" stroke="#4A3800" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
     </symbol>
     <symbol id="ic-check" viewBox="0 0 32 32"><path d="M6 17 L13 24 L26 8" fill="none" stroke="#1B7E28" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <!-- My Wallet. A billfold rather than another rounded app tile: it sits on
+         the desktop next to CURSORS.EXE, and two blue squares would be two
+         things nobody can tell apart at 32px. The coin carries the Solana
+         gradient the login tile already wears, so the shortcut and the tile
+         it opens are visibly the same subject. -->
+    <symbol id="ic-wallet" viewBox="0 0 32 32">
+      <linearGradient id="ic-wallet-sol" x1="0" y1="1" x2="1" y2="0">
+        <stop offset="0" stop-color="#14F195"/><stop offset="1" stop-color="#9945FF"/>
+      </linearGradient>
+      <rect x="7.5" y="5" width="17" height="11" rx="1.5" fill="#EFEADC" stroke="#43260C"/>
+      <circle cx="16" cy="10.5" r="3" fill="url(#ic-wallet-sol)" stroke="#43260C" stroke-width=".9"/>
+      <path d="M4.5 12 h23 a2 2 0 0 1 2 2 v11 a2 2 0 0 1 -2 2 h-23 a2 2 0 0 1 -2 -2 v-11 a2 2 0 0 1 2 -2 z" fill="#A9682B" stroke="#43260C"/>
+      <path d="M2.8 16 h26.4" stroke="#C98B45" stroke-width="1.3"/>
+      <path d="M21 18.5 h8.5 v5.5 h-8.5 a2.75 2.75 0 0 1 0 -5.5 z" fill="#8A5322" stroke="#43260C"/>
+      <circle cx="24" cy="21.2" r="1.5" fill="#EFEADC" stroke="#43260C" stroke-width=".8"/>
+    </symbol>
     <symbol id="ic-cpl" viewBox="0 0 32 32">
       <rect x="3" y="6" width="26" height="20" rx="2" fill="#DCE9FB" stroke="#4A6FA5"/>
       <circle cx="11" cy="13" r="3.4" fill="#fff" stroke="#4A6FA5"/>
@@ -126,7 +142,11 @@
         <span class="cx-tab" data-cx="cx-verify">Verify</span>
       </div>
       <div class="cx-pane on" id="cx-play">
-        <div class="walletrow"><span>WALLET</span><div class="wamt"><span class="amt" id="walletamt">5.000 SOL</span><span class="unreal mono" id="walletlive"></span></div></div>
+        <!-- The balance, and the way to change it. A separate small control
+             rather than a clickable row: this sits directly above DEPLOY, and
+             a row that navigates on any stray click is a row that will eat
+             one somebody meant for the button below it. -->
+        <div class="walletrow"><span>WALLET</span><div class="wamt"><span class="amt" id="walletamt">5.000 SOL</span><span class="unreal mono" id="walletlive"></span></div><button class="xbtn wbtn" id="wallet-manage" title="My Wallet — deposit or withdraw SOL">in / out</button></div>
         <div class="hr"></div>
         <button class="xbtn big" id="btn-deploy">▸ DEPLOY 0.1 SOL</button>
         <div class="small dim" style="margin-top:4px">0.098 arena · 0.002 fee</div>
@@ -217,8 +237,8 @@ THE MONEY
 · 0.100 = 0.098 arena
         + 0.002 house
 · RTP 98%. P(reach ×N) = 1/N.
-
-play money prototype. chain later.
+· real SOL. My Wallet puts it
+  in and takes it back out.
 
 paint sprites: jspaint (MIT)
 icons/sounds: winXP (MIT)</div>
@@ -1908,6 +1928,9 @@ icons/sounds: winXP (MIT)</div>
       <div class="sm-item" data-act="mypics"><i class="xico" data-ico="pics32"></i><div class="sm-texts"><div class="sm-text b">My Pictures</div></div></div>
       <div class="sm-item" data-app="win-amp"><i class="xico" data-ico="music32"></i><div class="sm-texts"><div class="sm-text b">My Music</div></div></div>
       <div class="sm-item" data-app="win-explorer"><i class="xico" data-ico="computer32"></i><div class="sm-texts"><div class="sm-text b">My Computer</div></div></div>
+      <!-- with the other My-things, in bold, because it is one of them: the
+           place this account's money is, rather than a utility -->
+      <div class="sm-item" data-act="wallet"><i class="xico" data-ico="@ic-wallet"></i><div class="sm-texts"><div class="sm-text b">My Wallet</div></div></div>
       <div class="sm-sep"></div>
       <div class="sm-item" data-app="win-control"><i class="xico" data-ico="@ic-cpl"></i><div class="sm-texts"><div class="sm-text">Control Panel</div></div></div>
       <div class="sm-item" data-act="connect"><i class="xico" data-ico="connect32"></i><div class="sm-texts"><div class="sm-text">Connect To</div></div></div>
@@ -1971,11 +1994,54 @@ icons/sounds: winXP (MIT)</div>
         <div class="lg-inputrow" id="lg-inputrow" style="display:none"><input id="lg-user" maxlength="14" placeholder="type a user name" autocomplete="off" spellcheck="false"><button id="lg-go" title="Log on">→</button></div>
       </div></div>
       <div class="lg-tile" id="tile-guest"><span class="lg-ava guest">?</span><div><b>Guest</b><div class="lg-sub" id="guest-sub">look around, in the sandbox</div></div></div>
+
+      <!-- MY WALLET, ON THE SCREEN THAT ALREADY ASKS WHO YOU ARE.
+           Money in and out used to be a gold button belonging to the arcade,
+           floating over a Windows XP desktop that had never heard of it. It
+           lives here now because this screen is already the one place this
+           machine talks about identity, and a balance is what an identity is
+           for. Everything behind it is unchanged: the same ledger, the same
+           custody wallet, the same withdrawal that can only ever pay the
+           address that signed in. bank.js has the argument in full. -->
+      <div class="lg-bank" id="lg-bank" hidden>
+        <div class="lgb-hdr">
+          <i class="xico lgb-ico" data-ico="@ic-wallet"></i>
+          <b>My Wallet</b>
+          <span class="lgb-who" id="lgb-who"></span>
+        </div>
+        <div class="lgb-bals">
+          <div class="lgb-bal"><span>in the arcade</span><b id="lgb-arcade">&mdash;</b></div>
+          <div class="lgb-bal"><span id="lgb-chainlbl">in your wallet</span><b id="lgb-chain">&mdash;</b></div>
+        </div>
+        <div class="lgb-dust" id="lgb-dust" hidden></div>
+        <div class="lgb-tabs" role="tablist">
+          <button class="lgb-tab on" id="lgb-t-dep" data-bk="deposit" role="tab">Deposit</button>
+          <button class="lgb-tab" id="lgb-t-wd" data-bk="withdraw" role="tab">Withdraw</button>
+        </div>
+        <div class="lgb-row">
+          <input id="lgb-amt" inputmode="decimal" autocomplete="off" spellcheck="false" placeholder="0.0" aria-label="Amount in SOL">
+          <span class="lgb-unit">SOL</span>
+          <button class="lgb-max" id="lgb-max">max</button>
+        </div>
+        <button class="lgb-go" id="lgb-go">Deposit</button>
+        <div class="lgb-say" id="lgb-say"></div>
+        <div class="lgb-log" id="lgb-log"></div>
+      </div>
+      <div class="lg-banknote" id="lg-banknote">Connect a wallet above to deposit or withdraw.</div>
     </div>
     <div class="lg-welcome" id="lg-welcome">welcome</div>
   </div>
   <div class="lg-orange"></div>
-  <div class="lg-bot"><button id="lg-off"><img id="lg-offimg" alt="">Turn off computer</button><div class="lg-note">After you log on, you can add or lose funds.</div></div>
+  <div class="lg-bot">
+    <div class="lg-botl">
+      <button id="lg-off"><img id="lg-offimg" alt="">Turn off computer</button>
+      <!-- Only while a session is already running behind this screen. Coming
+           here from the desktop is switching users, not logging off, and the
+           way out of it should not be a tile that says "log on". -->
+      <button id="lg-back" hidden>&laquo; Back to the desktop</button>
+    </div>
+    <div class="lg-note">After you log on, you can add or lose funds.</div>
+  </div>
 </div>
 <script type="module" src="/src/main.js"></script>
 </body>

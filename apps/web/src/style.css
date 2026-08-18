@@ -89,8 +89,11 @@ body.mobile .icon .lbl{font-size:10px}
 .small{font-size:10px}
 .phaseline{font:bold 12px "Lucida Console",Consolas,monospace;background:#FFF7DE;border:1px solid #E0C05A;border-radius:3px;padding:5px 8px;text-align:center;margin-bottom:8px}
 .phaseline.battle{background:#FFE9E0;border-color:#E08A5A}
-.walletrow{display:flex;justify-content:space-between;align-items:baseline}
+.walletrow{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
 .walletrow .amt{font:bold 17px "Lucida Console",Consolas,monospace}
+.walletrow .wamt{margin-left:auto}
+/* small, quiet, and never mistaken for DEPLOY underneath it */
+.wbtn{flex:none;align-self:center;padding:2px 7px;font-size:11px;min-width:0}
 /* what is banked and what is still on the desktop, in one place. The
    unrealized figure only exists while cursors are out, so an idle wallet
    reads exactly as it always did. */
@@ -704,7 +707,7 @@ body.mobile #bsod{font-size:11px;padding:16px 14px}
 .lg-brandtext .xp{color:#F7941D;font-size:26px;vertical-align:top;margin-left:1px}
 .lg-hint{color:#E6EEFC;font:16px "Franklin Gothic Medium","Segoe UI",Tahoma;font-weight:normal}
 .lg-div{width:2px;align-self:stretch;margin:40px 0;background:linear-gradient(180deg,transparent,rgba(255,255,255,.55),transparent)}
-.lg-right{flex:1;padding-left:40px;display:flex;flex-direction:column;gap:12px}
+.lg-right{flex:1;padding-left:40px;display:flex;flex-direction:column;gap:12px;max-height:100%;overflow-y:auto;scrollbar-width:thin}
 .lg-tile{display:flex;align-items:center;gap:12px;padding:8px 12px;border-radius:6px;cursor:pointer;color:#fff;max-width:290px}
 .lg-tile:hover{background:rgba(255,255,255,.16);box-shadow:0 0 12px rgba(255,255,255,.15)}
 .lg-tile b{font:20px "Franklin Gothic Medium","Segoe UI",Tahoma;font-weight:normal}
@@ -736,6 +739,69 @@ body.mobile #bsod{font-size:11px;padding:16px 14px}
 #lg-off:hover{background:rgba(255,255,255,.14)}
 #lg-off img{width:26px;height:26px}
 .lg-note{color:#B9C8EC;font-size:11px;max-width:44%;text-align:right}
+.lg-botl{display:flex;align-items:center;gap:4px;min-width:0}
+#lg-back{background:none;border:0;color:#DCE6FA;padding:7px 12px;cursor:pointer;font:13px Tahoma;border-radius:4px;min-width:0;box-shadow:none}
+#lg-back:hover{background:rgba(255,255,255,.14);color:#fff}
+#lg-back[hidden]{display:none}
+
+/* ---------- My Wallet, on the welcome screen ----------
+   It belongs to this screen and is dressed as part of it: the tiles' own
+   translucent-white-on-blue, not a panel from somewhere else pasted on top.
+   Money text is 11px at its very smallest and the two balances are 15px,
+   because a number you squint at is a number you misread. */
+.lg-bank{max-width:290px;margin-top:4px;padding:10px 12px 11px;border-radius:6px;color:#fff;
+  background:rgba(255,255,255,.13);box-shadow:inset 0 0 0 1px rgba(255,255,255,.22),0 2px 10px rgba(0,0,0,.18)}
+.lg-bank[hidden]{display:none}
+.lgb-hdr{display:flex;align-items:center;gap:7px;margin-bottom:8px}
+.lgb-ico{width:18px;height:18px;flex:none}
+.lgb-ico img,.lgb-ico svg{width:100%;height:100%;display:block}
+.lgb-hdr b{font:15px "Franklin Gothic Medium","Segoe UI",Tahoma;font-weight:normal}
+.lgb-who{margin-left:auto;font:11px Tahoma;color:#CFDCF6;white-space:nowrap}
+.lgb-bals{display:flex;flex-direction:column;gap:2px;margin-bottom:8px}
+.lgb-bal{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.lgb-bal span{font:11px Tahoma;color:#CFDCF6}
+.lgb-bal b{font:15px Tahoma;font-weight:bold;letter-spacing:.2px}
+.lgb-bal b.stale{opacity:.55}
+/* the sub-unit remainder, said out loud rather than left as a disagreement
+   between this number and the one CURSORS.EXE prints */
+.lgb-dust{font:11px Tahoma;color:#F3D79A;margin:-4px 0 8px}
+.lgb-dust[hidden]{display:none}
+.lgb-tabs{display:flex;gap:4px;margin-bottom:7px}
+.lgb-tab{flex:1;padding:5px 0 6px;font:12px Tahoma;color:#DCE6FA;cursor:pointer;border:0;border-radius:3px;min-width:0;
+  background:rgba(0,0,0,.16);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14)}
+.lgb-tab:hover{background:rgba(0,0,0,.24);color:#fff}
+.lgb-tab.on{color:#12305F;font-weight:bold;background:#E7EEFB;box-shadow:inset 0 0 0 1px rgba(255,255,255,.5)}
+.lgb-row{display:flex;align-items:stretch;gap:5px;margin-bottom:6px}
+#lgb-amt{flex:1;min-width:0;font:bold 15px Tahoma;padding:5px 7px;border:1px solid #7B96C8;border-radius:3px;
+  background:#fff;color:#12305F}
+#lgb-amt:focus{outline:2px solid #F7941D;outline-offset:-1px}
+#lgb-amt:disabled{background:#DCE3EF;color:#7A87A0}
+.lgb-unit{align-self:center;font:11px Tahoma;color:#CFDCF6}
+.lgb-max{flex:none;padding:0 10px;font:11px Tahoma;color:#12305F;cursor:pointer;border:1px solid #7B96C8;border-radius:3px;
+  background:linear-gradient(180deg,#FDFEFF,#D6E1F3);min-width:0}
+.lgb-max:hover{filter:brightness(1.06)}
+.lgb-go{width:100%;padding:8px 10px;font:bold 13px Tahoma;color:#fff;cursor:pointer;border:1px solid #2C6B12;border-radius:4px;
+  background:linear-gradient(180deg,#8CC63F,#4E9A06);box-shadow:1px 1px 3px rgba(0,0,0,.28);min-width:0}
+.lgb-go:hover:not(:disabled){filter:brightness(1.1)}
+.lgb-go:active:not(:disabled){background:linear-gradient(180deg,#4E9A06,#8CC63F)}
+.lgb-go:disabled{cursor:default;color:#E4EAF5;border-color:#5F7392;background:linear-gradient(180deg,#8492AB,#6E7B92);box-shadow:none}
+.lgb-go.out{border-color:#8A4A0E;background:linear-gradient(180deg,#F2A64B,#C4700F)}
+.lgb-say{font:11px Tahoma;color:#CFDCF6;line-height:1.45;margin-top:6px;min-height:15px}
+.lgb-say.bad{color:#FFC0B4}
+.lgb-say.ok{color:#B8F5C6}
+.lgb-say.busy{color:#FFE9A8}
+.lgb-say a{color:#BFE0FF}
+.lgb-say code{font:11px "Lucida Console",monospace;word-break:break-all;color:#DCE6FA}
+.lgb-log{margin-top:7px;padding-top:6px;font:11px Tahoma;color:#CFDCF6;box-shadow:inset 0 1px 0 rgba(255,255,255,.18)}
+.lgb-log:empty{display:none}
+.lgb-le{display:flex;justify-content:space-between;gap:10px;padding:1px 0}
+.lgb-le b{font-weight:bold}
+.lgb-le b.in{color:#B8F5C6}
+.lgb-le b.out{color:#F3D79A}
+.lgb-le a{color:#BFE0FF;text-decoration:none}
+.lgb-le a:hover{text-decoration:underline}
+.lg-banknote{max-width:290px;font:11px Tahoma;color:#B9C8EC;line-height:1.45;padding:0 2px}
+.lg-banknote[hidden]{display:none}
 
 /* ---------- context menus / tooltip ---------- */
 #ctx{position:fixed;display:none;z-index:100010;background:#fff;border:1px solid #ACA899;box-shadow:4px 4px 3px -1px rgba(0,0,0,.28);padding:2px;min-width:166px;font-size:11px}
@@ -969,8 +1035,16 @@ body.mobile .lg-brandtext{font-size:34px}
 body.mobile .lg-flag{width:56px}
 body.mobile .lg-hint{font-size:13px}
 body.mobile .lg-div{display:none}
-body.mobile .lg-right{flex:none;width:100%;padding:0 34px}
+body.mobile .lg-right{flex:none;width:100%;padding:0 34px;max-height:none;overflow:visible}
 body.mobile .lg-note{display:none}
+/* With My Wallet open this screen is taller than a phone, so it scrolls and
+   the stack tightens. `hasbank` rather than :has() -- one class, set where the
+   panel is shown, and no support question to answer. */
+body.mobile .lg-mid{overflow-y:auto}
+body.mobile #login.hasbank .lg-mid{justify-content:flex-start;gap:16px;padding:18px 0}
+body.mobile #login.hasbank .lg-brandtext{font-size:26px}
+body.mobile #login.hasbank .lg-flag{width:44px}
+body.mobile .lg-bank,body.mobile .lg-banknote{max-width:none}
 
 /* ---- the phone keyboard ---- */
 /* iOS shrinks the visual viewport without touching layout, so a composer at

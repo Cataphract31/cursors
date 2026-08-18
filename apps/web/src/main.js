@@ -25,6 +25,7 @@ import { initTour } from "./tour.js";
 import { initTourXP } from "./tourxp.js";
 import { initAccess } from "./access.js";
 import { Wallet, shortAddress, sessionToken, carrySession } from "./wallet.js";
+import { initBank } from "./bank.js";
 /* Webamp is ~870 KB — a third of the first-paint budget, paid by every phone
    whether or not its owner ever opens Winamp. It loads on first launch now. */
 let Webamp = null;
@@ -928,6 +929,11 @@ const SYSICONS=[
   {id:"computer",label:"My Computer",ico:"computer32",app:"win-explorer",sys:1},
   {id:"recycle",label:"Recycle Bin",ico:"bin32",app:"bin",sys:1},
   {id:"cursors",label:"CURSORS.EXE",ico:"@ic-app",app:"win-cursors",sys:1},
+  /* The way to the money, on the desktop, because the way to the money should
+     not be four clicks into a Start menu whose last item says "Log Off". It
+     opens the welcome screen -- which is where My Wallet lives, beside the
+     tile that signs you in -- and coming back is one button. */
+  {id:"wallet",label:"My Wallet",ico:"@ic-wallet",app:"wallet",sys:1},
   {id:"mine",label:"Minesweeper",ico:"mine32",app:"win-mine",sys:1},
   {id:"paint",label:"Paint",ico:"paint32",app:"win-paint",sys:1},
   {id:"chat",label:"Windows Messenger",ico:"msn32",app:"win-chat",sys:1},
@@ -1178,6 +1184,8 @@ function openIcon(ic){
     nsrc.connect(g).connect(ac.destination); nsrc.start();
   }else if(ic.app==="wavdoc"){
     showError("Windows Media Player","Windows Media Player cannot play the file. The file is either corrupt or the Player does not support the format you are trying to play.");
+  }else if(ic.app==="wallet"){
+    openWallet();
   }else if(ic.app==="run"){
     runNamed(ic.cmd);
   }else if(ic.app==="applnk"){
@@ -2942,6 +2950,7 @@ function smAction(act,itemEl){
     case "connect": showError("Network Connections","Dial-up to Solana Mainnet: no dial tone. Ships with the chain update."); break;
     case "printers": showError("Printers and Faxes","CURSORS-PRINTER is out of ink. It was printing money."); break;
     case "search": openWin("win-explorer"); explorer.openSearch(); break;
+    case "wallet": openWallet(); break;
     case "allprograms":{
       const r=itemEl.getBoundingClientRect();
       showMenu(allProgramsMenu(),r.right+4,Math.max(8,r.top-180));
@@ -4444,6 +4453,9 @@ function recallAll(){
   if(refunded||recalled) sClick();
   updatePanel();
 }
+/* the balance's own control: the shortest path from "I am out of SOL" to
+   putting some in, which used to be a gold button belonging to another game */
+$("#wallet-manage").addEventListener("click",e=>{ e.stopPropagation(); openWallet("deposit"); });
 $("#btn-deploy").addEventListener("click",()=>deploy(false));
 $("#btn-recall").addEventListener("click",recallAll);
 /* the mobile thumb bar mirrors the dashboard verbs; the info row opens the full app */
@@ -5961,10 +5973,18 @@ const HELP={
     what it banks is yours, and what it loses is gone. There is no faucet and no
     practice balance — the play-money beta this game opened with is over.</p>
     <p>Your balance is the arcade's: one balance across every game here, funded
-    by depositing to the arcade and taken out the same way. Press <b>BANK</b> at
-    the top left of the screen to do either. Sign in with your wallet first —
-    the guest tile still works, but it runs a local sandbox where nothing is
-    staked and nothing is won.</p>
+    by depositing to the arcade and taken out the same way. <b>My Wallet</b> is
+    where you do either — the shortcut on the desktop, the <b>in / out</b>
+    button beside the balance in CURSORS.EXE, or Start → My Wallet. All three
+    open the welcome screen, which is where it lives, beside the tile that
+    signs you in.</p>
+    <p>A deposit is one press: type an amount and your own wallet asks you to
+    approve the transfer, with the arcade's address and the amount shown by the
+    wallet rather than typed by you. A withdrawal can only ever be paid to the
+    address you signed in with — there is no field for a destination, which is
+    what stops a stolen session sending your balance somewhere else.</p>
+    <p>Sign in with your wallet first — the guest tile still works, but it runs
+    a local sandbox where nothing is staked and nothing is won.</p>
     <p>The arena is shared: the cursors you see belong to other people who are
     connected right now. Open <b>Windows Messenger</b> to see who is here — real
     players are listed above the bots.</p>
@@ -6081,6 +6101,16 @@ function markFightRange(){
 }
 function frame(t){
   const dt=Math.min(.05,(t-last)/1000); last=t;
+  /* THE ARENA DOES NOT STOP FOR THE WELCOME SCREEN. Going to My Wallet does
+     not recall anybody -- that would make putting money in cost you a bank --
+     so cursors keep fighting behind it, and the way back has to say so rather
+     than let somebody discover it afterwards in the kill feed. */
+  if(!$("#lg-back").hidden){
+    const n=myCurs().length;
+    $("#lg-back").textContent=n
+      ?`« Back to the desktop — ${n} cursor${n>1?"s":""} still out`
+      :"« Back to the desktop";
+  }
   if(MP.on){ mpFrame(dt,t); }
   else{
   phaseTick(dt);
@@ -6154,13 +6184,20 @@ function desktopActive(){
     &&$("#boot").style.display!=="block"
     &&$("#shutdown").style.display!=="grid";
 }
+/* The FIRST arrival on the desktop is a boot: a balloon or the tour, MSConfig's
+   nag, the whole ceremony. Every arrival after it is a return from the welcome
+   screen -- somebody who went to put money in and came back -- and running the
+   ceremony at them again would reopen the tour over a live arena. */
 function enterDesktop(){
+  const first=!desktopEntered;
   desktopEntered=true;
+  bankPanel.active(false);
   degauss();
   $("#login").style.opacity="0";
   setTimeout(()=>{
     const lg=$("#login");
     lg.style.display="none"; lg.style.opacity=""; lg.classList.remove("welcoming");
+    if(!first) return;
     if(store.data.tourSeen) showBalloon();   /* first visit gets the How to Play card instead */
     else setTimeout(()=>{ try{ tour.open(); }catch(e){} },3200);
     /* MSConfig nags every boot until you put startup back to Normal */
@@ -6186,7 +6223,27 @@ function playStartup(){
 function showLogin(skipStartup){
   const lg=$("#login");
   lg.style.display="flex"; lg.style.opacity=""; lg.classList.remove("welcoming");
+  /* A session already running behind this screen makes it a user switcher, not
+     a logon screen, and the difference has to be visible: the way back appears
+     and the tiles stop saying "log on". */
+  $("#lg-back").hidden=!desktopEntered;
+  syncIdentity();
+  bankPanel.active(true);
   if(!skipStartup) playStartup();
+}
+/* THE WAY TO THE MONEY, from anywhere. The desktop shortcut, the CURSORS.EXE
+   balance row and the Start menu all end up here.
+
+   It is the welcome screen rather than a window of its own because that is
+   where the wallet tile is, and a deposit screen that cannot also sign you in
+   is a deposit screen that half of its visitors bounce off. Nothing is torn
+   down on the way: the socket stays up, cursors keep fighting, and the panel
+   says so. */
+function openWallet(tab){
+  if($("#login").style.display==="flex"){ bankPanel.show(tab); return; }
+  sysSnd("nav",.5);
+  showLogin(true);              /* no startup chime: this is not a boot */
+  bankPanel.show(tab);
 }
 function showBootThenLogin(){
   $("#boot").style.display="block";
@@ -6208,13 +6265,28 @@ function playerNameFull(){ return PLAYER||(GUEST?"Guest":"Administrator"); }
 function syncIdentity(){
   /* the admin tile is the TYPED name and stays that even for a wallet or a
      guest session -- it is the account, not the current identity */
-  $("#lg-name").textContent=PLAYER||"Administrator";
+  const back=desktopEntered;   /* a session is already running behind this */
+  /* THE TYPED NAME, not PLAYER. The comment above has always said this tile is
+     the account rather than the current identity, and it was true right up to
+     the moment somebody could come BACK to this screen: walletLogon() sets
+     PLAYER to a shortened address, so a returning player was shown their own
+     wallet address on the Administrator tile as well as on the wallet one --
+     two tiles, same name, and no way back to the account they typed. */
+  const named=store.data.userName||"";
+  $("#lg-name").textContent=named||"Administrator";
   $("#sm-user").textContent=playerNameFull();
-  $("#lg-sub").textContent=PLAYER?"click to log on":"click to begin";
+  $("#lg-sub").textContent=named?(back?"click to go back":"click to log on"):"click to begin";
+  $(".lg-hint").textContent=back
+    ?"Add or take out SOL, or click a user to go back"
+    :"To begin, connect a wallet or click your user name";
+  if(back&&walletAcct.address) $("#w-sub").textContent="click to go back";
 }
 function logon(){
   sessionStorage.setItem("cxp.booted","1");
   syncIdentity();
+  /* Coming back from My Wallet is not a logon: no "welcome", no chime, no
+     second and a half of ceremony over an arena that never stopped. */
+  if(desktopEntered){ enterDesktop(); return; }
   $("#login").classList.add("welcoming");
   chime();
   setTimeout(enterDesktop,1500);
@@ -6240,7 +6312,12 @@ function commitUserName(){
 }
 $("#tile-admin").addEventListener("click",e=>{
   if(e.target.closest(".lg-inputrow")) return;
-  if(PLAYER){ logon(); return; }
+  /* the account, not whoever is currently logged on -- see syncIdentity. Same
+     rule as walletLogon: a hello only when the identity really moved. */
+  if(store.data.userName){
+    if(PLAYER!==store.data.userName||GUEST){ PLAYER=store.data.userName; GUEST=false; mpHello(); }
+    logon(); return;
+  }
   $("#lg-inputrow").style.display="flex";
   $("#lg-sub").textContent="pick a name for the scoreboard";
   $("#lg-user").focus();
@@ -6257,10 +6334,24 @@ syncIdentity();
    confused: one is a number that goes up and down, the other is a name. */
 const walletAcct=new Wallet(({address})=>{
   $("#w-name").textContent=address?shortAddress(address):"Connect wallet";
-  $("#w-sub").textContent=address?"click to log on":"Phantom, Solflare or Backpack";
+  $("#w-sub").textContent=address?(desktopEntered?"click to go back":"click to log on"):"Phantom, Solflare or Backpack";
   $("#tile-wallet").classList.toggle("connected",Boolean(address));
   $("#w-off").hidden=!address;
+  /* connecting, signing in and disconnecting all change what My Wallet is
+     allowed to show, and it is sitting right underneath this tile */
+  bankPanel.sync();
 });
+/* MY WALLET. It renders into the welcome screen and asks the arcade, so it
+   needs the wallet object (for the provider that approves a deposit) and
+   nothing else this file owns. See bank.js for why the money lives here.
+
+   `bankPanel`, not `bank`, and the collision is worth naming: bank() a few
+   hundred lines up is this game's VERB -- recalling a cursor and keeping its
+   bounty. Two different meanings of the word, one file, and the reason the
+   panel is called My Wallet everywhere a player can see it. */
+const bankPanel=initBank({$,wallet:walletAcct,sysSnd});
+bankPanel.mount();
+$("#lg-back").addEventListener("click",()=>{ sysSnd("nav",.5); enterDesktop(); });
 /* The tile's click already means "log on", so the way out cannot be a second
    press on it the way it is everywhere else in the arcade -- it is its own
    small red control at the tile's edge, and it only exists while connected. */
@@ -6272,15 +6363,34 @@ function walletLogon(){
   /* deliberately NOT written to store.data.userName: the wallet and the typed
      name are two identities, and overwriting one with the other would mean a
      player who connects once can never get their own name back */
-  PLAYER=shortAddress(walletAcct.address);
-  GUEST=false;
-  mpHello(); logon();
+  const as=shortAddress(walletAcct.address);
+  /* ONLY IF IT ACTUALLY CHANGED. This tile is also the way back from My Wallet
+     now, so it is pressed by people who are already logged in as this very
+     address -- and a hello re-keys a live socket with cursors on the field.
+     Saying the same thing again is not free. */
+  if(PLAYER!==as||GUEST){ PLAYER=as; GUEST=false; mpHello(); }
+  logon();
 }
 $("#tile-wallet").addEventListener("click",async()=>{
   if(walletAcct.address){ walletLogon(); return; }
   $("#w-sub").textContent="check your wallet…";
   try{
     await walletAcct.connect();
+    /* connect() signs in as its last act, so the panel's idea of who is here
+       is one step behind until now */
+    bankPanel.sync();
+    /* AND STOP HERE IF THERE IS NOTHING TO PLAY WITH. Signing in with an
+       empty arcade balance and being dropped onto the desktop means the next
+       thing that happens is DEPLOY refusing, which reads as the game being
+       broken rather than as an account with no money in it. The screen that
+       fixes it is the one they are already standing on. */
+    const st=await bankPanel.check();
+    if(st.signedIn&&st.arcade===0){
+      bankPanel.show("deposit");
+      bankPanel.tell("Signed in. There is nothing in the arcade yet — put some SOL in here, or click your name again to look around first.");
+      $("#w-sub").textContent="click to log on";
+      return;
+    }
     walletLogon();
   }catch(err){
     const t=$("#tile-wallet");
