@@ -24,7 +24,7 @@ import { initSysMaint } from "./sysmaint.js";
 import { initTour } from "./tour.js";
 import { initTourXP } from "./tourxp.js";
 import { initAccess } from "./access.js";
-import { Wallet, shortAddress } from "./wallet.js";
+import { Wallet, shortAddress, sessionToken, carrySession } from "./wallet.js";
 /* Webamp is ~870 KB — a third of the first-paint budget, paid by every phone
    whether or not its owner ever opens Winamp. It loads on first launch now. */
 let Webamp = null;
@@ -5404,6 +5404,18 @@ function mpHello(){
   /* the server assumes new sockets are visible; a hidden tab reconnecting
      overnight would stream 15Hz snapshots to a renderer that never draws */
   net.send({t:"vis",on:document.visibilityState==="visible"});
+  /* AND THE ARCADE SESSION, WHICH IS WHERE THE MONEY IS.
+     The hello above buys a seat: an identity this machine minted, good for
+     watching, chatting and holding cursors, and good for nothing else. The
+     arcade's books have no account for a local token, so a player who only
+     ever said hello can look at the desktop and cannot deploy on it.
+     This is the swap. The server takes the token to the issuer, asks whose it
+     is, and re-keys the socket to that wallet -- a client claiming to BE an
+     address proves nothing, which is why the address is never sent. Sent on
+     every hello, including reconnects, because the server drops everything it
+     knew about us with the old socket. */
+  const seat=sessionToken();
+  if(seat) net.send({t:"arcade",token:seat});
   lastSnapAt=performance.now();
 }
 
@@ -5784,6 +5796,14 @@ function mpMsg(m){
         if(mpGraceT){ clearTimeout(mpGraceT); mpGraceT=null; }
         mpDrop("You signed in from another tab. This one is a sandbox now.");
         showBalloon("beta server","You signed in from another tab. This one went offline — reload it to take over.");
+      }else if(m.msg==="arcade session rejected"){
+        /* A REFUSED SESSION IS A DEAD SESSION. Keeping the cookie means every
+           reconnect from now on re-sends the same rejected token and this
+           balloon appears forever, which reads as the server being broken
+           rather than as a sign-in that lapsed. Dropped, so the next press of
+           the wallet tile mints a fresh one. */
+        carrySession(null);
+        showBalloon("beta server","Your arcade sign-in expired. Click the wallet tile to sign in again.");
       }else if(m.msg) showBalloon("beta server",m.msg);
       break;
   }

@@ -22,7 +22,16 @@
    thing is for the address to be a NAME and for the token to stay the key it
    already is.
 
-   Nothing here signs, sends or spends. No transaction is ever built.
+   THAT LAST PARAGRAPH DESCRIBED A GAP, AND THIS FILE IS WHERE IT CLOSED. The
+   signed challenge it says "until that exists" about now exists: the arcade
+   issues a nonce, the wallet signs it, and what comes back is a session token
+   that IS a credential. So connecting here signs you in, and the address stays
+   what it always was -- a name -- with the signature doing the proving. This
+   machine's own mpToken is untouched and still holds the seat; what the
+   session buys is money, which a seat never could.
+
+   Nothing here approves a TRANSACTION. Signing a sentence proves a key is
+   yours; it moves nothing, and the sentence the wallet displays says so.
 
    ONE CONNECTION FOR THE WHOLE ARCADE
    This machine lives on cursors.voidsolana.com, beside a portal and three
@@ -37,6 +46,27 @@
 
 const PREF_KEY = "cursors.wallet";
 const COOKIE = "zinc_wallet";
+/* The arcade's proof, as opposed to the arcade's claim. `zinc_wallet` above is
+   a name this browser goes by; this is the token minted in exchange for a
+   signature, and it is the only thing that makes a balance safe to key to an
+   address. Every world on this domain reads it, so signing in once anywhere
+   signs you in everywhere. */
+const SESSION_COOKIE = "zinc_session";
+
+/* WHERE THE ARCADE'S ISSUER LIVES.
+   This page is static and its API is not: the client is served from Vercel and
+   every route that knows anything runs on the box. Same arrangement as the
+   game socket a few lines up in main.js, same hard-coded origin, and localhost
+   is exempt by hostname so a local run does not sign in against production. */
+const ARCADE = "https://gielinor.34-70-75-204.sslip.io";
+const arcadeUrl = (path) => {
+  try {
+    const q = new URLSearchParams(location.search).get("arcade");
+    if (q) return q.replace(/\/+$/, "") + path;
+    if (/^(localhost|127\.)/.test(location.hostname)) return path;
+  } catch (e) { /* no location; fall through to the deployed box */ }
+  return ARCADE + path;
+};
 /* A month: long enough to be a convenience, short enough to lapse. */
 const MAX_AGE = 60 * 60 * 24 * 30;
 
@@ -70,6 +100,83 @@ function carry(address) {
     if (location.protocol === "https:") parts.push("Secure");
     document.cookie = parts.join("; ");
   } catch (e) { /* no cookie jar; this browser just will not carry it */ }
+}
+
+/** One cookie by name, or "". */
+function cookie(name) {
+  try {
+    const found = document.cookie.match(new RegExp("(?:^|;\\s*)" + name + "=([^;]+)"));
+    return found ? decodeURIComponent(found[1]) : "";
+  } catch (e) { return ""; }
+}
+
+/**
+ * The arcade session this browser holds, or null.
+ *
+ * Shape-checked before it is ever sent. A truncated or mangled cookie should
+ * read as "signed out" rather than as a token the server has to reject, and a
+ * rejected one costs a round trip and a visible error on the login screen.
+ */
+export function sessionToken() {
+  const token = cookie(SESSION_COOKIE);
+  return /^[0-9a-f]{64}$/.test(token) ? token : null;
+}
+
+/** Write the arcade session where every world on this domain reads it, or clear it. */
+export function carrySession(token) {
+  try {
+    const host = location.hostname;
+    const parts = [`${SESSION_COOKIE}=${token ? encodeURIComponent(token) : ""}`, "Path=/"];
+    if (host === "voidsolana.com" || host.endsWith(".voidsolana.com")) parts.push("Domain=.voidsolana.com");
+    parts.push(`Max-Age=${token ? MAX_AGE : 0}`, "SameSite=Lax");
+    if (location.protocol === "https:") parts.push("Secure");
+    document.cookie = parts.join("; ");
+  } catch (e) { /* no cookie jar; this browser cannot stay signed in */ }
+}
+
+/**
+ * Prove the address is yours, and keep what the arcade gives back.
+ *
+ * The wallet signs exactly the sentence the ISSUER sent, byte for byte.
+ * Rebuilding it here would be a second implementation of the one thing that
+ * must never disagree, and a signature over slightly different bytes verifies
+ * against nothing at all.
+ *
+ * Returns false rather than throwing on every failure path -- a declined
+ * popup, an old box with no issuer on it -- because the caller's fallback is
+ * the same in all of them: carry on with the address as a name, which is what
+ * this file did for its whole life before now.
+ */
+async function signIn(provider, address) {
+  if (typeof provider?.signMessage !== "function") return false;
+  try {
+    const asked = await fetch(arcadeUrl("/api/auth/challenge"), {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ wallet: address }),
+    });
+    if (!asked.ok) return false;
+    const { nonce, statement } = await asked.json();
+    if (!nonce || !statement) return false;
+
+    const { signature } = await provider.signMessage(new TextEncoder().encode(statement), "utf8");
+    const proof = await fetch(arcadeUrl("/api/auth/verify"), {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        wallet: address,
+        nonce,
+        signature: btoa(String.fromCharCode(...signature)),
+      }),
+    });
+    if (!proof.ok) return false;
+    const { token } = await proof.json();
+    if (typeof token !== "string" || !token) return false;
+    carrySession(token);
+    return true;
+  } catch (e) {
+    return false;
+  }
 }
 
 /** Has this player already opted in, here or on any other world? */
@@ -140,6 +247,13 @@ export class Wallet {
       const key = out?.publicKey ?? this.provider.publicKey;
       if (!key) throw new Error("the wallet connected without giving an address");
       this.#set(key.toString());
+      /* AND SIGN IN, here, on the explicit press -- never on resume(). A
+         signature popup belongs to a gesture the player just made. Firing one
+         at somebody who only came back to watch is how a site teaches people
+         to dismiss wallet dialogs without reading them, which is the habit
+         every drainer relies on. If they decline they keep the name and play
+         as a spectator, which is what this screen already did. */
+      if (!sessionToken()) await signIn(this.provider, this.address);
       return this.address;
     } catch (err) {
       /* 4001 is the wallet standard's "user rejected", and it is not an error
@@ -155,6 +269,10 @@ export class Wallet {
 
   async disconnect() {
     try { await this.provider?.disconnect?.(); } catch (e) { /* it is going regardless */ }
+    /* The session goes with the wallet. Leaving it behind would mean a player
+       who pressed disconnect is still spending from the same balance on the
+       next reload, which is not what that button says. */
+    carrySession(null);
     this.#set(null);
   }
 }
