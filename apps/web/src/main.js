@@ -3295,7 +3295,7 @@ sys=initSysApps({
       memTotal:"512 MB", memFree:(512-Math.min(420,Math.round(120+curs.length*4)))+" MB",
     }),
     netInfo:()=>({ up:MP.on||netUp, ip:MP.on?"10.64.0."+(1+(roundNo%250)):"192.168.0.14",
-      gw:"34.70.75.204", rtt:MP.on?46:38 }),
+      gw:"34.60.159.134", rtt:MP.on?46:38 }),
     processes:liveProcesses,
     killProcess:p=>{ killedProcs.add(p.pid); },
     shutdownBox:secs=>sysShutdown(secs),
@@ -4629,7 +4629,7 @@ function mpUrl(){
     if(typeof location.hostname!=="string"||!location.hostname) return null;
     if(location.protocol==="file:") return null;
     if(/^(localhost|127\.|192\.168\.)/.test(location.hostname)) return null;
-    return "wss://cursors.34-70-75-204.sslip.io";
+    return "wss://cursors.34-60-159-134.sslip.io";
   }catch(e){ return null; }
 }
 const MPURL=mpUrl();
