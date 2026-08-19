@@ -5,10 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "node scripts/smoke.mjs && vite build && node scripts/postbuild.mjs",
+    "build": "node scripts/sync-arcade.mjs --check && node scripts/smoke.mjs && vite build && node scripts/postbuild.mjs",
     "preview": "vite preview",
     "csp": "node scripts/csp.mjs",
-    "agree": "node scripts/agree.mjs"
+    "agree": "node scripts/agree.mjs",
+    "sync-arcade": "node scripts/sync-arcade.mjs"
   },
   "dependencies": {
     "webamp": "^1.5.0",

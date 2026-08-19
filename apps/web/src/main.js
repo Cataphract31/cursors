@@ -24,7 +24,7 @@ import { initSysMaint } from "./sysmaint.js";
 import { initTour } from "./tour.js";
 import { initTourXP } from "./tourxp.js";
 import { initAccess } from "./access.js";
-import { Wallet, shortAddress, sessionToken, carrySession } from "./wallet.js";
+import { Wallet, shortAddress, sessionToken, signOut } from "./wallet.js";
 import { initBank } from "./bank.js";
 /* Webamp is ~870 KB — a third of the first-paint budget, paid by every phone
    whether or not its owner ever opens Winamp. It loads on first launch now. */
@@ -5834,7 +5834,7 @@ function mpMsg(m){
            balloon appears forever, which reads as the server being broken
            rather than as a sign-in that lapsed. Dropped, so the next press of
            the wallet tile mints a fresh one. */
-        carrySession(null);
+        void signOut();
         showBalloon("CURSORS","Your arcade sign-in expired. Click the wallet tile to sign in again.");
       }else if(m.msg) showBalloon("CURSORS",m.msg);
       break;
