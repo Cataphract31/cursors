@@ -318,9 +318,15 @@ export function deeplinkSession() {
   return { wallet: held.wallet, address: held.address, name: walletById(held.wallet)?.name ?? 'Wallet' };
 }
 
-/** Forget everything: the channel, the session, and the address. */
+/**
+ * Forget everything: the channel, the session, the address -- and any trip
+ * that was in flight, which now outlives the tab that started it and would
+ * otherwise be resumed against a connection that no longer exists.
+ */
 export function forgetDeeplink() {
   writeStore(null);
+  try { globalThis.sessionStorage?.removeItem(`${STORE}.step`); } catch { /* nothing to clear */ }
+  try { globalThis.localStorage?.removeItem(`${STORE}.step`); } catch { /* nothing to clear */ }
 }
 
 /* ==========================================================================
@@ -431,18 +437,76 @@ async function cluster() {
   return 'mainnet-beta';
 }
 
-/** Record what we are in the middle of, then go. */
+/** Where the step is written. See leaveFor: BOTH, on purpose. */
+const STEP_KEY = `${STORE}.step`;
+
+/**
+ * Record what we are in the middle of, then go.
+ *
+ * IN BOTH STORES, AND THAT IS THE WHOLE MOBILE SIGN-IN BUG.
+ *
+ * This wrote the step to sessionStorage alone. sessionStorage IS PER TAB, and
+ * the trip this function makes is a trip to another app -- which sends the
+ * player back through `redirect_link`, and a wallet is entitled to open that in
+ * a NEW TAB. It generally does. A new tab is a new sessionStorage, so the step
+ * was simply gone when the answer arrived.
+ *
+ * The damage was not spread evenly, which is why this hid for so long and
+ * looked like several different bugs:
+ *
+ *   CONNECT SURVIVED. finishConnect() reads the channel out of localStorage and
+ *     the wallet's key out of the URL, and never looks at the step at all. So
+ *     the address came back, the page said "connected", and everything looked
+ *     right.
+ *   SIGN-IN DIED, SILENTLY. finishSignIn() needs `authNonce` -- the challenge
+ *     the box issued before leaving -- and it lives ONLY in the step. Without
+ *     it the arcade was posted a signature over a nonce it was not told, refused
+ *     it, and the failure went back up into a page with nothing to show it on.
+ *
+ * So the phone connected and could never sign in: an address on screen, no
+ * session behind it, a bank that says connect your wallet, and a table that
+ * says it keeps no guest balance -- over the player's own address. Pressing
+ * connect again just repeated the same two trips. The only thing that ever
+ * changed anything was disconnecting, which is not a fix, it is a coin flip on
+ * whether the next return lands in the tab that started it.
+ *
+ * localStorage is where the rest of this machine already keeps its state -- the
+ * channel keypair, the wallet session, the address -- for exactly this reason;
+ * see the header. The step was the one piece left outside it.
+ *
+ * SESSIONSTORAGE IS STILL WRITTEN, and preferred on the way back. When the
+ * return DOES land in the tab that left, it is the tighter answer: scoped to
+ * that tab, and it cannot be read by a second one. This is a fallback added
+ * beneath it rather than a replacement for it.
+ */
 function leaveFor(url, step, context = {}) {
-  try {
-    globalThis.sessionStorage?.setItem(`${STORE}.step`, JSON.stringify({ step, at: Date.now(), ...context }));
-  } catch { /* the step is also in the redirect link; this is the belt */ }
+  const record = JSON.stringify({ step, at: Date.now(), ...context });
+  try { globalThis.sessionStorage?.setItem(STEP_KEY, record); } catch { /* see below */ }
+  try { globalThis.localStorage?.setItem(STEP_KEY, record); } catch { /* then this browser cannot deeplink */ }
   globalThis.location.href = url;
 }
 
+/**
+ * The step being answered, and it is CLEARED FROM BOTH STORES either way.
+ *
+ * Read once and gone, because a step is a single trip: left behind in the
+ * durable store it would be resumed by some later page load, which is the
+ * thing STEP_TTL_MS exists to bound and this makes unreachable in the ordinary
+ * case. Cleared even when it has expired, and even when the tab-scoped copy is
+ * the one that answered -- a stale record in the other store is exactly the
+ * one that would surface a week later.
+ */
 function takeStep() {
+  let raw = null;
   try {
-    const raw = globalThis.sessionStorage?.getItem(`${STORE}.step`);
-    globalThis.sessionStorage?.removeItem(`${STORE}.step`);
+    raw = globalThis.sessionStorage?.getItem(STEP_KEY) ?? null;
+    globalThis.sessionStorage?.removeItem(STEP_KEY);
+  } catch { /* no sessionStorage; the durable copy below is the whole answer */ }
+  try {
+    raw ??= globalThis.localStorage?.getItem(STEP_KEY) ?? null;
+    globalThis.localStorage?.removeItem(STEP_KEY);
+  } catch { /* nothing kept it; the caller reports a step it cannot finish */ }
+  try {
     const step = JSON.parse(raw ?? 'null');
     if (!step || Date.now() - Number(step.at ?? 0) > STEP_TTL_MS) return null;
     return step;

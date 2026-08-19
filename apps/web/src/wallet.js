@@ -36,6 +36,10 @@ import { Wallet as ArcadeWallet } from "./arcade/wallet.js";
 export {
   authHeaders,
   claimedWallet,
+  /* Drops a session the BOX has stopped honouring, locally and without a
+     signature. My Wallet needs it for the same reason the arcade's own panels
+     do -- see the 401 branch in bank.js, and forgetSession's note upstairs. */
+  forgetSession,
   onDepositArrival,
   sessionToken,
   shortAddress,

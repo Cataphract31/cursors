@@ -40,7 +40,7 @@
    transfer comes out of the wallet you signed in with, by construction, so
    there is nothing left to warn about. */
 
-import { approve, arcadeUrl, authHeaders, onDepositArrival, sessionToken, shortAddress } from "./wallet.js";
+import { approve, arcadeUrl, authHeaders, forgetSession, onDepositArrival, sessionToken, shortAddress } from "./wallet.js";
 
 const LAMPORTS = 1_000_000_000;
 
@@ -318,6 +318,36 @@ export function initBank({ $, wallet, sysSnd = () => {}, onArcadeBalance = () =>
       try { parsed = await res.text().then(t => (t ? JSON.parse(t) : null)); } catch (e) { parsed = null; }
     }
     if (!res.ok) {
+      /*
+       * A COOKIE THIS BROWSER STILL HAS AND THE BOX HAS STOPPED HONOURING.
+       *
+       * zinc_session lasts a month and everything here tested it for PRESENCE,
+       * but the box can retire a token at any moment and has no way to
+       * announce it: signing in on a second device retires the first (one live
+       * session per wallet), a fresh database forgets every token, and the
+       * server's month can end before the browser's.
+       *
+       * From then on this panel believed it was signed in, drew itself that
+       * way, and every read 401'd into a catch that says nothing -- so it sat
+       * there showing stale numbers and a Deposit button that could not work.
+       * The only escape was pressing disconnect, whose signOut() clears the
+       * cookie as a side effect of a button nobody had a reason to press.
+       * That is exactly how it was reported.
+       *
+       * So a refusal is believed. The cookie goes, locally and with no
+       * signature asked for -- this runs from a four-second poll rather than a
+       * gesture, and a wallet popup fired by a background timer is the habit
+       * every drainer relies on. The panel simply becomes what it already was,
+       * signed out, where the Sign in button says what it does.
+       *
+       * ONLY A REFUSAL. A 502, a timeout or a captive portal is not the box
+       * declining a session, and treating one as though it were would sign
+       * people out of a perfectly good session over a bad minute of wifi.
+       */
+      if (res.status === 401 || res.status === 403 || parsed?.error?.code === "NO_SESSION") {
+        forgetSession();
+        draw();
+      }
       throw Object.assign(new Error(parsed?.error?.message ?? `The arcade said ${res.status}.`),
         /* A status from the box is an answer even when the body was junk;
            what makes it useful is the code, and UNTOUCHED checks for that. */

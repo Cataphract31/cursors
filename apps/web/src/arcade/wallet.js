@@ -70,6 +70,23 @@ import { isMobile, noWalletAdvice } from './platform.js';
 const MONTH_SECONDS = 60 * 60 * 24 * 30;
 
 /*
+ * WHICH WALLET THE SESSION IN THIS BROWSER WAS MINTED FOR.
+ *
+ * A token is opaque -- it says nothing about whose it is -- and the arcade has
+ * exactly one of them at a time, so a browser that connects wallet A and then
+ * switches to wallet B in the wallet's own interface holds a credential for A
+ * while every screen on the page is captioned B. Everything that follows is
+ * wrong in the worst direction: the bank shows A's balance under B's name, and
+ * a stake pressed as B is taken from A.
+ *
+ * WRITTEN BESIDE THE TOKEN RATHER THAN INSIDE IT, because the token is the
+ * server's to shape and this is the browser's own bookkeeping. It is NOT a
+ * credential and nothing trusts it: it can only ever cause a fresh sign-in to
+ * be asked for, never let one be skipped -- see sessionFor().
+ */
+const SESSION_FOR = 'zinc_session_wallet';
+
+/*
  * THE PHONE'S WALLET, ONCE IT HAS ANSWERED.
  *
  * On a phone there is nothing injected and there never will be: the wallet is
@@ -233,6 +250,71 @@ export function sessionToken() {
   return /^[0-9a-f]{64}$/.test(token) ? token : null;
 }
 
+/**
+ * The session, but only if it belongs to `address`.
+ *
+ * THE ONE QUESTION A PRESS SHOULD ASK. "Is there a token" is the wrong test at
+ * connect time and it is how somebody ends up playing another wallet's money:
+ * see SESSION_FOR above. This is the same test plus the only thing that makes
+ * it safe -- that the credential and the name on screen are the same person.
+ *
+ * A SESSION WITH NO OWNER RECORDED IS ACCEPTED, and that is a migration rather
+ * than a hole. Browsers signed in before this cookie existed hold a perfectly
+ * good token and no note of whose it is; refusing them would sign the whole
+ * arcade out on deploy. The box is the authority either way -- it decides whose
+ * the token is on every single call -- so the worst this can do is ask for a
+ * signature that was not needed, and only until the next sign-in writes it.
+ *
+ * @param {string|null|undefined} address
+ * @returns {string|null}
+ */
+export function sessionFor(address) {
+  const token = sessionToken();
+  if (!token) return null;
+  const owner = readCookie(SESSION_FOR);
+  if (owner && address && owner !== address) return null;
+  return token;
+}
+
+/**
+ * DROP A SESSION THIS BROWSER IS STILL CARRYING AND THE BOX NO LONGER HONOURS.
+ *
+ * The bug this exists to end, which cost an arcade-wide lockout: `zinc_session`
+ * is a month-long cookie and every screen here tests for its PRESENCE, while
+ * the box can stop honouring a token at any moment and never gets to say so.
+ * Three ordinary things do it -- signing in on a second device (one live
+ * session per wallet, so the first is retired), a deploy onto a fresh database,
+ * and the month running out at the server before the cookie lapses here.
+ *
+ * From then on the browser was wedged, and silently. Every panel believed it
+ * was signed in, so every panel drew itself as signed in and every read came
+ * back 401 into a catch that says nothing -- an empty bank, a game answering
+ * "playerId is required", a header showing an address that proves nothing. And
+ * the one thing that would have fixed it could not run: connect() signs in only
+ * `if (!sessionToken())`, and the dead cookie made that false forever. The only
+ * way out was to press disconnect, whose signOut() clears the cookie as a side
+ * effect of something the player had no reason to do.
+ *
+ * NOT signOut(): there is nothing at the box to retire. It has already told us
+ * it does not know this token, and a POST to hand it back would be one more
+ * request to fail. This is the browser catching up with an answer it was given.
+ *
+ * NO SIGNATURE IS ASKED FOR HERE, and that is deliberate. This runs from a
+ * failed poll, which is not a gesture anybody made; a wallet popup fired from a
+ * background timer is the habit every drainer relies on. Clearing the cookie
+ * puts the arcade honestly into its signed-out state, where the Connect button
+ * says what it does and pressing it now works.
+ *
+ * @returns {boolean} whether anything was actually let go of
+ */
+export function forgetSession() {
+  const had = Boolean(readCookie('zinc_session') || readCookie(SESSION_FOR));
+  if (!had) return false;
+  carry('zinc_session', '');
+  carry(SESSION_FOR, '');
+  return true;
+}
+
 /** Headers for an authenticated call, or nothing at all when signed out. */
 export function authHeaders() {
   const token = sessionToken();
@@ -314,6 +396,8 @@ export async function signIn(provider, address) {
     const { token } = await proof.json();
     if (typeof token !== 'string' || !token) return false;
     carry('zinc_session', token);
+    // Whose it is, so a later account switch cannot spend it. See SESSION_FOR.
+    carry(SESSION_FOR, address);
     return true;
   } catch {
     return false;
@@ -338,6 +422,7 @@ export async function signOut() {
     } catch { /* unreachable box; the cookie still goes */ }
   }
   carry('zinc_session', '');
+  carry(SESSION_FOR, '');
 }
 
 /**
@@ -508,6 +593,33 @@ export function onDepositArrival(show) {
   arrivalSink = typeof show === 'function' ? show : null;
 }
 
+/*
+ * WHY A TRIP TO THE WALLET CAME BACK WITH NOTHING, KEPT FOR WHOEVER ASKS.
+ *
+ * A phone sign-in fails on the page load that ANSWERS it -- there is no button
+ * still waiting, no panel open, and nothing on screen that was expecting a
+ * result -- so the reason had nowhere to go and was dropped on the floor. That
+ * is how the worst version of this reads to a player: they approve in their
+ * wallet, land back on the arcade, and it is exactly as it was. Nothing says
+ * no. Pressing connect again does the same nothing, twice as slowly.
+ *
+ * So it is written down here for the next screen that has room for it -- the
+ * bank's connect prompt is the one they actually go to -- and it is READ ONCE.
+ * A stale "that did not work" surfacing tomorrow, over a session that has been
+ * fine since, would be worse than the silence it replaces.
+ *
+ * NOT KEPT ACROSS PAGE LOADS on purpose. It belongs to the return trip, and
+ * the return trip is this page.
+ */
+let signInProblem = null;
+
+/** Why the last trip to the wallet failed, if it did. Cleared by reading it. */
+export function lastWalletProblem() {
+  const said = signInProblem;
+  signInProblem = null;
+  return said;
+}
+
 export async function completeDeeplink() {
   try {
     if (!String(globalThis.location?.search ?? '').includes('zinc_link=')) return null;
@@ -520,11 +632,34 @@ export async function completeDeeplink() {
 
     if (result?.kind === 'connected') {
       carry('zinc_wallet', result.address);
-      // Navigates, so nothing after this line runs on this page.
-      if (!sessionToken()) return await link.continueToSignIn(result);
+      /*
+       * AND ON TO PROVING IT, unless there is already a session FOR THIS
+       * ADDRESS. Testing for a token alone stranded exactly the players this
+       * chain exists for: a phone holding a session that had lapsed at the box,
+       * or one minted for the account they just switched away from, came back
+       * from the wallet app named and not signed in -- and then sat on a screen
+       * that expected something of them without saying what, because the trip
+       * that would have fixed it had been skipped as unnecessary.
+       *
+       * Navigates, so nothing after this line runs on this page.
+       */
+      if (!sessionFor(result.address)) return await link.continueToSignIn(result);
+    }
+    /*
+     * A SIGN-IN THAT DID NOT FINISH IS WRITTEN DOWN RATHER THAN SWALLOWED.
+     *
+     * `cancelled` is included: somebody who declined in their wallet and came
+     * back to an unchanged page has no way to know the arcade heard them, and
+     * "nothing happened" is the one thing this route must never leave a player
+     * guessing about. The deposit steps have their own report -- see the sink
+     * above and reportArrival -- so only the sign-in leg lands here.
+     */
+    if (step === 'signin' && (result?.kind === 'error' || result?.kind === 'cancelled')) {
+      signInProblem = result.message ?? 'That sign-in did not finish.';
     }
     if (result?.kind === 'signed-in') {
       carry('zinc_session', result.token);
+      carry(SESSION_FOR, result.address);
       carry('zinc_wallet', result.address);
     }
     /*
@@ -567,6 +702,36 @@ export async function completeDeeplink() {
 }
 
 /**
+ * MAKE THE SESSION THIS WALLET'S, ON A PRESS.
+ *
+ * This used to be `if (!sessionToken()) await signIn(...)`, written out twice,
+ * and it was wrong in both directions at once.
+ *
+ * IT SKIPPED A SIGN-IN THAT WAS NEEDED. A token held for wallet A is not a
+ * session for wallet B, so connecting B kept A's credential and the arcade
+ * spent A's balance under B's name. sessionFor() is the same test with the
+ * only condition that makes it true.
+ *
+ * AND IT SKIPPED THE SIGN-IN THAT WAS THE WAY OUT. A token the box had stopped
+ * honouring still passed `sessionToken()`, so the press that was supposed to
+ * repair the session was the one press that could not -- see forgetSession().
+ * A caller that has already forgotten a refused token arrives here with no
+ * cookie and gets the popup, which is the whole repair.
+ *
+ * THE OTHER WALLET'S SESSION IS RETIRED AT THE BOX RATHER THAN ORPHANED. It
+ * belongs to the person standing here, they are done with it, and a live token
+ * nobody holds is the difference this file already draws between logging out
+ * and hiding the evidence.
+ *
+ * @returns {Promise<boolean>} whether a session for `address` now exists
+ */
+async function seat(provider, address) {
+  if (sessionFor(address)) return true;
+  if (sessionToken()) await signOut();
+  return signIn(provider, address);
+}
+
+/**
  * Connect, then sign in -- on an explicit press, never on load.
  *
  * The one-shot form, for arcade furniture that has no state to keep: the bank
@@ -593,7 +758,7 @@ export async function connect() {
   if (!key) throw new Error('The wallet connected without giving an address.');
   const address = key.toString();
   carry('zinc_wallet', address);
-  const session = sessionToken() ? true : await signIn(found.provider, address);
+  const session = await seat(found.provider, address);
   return { address, name: found.name, session };
 }
 
@@ -663,6 +828,21 @@ export class Wallet {
   }
 
   #set(address) {
+    /*
+     * A SWITCH IN THE WALLET'S OWN INTERFACE LEAVES A CREDENTIAL BEHIND.
+     *
+     * This fires from `accountChanged`, with no press and no chance to ask for
+     * a signature -- and the session in the cookie jar still belongs to the
+     * account they just left. Held on to, it is the impersonation this file's
+     * header warns about arriving by accident: every panel would go on reading
+     * the OLD wallet's balance under the NEW wallet's name, and a stake pressed
+     * here would come out of an account that is no longer on screen.
+     *
+     * So it is let go of locally, which is the half that can be done without a
+     * gesture. The arcade falls to signed-out, the button says Connect, and the
+     * press that follows signs in as whoever they actually switched to.
+     */
+    if (address && sessionToken() && !sessionFor(address)) forgetSession();
     this.address = address;
     this.walletName = address ? this.providerName : null;
     try {
@@ -723,7 +903,7 @@ export class Wallet {
        * and play without a session; nothing here is load-bearing enough to
        * insist, and insisting is what trains people to click through.
        */
-      if (!sessionToken()) await signIn(this.provider, this.address);
+      await seat(this.provider, this.address);
       return this.address;
     } catch (err) {
       // 4001 is the wallet standard's "user rejected", and it is not an error
