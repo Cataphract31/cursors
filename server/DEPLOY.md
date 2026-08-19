@@ -9,15 +9,20 @@ services are fully separate: THIN ICE owns `:8787` + `34.60.159.134.sslip.io`,
 CURSORS owns `:8788` + `cursors.34-60-159-134.sslip.io`. Caddy terminates TLS for
 both (auto Let's Encrypt via sslip.io). **Never touch the thinice service.**
 
-> **The external IP is ephemeral, and the hostnames encode it.** A VM stop/start
-> hands out a new address (2026-08-20: `34.70.75.204` → `34.60.159.134`), and because
-> every name is `<x-y-z-w>.sslip.io`, the old names stop resolving to this box. That
-> single change breaks, all at once: the four Caddy site blocks, this client's default
-> `wss://` URL in `apps/web/src/main.js`, the `connect-src` in `vercel.json`, and the
-> signer that dials in over the public name. Fix in this order — Caddy first (all four
-> blocks, then `caddy validate` + `systemctl reload caddy`, new certs issue
-> automatically), then the repo refs, then rebuild/vendor/push the client. Reserving a
-> static IP would retire this whole failure mode.
+> **The IP is now a reserved static address, and that retired this failure mode.**
+> It was ephemeral until 2026-08-20 and moved twice (`34.70.75.204` →
+> `34.60.159.134`); it is now held as `arcade-ip` in us-central1
+> (`gcloud compute addresses list`), so a VM stop/start no longer changes it.
+>
+> Written down in case the reservation is ever released: because every name is
+> `<x-y-z-w>.sslip.io`, a new address stops the old names resolving to this box and
+> breaks, all at once, the four Caddy site blocks, this client's default `wss://` URL
+> in `apps/web/src/main.js`, the `connect-src` in `vercel.json`, and the signer that
+> dials in over the public name. Fix in this order — Caddy first (all four blocks,
+> then `caddy validate` + `systemctl reload caddy`, new certs issue automatically),
+> then the repo refs, then rebuild/vendor/push the client. The signature of this
+> particular breakage is HTTPS dead on every host while SSH still works: Caddy has no
+> certificate for a hostname it has not been told about yet.
 
 | | |
 |---|---|
