@@ -5412,9 +5412,29 @@ $("#btn-logoff-yes").addEventListener("click",()=>{
    as events and reuse the exact solo FX paths. Offline (no server, dev
    hashes, file://) the local sandbox sim runs untouched. */
 const MP={on:false,name:null,fill:0,disk:null,guest:null,gallery:null,chatSeeded:false};
+/* WHY THIS IS `?arena=` AND NOT `?server=`, WHICH IS WHAT IT WAS.
+   Two different things read that name now, and one of them decides where money
+   goes. src/arcade/wallet.js arrived as a verbatim copy of the arcade's, and it
+   brought src/arcade/origin.js with it -- which reads `?server=` on a localhost
+   page to point every custody, ledger and sign-in call at a different box, and
+   PERSISTS it to localStorage, so the redirection outlives the parameter. That
+   file is upstream's and may not be edited here; nothing in the arcade collides
+   with it, because no other table has an arena socket to aim.
+
+   Nothing was broken in practice: the values this override is actually given
+   are `off` and a `ws://` or `wss://` URL, and cleanOrigin() refuses all three
+   -- not an origin, wrong scheme -- so they fell through rather than being
+   stored. The hazard was the one nobody had typed yet. `?server=http://…`
+   parses, and would have stuck to that browser silently, aiming its deposits
+   at whatever host was in a link. Renaming is the fix that cannot be got
+   wrong later: the two overrides now cannot be confused, by anybody, ever.
+
+   NO FALLBACK TO THE OLD NAME, deliberately -- reading `?server=` here would
+   keep exactly the collision this removes. An old link now gets the default
+   box, which is the safe answer and a visible one. */
 function mpUrl(){
   try{
-    const q=new URLSearchParams(location.search).get("server");
+    const q=new URLSearchParams(location.search).get("arena");
     if(q==="off") return null;
     if(q) return q;
     if(location.hash.indexOf("#desktop-mp")===0) return "ws://localhost:8788";

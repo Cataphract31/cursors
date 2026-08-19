@@ -157,7 +157,7 @@ Play money: every visitor gets 5.000 SOL, a beta faucet refills anyone who busts
 when connected (deploys/recalls are requests; positions arrive as 10Hz snapshots,
 lerped client-side; deaths/banks arrive as events and reuse the solo FX paths verbatim) and
 falls back to the untouched offline sandbox when the server is unreachable — dev hashes
-always stay offline, `#desktop-mp*` forces localhost, `?server=` overrides. Names are
+always stay offline, `#desktop-mp*` forces localhost, `?arena=` overrides. Names are
 server-unique (welcome may rename you), identity is a bearer token in localStorage
 (`store.data.mpToken`), balances persist in sqlite. Pot conservation is asserted at every
 crash (`INVARIANT VIOLATION` in the journal if it ever breaks — it hasn't).
@@ -374,8 +374,11 @@ rush, ~18.5s the crash dialog, ~27s the recovered arena).
   nothing. First paint ≈ **0.5 MB gzipped**. Do not reintroduce `vite-plugin-singlefile`.
 - Testing the shipped folder needs a **web server**, not `file://` — ES modules are blocked
   by CORS on file URLs. `cd apps/web/dist && python -m http.server 8099`, then point
-  shot.mjs at `http://localhost:8099/index.html`. Add `?server=off` for the offline sandbox
-  or `?server=wss://…` to aim at a server.
+  shot.mjs at `http://localhost:8099/index.html`. Add `?arena=off` for the offline sandbox
+  or `?arena=wss://…` to aim at a server. It was `?server=` until the arcade's wallet was
+  vendored in: `src/arcade/origin.js` reads that name for the MONEY origin and persists it,
+  so the arena's override was renamed rather than left one typo away from redirecting
+  deposits. See mpUrl() in main.js.
 
 ---
 
