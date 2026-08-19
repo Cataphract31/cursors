@@ -1,11 +1,48 @@
 // Smoke test: execute src/main.js under a stub DOM in node.
 // Catches strict-mode violations (undeclared assignments), ReferenceErrors,
 // and load-time crashes that a syntax check cannot see.
-import { readFileSync, writeFileSync, rmSync } from "node:fs";
-import { join, dirname } from "node:path";
+import { readFileSync, writeFileSync, rmSync, existsSync } from "node:fs";
+import { join, dirname, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { registerHooks } from "node:module";
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
+
+/* ---- the arcade's wallet, which is a URL and not a file in this repo ----
+
+   src/wallet.js imports "/arcade/web/wallet.js": a real URL on the site this
+   game is served from, marked external so the bundler leaves it alone (see
+   serveArcade in vite.config.js). Node resolves a leading slash against the
+   FILESYSTEM root, so without this the smoke run dies on C:rcade\web\.
+
+   Resolved to the arcade checkout next door, same ARCADE variable the vite
+   plugin uses, so this test executes the REAL wallet rather than a stub --
+   better coverage than it had when the file was copied in here, since a copy
+   could only ever be as current as its last sync.
+
+   WITHOUT A CHECKOUT IT IS STUBBED RATHER THAN FATAL. This build runs where
+   GIELINOR may not be cloned, and this test exists to catch load-time crashes
+   in THIS game's code. Refusing to run at all because a neighbouring
+   repository is absent would turn a missing convenience into a broken build --
+   the same reasoning the sync script used for its own --check. It says which
+   one it did, out loud, because a silent stub is how a test stops meaning
+   anything. */
+const arcadeWeb = resolve(root, process.env.ARCADE ?? "../../../GIELINOR", "arcade/web");
+const haveArcade = existsSync(join(arcadeWeb, "wallet.js"));
+registerHooks({
+  resolve(specifier, context, next) {
+    if (!specifier.startsWith("/arcade/web/")) return next(specifier, context);
+    const rel = specifier.slice("/arcade/web/".length);
+    if (haveArcade) {
+      return { url: pathToFileURL(join(arcadeWeb, rel)).href, shortCircuit: true };
+    }
+    return { url: `data:text/javascript,export%20const%20__stub=1`, shortCircuit: true };
+  },
+});
+console.log(haveArcade
+  ? `smoke: arcade wallet from ${arcadeWeb}`
+  : "smoke: NO arcade checkout — /arcade/web/* stubbed, this run does not cover it");
+
 let src = readFileSync(join(root, "src", "main.js"), "utf8");
 
 // Strip browser-only imports; stub the Webamp constructor and the asset module

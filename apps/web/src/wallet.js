@@ -31,7 +31,7 @@
    somebody who connected on this desktop, never on any other table, and has
    since lost that cookie. They press connect once more. */
 
-import { Wallet as ArcadeWallet } from "./arcade/wallet.js";
+import { Wallet as ArcadeWallet } from "/arcade/web/wallet.js";
 
 export {
   authHeaders,
@@ -44,8 +44,8 @@ export {
   sessionToken,
   shortAddress,
   signOut,
-} from "./arcade/wallet.js";
-export { arcadeUrl } from "./arcade/origin.js";
+} from "/arcade/web/wallet.js";
+export { arcadeUrl } from "/arcade/web/origin.js";
 
 /** The arcade's wallet, told which table it is standing at. */
 export class Wallet extends ArcadeWallet {
