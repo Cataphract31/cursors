@@ -5883,7 +5883,12 @@ function mpMsg(m){
       break;
   }
 }
-const net=MPURL?initNet({url:MPURL,onMsg:mpMsg,onUp:()=>{ if(PLAYER) mpHello(); },onDown:mpDown}):null;
+/* GUESTS RE-HELLO TOO. `if(PLAYER)` was the whole of the old rule, and a
+   guest has no PLAYER by definition -- so a guest who reconnected after a
+   blip dropped silently back into the offline sandbox and stayed there for
+   the rest of the session, watching bots. Anybody who has entered the
+   desktop wants the field they were just looking at. */
+const net=MPURL?initNet({url:MPURL,onMsg:mpMsg,onUp:()=>{ if(PLAYER||GUEST) mpHello(); },onDown:mpDown}):null;
 if(net) net.start();
 /* the half-open-socket watchdog. A tab that asked not to be sent snapshots is
    deliberately silent, so keep its clock fresh rather than kicking it. */
@@ -6594,14 +6599,28 @@ $("#tile-wallet").addEventListener("click",async e=>{
 });
 void walletAcct.resume();
 $("#tile-guest").addEventListener("click",()=>{
-  /* Guest is the honest answer for somebody who only came to watch, and it is
-     the only way to see this game without risking money. No name goes to the
-     server, so no hello is sent, so the field runs in the SANDBOX: everything
-     is visible, nothing is staked and nothing can be won. That separation is
-     load-bearing now that the arena plays for real SOL -- a guest must never
-     be one accidental code path away from a hold on somebody's balance. */
+  /* A GUEST WATCHES THE REAL ARENA. They used to watch a fake one.
+     Guest sent no hello, so no welcome ever arrived, so MP.on stayed false and
+     the OFFLINE SANDBOX ran instead -- the seven local bots in BOTS above,
+     playing invented money on a field nobody else was standing on. Somebody
+     who came to see whether this game is worth playing was shown a simulation
+     of it, which is the worst possible answer to that question, and the
+     taskbar cheerfully labelled it "SANDBOX · fake money".
+     THE SANDBOX WAS NEVER WHAT KEPT A GUEST AWAY FROM THE MONEY, and the note
+     that used to stand here claiming otherwise had the mechanism wrong. A
+     hello buys a SEAT and nothing else -- see mpHello, which says so in as
+     many words. Money attaches only when the socket is re-keyed to a wallet by
+     the separate `arcade` message carrying an arcade session token, and a
+     guest has no session to send. The server enforces the same thing from its
+     own side: deploy() refuses anybody isWallet() does not recognise, with
+     "connect a wallet to deploy -- a guest login holds no money". Two
+     independent gates, neither of them the sandbox.
+     So a guest now joins as a watcher: the real field, the real pot, the real
+     players, and a DEPLOY that is refused by the box rather than granted by a
+     fiction. */
   GUEST=true; PLAYER=null;
   $("#guest-sub").textContent="signing in…";
+  mpHello();
   logon();
 });
 $("#lg-off").addEventListener("click",()=>{ sysSnd("shutdown",.55); $("#login").style.display="none"; $("#shutdown").style.display="grid"; });
