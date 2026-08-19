@@ -204,9 +204,25 @@ const sim = createSim({
       case "bank": {
         broadcast(evt);
         if (!isWallet(evt.key)) break;
-        ledger.settle(evt.epoch, evt.id, toLamports(evt.amt))
-          .then(() => refreshBalance(evt.key))
-          .catch((e) => console.error(`settle deferred e${evt.epoch}c${evt.id}: ${e.message}`));
+        /*
+         * WRITTEN DOWN BEFORE IT IS SENT, so a crash cannot turn a win into a
+         * refund.
+         *
+         * The settle stays un-awaited for the reason above. What is new is that
+         * the amount no longer lives only in this closure: it goes into the
+         * local database first, which is a synchronous insert measured in
+         * microseconds and safe inside a tick. If this process dies before the
+         * settle lands, boot replays the row. Without it the hold stayed open,
+         * the boot sweep released it, and a player who had watched a 5x land
+         * got their 0.1 stake back instead -- see the note on the settlements
+         * table in db.js.
+         */
+        const ref = ledger.refFor(evt.epoch, evt.id);
+        const lamports = toLamports(evt.amt);
+        db.settleOpen(ref, evt.key, lamports);
+        ledger.settleRef(ref, lamports, `epoch ${evt.epoch}`)
+          .then(() => { db.settleDone(ref); refreshBalance(evt.key); })
+          .catch((e) => console.error(`settle deferred ${ref}: ${e.message}`));
         break;
       }
       case "refund": {
@@ -609,10 +625,52 @@ process.on("unhandledRejection", e => console.error("unhandled:", e));
  * Idempotent, so a restart loop cannot refund anything twice, and it runs
  * before the socket opens so no new stake races the cleanup.
  */
+/*
+ * BANKS THE LAST PROCESS PROMISED BUT NEVER FILED, AND THEY GO FIRST.
+ *
+ * BEFORE THE SWEEP, WHICH IS THE WHOLE POINT OF THE ORDERING. The sweep
+ * RELEASES every open hold -- the right answer for a cursor that was still
+ * roaming when the process died, and precisely the wrong one for a cursor that
+ * had already banked. Swept first, a 5x win becomes a 0.1 refund and nothing
+ * anywhere records that it should not have.
+ *
+ * Each row is settled by the ref it was taken under, because that ref carries
+ * the boot id of the process that minted it and cannot be rebuilt here.
+ */
+if (ledger.enabled) {
+  const pending = db.settlePending();
+  if (pending.length > 0) {
+    console.log(`replaying ${pending.length} bank(s) the last run did not file`);
+    for (const row of pending) {
+      try {
+        await ledger.settleRef(row.ref, row.lamports, "replayed after a restart");
+        db.settleDone(row.ref);
+      } catch (e) {
+        console.error(`COULD NOT REPLAY ${row.ref} (${row.lamports} lamports): ${e.message}`);
+      }
+    }
+  }
+}
+
 if (ledger.enabled) {
   try {
     const released = await ledger.sweep();
     if (released > 0) console.log(`released ${released} stranded stakes back to their wallets`);
+    /*
+     * ANYTHING STILL PENDING AFTER A SUCCESSFUL SWEEP CAN NEVER BE PAID, and
+     * saying so once beats retrying it at every boot forever. The sweep has
+     * released the hold it named, so the player has their stake back rather
+     * than their winnings -- which is the old behaviour, now visible instead of
+     * silent.
+     */
+    const stuck = db.settlePending();
+    for (const row of stuck) {
+      console.error(
+        `UNPAYABLE BANK ${row.ref}: ${row.lamports} lamports owed to ${row.wallet}, ` +
+        "but the hold behind it has been released. The stake went back instead.",
+      );
+    }
+    if (stuck.length > 0) db.settleClear();
   } catch (e) {
     // Not fatal: refusing to boot would take the arena down for a ledger
     // hiccup, and the holds stay open for the next restart to find. Loud,

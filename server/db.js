@@ -68,6 +68,44 @@ export function openDb(path) {
       commitv TEXT NOT NULL,
       top     TEXT
     );
+    /*
+     * BANKS THAT HAVE NOT REACHED THE ARCADE YET.
+     *
+     * A bank fires its settle without awaiting it, deliberately: a bank happens
+     * inside the simulation loop every player is watching, and an HTTP round
+     * trip in that tick would be the arcade's latency showing up as stutter.
+     * That part is right and is unchanged.
+     *
+     * What was missing is what happens when the settle does not land. Nothing
+     * remembered the amount -- the cursor lived in memory and died with the
+     * process -- so a crash between banking and settling left the hold open and
+     * the boot sweep RELEASED it. The player got their 0.1 stake back instead
+     * of the win they had already watched land, and the only trace was one
+     * console line. The window is not the millisecond it looks like: a crash
+     * event banks every live cursor in the same tick, so dozens of settles are
+     * in flight at once, at exactly the moment this process is busiest.
+     *
+     * So the amount is written here first -- a local insert, microseconds, safe
+     * inside the tick -- and deleted when the settle lands. Boot replays
+     * whatever is left BEFORE sweeping, so the sweep only ever releases stakes
+     * that were genuinely never settled.
+     *
+     * THE REF IS STORED WHOLE, AND THAT IS NOT AN ACCIDENT. refFor() in
+     * ledger.js folds in a per-process boot id, so an epoch and a cursor id
+     * cannot be turned back into the right ref by a later process. Only the ref
+     * itself names the hold that is actually open.
+     *
+     * Releases are deliberately NOT journalled. A release that fails leaves the
+     * hold open and the boot sweep releases it -- the same outcome by another
+     * road. Only settles need this, because for a settle the sweep's default is
+     * the wrong answer.
+     */
+    CREATE TABLE IF NOT EXISTS settlements (
+      ref      TEXT PRIMARY KEY,
+      wallet   TEXT NOT NULL,
+      lamports INTEGER NOT NULL,
+      at       INTEGER NOT NULL
+    );
   `);
 
   /* Migrations. CREATE TABLE IF NOT EXISTS only ever builds a FRESH database —
@@ -116,6 +154,10 @@ export function openDb(path) {
     galleryLast: db.prepare("SELECT * FROM gallery ORDER BY id DESC LIMIT 1"),
     guestTrim: db.prepare("DELETE FROM guestbook WHERE rowid NOT IN (SELECT rowid FROM guestbook ORDER BY rowid DESC LIMIT 200)"),
     epochAdd: db.prepare("INSERT OR REPLACE INTO epochs (no,endedAt,up,pot,deploys,deaths,seed,commitv,top) VALUES (?,?,?,?,?,?,?,?,?)"),
+    settleOpen: db.prepare("INSERT OR REPLACE INTO settlements (ref,wallet,lamports,at) VALUES (?,?,?,?)"),
+    settleDone: db.prepare("DELETE FROM settlements WHERE ref = ?"),
+    settlePending: db.prepare("SELECT ref, wallet, lamports, at FROM settlements ORDER BY at"),
+    settleClear: db.prepare("DELETE FROM settlements"),
     chatList: db.prepare("SELECT who, txt, at FROM chat ORDER BY id DESC LIMIT 60"),
     chatPost: db.prepare("INSERT INTO chat (who, txt, at) VALUES (?,?,?)"),
     chatTrim: db.prepare("DELETE FROM chat WHERE id NOT IN (SELECT id FROM chat ORDER BY id DESC LIMIT 300)"),
@@ -161,6 +203,14 @@ export function openDb(path) {
     galleryLatest: () => q.galleryLast.get(),
     galleryPost: (name, by, png) => { q.galleryPost.run(name, by, Date.now(), png); q.galleryTrim.run(); },
     epochAdd: r => q.epochAdd.run(r.no, Date.now(), r.up, r.pot, r.deploys, r.deaths, r.seed, r.commit, JSON.stringify(r.top || null)),
+
+    /* A bank that has been promised to a player but not yet to the arcade.
+       Written before the settle is fired and deleted when it lands -- see the
+       note on the settlements table. */
+    settleOpen: (ref, wallet, lamports) => q.settleOpen.run(ref, wallet, lamports, Date.now()),
+    settleDone: ref => q.settleDone.run(ref),
+    settlePending: () => q.settlePending.all(),
+    settleClear: () => q.settleClear.run(),
     chatList: () => q.chatList.all().reverse(),
     chatPost: (who, txt) => { q.chatPost.run(who, txt, Date.now()); q.chatTrim.run(); },
     dmPost: d => { q.dmPost.run(d.fromTok, d.toTok, d.fromName, d.toName, d.txt, Date.now()); q.dmTrim.run(); },

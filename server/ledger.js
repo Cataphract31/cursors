@@ -138,9 +138,28 @@ export function createLedger({
    */
   const refFor = (roundId, cursorId) => `${GAME}:${boot}:e${roundId}:c${cursorId}`;
 
+  /**
+   * Settle a ref, whoever minted it.
+   *
+   * THE REF IS THE ONLY PART OF A HOLD THAT SURVIVES A RESTART, which is why
+   * the settlement journal in db.js stores it whole rather than storing an
+   * epoch and a cursor id. `refFor` folds in `boot`, a fresh random value every
+   * time this process starts, so the same epoch and the same cursor produce a
+   * DIFFERENT ref after a restart -- and a settle under a ref no hold was ever
+   * taken under is not a retry, it is a stranger, and the ledger says so.
+   *
+   * That boot id is not incidental; the note above explains why it exists. What
+   * it means here is that a banked cursor whose settle did not land before the
+   * process died can only be finished by name.
+   */
+  const settleRef = async (ref, payoutLamports, memo = "replayed after a restart") => {
+    await call("settle", { body: { ref, payout: payoutLamports, memo } });
+  };
+
   return {
     enabled,
     refFor,
+    settleRef,
 
     /** Take a stake into escrow. Throws; `isBroke`/`isNotAWallet` are normal. */
     async hold(wallet, lamports, roundId, cursorId) {
@@ -155,9 +174,7 @@ export function createLedger({
 
     /** Settle a stake at what it returned. 0 is a loss, and is a settlement. */
     async settle(roundId, cursorId, payoutLamports) {
-      await call("settle", {
-        body: { ref: refFor(roundId, cursorId), payout: payoutLamports, memo: `epoch ${roundId}` },
-      });
+      await settleRef(refFor(roundId, cursorId), payoutLamports, `epoch ${roundId}`);
     },
 
     /** Give a stake back untouched. Idempotent. */
