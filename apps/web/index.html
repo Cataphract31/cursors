@@ -2040,11 +2040,20 @@ icons/sounds: winXP (MIT)</div>
         <div class="lgb-row">
           <input id="lgb-amt" inputmode="decimal" autocomplete="off" spellcheck="false" placeholder="0.0" aria-label="Amount in SOL">
           <span class="lgb-unit">SOL</span>
-          <button class="lgb-max" id="lgb-max">max</button>
         </div>
+        <!-- The amounts people actually type, as buttons. Filled in by bank.js
+             because the two tabs mean different things by a preset: a deposit
+             is a sum you decide, a withdrawal is a share of what you have. -->
+        <div class="lgb-presets" id="lgb-presets"></div>
         <button class="lgb-go" id="lgb-go">Deposit</button>
         <div class="lgb-say" id="lgb-say"></div>
+        <div class="lgb-logh" id="lgb-logh" hidden></div>
         <div class="lgb-log" id="lgb-log"></div>
+        <div class="lgb-pager" id="lgb-pager" hidden>
+          <button class="lgb-pg" id="lgb-prev" aria-label="Newer">&lsaquo;</button>
+          <span id="lgb-pgat"></span>
+          <button class="lgb-pg" id="lgb-next" aria-label="Older">&rsaquo;</button>
+        </div>
       </div>
       <div class="lg-banknote" id="lg-banknote">Connect a wallet above to deposit or withdraw.</div>
     </div>

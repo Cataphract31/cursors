@@ -780,19 +780,41 @@ body.mobile #bsod{font-size:11px;padding:16px 14px}
 .lgb-max{flex:none;padding:0 10px;font:11px Tahoma;color:#12305F;cursor:pointer;border:1px solid #7B96C8;border-radius:3px;
   background:linear-gradient(180deg,#FDFEFF,#D6E1F3);min-width:0}
 .lgb-max:hover{filter:brightness(1.06)}
+/* THE AMOUNTS PEOPLE ACTUALLY TYPE, as buttons. A number pad on a phone is
+   the slowest control on this panel and the four sums below cover most of
+   what anybody sends; a preset that costs more than the wallet holds is
+   greyed rather than hidden, so the row does not reshuffle under a thumb. */
+.lgb-presets{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-bottom:7px}
+.lgb-preset{padding:4px 0 5px;font-variant-numeric:tabular-nums;font:11px Tahoma;color:#DCE6FA;cursor:pointer;border:0;border-radius:3px;min-width:0;
+  background:rgba(0,0,0,.16);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14)}
+.lgb-preset:hover:not(:disabled){background:rgba(0,0,0,.24);color:#fff}
+.lgb-preset.on{color:#12305F;font-weight:bold;background:#E7EEFB;box-shadow:inset 0 0 0 1px rgba(255,255,255,.5)}
+.lgb-preset:disabled{cursor:default;color:#93A6C8;box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)}
 .lgb-go{width:100%;padding:8px 10px;font:bold 13px Tahoma;color:#fff;cursor:pointer;border:1px solid #2C6B12;border-radius:4px;
   background:linear-gradient(180deg,#8CC63F,#4E9A06);box-shadow:1px 1px 3px rgba(0,0,0,.28);min-width:0}
 .lgb-go:hover:not(:disabled){filter:brightness(1.1)}
 .lgb-go:active:not(:disabled){background:linear-gradient(180deg,#4E9A06,#8CC63F)}
 .lgb-go:disabled{cursor:default;color:#E4EAF5;border-color:#5F7392;background:linear-gradient(180deg,#8492AB,#6E7B92);box-shadow:none}
-.lgb-go.out{border-color:#8A4A0E;background:linear-gradient(180deg,#F2A64B,#C4700F)}
+.lgb-go.out:not(:disabled){border-color:#8A4A0E;background:linear-gradient(180deg,#F2A64B,#C4700F)}
 .lgb-say{font:11px Tahoma;color:#CFDCF6;line-height:1.45;margin-top:6px;min-height:15px}
 .lgb-say.bad{color:#FFC0B4}
 .lgb-say.ok{color:#B8F5C6}
 .lgb-say.busy{color:#FFE9A8}
 .lgb-say a{color:#BFE0FF}
 .lgb-say code{font:11px "Lucida Console",monospace;word-break:break-all;color:#DCE6FA}
-.lgb-log{margin-top:7px;padding-top:6px;font:11px Tahoma;color:#CFDCF6;box-shadow:inset 0 1px 0 rgba(255,255,255,.18)}
+/* One tab, one book: the deposit half lists deposits and the withdrawal half
+   lists withdrawals, five at a time, because a mixed list of four was where
+   the receipt somebody came looking for went missing. */
+.lgb-logh{display:flex;justify-content:space-between;gap:10px;margin-top:8px;padding-top:6px;font:11px Tahoma;color:#9FB4DC;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.18)}
+.lgb-logh[hidden]{display:none}
+.lgb-pager{display:flex;align-items:center;justify-content:flex-end;gap:6px;margin-top:4px;font:11px Tahoma;color:#9FB4DC}
+.lgb-pager[hidden]{display:none}
+.lgb-pg{padding:1px 7px 2px;font:12px Tahoma;color:#DCE6FA;cursor:pointer;border:0;border-radius:3px;min-width:0;
+  background:rgba(0,0,0,.16);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14)}
+.lgb-pg:hover:not(:disabled){background:rgba(0,0,0,.24);color:#fff}
+.lgb-pg:disabled{cursor:default;color:#7F92B6;box-shadow:inset 0 0 0 1px rgba(255,255,255,.06)}
+.lgb-log{margin-top:3px;font:11px Tahoma;color:#CFDCF6}
 .lgb-log:empty{display:none}
 .lgb-le{display:flex;justify-content:space-between;gap:10px;padding:1px 0}
 .lgb-le b{font-weight:bold}
