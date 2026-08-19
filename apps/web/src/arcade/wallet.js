@@ -411,6 +411,31 @@ export async function signIn(provider, address) {
  * copied it can still spend with. Signing out retires it there, which is the
  * difference between logging out and hiding the evidence.
  */
+/**
+ * PUT THE BROWSER'S HALF OF THE SESSION BACK ON ITS FULL MONTH.
+ *
+ * The cookie's Max-Age is written once, when the signature mints the token, and
+ * was never touched again -- so it expired thirty days after the signature no
+ * matter how often somebody played. The box now pushes ITS deadline out every
+ * time a session is used (see TOKEN_RENEW_AFTER_MS in arcade/money/auth.js),
+ * and without this the two halves disagree: the token stays valid on the server
+ * and the browser throws away the only copy of it, which is a re-sign for a
+ * session that never actually lapsed.
+ *
+ * SO THE TWO SLIDE TOGETHER. Called from resume(), which runs once per page
+ * load per table -- the right cadence, because it costs nothing and anybody who
+ * shows up inside a month keeps their session indefinitely.
+ *
+ * NOT A CREDENTIAL CHANGE. The same token value is written back with a fresh
+ * Max-Age; nothing is minted, nothing is sent, and a token the box has already
+ * retired is still dead on its next use -- forgetSession() is what notices
+ * that, and this does not get in its way.
+ */
+export function keepSession() {
+  const token = sessionToken();
+  if (token) carry('zinc_session', token);
+}
+
 export async function signOut() {
   const token = sessionToken();
   if (token) {
@@ -868,6 +893,9 @@ export class Wallet {
      * call is about to write.
      */
     await completeDeeplink();
+    /* Before the opt-in gate, because a signed-in browser deserves its month
+       back whether or not this particular table is one it has connected at. */
+    keepSession();
     if (!optedIn(this.prefKey)) return;
     // A phone's wallet is not in the page, so it was not there when this table
     // was built. If a session survived the trip, this is where it is found.
