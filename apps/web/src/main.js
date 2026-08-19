@@ -342,7 +342,6 @@ document.documentElement.style.setProperty("--pt-air",`url(${PAINT.airbrush})`);
 $("#startbtn").src=IMG.startBtn;
 $("#sm-ava").src=IMG.user48;
 $("#sm-allarrow").src=IMG.allProg;
-$("#lg-avaimg").src=IMG.user48;
 $("#lg-offimg").src=IMG.off32;
 $$(".boot-flag,.lg-flag").forEach(el=>{ el.src=IMG.flag; });
 /* legacy saved icons (pre-asset builds) get real icons */
@@ -2490,14 +2489,18 @@ document.addEventListener("contextmenu",e=>{
   if(e.target.closest("#pt-box,.pt-sw")) return;  /* Paint uses the right button to draw */
   if(e.target.closest("#webamp,#webamp-slot")) return; /* Winamp draws its own menus */
   if(e.target.closest(".ms-grid")) return;             /* right-click plants flags */
-  const lgAdmin=e.target.closest("#tile-admin");
-  if(lgAdmin){
-    showMenu([{label:"Log on as a different user",action(){
-      PLAYER=null; delete store.data.userName; store.save();
-      syncIdentity();
-      $("#lg-inputrow").style.display="flex"; $("#lg-user").value=""; $("#lg-user").focus();
-      $("#lg-sub").textContent="pick a name for the scoreboard";
-    }}],e.clientX,e.clientY);
+  /* The wallet tile is the user tile now -- the Administrator one it used to
+     hang off is gone -- so this is where the name is changed and given back. */
+  if(e.target.closest("#tile-wallet")&&!e.target.closest(".lg-inputrow")){
+    const named=store.data.userName||"";
+    showMenu([
+      {label:named?"Change display name…":"Choose a display name…",action(){ askUserName(); }},
+      ...(named?[{label:"Go back to my address",action(){
+        delete store.data.userName; store.save();
+        if(!GUEST&&walletAcct.address){ PLAYER=shortAddress(walletAcct.address); mpHello(); }
+        syncIdentity();
+      }}]:[]),
+    ],e.clientX,e.clientY);
     return;
   }
   /* any text control gets XP's edit menu — including the one submenu nobody ever opened */
@@ -2704,6 +2707,13 @@ addEventListener("pointerdown",()=>{ clearTimeout(tipTimer); tip.style.display="
 /* ================= start menu / tray ================= */
 const startmenu=$("#startmenu");
 function closeStart(){ startmenu.classList.remove("open"); }
+/* XP'S USER PICTURE OPENS USER ACCOUNTS, and this machine's user account is
+   one field: the name the scoreboard calls you. It is the discoverable half of
+   the rename -- the header is already showing that name, in the one place a
+   player looks when they want to know who the computer thinks they are, and
+   the welcome screen's tile has the same control behind a right-click. */
+$(".sm-head").addEventListener("click",()=>{ closeStart(); askUserName(); });
+$(".sm-head").title="Change the name the scoreboard calls you";
 /* XP's left column below the pinned pair is a most-recently-used list. Ours is
    too: opening an app promotes it, so the menu reshapes around how you play. */
 const SMAPPS={
@@ -3798,7 +3808,11 @@ sys=initSysApps({
     openVolume:()=>{ $("#sndico").click(); },
     openNetwork:()=>showError("Network Connections","There are no network connections to configure."),
     printers:()=>showError("Printers and Faxes","There are no printers installed on this computer."),
-    userAccounts:()=>openWin("win-logoff"),
+    /* THE ONE ACCOUNT SETTING THIS MACHINE HAS. It used to open Log Off, which
+       is the neighbouring icon and not what the label says. The name box moved
+       off the welcome screen's Administrator tile when that tile went, and
+       this is where XP keeps it. */
+    userAccounts:()=>askUserName(),
     accessibility:()=>access.openAccessOptions(),
     addRemove:()=>maint.openAddRemove(),
     fonts:()=>maint.openFonts(),
@@ -5552,7 +5566,16 @@ function mpWelcome(m){
   MP.on=true; MP.name=m.name; netIco();
   roundId++;   /* strands the sandbox's pending bot timers, which check it */
   store.data.mpToken=m.token; store.save();
-  if(PLAYER!==m.name){ PLAYER=m.name; store.data.userName=m.name; store.save(); syncIdentity(); try{ msn.renderMe(); }catch(e){} }
+  if(PLAYER!==m.name){
+    PLAYER=m.name;
+    /* ONLY IF IT WAS THEIRS TO KEEP. The server dedupes names, so a player who
+       never chose one and is playing under their own address comes back as
+       `8cyh..hbsf2` -- and writing that here would promote a fallback into a
+       chosen name, which then outlives the wallet it was borrowed from and
+       shows up on the welcome screen as a name they never typed. */
+    if(store.data.userName){ store.data.userName=m.name; store.save(); }
+    syncIdentity(); try{ msn.renderMe(); }catch(e){}
+  }
   mpPurge();
   const keepMy=(roundNo===m.epoch.no&&R)?{i:R.myIn,o:R.myOut}:null;
   roundNo=m.epoch.no; R=newRoundRecord();
@@ -6338,24 +6361,41 @@ function showBootThenLogin(){
    start menu would be telling all session. */
 function playerName(){ return PLAYER||(GUEST?"guest":"admin"); }
 function playerNameFull(){ return PLAYER||(GUEST?"Guest":"Administrator"); }
+/* The name the arena is told to use, which is not always a name: a player who
+   has never typed one is called by the wallet they signed in with, because an
+   address is the only true thing there is to call them. */
+function displayName(){ return store.data.userName||shortAddress(walletAcct.address||"")||null; }
 function syncIdentity(){
-  /* the admin tile is the TYPED name and stays that even for a wallet or a
-     guest session -- it is the account, not the current identity */
   const back=desktopEntered;   /* a session is already running behind this */
-  /* THE TYPED NAME, not PLAYER. The comment above has always said this tile is
-     the account rather than the current identity, and it was true right up to
-     the moment somebody could come BACK to this screen: walletLogon() sets
-     PLAYER to a shortened address, so a returning player was shown their own
-     wallet address on the Administrator tile as well as on the wallet one --
-     two tiles, same name, and no way back to the account they typed. */
-  const named=store.data.userName||"";
-  $("#lg-name").textContent=named||"Administrator";
   $("#sm-user").textContent=playerNameFull();
-  $("#lg-sub").textContent=named?(back?"click to go back":"click to log on"):"click to begin";
   $(".lg-hint").textContent=back
     ?"Add or take out SOL, or click a user to go back"
-    :"To begin, connect a wallet or click your user name";
-  if(back&&walletAcct.address) $("#w-sub").textContent="click to go back";
+    :"To begin, connect a wallet — or look around as a guest";
+  syncWalletTile();
+}
+/* WHAT THE WALLET TILE SAYS, in one place, because three things change it:
+   the wallet connecting or going away, a session being minted, and a name
+   being typed into the box that now lives inside it. They used to write over
+   each other from three sites and the tile was whatever had run last. */
+function syncWalletTile(){
+  const address=walletAcct.address;
+  const named=store.data.userName||"";
+  /* the server can name you too -- see the rename in mpWelcome -- so a name
+     can arrive while the box is open, and it is the box's cue to close */
+  if(named) $("#lg-inputrow").style.display="none";
+  $("#w-name").textContent=address?shortAddress(address):"Connect wallet";
+  $("#tile-wallet").classList.toggle("connected",Boolean(address));
+  $("#w-off").hidden=!address;
+  if(!address){ $("#w-sub").textContent=walletAcct.available?"Phantom, Solflare or Backpack":"no wallet here — install Phantom"; return; }
+  /* CONNECTED IS NOT SIGNED IN. The tile is the way to both, so it has to say
+     which one the next press buys -- see the click handler for why pressing it
+     while signed out now signs in rather than walking onto the desktop. */
+  /* Shorter once there is a name to fit beside it: the tile is 290px wide and
+     "as Attrition — click to log on" wraps to two lines under a 20px title,
+     which is a lot of furniture for one sub-line. */
+  const where=desktopEntered?"go back":"log on";
+  $("#w-sub").textContent=!walletAcct.session?"click to sign in"
+    :named?`as ${named} · ${where}`:`click to ${where}`;
 }
 function logon(){
   sessionStorage.setItem("cxp.booted","1");
@@ -6376,31 +6416,38 @@ function commitUserName(){
   try{ raw=typed.replace(/[^\p{L}\p{N} .$_-]/gu,"").slice(0,14); }
   catch(e){ raw=typed.replace(/[^\w .$-]/g,"").slice(0,14); }
   if(!raw){
-    const t=$("#tile-admin");
+    const t=$("#tile-wallet");
     t.classList.remove("shake"); void t.offsetWidth; t.classList.add("shake");
-    $("#lg-sub").textContent=typed?"letters and numbers only":"type a name first";
+    $("#w-sub").textContent=typed?"letters and numbers only":"type a name first";
     sError(); return;
   }
-  PLAYER=raw;
+  /* A NAME IS NOT A LOGON ANY MORE, and that is the whole of what changed
+     here. It used to be both, because typing one was how you got onto the
+     desktop; the tile that did that is gone, so this saves the label and puts
+     the box away, and the press that logs on is the one on the tile. */
   store.data.userName=raw; store.save();
-  mpHello();
-  logon();
+  $("#lg-inputrow").style.display="none";
+  /* Live, if there is a session to tell. The arena stores the name against
+     the socket, so renaming mid-round moves it on the scoreboard rather than
+     waiting for the next logon -- and a hello is the only thing that says so. */
+  if(!GUEST){ PLAYER=raw; mpHello(); }
+  syncIdentity();
+  sysSnd("nav",.5);
 }
-$("#tile-admin").addEventListener("click",e=>{
-  if(e.target.closest(".lg-inputrow")) return;
-  /* the account, not whoever is currently logged on -- see syncIdentity. Same
-     rule as walletLogon: a hello only when the identity really moved. */
-  if(store.data.userName){
-    if(PLAYER!==store.data.userName||GUEST){ PLAYER=store.data.userName; GUEST=false; mpHello(); }
-    logon(); return;
-  }
+/** Open the name box, wherever the player asked for it from. */
+function askUserName(){
+  if($("#login").style.display!=="flex") showLogin(true);
   $("#lg-inputrow").style.display="flex";
-  $("#lg-sub").textContent="pick a name for the scoreboard";
-  $("#lg-user").focus();
-});
+  $("#lg-user").value=store.data.userName||"";
+  $("#w-sub").textContent="a name for the scoreboard";
+  $("#lg-user").focus(); $("#lg-user").select();
+}
 $("#lg-go").addEventListener("click",commitUserName);
 $("#lg-user").addEventListener("keydown",e=>{ if(e.key==="Enter") commitUserName(); });
-syncIdentity();
+/* syncIdentity() runs BELOW the wallet now, not here. It reads walletAcct to
+   draw the tile, and a const declared further down this file is in its dead
+   zone until then -- so calling it up here is a ReferenceError that takes the
+   whole module with it, and every handler after it. */
 /* ---- the wallet tile ---- */
 /* The address is a NAME here and nothing more -- the long note is in
    wallet.js. It sits on the login screen because that is where this machine
@@ -6408,15 +6455,13 @@ syncIdentity();
    the arcade, off one cookie, so connecting once is connecting everywhere. */
 /* `wallet` in this file is already the balance, and these two must never be
    confused: one is a number that goes up and down, the other is a name. */
-const walletAcct=new Wallet(({address})=>{
-  $("#w-name").textContent=address?shortAddress(address):"Connect wallet";
-  $("#w-sub").textContent=address?(desktopEntered?"click to go back":"click to log on"):"Phantom, Solflare or Backpack";
-  $("#tile-wallet").classList.toggle("connected",Boolean(address));
-  $("#w-off").hidden=!address;
+const walletAcct=new Wallet(()=>{
+  syncWalletTile();
   /* connecting, signing in and disconnecting all change what My Wallet is
      allowed to show, and it is sitting right underneath this tile */
   bankPanel.sync();
 });
+syncIdentity();
 /* MY WALLET. It renders into the welcome screen and asks the arcade, so it
    needs the wallet object (for the provider that approves a deposit) and
    nothing else this file owns. See bank.js for why the money lives here.
@@ -6449,10 +6494,14 @@ $("#w-off").addEventListener("click",e=>{
   void walletAcct.disconnect();
 });
 function walletLogon(){
-  /* deliberately NOT written to store.data.userName: the wallet and the typed
-     name are two identities, and overwriting one with the other would mean a
-     player who connects once can never get their own name back */
-  const as=shortAddress(walletAcct.address);
+  /* THE NAME THEY CHOSE, IF THEY CHOSE ONE, and the address if they did not.
+     The typed name used to be unreachable from here: it belonged to the
+     Administrator tile, which was the only login that sent it, so connecting a
+     wallet meant playing as `8cyh..hbsf` whatever was in the box. That tile is
+     gone and the box is part of this tile, so the name is simply a label on
+     this login now -- still deliberately NOT overwritten by the address, which
+     is what would take it away for good. */
+  const as=displayName();
   /* ONLY IF IT ACTUALLY CHANGED. This tile is also the way back from My Wallet
      now, so it is pressed by people who are already logged in as this very
      address -- and a hello re-keys a live socket with cursors on the field.
@@ -6460,8 +6509,30 @@ function walletLogon(){
   if(PLAYER!==as||GUEST){ PLAYER=as; GUEST=false; mpHello(); }
   logon();
 }
-$("#tile-wallet").addEventListener("click",async()=>{
-  if(walletAcct.address){ walletLogon(); return; }
+$("#tile-wallet").addEventListener("click",async e=>{
+  /* THE NAME BOX LIVES INSIDE THIS TILE NOW, so its → button is a press on the
+     tile as far as the DOM is concerned. Without this the one control that
+     saves a name also logged you on with it, and the welcome screen vanished
+     out from under somebody who had come back specifically to rename. The
+     Administrator tile carried the identical guard for the identical reason. */
+  if(e.target.closest(".lg-inputrow")) return;
+  /* AN ADDRESS IS NOT A SESSION, and the difference is the whole of My Wallet.
+     resume() connects without signing in on purpose -- a signature popup
+     belongs to a gesture somebody just made, not to a page load -- so EVERY
+     reload lands on this screen with a name showing and no session behind it.
+     The panel underneath says so in words and tells them to press this tile.
+
+     It was not true. This line read `if(walletAcct.address)` and went straight
+     to walletLogon(), which walks onto the desktop, so the one instruction on
+     the screen did the one thing it did not say: a returning player had no
+     route back to their own money at all short of pressing disconnect and
+     connecting again, and nothing on the screen told them that either.
+
+     connect() is the right call for the connected-but-signed-out case as well
+     as the cold one: on an origin the wallet already trusts it resolves
+     without a popup and then signs in, which is the single dialog this press
+     is asking for. */
+  if(walletAcct.address&&walletAcct.session){ walletLogon(); return; }
   $("#w-sub").textContent="check your wallet…";
   try{
     await walletAcct.connect();
@@ -6473,11 +6544,29 @@ $("#tile-wallet").addEventListener("click",async()=>{
        thing that happens is DEPLOY refusing, which reads as the game being
        broken rather than as an account with no money in it. The screen that
        fixes it is the one they are already standing on. */
+    /* AND STOP HERE, WHATEVER THE BALANCE SAYS.
+       This used to stop only for an empty account and log everybody else
+       straight in, which meant the one press that opens My Wallet was also the
+       press that took the screen away -- signing in and reaching the money
+       were the same click, and the money lost. Somebody who had just connected
+       had no way to deposit without going back to this screen and, until the
+       tile above learnt to sign in, no way back to it at all.
+
+       So a fresh sign-in lands ON the panel. The tile says what the next press
+       does and does it: this is now two presses, and the second one is the one
+       that means "I am done with the money, let me in". A player who is
+       already signed in never comes through here -- see the top of this
+       handler -- so nobody pays the extra press twice. */
     const st=await bankPanel.check();
-    if(st.signedIn&&st.arcade===0){
+    if(st.signedIn){
       bankPanel.show("deposit");
-      bankPanel.tell("Signed in. There is nothing in the arcade yet — put some SOL in here, or click your name again to look around first.");
-      $("#w-sub").textContent="click to log on";
+      /* "ok" is not decoration: restate() leaves a message in that class alone
+         while the amount field is empty, and every other kind is overwritten
+         by the panel's own hint the moment the poll comes back. */
+      bankPanel.tell(st.arcade===0
+        ?"Signed in. There is nothing in the arcade yet — put some SOL in here, or press the tile again to look around first."
+        :"Signed in. Add or take out SOL here, or press the tile again to log on.","ok");
+      syncWalletTile();
       return;
     }
     walletLogon();
@@ -6490,7 +6579,6 @@ $("#tile-wallet").addEventListener("click",async()=>{
     sError();
   }
 });
-if(!walletAcct.available) $("#w-sub").textContent="no wallet here — install Phantom";
 void walletAcct.resume();
 $("#tile-guest").addEventListener("click",()=>{
   /* Guest is the honest answer for somebody who only came to watch, and it is

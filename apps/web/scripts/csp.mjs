@@ -185,13 +185,12 @@ try {
   await sleep(1500);
   await evaluate('document.getElementById("boot").dispatchEvent(new PointerEvent("pointerdown",{bubbles:true}))');
   await sleep(1200);
-  // a first visit is two steps: the tile reveals a name field, the name commits
-  // the logon — and committing is what dials the game server (mpHello)
-  await evaluate('document.getElementById("tile-admin").click()');
-  await sleep(800);
-  await evaluate('(()=>{ const u=document.getElementById("lg-user"); u.value="cspbot";' +
-    'u.dispatchEvent(new Event("input",{bubbles:true}));' +
-    'document.getElementById("lg-go").click(); })()');
+  // A first visit with no wallet extension in the browser has one way in, and
+  // Guest is it: the Administrator tile that used to take a typed name and log
+  // you on is gone, because the server refuses to deploy for anybody without
+  // an arcade session and that tile could never get one. Guest still dials the
+  // game server, which is what this pass is here to exercise.
+  await evaluate('document.getElementById("tile-guest").click()');
   await sleep(9000);   // logon's 1500ms chime, enterDesktop's fade, the socket dial
 
   // the failure this harness exists to catch: a policy that blocks the app's

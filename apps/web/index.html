@@ -2008,10 +2008,24 @@ icons/sounds: winXP (MIT)</div>
     </div>
     <div class="lg-div"></div>
     <div class="lg-right">
-      <div class="lg-tile" id="tile-wallet"><span class="lg-ava wallet">◈</span><div style="flex:1"><b id="w-name">Connect wallet</b><div class="lg-sub" id="w-sub">Phantom, Solflare or Backpack</div></div><button id="w-off" class="lg-off" hidden>disconnect</button></div>
-      <div class="lg-tile" id="tile-admin"><span class="lg-ava"><img id="lg-avaimg" alt=""></span><div style="flex:1"><b id="lg-name">Administrator</b><div class="lg-sub" id="lg-sub">5.000 SOL and dreams</div>
-        <div class="lg-inputrow" id="lg-inputrow" style="display:none"><input id="lg-user" maxlength="14" placeholder="type a user name" autocomplete="off" spellcheck="false"><button id="lg-go" title="Log on">→</button></div>
-      </div></div>
+      <!-- TWO TILES, BECAUSE THIS MACHINE HAS TWO ANSWERS.
+           There was a third: Administrator, the typed name, which had been the
+           way in since before there was a wallet at all. It bought nothing any
+           more. The server refuses to deploy a cursor for anybody without an
+           arcade session (see deploy() in server/server.js), so a player who
+           logged on by typing a name got exactly what Guest gives them -- the
+           field, visible, with no money on it -- reached by a tile that looked
+           like the real one and did not say so. Two tiles that mean two
+           different things is the whole point of this screen.
+
+           THE NAME SURVIVED THE TILE. It was never an account, only a label
+           for the scoreboard, so it belongs to whoever is logging on rather
+           than to a login of its own: the box below is part of the wallet
+           tile now, and the name it holds is what the arena is told to call
+           you instead of your address. -->
+      <div class="lg-tile" id="tile-wallet"><span class="lg-ava wallet">◈</span><div style="flex:1"><b id="w-name">Connect wallet</b><div class="lg-sub" id="w-sub">Phantom, Solflare or Backpack</div>
+        <div class="lg-inputrow" id="lg-inputrow" style="display:none"><input id="lg-user" maxlength="14" placeholder="name for the scoreboard" autocomplete="off" spellcheck="false"><button id="lg-go" title="Save this name">→</button></div>
+      </div><button id="w-off" class="lg-off" hidden>disconnect</button></div>
       <div class="lg-tile" id="tile-guest"><span class="lg-ava guest">?</span><div><b>Guest</b><div class="lg-sub" id="guest-sub">look around, in the sandbox</div></div></div>
 
       <!-- MY WALLET, ON THE SCREEN THAT ALREADY ASKS WHO YOU ARE.
