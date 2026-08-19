@@ -934,6 +934,10 @@ const SYSICONS=[
      opens the welcome screen -- which is where My Wallet lives, beside the
      tile that signs you in -- and coming back is one button. */
   {id:"wallet",label:"My Wallet",ico:"@ic-wallet",app:"wallet",sys:1},
+  /* The way out of this machine and back to the arcade it is one game in.
+     It used to be a gold OSRS tab the arcade stapled over the top-left of the
+     taskbar; it is a shortcut on the desktop now, like everything else here. */
+  {id:"zinc",label:"ZINC",ico:"@ic-zinc",app:"arcade",sys:1},
   {id:"mine",label:"Minesweeper",ico:"mine32",app:"win-mine",sys:1},
   {id:"paint",label:"Paint",ico:"paint32",app:"win-paint",sys:1},
   {id:"chat",label:"Windows Messenger",ico:"msn32",app:"win-chat",sys:1},
@@ -1186,6 +1190,8 @@ function openIcon(ic){
     showError("Windows Media Player","Windows Media Player cannot play the file. The file is either corrupt or the Player does not support the format you are trying to play.");
   }else if(ic.app==="wallet"){
     openWallet();
+  }else if(ic.app==="arcade"){
+    leaveToArcade();
   }else if(ic.app==="run"){
     runNamed(ic.cmd);
   }else if(ic.app==="applnk"){
@@ -2624,6 +2630,10 @@ $("#ql-desk").addEventListener("click",()=>{
   }
 });
 $$("#ql .qlb[data-app]").forEach(b=>b.addEventListener("click",()=>{ sysSnd("nav",.5); openWin(b.dataset.app); }));
+/* Quick Launch is the one strip that is on screen at every moment without
+   covering anything, which is the single property the arcade's corner tab had
+   and the reason it was there. Same job, XP furniture. */
+$("#ql-zinc").addEventListener("click",()=>leaveToArcade());
 function showDesktopToggle(){ $("#ql-desk").click(); }
 /* Address, Links and Desktop: the three toolbars everyone right-clicked on by
    accident and then could not find again. They do what they say. */
@@ -2951,6 +2961,7 @@ function smAction(act,itemEl){
     case "printers": showError("Printers and Faxes","CURSORS-PRINTER is out of ink. It was printing money."); break;
     case "search": openWin("win-explorer"); explorer.openSearch(); break;
     case "wallet": openWallet(); break;
+    case "arcade": leaveToArcade(); break;
     case "allprograms":{
       const r=itemEl.getBoundingClientRect();
       showMenu(allProgramsMenu(),r.right+4,Math.max(8,r.top-180));
@@ -5855,6 +5866,11 @@ document.addEventListener("visibilitychange",()=>{
   }
   if(!MP.on) return;
   mpSend({t:"vis",on:document.visibilityState==="visible"});
+  /* Money can move while this tab is in the background -- a withdrawal, a win
+     paid by another game in the arcade, a transfer made in another tab -- and
+     nothing here would hear about it until the next kill. Coming back is the
+     one moment somebody is definitely looking at the number. */
+  if(document.visibilityState==="visible") mpSend({t:"sync"});
 });
 addEventListener("online",()=>{ if(net&&!net.up()) try{ net.poke(); }catch(e){} });
 
@@ -6192,6 +6208,11 @@ function enterDesktop(){
   const first=!desktopEntered;
   desktopEntered=true;
   bankPanel.active(false);
+  /* The poll that was watching the books stops on the next line, so this is
+     the last chance to catch a deposit that landed between its final tick and
+     this click. One message, and the server's own cooldown absorbs it if the
+     panel already reported the same movement a moment ago. */
+  mpSend({t:"sync"});
   degauss();
   $("#login").style.opacity="0";
   setTimeout(()=>{
@@ -6244,6 +6265,41 @@ function openWallet(tab){
   sysSnd("nav",.5);
   showLogin(true);              /* no startup chime: this is not a boot */
   bankPanel.show(tab);
+}
+/* WHERE THE ARCADE'S FRONT DOOR IS.
+   This build is vendored under /cursors/ on the arcade's own origin, so home is
+   that origin's root. A standalone deploy of this repo has the game at its
+   root and no portal there, so that case gets the address in full rather than
+   a link back to itself. */
+const ARCADE_HOME=(()=>{
+  try{
+    if(location.pathname.indexOf("/cursors/")===0) return "/";
+    if(/(^|\.)voidsolana\.com$/.test(location.hostname)) return "/";
+  }catch(e){ /* no location; fall through to the deployed portal */ }
+  return "https://www.voidsolana.com/";
+})();
+/* LEAVING THE MACHINE, which is not free and so is not silent.
+
+   The socket closing does NOT recall anything: the server keeps simulating
+   cursors whose owner has gone, so they carry on fighting, can still be eaten,
+   and cannot be banked by anybody until that player comes back or the disk
+   fills and banks the field. That is the right behaviour -- a player whose
+   train went into a tunnel should not be liquidated for it -- but it means
+   walking out with cursors on the desktop is a decision, and a one-click tab
+   in the corner of the screen was never a decision. So this asks, with the
+   number in front of them, and only when there is something to lose. */
+function leaveToArcade(){
+  try{ closeStart(); }catch(e){}
+  const mine=myCurs();
+  if(!mine.length){ sysSnd("nav",.5); location.href=ARCADE_HOME; return; }
+  const carrying=mine.reduce((t,c)=>t+c.bounty,0);
+  const nl="\n\n";
+  showConfirm("CURSORS.EXE",
+    `You have ${mine.length} cursor${mine.length>1?"s":""} on the desktop, carrying ${fmtS(carrying)} SOL.`+nl
+    +"Leaving does not recall them. They keep fighting without you, and nothing "
+    +"can bank them until you come back or the disk fills."+nl
+    +"Go to ZINC anyway?",
+    ()=>{ location.href=ARCADE_HOME; });
 }
 function showBootThenLogin(){
   $("#boot").style.display="block";
@@ -6349,7 +6405,20 @@ const walletAcct=new Wallet(({address})=>{
    hundred lines up is this game's VERB -- recalling a cursor and keeping its
    bounty. Two different meanings of the word, one file, and the reason the
    panel is called My Wallet everywhere a player can see it. */
-const bankPanel=initBank({$,wallet:walletAcct,sysSnd});
+const bankPanel=initBank({$,wallet:walletAcct,sysSnd,
+  /* THE WELCOME SCREEN JUST WATCHED THE BOOKS MOVE, and the desktop behind it
+     is showing the same money. The arena's balance is pushed by the server and
+     only on sign-in and settlement, so a deposit made on this very screen left
+     CURSORS.EXE displaying the pre-deposit figure until the next kill or a
+     reload -- which is the page teaching somebody that a number about their
+     money is not to be trusted.
+
+     ASKED FOR RATHER THAN SET. The books count in lamports and the arena
+     counts in whole play units; the server owns that conversion and answers
+     with a `bal` of its own. See bank.js for why the figure is not carried
+     across, and the `sync` case in server/server.js for the cooldown that
+     makes leaning on this safe. */
+  onArcadeBalance:()=>mpSend({t:"sync"})});
 bankPanel.mount();
 $("#lg-back").addEventListener("click",()=>{ sysSnd("nav",.5); enterDesktop(); });
 /* The tile's click already means "log on", so the way out cannot be a second

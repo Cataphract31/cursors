@@ -90,7 +90,7 @@ function explorer(signature, network) {
  * @param {object} deps.wallet the Wallet from wallet.js -- for its provider
  * @param {(name: string, vol?: number) => void} deps.sysSnd
  */
-export function initBank({ $, wallet, sysSnd = () => {} }) {
+export function initBank({ $, wallet, sysSnd = () => {}, onArcadeBalance = () => {} }) {
   const panel = $("#lg-bank");
   const note = $("#lg-banknote");
   const amtEl = $("#lgb-amt");
@@ -163,7 +163,22 @@ export function initBank({ $, wallet, sysSnd = () => {} }) {
       api("/api/custody/wallet"),
     ]);
     if (bal.status === "fulfilled") {
+      const was = arcade;
       arcade = Number(bal.value.balance ?? 0);
+      /* THE DESKTOP IS SHOWING THE SAME MONEY, and this poll is the only thing
+         in the build that notices it move. The arena's balance is PUSHED by
+         the server -- on sign-in and on every settlement -- so it covers every
+         way money moves inside the game and none of the ways it moves outside
+         one: a deposit made right here, a withdrawal, a win paid by another
+         game in the arcade. Somebody funded their account on this screen,
+         clicked back to the desktop, and CURSORS.EXE went on showing what it
+         showed before the deposit until the next kill or a reload.
+
+         The number is NOT handed over, only the fact that it moved: the arena
+         counts in whole play units and the books count in lamports, and a
+         second place doing that conversion is a second place to get it wrong.
+         main.js asks the server, which answers in the units it owns. */
+      if (arcade !== was) { try { onArcadeBalance(arcade); } catch (e) {} }
       put(arcadeEl, `${sol(arcade)} SOL`);
       arcadeEl.classList.remove("stale");
       const held = Number(bal.value.held ?? 0);

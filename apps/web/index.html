@@ -103,6 +103,21 @@
       <path d="M21 18.5 h8.5 v5.5 h-8.5 a2.75 2.75 0 0 1 0 -5.5 z" fill="#8A5322" stroke="#43260C"/>
       <circle cx="24" cy="21.2" r="1.5" fill="#EFEADC" stroke="#43260C" stroke-width=".8"/>
     </symbol>
+    <!-- ZINC, the arcade this desktop is one machine on. Drawn rather than
+         borrowed: the nearest real XP icon (309, the globe-and-plug) is
+         already the Start menu's "Connect To", and two identical globes in one
+         menu meaning different things is worse than no icon at all. A monitor
+         in front of a world is XP's own way of saying "somewhere else on the
+         network", which is exactly what the portal is from in here. -->
+    <symbol id="ic-zinc" viewBox="0 0 32 32">
+      <circle cx="17" cy="14" r="12.5" fill="#2C7AC6" stroke="#0E3763"/>
+      <path d="M4.7 10.4 h24.6 M4.7 17.8 h24.6" stroke="#D9EEFF" stroke-width="1.35"/>
+      <path d="M17 1.5 a15 12.5 0 0 0 0 25 a15 12.5 0 0 0 0 -25 z" fill="none" stroke="#D9EEFF" stroke-width="1.35"/>
+      <circle cx="17" cy="14" r="12.5" fill="none" stroke="#0E3763"/>
+      <path d="M6.8 29.5 h10 l-1.3 -2.5 h-7.4 z" fill="#B4BECB" stroke="#232E3A" stroke-linejoin="round"/>
+      <rect x="2" y="19.4" width="13.6" height="8.6" rx="1.3" fill="#F4F7FB" stroke="#232E3A"/>
+      <rect x="3.4" y="20.8" width="10.8" height="5.8" fill="#123F72"/>
+    </symbol>
     <symbol id="ic-cpl" viewBox="0 0 32 32">
       <rect x="3" y="6" width="26" height="20" rx="2" fill="#DCE9FB" stroke="#4A6FA5"/>
       <circle cx="11" cy="13" r="3.4" fill="#fff" stroke="#4A6FA5"/>
@@ -1863,7 +1878,7 @@ icons/sounds: winXP (MIT)</div>
 <!-- taskbar -->
 <div id="taskbar">
   <img id="startbtn" alt="start" draggable="false" data-tip="Click here to begin">
-  <div id="ql"><span class="ql-grip"></span><button class="qlb" id="ql-desk" data-tip="Show Desktop"><svg><use href="#ic-desk"/></svg></button><button class="qlb" data-app="win-amp" data-tip="Winamp"><i class="xico" data-ico="amp16"></i></button><button class="qlb" data-app="win-chat" data-tip="Windows Messenger"><i class="xico" data-ico="msn16"></i></button><span class="ql-grip"></span></div>
+  <div id="ql"><span class="ql-grip"></span><button class="qlb" id="ql-desk" data-tip="Show Desktop"><svg><use href="#ic-desk"/></svg></button><button class="qlb" id="ql-zinc" data-tip="ZINC — the arcade"><svg><use href="#ic-zinc"/></svg></button><button class="qlb" data-app="win-amp" data-tip="Winamp"><i class="xico" data-ico="amp16"></i></button><button class="qlb" data-app="win-chat" data-tip="Windows Messenger"><i class="xico" data-ico="msn16"></i></button><span class="ql-grip"></span></div>
   <div id="tb-addr" class="tb-bar"><span>Address</span><input type="text" id="tb-addr-in" spellcheck="false"><button class="xbtn" id="tb-addr-go">Go</button></div>
   <div id="tb-links" class="tb-bar"><span>Links</span><span id="tb-links-in"></span></div>
   <div id="tb-desk" class="tb-bar"><span>Desktop</span><span id="tb-desk-in"></span></div>
@@ -1912,6 +1927,10 @@ icons/sounds: winXP (MIT)</div>
   <section class="sm-menu">
     <hr class="orange-hr">
     <div class="sm-left">
+      <!-- XP pinned "Internet" at the very top of this column. There is no
+           browser on this machine any more, and the one address it ever wants
+           is the arcade it lives in, so that slot says ZINC. -->
+      <div class="sm-item two" data-act="arcade"><i class="xico" data-ico="@ic-zinc"></i><div class="sm-texts"><div class="sm-text b">ZINC</div><div class="sm-sub">the arcade</div></div></div>
       <div class="sm-item two" data-app="win-fame"><i class="xico" data-ico="@ic-cursor"></i><div class="sm-texts"><div class="sm-text b">Hall of Fame</div><div class="sm-sub">live from the arena</div></div></div>
       <div class="sm-item two" data-act="email"><i class="xico" data-ico="outlook32"></i><div class="sm-texts"><div class="sm-text b">E-mail</div><div class="sm-sub">Outlook Express</div></div></div>
       <div id="sm-pinned"></div>

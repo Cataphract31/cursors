@@ -818,6 +818,10 @@ body.mobile #bsod{font-size:11px;padding:16px 14px}
 .cit.has-sub:hover>.csub,.csub.open{visibility:visible}
 .csep{border-top:1px solid #ACA899;margin:3px 2px}
 #errtext{white-space:pre-line}
+/* the confirm box grew a paragraph when leaving the machine mid-round became
+   something worth spelling out, and a 
+ that renders as a space is a wall */
+#conftext{white-space:pre-line}
 #xptip{position:fixed;display:none;z-index:99900;background:#FFFFE1;border:1px solid #000;padding:3px 7px;font-size:11px;box-shadow:1px 2px 4px rgba(0,0,0,.3);pointer-events:none;white-space:nowrap}
 
 /* ---------- xp tabs / dialogs / task manager ---------- */

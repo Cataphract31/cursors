@@ -533,6 +533,26 @@ function handle(c, m) {
       }
       break;
     }
+    /* GO AND READ THE BOOKS AGAIN.
+
+       The balance on the desktop is pushed, not polled: sign-in and every
+       settlement send a `bal`, and nothing else does. That covers every way
+       money moves INSIDE this game and none of the ways it moves outside one
+       -- a deposit at the welcome screen, a withdrawal, a win paid by another
+       game in the arcade. The client watched its own arcade balance change and
+       had no way to say so; the number on the desktop stayed where it was
+       until the next kill or a reload.
+
+       Rate-limited per socket, because the client asks on a signal it does not
+       control -- a poll, a tab coming back, a screen change -- and each ask is
+       an outbound call to the arcade's ledger from this box. Two seconds is
+       the same ceiling `vis` uses, and for the same reason. */
+    case "sync": {
+      if (now - (c.lastSync || 0) < 2000) break;
+      c.lastSync = now;
+      void refreshBalance(c.key);
+      break;
+    }
     case "ping": send(c, { t: "pong" }); break;
   }
 }
