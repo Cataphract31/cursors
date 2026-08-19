@@ -1,8 +1,3 @@
-/* Real Windows XP assets, inlined by Vite at build.
-   Icons: ShizukuIchi/winXP (MIT) — shell32-numbered + named PNGs.
-   Sounds: the 2001 Windows XP sound scheme + MSN Messenger 7.
-   Wallpaper: Bliss, the original crop. Flag: commons vector, genuine palette. */
-
 import wallBliss from "./assets/xp/wall/bliss.jpg";
 import logoFlag from "./assets/xp/logo/xp-flag.svg";
 import startBtn from "./assets/xp/icons/start.png";
@@ -55,7 +50,6 @@ import navUp from "./assets/xp/icons/up.png";
 import navFolders from "./assets/xp/icons/folder.png";
 import navSearch from "./assets/xp/icons/299(32x32).png";
 import navDrop from "./assets/xp/icons/dropdown.png";
-/* the real IE6 toolbar set, same winXP repo */
 import navStop from "./assets/xp/icons/stop.png";
 import navRefresh from "./assets/xp/icons/refresh.png";
 import navHome from "./assets/xp/icons/home.png";
@@ -67,7 +61,6 @@ import navMedia from "./assets/xp/icons/846(16x16).png";
 import earth16 from "./assets/xp/icons/earth.png";
 import connect16 from "./assets/xp/icons/309(16x16).png";
 import sysfile32 from "./assets/xp/icons/546(32x32).png";
-/* file-type icons for the desktop New menu, same shell32-numbered set */
 import bmpdoc32 from "./assets/xp/icons/680(32x32).png";
 import wavdoc16 from "./assets/xp/icons/234(16x16).png";
 import writedoc16 from "./assets/xp/icons/153(16x16).png";
@@ -116,26 +109,14 @@ export const IMG = {
   earth16, connect16,
 };
 
-/* Microsoft Agent characters, vendored out of clippyjs (MIT wrapper around the
-   original .acs sprite sheets). The PNG urls are eager because they are only
-   strings — the images themselves are not fetched until a character is shown —
-   and the animation tables are lazy so none of this touches first paint. */
 export const AGENT_PNG = import.meta.glob("./assets/xp/agent/*.png", { eager: true, query: "?url", import: "default" });
 export const AGENT_DEF = import.meta.glob("./assets/xp/agent/*.json");
-/* the real XP cursor files (bartekl1/windows-ui-assets) — .cur for CSS and
-   <img>, .ani parsed at runtime for previews. URLs only; nothing preloads. */
 export const CURFILES = import.meta.glob("./assets/xp/cursors/*", { eager: true, query: "?url", import: "default" });
 
-/* Paint tool sprites — jspaint (Isaiah Odhner), MIT */
 export const PAINT = { tools: paintTools, transparency: paintTrans, airbrush: paintAir };
 
-/* The playlist: everything in apps/web/public/music/, with names read from the
-   files' own ID3 tags. Drop a file in that folder and it appears in Winamp,
-   Media Player and My Music on the next build — nothing to register here.
-   The scan and the tag reading live in scripts/music-plugin.mjs. */
 export { default as TRACKS, VIDEOS } from "virtual:music";
 
-/* Minesweeper sprite set (winXP repo, MIT): digits 13x23, cells 16x16 */
 const mineGlob = import.meta.glob("./assets/xp/mine/*.png", { eager: true, query: "?url", import: "default" });
 export const MINE = Object.fromEntries(
   Object.entries(mineGlob).map(([p, url]) => [p.split("/").pop().replace(/\.png$/, ""), url])
@@ -143,7 +124,6 @@ export const MINE = Object.fromEntries(
 IMG.mine16 = MINE["mine-icon"];
 IMG.mine32 = MINE["mine-icon"];
 
-/* MSN Messenger emoticons, the retro (2003) set — bernzrdo/msn-emoticons, 19x19 */
 const emoGlob = import.meta.glob("./assets/xp/emo/*.png", { eager: true, query: "?url", import: "default" });
 export const EMO = Object.fromEntries(
   Object.entries(emoGlob).map(([p, url]) => [p.split("/").pop().replace(/\.png$/, ""), url])

@@ -1,14 +1,3 @@
-/*
- * DOES A DEPLOY IN CURSORS MOVE REAL MONEY?
- *
- *   Terminal 1: PORT=8080 LEDGER_KEY=ctest2 LEDGER_DB=:memory: node /c/GIELINOR/arcade/server/main.js
- *   Terminal 2: PORT=8795 LEDGER_KEY=ctest2 DB_PATH=./ctest.db FAST=1 node server/server.js
- *   Terminal 3: node itest-cursors.mjs
- *
- * Signs a real wallet into the arcade, funds it, connects, deploys, and reads
- * the books back. What to look for: the hold appears while the cursor is alive,
- * and the audit closes at sum 0 with escrow empty once it banks.
- */
 import { generateKeyPairSync, sign } from "node:crypto";
 import WebSocket from "ws";
 
@@ -39,20 +28,16 @@ ws.on("message", async (raw) => {
   const m = JSON.parse(String(raw));
   if (m.t === "err") errs.push(m.msg);
   if (m.t === "welcome") {
-    // TWO welcomes arrive: the spectator one from `hello`, then the wallet one
-    // from `arcade`. Only the second can deploy.
     if (!m.wallet) { welcomed = m; ws.send(JSON.stringify({ t: "arcade", token: v.token })); return; }
     console.log("signed in as wallet, name:", m.name, " balance:", m.balance);
 
     const show = async (label) => console.log(`  ${label}`, JSON.stringify(await bal(wallet)));
 
-    // 1. deploy and recall INSIDE grace (1400ms) -> a release, stake back whole
     ws.send(JSON.stringify({ t: "deploy" }));
     setTimeout(() => ws.send(JSON.stringify({ t: "recall" })), 500);
     setTimeout(async () => {
       await show("a) deployed then recalled in grace:");
 
-      // 2. deploy and recall AFTER grace -> a 3s glide, then a bank -> settle
       ws.send(JSON.stringify({ t: "deploy" }));
       setTimeout(async () => { await show("b) deployed, hold open           :"); }, 800);
       setTimeout(() => ws.send(JSON.stringify({ t: "recall" })), 2000);

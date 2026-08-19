@@ -1,149 +1,56 @@
-/* The arena, server-side — a faithful port of the client sim in main.js, now
-   the single authority. Same fixed 1280×800 logical field, same movement
-   rules, same duel math: P(A wins) = A/(A+B), winner takes all, every
-   collision EV-neutral. All money lives here in integer milli-SOL (1000 =
-   1.000 SOL) so the fairness invariants are checkable in one file.
-
-   Epochs no longer end on a timer. Every death writes a 12 MB corpse to the
-   fake C: drive; when the disk fills, CURSORS.EXE crashes, everyone is banked
-   in full (the crash can never cost money), the corpses are archived, and the
-   system restarts. The disk is the round clock, and it is visible to everyone.
-
-   All sim randomness — duels, spawns, wander noise — draws from one sfc32
-   stream seeded per epoch; sha256(seed) is published at epoch start and the
-   seed is revealed at the crash. Full replay verification still needs input
-   logs (see HANDOFF engine track); the label in the client says exactly that. */
-
 import { rngFromSeedHex, newSeedHex, commitOf } from "./rng.js";
 
-/* economics — LOCKED, and the client mirrors these exactly */
 export const STAKE = 100, ENTRY = 98, FEE = 2;
 export const MAXCUR = 5;
 
-/* The food chain. A cursor only fights inside 4x its own size — sharks stop
-   bothering with plankton, and a fresh deploy cannot be eaten by the whale it
-   happened to spawn beside. This says which fights HAPPEN, never how they
-   resolve: every legal duel is still P(A wins) = A/(A+B), winner takes all,
-   and the ladder still prices ×N at exactly 1/N. Measured against the old
-   free-for-all it takes "new player eaten by something enormous" from 35% to
-   9%, and whale-farming of fresh deploys from 83% to zero, while leaving the
-   right tail alone — the biggest cursor of a long run is unchanged. */
 export const FOOD_CHAIN = 4;
 
-/* Four weight classes, one per 4x step, each wearing a real XP pointer scheme.
-   You never pick this one: it is what you have grown into, and it changes under
-   you mid-round the moment you cross a boundary. A player's own Mouse
-   Properties choice still dresses their desktop pointer — it just no longer
-   dresses their cursors in the arena, because out there the arrow has to mean
-   your size and it cannot mean two things at once.
-
-   A rank step IS the reach of the rule, deliberately: at 4x apiece, everything
-   you can legally fight is your own rank or the one next door, and nothing two
-   ranks away is ever touchable. Ranks every DOUBLING were tried first and gave
-   more steps, but a step that does not line up with the rule is just a colour
-   change — you could not read "can I fight that" off the arrow any more. The
-   top rank is 64x, which a good run really does reach. */
 export const TIER_SKINS = ["", "white", "bronze", "dinosaur"];
 export const TIER_NAMES = ["Plankton", "3D-White", "3D-Bronze", "Dinosaur"];
 export const TIER_AT = [1, 4, 16, 64];
 export function tierOf(bounty) {
   const m = Math.max(1, bounty / ENTRY);
-  return Math.min(TIER_SKINS.length - 1, Math.floor(Math.log2(m) / 2));   /* log4 */
+  return Math.min(TIER_SKINS.length - 1, Math.floor(Math.log2(m) / 2));
 }
 export const skinOf = bounty => TIER_SKINS[tierOf(bounty)];
 
-/* Exported so the rules suite can pin the boundary without reaching into a sim,
-   and so the client mirror has one definition to copy rather than two. */
 export const canFight = (aBounty, bBounty) =>
   Math.max(aBounty, bBounty) <= FOOD_CHAIN * Math.min(aBounty, bBounty);
 
-/* left<->right, top<->bottom. Recall exits through the far wall, so the
-   glide is a run across the field rather than a step off the edge you were
-   already standing on. Exported so the client mirror has one definition. */
 export const OPP_EDGE = [1, 0, 3, 2];
 
-/* arena + feel constants, verbatim from the client */
-/* The arena's BASE size. The field the epoch actually runs on is derived from
-   this and the population — see sizeArena. 16:10 always, because the client
-   fits the field to the viewport and a changing aspect would move the
-   letterbox around under the player. */
 const BASE_AW = 1280, BASE_AH = 800;
-/* Density, not size, is what a round feels like: it sets how long a fresh
-   cursor lives and how fast the disk fills. Measured, at 4x food chain and
-   all-edge spawns: ~24k px2 per cursor is a meat grinder, ~35k breathes.
-   Hold the number and the game plays the same at 10 cursors or 400. */
 const PX2_PER_CUR = 32000, ARENA_MAX = 3;
-/* RUSH_MS is a CEILING, not a duration: the rush ends the moment the field
-   is empty, which with a 3s glide is 3-4 seconds. It used to run the full
-   clock, so every epoch ended with everyone banked and eight seconds of
-   nothing to watch, which is where people left. The ceiling only matters
-   if a duel keeps resolving into new glides. */
 const GRACE_MS = 1400, RECALL_SECS = 3, DUEL_MS = 700, RUSH_MS = 6000, CRASH_MS = 3000;
 
-/* The disk, which is the round clock. A 20 GB drive is what an XP box actually
-   shipped with, and at 12 MB a corpse it holds enough dead cursors to make a
-   round last most of an hour instead of three minutes. Windows and the apps
-   occupy whatever is left over after the corpse budget, so the free space you
-   see really is the space the round has to fill. */
 export const MB = 1024 * 1024, GB = 1024 * MB;
 export const DISK_TOTAL = 20 * GB, CORPSE_BYTES = 12 * MB;
-
-/*
- * NO BOTS, AND NOTHING LEFT THAT COULD BECOME ONE.
- *
- * There were seven, and they were economic participants: they held balances,
- * paid stakes and took pots, and when one went broke it silently refilled
- * itself to 50.000. That is a money printer, and it may not exist in an arcade
- * about to hold real deposits -- their winnings would have been
- * indistinguishable from money somebody actually paid in.
- *
- * A first pass deleted the spawning and left the scaffolding: an empty name
- * list, a `bot` flag on every player, a lower cursor cap for bots, and a risk
- * loop that recalled them. Empty scaffolding is worse than none, because it
- * reads as a feature that is merely switched off and invites somebody to
- * switch it back on. It is all gone. A cursor in this arena has an owner who
- * paid for it.
- */
 
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
 const angDiff = a => { while (a > Math.PI) a -= 2 * Math.PI; while (a < -Math.PI) a += 2 * Math.PI; return a; };
 
 export function createSim(opts) {
-  /* per-sim, not per-module: two sims in one process (the test rig does this)
-     must not share a field size */
   let AW = BASE_AW, AH = BASE_AH, ARENA_K = 1;
-  const emit = opts.emit;                       /* (evt) => void — server forwards */
-  const CORPSES = opts.corpses || 900;          /* deaths that fill the disk */
-  /* The rush is a short dramatic window, not a fraction of the round. It used
-     to start at CORPSES/10 remaining and then hit the 12s cap immediately,
-     which crashed the epoch with most of the disk still free — the reason
-     rounds stayed three minutes long after the disk was supposed to own them. */
+  const emit = opts.emit;
+  const CORPSES = opts.corpses || 900;
   const RUSH_MARGIN = Math.min(6, Math.max(2, Math.round(CORPSES / 40)));
   const BASE_USED = DISK_TOTAL - CORPSES * CORPSE_BYTES;
 
-  const players = new Map();                    /* key -> economic record */
+  const players = new Map();
   let curs = [], nextCurId = 1, deathN = 0;
   let phase = "battle", epochNo = 0, seedHex = null, commit = null;
-  let rng = rngFromSeedHex(newSeedHex());       /* pre-first-epoch placeholder */
+  let rng = rngFromSeedHex(newSeedHex());
   let upT = 0, epochStart = 0, epochDeaths = 0;
-  /* sim time, not wall time: it advances by exactly one fixed step per tick, so
-     the timeline the client rebuilds from it is perfectly even */
   let simClock = 0;
   let rushAt = null, crashUntil = 0, deploysOpen = false;
   let R = null;
   let liveSum = 0, liveN = 0, arenaN = 0;
   let houseFees = 0;
 
-  /* Sim time, not wall time. Motion integrates on a fixed dt, so anything that
-     gates on a clock has to use the same one or the round stops being a
-     function of the seed: a 17ms event-loop hiccup used to change which cursor
-     won a duel thousands of ticks later, which makes the commit/reveal
-     ceremony a decoration. */
   const now = () => simClock;
   const rand = (a, b) => a + rng.next() * (b - a);
   const pick = a => a[Math.floor(rng.next() * a.length)];
 
-  /* ---------- players & money ---------- */
   function registerPlayer(key, name, persisted) {
     let p = players.get(key);
     if (p) { p.name = name; return p; }
@@ -156,20 +63,7 @@ export function createSim(opts) {
     return p;
   }
   function money(p) { emit({ t: "money", key: p.key }); }
-  /*
-   * THE BETA FAUCET STOOD HERE. It refilled any broke player back to
-   * 5.000 so that a tester could never be locked out. Harmless while the
-   * money was points; a mint the moment it is not. A player with nothing
-   * now has nothing, and deploys are refused rather than funded.
-   */
 
-  /* ---------- cursors ---------- */
-  /* Where a cursor lands matters. Every human used to deploy at the bottom
-     centre inside a 120px band, so two players joining together spawned on top
-     of each other and fought the moment grace lifted — the arena picking the
-     fight instead of the players. Now the edge is sampled properly and, of
-     eight candidates, the one furthest from anyone already out there wins. It
-     costs nothing and it means a crowded arena spreads instead of piling. */
   function nearestCurDist2(x, y) {
     let bd = 1e9;
     for (const o of curs) { const d = (o.x - x) ** 2 + (o.y - y) ** 2; if (d < bd) bd = d; }
@@ -179,30 +73,7 @@ export function createSim(opts) {
     x: side === 0 ? 22 : side === 1 ? AW - 22 : rand(50, AW - 50),
     y: side === 2 ? 22 : side === 3 ? AH - 22 : rand(50, AH - 50),
   });
-  /* Which wall you come up from. Everyone used to deploy along the bottom, and
-     since a fresh cursor rarely lives long enough to travel, 87% of the field
-     and 96% of all deaths happened in the bottom quarter — a 1280x200 arena
-     with a large decorative area above it. That was fixed by giving each
-     PLAYER a wall for the epoch. It is drawn
-     from the epoch's own seeded stream, not chosen, because a choice with no
-     mechanical advantage still ends with everyone copying one wall. */
   function spawnPoint(p) {
-    /* EVERY deploy picks its own wall, players and bots alike. A per-player
-       wall meant your five arrived stacked on one edge and then spent half
-       their lives inside touching distance of a cursor they can never fight
-       — measured at 49.4% of squad-cursor time within 60px of a squadmate,
-       39.9% once spawns are spread. It never was an EV edge and the ladder
-       could not have given it one: every duel is A/(A+B), so no arrangement
-       of cursors bends the average, and 2174 head-to-head duels between a
-       5-cursor player and a 1-cursor player moved 747 SOL for a net of
-       +8.62 SOL to the squad — inside a +-16 SOL noise floor, and it flips
-       sign between arms. What it was, was five arrows in a heap looking like
-       a gang, which is its own problem in a game played for money.
-
-       They still regroup once they are out (see the centroid pull in move),
-       so a squad is still a squad — it just has to cross the field to become
-       one, and it arrives from four directions instead of one. Round length,
-       cursor lifetime and fights per cursor are all unchanged. */
     const fixed = -1;
     let best = null, bestD = -1;
     for (let i = 0; i < 8; i++) {
@@ -210,7 +81,7 @@ export function createSim(opts) {
       const { x, y } = edgePoint(side);
       const d = nearestCurDist2(x, y);
       if (d > bestD) { bestD = d; best = { x, y, side }; }
-      if (d > (200 * ARENA_K) ** 2) break;                  /* far enough, stop looking */
+      if (d > (200 * ARENA_K) ** 2) break;
     }
     return best;
   }
@@ -228,10 +99,6 @@ export function createSim(opts) {
     return c;
   }
   function sizeOf(c) {
-    /* +0.5 of a cursor for every doubling, out to 64x. The old .35/2.6 curve
-       flattened at 32x and only ever made a whale 2.6 arrows wide, which was
-       not enough to read across a crowded desktop — and size is now doing real
-       work, because size is what decides who may fight you. */
     const m = Math.max(1, c.bounty / ENTRY);
     c.s = Math.min(4, 1 + .5 * Math.log2(m));
     c.r = 10 * c.s;
@@ -241,36 +108,7 @@ export function createSim(opts) {
   function removeCur(c) { curs = curs.filter(x => x !== c); }
   const cursOf = key => curs.filter(c => c.key === key);
 
-  /* ---------- deploy / recall / bank ---------- */
   function canDeploy() { return phase === "battle" && deploysOpen && !rushAt; }
-  /*
-   * DEPLOY IS TWO HALVES NOW, WITH THE MONEY BETWEEN THEM.
-   *
-   * It used to be one synchronous function: check the balance, subtract it,
-   * spawn. The balance lives in the arcade's ledger now and is an HTTP call
-   * away, so the check and the spawn cannot happen in the same instant.
-   *
-   * The order is forced and it is this way round: EVERY CHECK THE SIM OWNS
-   * FIRST, then the money, then the spawn. A cursor that appears before its
-   * stake is confirmed is a free entry into the pot, so the spawn is last and
-   * happens only on a confirmed hold. The cost is that the phase can change
-   * while the hold is in flight -- which `commitDeploy` re-checks, and the
-   * caller releases the hold when it does.
-   */
-  /*
-   * CLAIM THE ID BEFORE THE MONEY, NOT AFTER.
-   *
-   * The stake is filed in the arcade's books under a ref built from the epoch
-   * and the cursor id, and the same ref has to be the one that settles when
-   * that cursor banks. Reading `nextCurId` and hoping it is still free when the
-   * hold comes back is a race: two deploys in flight together would file two
-   * holds against one id, and the second bank would settle a ref that was never
-   * opened.
-   *
-   * So the id is TAKEN here, before the hold, and handed to commitDeploy. An id
-   * burned by a deploy that failed is simply never used, which costs nothing --
-   * they are process-lifetime counters, not a scarce resource.
-   */
   function reserveCursorId() { return nextCurId++; }
 
   function checkDeploy(key) {
@@ -280,10 +118,6 @@ export function createSim(opts) {
     return null;
   }
 
-  /**
-   * Spawn a paid-for cursor. Returns the cursor, or null if the round moved on
-   * while the money was in flight -- in which case the caller owes a release.
-   */
   function commitDeploy(key, id) {
     const p = players.get(key); if (!p) return null;
     if (checkDeploy(key) !== null) return null;
@@ -294,20 +128,13 @@ export function createSim(opts) {
     money(p);
     return c;
   }
-  /* undeploy: spawn grace means it cannot have fought, so there is nothing to
-     game and the whole stake comes back */
   function refundCur(p, c) {
     p.epochIn -= STAKE; p.totIn -= STAKE;
     R.pot -= ENTRY; R.deploys--; houseFees -= FEE;
     removeCur(c);
-    // `key` and `epoch` ride on the event because the stake is released in the
-    // arcade's books by the server, and a ref needs both to name this cursor.
     emit({ t: "refund", id: c.id, owner: c.owner, key: c.key, epoch: c.epoch });
   }
   function requestRecall(key) {
-    /* one verb, two meanings, exactly like the client: cursors still inside
-       spawn grace undeploy for a full refund (they cannot have fought yet,
-       so there is nothing to game); roaming cursors start the 3s bank glide */
     const p = players.get(key); if (!p) return;
     let refunded = 0;
     for (const c of [...cursOf(key)]) {
@@ -320,41 +147,20 @@ export function createSim(opts) {
     const p = players.get(key); if (!p) return;
     const c = curs.find(c => c.id === id && c.key === key);
     if (!c) return;
-    /* This used to drop a graced cursor on the floor — no refund, no recall, no
-       reply — while RECALL ALL refunded the very same cursor. The client then
-       latched the slot for six seconds, by which time grace had lapsed and the
-       retry banked 0.098 instead of refunding 0.100. One tap, one meaning. */
     if (graced(c) && c.mode === "roam") { refundCur(p, c); money(p); return; }
     if (c.mode === "roam" || c.mode === "duel") forceRecall(c);
   }
   function cancelRecall(key) {
-    /* changed your mind inside the 3s glide. Recalling cursors stay
-       attackable, so this dodges nothing; during shutdown the sweep owns
-       every cursor and the answer is no. */
     if (phase !== "battle" || rushAt) return;
     for (const c of cursOf(key)) {
       if (c.mode === "recall") { c.mode = "roam"; c.prevMode = "roam"; c.recallT = 0; }
-      /* armed mid-duel and not yet gliding — disarm it the same way */
       else if (c.mode === "duel" && c.prevMode === "recall") { c.prevMode = "roam"; c.recallT = 0; }
     }
   }
   function forceRecall(c) {
-    /* Mid-duel the mode field is spoken for, and dropping the order here was a
-       silent theft: the player tapped recall on a cursor that collided in the
-       same instant, the request hit this line, and the cursor kept fighting
-       while the client showed it banking. A duel is 700ms, which is exactly
-       when a nervous player reaches for the button. So arm prevMode instead —
-       resolveDuel restores into the glide rather than back into a roam. */
     if (c.mode === "duel") { c.prevMode = "recall"; c.recallT = RECALL_SECS; return; }
     if (c.mode !== "recall") { c.mode = "recall"; c.prevMode = "recall"; c.recallT = RECALL_SECS; }
   }
-  /* A cursor the shutdown sweep takes that never had a fight paid to enter a
-     round it did not get to play. bounty === ENTRY and no kills is exactly
-     that: a win moves the bounty, a loss removes the cursor. Nobody can see
-     the crash coming or opt out of it, so the house hands its cut back and
-     the deploy costs nothing. The arena still returns exactly what it took
-     (R.banked counts ENTRY either way, so pot conservation is untouched) —
-     the extra 0.002 comes off the house, not out of the pot. */
   const unplayed = c => c.kills === 0 && c.bounty === ENTRY;
   function bank(c, atShutdown) {
     const p = players.get(c.key);
@@ -370,9 +176,6 @@ export function createSim(opts) {
     if (p) money(p);
   }
 
-  /* ---------- movement (verbatim port) ---------- */
-  /* the whole rule, in one predicate — used for hunting and for contact, so a
-     cursor never chases something it would pass straight through */
   const mayFight = (a, b) => canFight(a.bounty, b.bounty);
   function nearestEnemy(c) {
     let best = null, bd = 1e9;
@@ -392,20 +195,6 @@ export function createSim(opts) {
   function move(c, dt) {
     if (c.mode === "recall") {
       c.recallT -= dt;
-      /* Out through the FAR wall, not the one you came up from. The glide is
-         time-boxed at RECALL_SECS either way, so crossing the field does not
-         lengthen your exposure — it raises the speed, and that is the point:
-         a recall that stepped off the nearest edge was often indistinguishable
-         from a roam. Leaving now looks like leaving.
-
-         Measured over 100 seeded epochs per arm, same seeds: a glide dies
-         3.38% -> 5.41% of the time, but it also wins a fight on the way out
-         14.5% -> 17.2% of the time, and the net return on the act of leaving
-         is unchanged (100.25% vs 100.28%). It costs nothing in EV; it makes
-         the exit legible and a little more dangerous.
-
-         Per-player spawn edges still matter — they are what makes "opposite"
-         differ between players instead of funnelling everyone to one wall. */
       const e = OPP_EDGE[c.edge === undefined ? 3 : c.edge];
       const ex = e === 0 ? 18 : e === 1 ? AW - 18 : clamp(c.x, 60, AW - 60);
       const ey = e === 2 ? 18 : e === 3 ? AH - 18 : clamp(c.y, 60, AH - 60);
@@ -415,36 +204,20 @@ export function createSim(opts) {
       c.x += dx / Math.max(1, dist) * sp * dt; c.y += dy / Math.max(1, dist) * sp * dt;
       return;
     }
-    /* No stances. DEFEND existed so a small cursor could refuse a hopeless
-       fight with a whale; the food chain now refuses it on their behalf, and
-       everything still reachable is inside 4x — which is a fight worth having.
-       One verb remains, RECALL, and it is the honest one: leaving costs you the
-       round rather than just tempo. */
-    /* aggression ramps with the disk: calm on a fresh drive, frenzy near full */
     const fill = clamp(epochDeaths / CORPSES, 0, 1);
     const aggr = phase === "battle" ? (.7 + 1.5 * fill) : 1;
     let tx = null, ty = null, turn = 2.6 * aggr;
     const { best, bd } = nearestEnemy(c);
     if (best) {
-      /* Turn radius is speed/turn-rate: at 2.6 rad/s and ~100 px/s that is a
-         38px circle, and contact needs 20px — so an attacker could literally
-         orbit its target forever without touching it. Close in, turn hard. */
       if (bd < 130 * 130) turn *= 2.8;
       if (bd < (520 * ARENA_K) ** 2) { tx = best.x; ty = best.y; }
     }
-    /* Your own cursors regroup, but they must never stack. They cannot fight
-       each other, so a pile of them reads as a bug — two arrows sitting in the
-       same pixel with the tags overprinting, apparently refusing to duel. So
-       the squad has a personal space: pull together beyond 90px, shove apart
-       inside SEP, and the flock holds a loose formation instead of a point. */
     const SEP = 34;
     let rx = 0, ry = 0;
     for (const o of curs) {
       if (o === c || o.key !== c.key) continue;
       const dx = c.x - o.x, dy = c.y - o.y, d2 = dx * dx + dy * dy;
       if (d2 > SEP * SEP) continue;
-      /* exactly coincident gives a zero vector and they stay welded together,
-         so break the tie by id — deterministic, and always opposite */
       if (d2 < 1) { const a = (c.id % 8) / 8 * Math.PI * 2; rx += Math.cos(a) * SEP; ry += Math.sin(a) * SEP; continue; }
       const d = Math.sqrt(d2);
       rx += dx / d * (SEP - d); ry += dy / d * (SEP - d);
@@ -462,11 +235,6 @@ export function createSim(opts) {
       c.h += clamp(angDiff(want - c.h), -1, 1) * turn * dt;
     }
     c.h += (rng.next() - .5) * 3.0 * dt;
-    /* Edges. Four independent axis-aligned pulls CANCEL in a corner: heading
-       up-left, "turn right" says +1 and "turn down" says -1 and the cursor sits
-       there, pinned by the clamp, not moving and not fighting, forever. One
-       vector away from whichever walls are near cannot cancel — in a corner it
-       points diagonally out. */
     const M = 64, WT = 7;
     let wx = 0, wy = 0;
     if (c.x < M) wx += (M - c.x) / M;
@@ -475,23 +243,14 @@ export function createSim(opts) {
     if (c.y > AH - M) wy -= (c.y - (AH - M)) / M;
     if (wx || wy) c.h += clamp(angDiff(Math.atan2(wy, wx) - c.h), -1, 1) * WT * dt * Math.min(1, Math.hypot(wx, wy));
     const weight = 1 + .25 * (c.s - 1);
-    /* The old +12% chase / -10% flee pair existed only so an attacker could
-       close on a fleeing defender. With nobody fleeing it was a bonus everyone
-       held at once, which is the same as no bonus at all. */
     const sp = c.spd / weight;
-    /* and a hard guarantee on top of the soft one: if the clamp actually bit,
-       the cursor is against a wall, so mirror the heading off it. A bounce
-       cannot get stuck the way a slow turn can. */
     const ux = c.x + Math.cos(c.h) * sp * dt, uy = c.y + Math.sin(c.h) * sp * dt;
-    /* keep the BODY inside the field, not just the centre: the size curve took
-       r from 26 to 40 and a whale was drawn half-outside the wall */
     const pad = Math.max(24, c.r);
     c.x = clamp(ux, pad, AW - pad); c.y = clamp(uy, pad, AH - pad);
     if (c.x !== ux) c.h = Math.PI - c.h;
     if (c.y !== uy) c.h = -c.h;
   }
 
-  /* ---------- duels ---------- */
   function startDuel(a, b) {
     a.prevMode = a.mode; b.prevMode = b.mode;
     a.mode = b.mode = "duel";
@@ -523,27 +282,17 @@ export function createSim(opts) {
     removeCur(l);
     epochDeaths++; R.deaths++;
     emit({ t: "kill", w: w.id, l: l.id, wOwner: w.owner, lOwner: l.owner, pot, cert, fill: epochDeaths / CORPSES });
-    /* the disk just grew a corpse; a full drive is a crash */
     if (epochDeaths >= CORPSES && phase === "battle") crash();
     else if (!rushAt && epochDeaths >= CORPSES - RUSH_MARGIN) startRush();
   }
 
-  /* ---------- epoch lifecycle ---------- */
   function startRush() {
     rushAt = now();
-    /* every cursor, duellists included — forceRecall has a branch for exactly
-       that case (it arms prevMode so resolveDuel restores into the glide).
-       Filtering them out here meant a cursor that happened to be mid-duel when
-       the rush fired came back to "roam" and hunted a field of defenceless
-       gliding cursors for the rest of the shutdown: 90% of all rush-window
-       kills were made by cursors this sweep forgot. */
     for (const c of curs) forceRecall(c);
     emit({ t: "rush", secs: RUSH_MS / 1000 });
   }
   function crash() {
     for (const c of [...curs]) bank(c, true);
-    /* pot conservation — the invariant THIN ICE's wipe leak taught us to check:
-       everything that entered the arena this epoch must have left it as banks */
     if (R.pot !== R.banked)
       console.error(`INVARIANT VIOLATION epoch ${epochNo}: pot in ${R.pot} != banked ${R.banked}`);
     const receipt = {
@@ -554,31 +303,18 @@ export function createSim(opts) {
     emit({ t: "crash", ...receipt });
     for (const p of players.values()) { p.epochIn = 0; p.epochOut = 0; }
   }
-  /* Sized once, at epoch start, from the population the last epoch carried —
-     never mid-epoch, because a field that resizes under a live cursor moves it
-     relative to everyone else. Announced with the seed commit, so every client
-     in the round is on the identical field and the fixed-arena fairness rule
-     still holds: it fixes the field for the ROUND, not for all time. */
   function sizeArena(n) {
     const want = Math.max(1, n) * PX2_PER_CUR;
     const k = clamp(Math.sqrt(want / (BASE_AW * BASE_AH)), 1, ARENA_MAX);
     AW = Math.round(BASE_AW * k); AH = Math.round(BASE_AH * k);
-    /* Sensing has to scale with the field or the point is lost: on a 3x field
-       with an absolute 520px acquisition radius, cursors wander blind and a
-       round takes 2.4x longer instead of playing the same. */
     ARENA_K = k;
   }
   function startEpoch() {
     epochNo++;
-    /* an average over the epoch, then smoothed across epochs — peak made one
-       busy tick decide the next round's whole field */
     const avg = liveN ? liveSum / liveN : 0;
     arenaN = arenaN ? arenaN * .5 + avg * .5 : avg;
     liveSum = 0; liveN = 0;
     sizeArena(arenaN);
-    /* opts.seed pins every epoch to one seed. Replay verification needs this
-       (see the engine track), and it is how the suite proves a round is a
-       function of the seed rather than of event-loop jitter. */
     seedHex = opts.seed || newSeedHex(); commit = commitOf(seedHex);
     rng = rngFromSeedHex(seedHex);
     R = { pot: 0, deploys: 0, deaths: 0, banked: 0, bigBank: null };
@@ -587,7 +323,6 @@ export function createSim(opts) {
     emit({ t: "epoch", no: epochNo, commit, corpses: CORPSES, aw: AW, ah: AH });
   }
 
-  /* ---------- the loop ---------- */
   function tick(dt) {
     upT += dt; simClock += dt * 1000;
     liveSum += curs.length; liveN++;
@@ -595,12 +330,9 @@ export function createSim(opts) {
       if (now() >= crashUntil) startEpoch();
       return;
     }
-    /* move everyone not frozen mid-duel */
     for (const c of [...curs]) if (c.mode !== "duel") move(c, dt);
-    /* duels resolve after their 700ms hourglass */
     for (const c of [...curs]) if (c.mode === "duel" && c.id < c.duelFoe && now() >= c.duelUntil) resolveDuel(c);
-    if (phase !== "battle") return;   /* a resolve may have crashed the system */
-    /* collisions, canonical order */
+    if (phase !== "battle") return;
     for (let i = 0; i < curs.length; i++) for (let j = i + 1; j < curs.length; j++) {
       const a = curs[i], b = curs[j];
       if (a.key === b.key || graced(a) || graced(b)) continue;
@@ -609,16 +341,13 @@ export function createSim(opts) {
       const rr = a.r + b.r;
       if ((a.x - b.x) ** 2 + (a.y - b.y) ** 2 < rr * rr) startDuel(a, b);
     }
-    /* The sweep is done when the field is empty — every cursor is banked and
-       there is nothing left to look at. The clock is only the backstop. */
     if (rushAt && (!curs.length || now() - rushAt >= RUSH_MS)) crash();
   }
 
-  /* ---------- views ---------- */
   const diskUsed = () => BASE_USED + epochDeaths * CORPSE_BYTES;
   function snapshot() {
     return {
-      t: "snap", ts: Math.round(simClock),   /* sim clock: exactly even, unlike wall time */
+      t: "snap", ts: Math.round(simClock),
       aw: AW, ah: AH,
       p: curs.map(c => [c.id, Math.round(c.x), Math.round(c.y), c.bounty,
         c.mode === "recall" ? "c" : c.mode === "duel" ? "d" : "r"]),
@@ -643,7 +372,6 @@ export function createSim(opts) {
     };
   }
 
-  /* the arena opens empty: every cursor on it belongs to somebody */
   startEpoch();
 
   return {

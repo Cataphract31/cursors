@@ -1,60 +1,41 @@
-/* Spider Solitaire — two decks, ten columns, the 2001 rules. Card faces are
-   the js-solitaire sprite sheet lifted at runtime, same as FreeCell, so the
-   whole shelf of card games wears one deck. No imports on purpose: the
-   build-time smoke runner executes this file in node, so it must stay pure JS. */
-
 export function initSpider(deps) {
   const { host, store, sysSnd, showError, showConfirm, isFocused, close } = deps;
 
-  /* sprite sheet geometry: 4 suit columns x 13 rank rows, one card 71x96 */
   const CW = 71, CH = 96;
   const SUITX = { h: 1, c: 72, d: 143, s: 214 };
   const GLYPH = { h: "♥", d: "♦", c: "♣", s: "♠" };
   const RTXT = [, "A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"];
 
-  /* fixed board: ten columns, finished sets bottom-left, stock bottom-right */
   const BW = 780, BH = 470;
   const COLX = c => 8 + c * (CW + 6);
   const BOTY = BH - CH - 8;
 
   let cols, stock, done, score, movesN;
   let diff = [1, 2, 4].includes(store.data.spDiff) ? store.data.spDiff : 1;
-  let sel = null;          /* {col, idx} */
-  let undoSnap = null;     /* one level, and a dealt row stays dealt */
+  let sel = null;
+  let undoSnap = null;
   let over = false;
 
-  /* ---- the deck art, borrowed from the solitaire bundle ---- */
   host.classList.add("sp-nosheet");
   fetch("solitaire/main.js").then(r => r.text()).then(t => {
     const m = t.match(/data:image\/png;base64,[A-Za-z0-9+/=]+/);
     if (!m) throw new Error("no sheet");
     host.style.setProperty("--sp-sheet", `url("${m[0]}")`);
     host.classList.remove("sp-nosheet");
-  }).catch(() => {});      /* text corners stand in if the sheet never comes */
+  }).catch(() => {});
 
-  /* ---- the phone fit ---- */
-  /* Ten columns plus the stock need 780px of felt; a phone hands over 390, so
-     five columns, the stock and the score used to hang off the glass. The
-     board is a fixed pixel layout, so it gets scaled to the sheet rather than
-     clipped — the same trick main.js plays on the vendored Solitaire. The
-     layout box is set to the SCALED size too, so nothing overflows the pane,
-     the felt stays centred, and a tap still hits the card drawn under the
-     finger (a transform scales hit-testing with the paint). */
   const phone = () => !!(document.body && document.body.classList.contains("mobile"));
   let scale = 1;
   function fit() {
     const pane = host.parentElement;
     if (!pane) return;
-    if (!phone()) {          /* the desktop board is already the right size */
+    if (!phone()) {
       scale = 1;
       host.style.width = host.style.height = host.style.marginTop = host.style.transform = "";
       fitScore();
       return;
     }
     const w = pane.clientWidth, h = pane.clientHeight;
-    /* a hidden sheet measures 0. Keep the last good fit and wait to be shown
-       again rather than painting the felt at scale(0), which is how Solitaire
-       once came back from a minimise as an empty green rectangle. */
     if (w < 40 || h < 40) return;
     scale = Math.min((w - 2) / BW, (h - 2) / BH, 1);
     host.style.width = Math.ceil(BW * scale) + "px";
@@ -64,15 +45,7 @@ export function initSpider(deps) {
     host.style.marginTop = Math.max(0, Math.floor((h - BH * scale) / 2)) + "px";
     fitScore();
   }
-  /* The cards are placed in board pixels and ride the scale happily. The score
-     is not: the stylesheet spans it left:0;right:0;bottom:48px against the host
-     BOX, which is now the scaled size, so it would print at half width halfway
-     up the tableau in 5px type. Pin it in board coordinates instead, and ask
-     for a size that lands on the glass at the 12px a thumb can read. */
   function fitScore() {
-    /* An empty column is one hairline of #060 on green felt: scaled, it lands
-       on half a device pixel and the slot you are aiming at fades off the
-       board. Two board pixels come back as one crisp line. */
     const bw = scale < 1 ? "2px" : "";
     for (const s of host.querySelectorAll(".sp-slot")) s.style.borderWidth = bw;
     const st = host.querySelector(".sp-score");
@@ -81,21 +54,16 @@ export function initSpider(deps) {
     st.style.left = "0px";
     st.style.width = BW + "px";
     st.style.bottom = "auto";
-    st.style.top = (BH - 61) + "px";      /* where bottom:48px puts it at 1:1 */
+    st.style.top = (BH - 61) + "px";
     st.style.fontSize = Math.round(12 / scale) + "px";
   }
-  /* one listener per module, replaced not stacked, so rotating a phone a dozen
-     times does not leave a dozen fits running */
   if (initSpider._fit) removeEventListener("resize", initSpider._fit);
   initSpider._fit = fit;
   addEventListener("resize", fit);
-  /* the pane reports a size again the instant the sheet is shown, which is the
-     only reliable signal that a display:none board is back */
   if (typeof ResizeObserver === "function")
     try { new ResizeObserver(fit).observe(host.parentElement); } catch (e) {}
   fit();
 
-  /* ---- the deal: 104 cards, 8 runs of a suit set sized by difficulty ---- */
   function newGame(d) {
     if (d) { diff = d; store.data.spDiff = d; store.save(); }
     const su = diff === 1 ? ["s"] : diff === 2 ? ["s", "h"] : ["s", "h", "d", "c"];
@@ -106,15 +74,14 @@ export function initSpider(deps) {
       const t = deck[i]; deck[i] = deck[j]; deck[j] = t;
     }
     cols = Array.from({ length: 10 }, () => []);
-    for (let i = 0; i < 54; i++) cols[i % 10].push(deck.pop());   /* 6,6,6,6,5... */
+    for (let i = 0; i < 54; i++) cols[i % 10].push(deck.pop());
     for (const a of cols) a[a.length - 1].up = true;
-    stock = deck;            /* 50 left: five rows of ten */
+    stock = deck;
     done = []; score = 500; movesN = 0;
     sel = null; undoSnap = null; over = false;
     render();
   }
 
-  /* ---- rendering ---- */
   function faceEl(cls, c, x, y) {
     const d = document.createElement("div");
     d.className = cls;
@@ -134,7 +101,6 @@ export function initSpider(deps) {
       s.dataset.col = c;
       host.appendChild(s);
       const a = cols[c];
-      /* long columns squeeze so the bottom row stays clear */
       const ups = a.filter(x => x.up).length, downs = a.length - ups;
       let dU = 17, dD = 6;
       const need = () => downs * dD + Math.max(0, ups - 1) * dU + CH;
@@ -166,7 +132,6 @@ export function initSpider(deps) {
     fitScore();
   }
 
-  /* ---- rules ---- */
   function runOK(c, i) {
     const a = cols[c];
     if (!a[i].up) return false;
@@ -214,7 +179,6 @@ export function initSpider(deps) {
     sel = null;
     sweep();
   }
-  /* a full king-to-ace run in one suit leaves the table on its own */
   function sweep() {
     for (const a of cols) {
       const n = a.length;
@@ -239,14 +203,13 @@ export function initSpider(deps) {
     }
   }
 
-  /* ---- input ---- */
   host.addEventListener("click", e => {
     if (over) return;
     const t = e.target.closest(".sp-card,.sp-slot");
     if (!t) { sel = null; render(); return; }
     const d = t.dataset;
     if (d.stock) { dealRow(); return; }
-    if (d.col == null) { sel = null; render(); return; }    /* a finished set */
+    if (d.col == null) { sel = null; render(); return; }
     const c = +d.col;
     if (sel) {
       if (sel.col === c && d.i != null && +d.i === sel.idx) { sel = null; render(); return; }
@@ -262,7 +225,6 @@ export function initSpider(deps) {
     else if ((e.ctrlKey || e.metaKey) && (e.key === "z" || e.key === "Z")) { e.preventDefault(); undo(); }
   });
 
-  /* ---- menus ---- */
   function menus(label) {
     if (label === "Game") return [
       { label: "New Game", accel: "F2", action: () => newGame() },

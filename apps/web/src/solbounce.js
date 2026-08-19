@@ -1,11 +1,3 @@
-/* The Klondike win. The vendored js-solitaire celebrates inside its own
-   little canvas; this watches the foundations from outside the iframe and,
-   at 52, runs the cascade the way sol.exe ran it — one card at a time off
-   its pile, gravity, a floor that returns a little less each bounce, and no
-   erasing between frames: the smear IS the effect. Same-origin iframe,
-   canvas overlay on our window chrome, no fork edits. No imports on purpose:
-   the build-time smoke runner executes this file in node. */
-
 export function initSolBounce(deps) {
   const { sysSnd } = deps;
 
@@ -14,13 +6,11 @@ export function initSolBounce(deps) {
   let sheet = null, queue = [], cur = null, hidden = [];
   let scale = 1, W = 0, H = 0;
 
-  /* call on every iframe load; re-arms the watcher for that document */
   function arm(iframe) {
     disarm();
     ifr = iframe;
     fired = false;
     try {
-      /* the game's own win animation stays off — this one replaces it */
       const d = ifr.contentDocument;
       const st = d.createElement("style");
       st.textContent = "#js-solitaire canvas{display:none!important}";
@@ -48,18 +38,15 @@ export function initSolBounce(deps) {
 
   function start(doc, fin) {
     stop();
-    /* the deck art rides in the game's own computed style */
     const any = fin.querySelector(".card");
     const bg = doc.defaultView.getComputedStyle(any).backgroundImage;
     const m = /url\("?(data:image\/png[^")]+)"?\)/.exec(bg);
     if (!m) return;
-    /* the game may already be mid-celebration; a click on its document is
-       its own cancel */
     try { doc.dispatchEvent(new doc.defaultView.MouseEvent("click", { bubbles: true, cancelable: true })); } catch (e) {}
 
     const win = ifr.closest(".window");
     const wr = win.getBoundingClientRect(), fr = ifr.getBoundingClientRect();
-    scale = fr.width / (ifr.offsetWidth || fr.width);   /* the phone-fit transform */
+    scale = fr.width / (ifr.offsetWidth || fr.width);
     W = Math.max(1, Math.round(fr.width));
     H = Math.max(1, Math.round(fr.height));
     canvas = document.createElement("canvas");
@@ -74,7 +61,6 @@ export function initSolBounce(deps) {
     ctx = canvas.getContext("2d");
     addEventListener("pointerdown", stopOnClick, true);
 
-    /* pop order: the top card of each pile in turn, kings first */
     const piles = [];
     for (const p of fin.children) {
       const a = [...p.querySelectorAll(".card")];
@@ -86,7 +72,7 @@ export function initSolBounce(deps) {
       for (const a of piles) {
         const el = a[a.length - 1 - i];
         if (!el) continue;
-        const r = el.getBoundingClientRect();   /* iframe layout space */
+        const r = el.getBoundingClientRect();
         const bp = doc.defaultView.getComputedStyle(el).backgroundPosition.split(" ");
         queue.push({
           el,
@@ -98,7 +84,7 @@ export function initSolBounce(deps) {
     }
     sheet = new Image();
     sheet.onload = () => {
-      if (!canvas) return;   /* stopped before the art arrived */
+      if (!canvas) return;
       if (sysSnd) sysSnd("tada", .55);
       next();
       raf = requestAnimationFrame(step);
@@ -109,7 +95,7 @@ export function initSolBounce(deps) {
   function next() {
     cur = queue.shift() || null;
     if (!cur) return;
-    cur.el.style.visibility = "hidden";   /* the pile shrinks as cards launch */
+    cur.el.style.visibility = "hidden";
     hidden.push(cur.el);
     cur.vx = (2 + Math.random() * 4) * (Math.random() < 0.5 ? -1 : 1) * scale;
     cur.vy = -Math.random() * 6 * scale;
@@ -117,7 +103,6 @@ export function initSolBounce(deps) {
   function step() {
     raf = 0;
     if (!ctx || !cur) return;
-    /* two integration ticks per frame keeps the classic pace at 60Hz */
     for (let t = 0; t < 2 && cur; t++) {
       cur.vy += 0.6 * scale;
       cur.x += cur.vx;
@@ -128,7 +113,6 @@ export function initSolBounce(deps) {
       if (cur.x < -CWs() || cur.x > W) next();
     }
     if (cur) raf = requestAnimationFrame(step);
-    /* out of cards: the smears stay on screen until a click clears them */
   }
   const CWs = () => 71 * scale, CH = () => 96 * scale;
   function draw(c) {

@@ -1,14 +1,3 @@
-/* The XP applications: cmd.exe, Control Panel, Services, Device Manager and
-   the Group Policy editor. Import-free sibling module, same contract as
-   minesweeper/messenger/paint/explorer — main.js injects assets and shell
-   hooks, and the build's smoke runner executes this file in node.
-
-   The rule for all five: they read real state and they do real things. The
-   filesystem cmd walks is the one Explorer walks. The services list is what
-   the machine is actually running, the game included, and stopping one stops
-   it. Device Manager's pointing devices ARE the cursors on the field. Group
-   Policy settings actually apply. None of this is a screenshot with a title
-   bar on it. */
 export function initSysApps(deps) {
   const { $, $$, store, sysSnd, showMenu, showError, openWin, closeWin, hooks } = deps;
 
@@ -23,17 +12,13 @@ export function initSysApps(deps) {
   const groupN = n => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
   const zero2 = n => (n < 10 ? "0" : "") + n;
 
-  /* ================================================================
-     1. cmd.exe — a real interpreter over the real filesystem
-     ================================================================ */
   const CMDVER = "Microsoft Windows XP [Version 5.1.2600]";
   const HOME = "C:\\Documents and Settings\\Administrator";
   let cwd = HOME;
   const hist = [];
   let histAt = 0, line = "", screen = null, kbd = null, cmdReady = false;
 
-  let promptFmt = null;   /* PROMPT overrides $P$G */
-/* the handful of variables the shell really expanded, so %random% works */
+  let promptFmt = null;
   const expandVars = t => String(t)
     .replace(/%random%/ig, () => Math.floor(Math.random() * 32768))
     .replace(/%date%/ig, () => new Date().toLocaleDateString())
@@ -60,7 +45,6 @@ export function initSysApps(deps) {
     return true;
   }
 
-  /* --- paths, resolved against Explorer's tree --- */
   function normPath(p) {
     p = p.replace(/\//g, "\\").replace(/\\+$/, "") || "C:\\";
     if (/^[a-z]:$/i.test(p)) p = p.toUpperCase() + "\\";
@@ -293,7 +277,6 @@ export function initSysApps(deps) {
       }
     },
     prompt(a) {
-      /* $P$G is the default; the real one accepted the whole $-code set */
       promptFmt = (a || "").trim()
         ? a.replace(/\$p/ig, cwd).replace(/\$g/ig, ">").replace(/\$l/ig, "<")
             .replace(/\$b/ig, "|").replace(/\$\$/g, "$").slice(0, 40)
@@ -332,7 +315,6 @@ export function initSysApps(deps) {
         setTimeout(() => cmdWrite("Could not open connection to the host, on port 23: Connect failed"), 1400);
         return;
       }
-      /* the arena, over telnet: two cursors walk in and one walks out */
       const el = document.createElement("div");
       el.style.whiteSpace = "pre"; el.style.minHeight = "13px";
       screen.appendChild(el); screen.scrollTop = screen.scrollHeight;
@@ -567,23 +549,9 @@ export function initSysApps(deps) {
       cmdWrite("");
       drawInput();
     }
-    setTimeout(() => { try { kbd.focus({ preventScroll: true }); } catch (e) { /* older engines */ } }, 30);
+    setTimeout(() => { try { kbd.focus({ preventScroll: true }); } catch (e) {} }, 30);
   }
 
-  /* ================================================================
-     2. Services — the real console, and stopping one really stops it
-     ================================================================ */
-  /* Two tiers, and the line between them is the whole point.
-
-     `local` services touch nothing but your own machine — your sound, your
-     theme, your notifications — so you may stop them and the only person
-     affected is you.
-
-     Everything else belongs to the house: the arena, the fairness provider,
-     the plumbing they sit on. This is a live multiplayer game played for
-     money. A control that appears to stop the arena is a lie even when it is
-     only lying to you, so those services refuse with the error a real managed
-     machine gives you, and the properties sheet greys out. */
   const SERVICES = [
     { name: "AudioSrv", display: "Windows Audio", state: "Started", start: "Automatic", logon: "Local System", local: 1, ctl: "audio",
       desc: "Manages audio devices for Windows-based programs. Stopping it mutes this computer.",
@@ -621,7 +589,6 @@ export function initSysApps(deps) {
       desc: "Provides network address translation and name resolution for computers on your home network.",
       path: "C:\\WINDOWS\\System32\\svchost.exe -k netsvcs" },
 
-    /* --- the house's own, all protected --- */
     { name: "Arena", display: "CURSORS.EXE Arena Service", state: "Started", start: "Automatic", logon: "Local System",
       desc: "Runs the cursor arena and writes a 12 MB corpse for every death. This service runs on the game server, not on this computer, and cannot be controlled from here.",
       path: "\\\\CURSORS-BETA\\arena.dll" },
@@ -649,7 +616,6 @@ export function initSysApps(deps) {
     s.state = started ? "Started" : "Stopped";
     if (s.ctl) hooks.serviceChanged(s.ctl, started);
   }
-  /* the error a real managed machine gives you, verbatim */
   function svcDenied(s, verb) {
     showError("Services",
       "Could not " + verb + " the " + s.display + " service on Local Computer.\n\n" +
@@ -754,9 +720,6 @@ export function initSysApps(deps) {
     if (st) st.textContent = svcSel ? svcSel.display + "  —  " + svcSel.desc.split(".")[0] + "." : SERVICES.length + " service(s)";
   }
 
-  /* ================================================================
-     3. Device Manager — the pointing devices are the live cursors
-     ================================================================ */
   const DEVCLASSES = [
     { name: "Computer", items: () => [{ n: "ACPI Multiprocessor PC" }] },
     { name: "Disk drives", items: () => [{ n: "CURSOR$LAND ARENA-20G SCSI Disk Device", note: "The round clock. Every death writes 12 MB here." }] },
@@ -766,7 +729,6 @@ export function initSysApps(deps) {
     { name: "Keyboards", items: () => [{ n: "Standard 101/102-Key or Microsoft Natural PS/2 Keyboard" }] },
     {
       name: "Mice and other pointing devices",
-      /* the whole point of this console existing in this game */
       items: () => {
         const s = hooks.arenaState();
         const out = [{ n: "PS/2 Compatible Mouse" }];
@@ -823,9 +785,6 @@ export function initSysApps(deps) {
           devSel = Object.assign({ cls: cls.name }, it); devRender();
           showMenu([
             { label: "Update Driver...", action: () => showError("Hardware Update Wizard", "Windows could not find a better match for your hardware than the software you currently have installed.") },
-            /* recalling your own cursor from Device Manager is fair game — it
-               is your money and it is the same order the RECALL button sends.
-               Somebody else's cursor is not yours to disable. */
             { label: "Disable", disabled: !it.mine, action: () => hooks.recallOne(it.id) },
             { label: "Uninstall", disabled: true },
             { sep: 1 },
@@ -871,9 +830,6 @@ export function initSysApps(deps) {
     openWin("win-mmcprops");
   }
 
-  /* ================================================================
-     4. Group Policy — settings that actually take effect
-     ================================================================ */
   const POLICIES = {
     "Computer Configuration/Windows Settings/Security Settings": [
       { id: "audit", n: "Audit account logon events", d: "Determines whether to audit each instance of a user logging on.", ro: true },
@@ -914,7 +870,6 @@ export function initSysApps(deps) {
   }
   const polGet = id => polState()[id] || "Not configured";
 
-  /* the tree is derived from the policy paths, so adding a policy adds its folder */
   function polTree() {
     const nodes = [];
     const seen = new Set();
@@ -1022,9 +977,6 @@ export function initSysApps(deps) {
     openWin("win-mmcprops");
   }
 
-  /* ================================================================
-     5. Control Panel — category view and classic view, both real
-     ================================================================ */
   const APPLETS = [
     { n: "Display", ico: "cpanel32", d: "Change the appearance of your desktop, such as the background, screen saver, colors, font sizes, and screen resolution.", open: () => openWin("win-dispprops"), cat: "appearance" },
     { n: "Date and Time", ico: "cpanel32", d: "Set the date, time, and time zone for your computer.", open: () => hooks.openClock(), cat: "datetime" },
@@ -1059,7 +1011,6 @@ export function initSysApps(deps) {
     host.innerHTML = "";
     host.appendChild(el("div", "menubar")).innerHTML = "<span>File</span><span>Edit</span><span>View</span><span>Favorites</span><span>Tools</span><span>Help</span>";
     const split = el("div", "cpl-split");
-    /* the blue task pane, which is where XP put the view switch */
     const side = el("div", "cpl-side");
     const box = el("div", "cpl-box");
     box.appendChild(el("div", "cpl-boxhead", "Control Panel"));
@@ -1115,9 +1066,6 @@ export function initSysApps(deps) {
     host.appendChild(split);
   }
 
-  /* ================================================================
-     MMC chrome: one host, three consoles (which is what MMC is)
-     ================================================================ */
   function mmcShell(body, kind) {
     body.innerHTML = "";
     const bar = el("div", "menubar");
@@ -1140,7 +1088,6 @@ export function initSysApps(deps) {
       n.appendChild(el("i", "mmc-tw none"));
       n.appendChild(el("span", "mmc-lbl", "Services"));
       left.appendChild(n);
-      /* Extended/Standard is XP's description-pane toggle, and it toggles */
       const tabs = el("div", "mmc-tabs");
       const ex = el("span", "on", "Extended"), sd = el("span", null, "Standard");
       ex.addEventListener("click", () => { ex.className = "on"; sd.className = ""; right.classList.remove("standard"); });
@@ -1174,27 +1121,21 @@ export function initSysApps(deps) {
     if (kind === "services") svcRender();
     else if (kind === "devmgr") devRender();
     else polRender();
-    /* openWin() calls US for these three ids, so calling it back unconditionally
-       recursed until the stack blew — the tab froze for about half a second on
-       every open. By this point openWin has already made the window visible,
-       so only a direct call (from Run, say) still needs to open it. */
     const el = document.getElementById(id);
     if (!el || el.style.display !== "flex") openWin(id);
   }
 
-  /* Device Manager is a live view of the field: refresh it while it is open */
   setInterval(() => {
     if (built.devmgr && document.getElementById("win-devmgr").style.display === "flex") devRender();
   }, 1500);
 
   return {
     cmdOpen,
-    key:e=>cmdKey(e),   /* dev hashes drive the console like a keyboard */
+    key:e=>cmdKey(e),
     cplRender,
     openConsole,
     services: () => SERVICES,
     serviceOn: ctl => { const s = SERVICES.find(x => x.ctl === ctl); return !s || s.state === "Started"; },
-    /* msconfig's Services tab drives the same list this console does */
     svcSet: (name, on) => {
       const s = SERVICES.find(x => x.name === name || x.display === name);
       if (!s) return false;
@@ -1209,17 +1150,9 @@ export function initSysApps(deps) {
   };
 
   function wireCmd() {
-    const focusKbd = () => { try { kbd.focus({ preventScroll: true }); } catch (e) { /* older engines */ } };
+    const focusKbd = () => { try { kbd.focus({ preventScroll: true }); } catch (e) {} };
     screen.addEventListener("pointerdown", e => { e.stopPropagation(); focusKbd(); });
-    /* the real keyboard path is a hidden input, so a phone raises its on-screen
-       keyboard and the shell's --kb handling lifts the window clear of it */
     kbd.addEventListener("keydown", e => { e.stopPropagation(); if (cmdKey(e)) e.preventDefault(); });
-    /* An Android IME does not send a usable keydown — it reports keyCode 229
-       with key "Unidentified" and delivers the real text on `input`. Throwing
-       that away is why the prompt stayed empty while you typed on a phone.
-       Take the characters from here and let keydown keep the control keys.
-       (The on-screen-keyboard applet dispatches synthetic keydowns at this
-       same field, so both paths have to keep working.) */
     kbd.addEventListener("input", () => {
       const txt = kbd.value;
       kbd.value = "";

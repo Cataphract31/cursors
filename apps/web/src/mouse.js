@@ -1,24 +1,8 @@
-/* Mouse Properties (main.cpl) and the pointer schemes — the real files.
-
-   Every .cur/.ani here is the actual Windows XP cursor set (vendored from
-   bartekl1/windows-ui-assets). The scheme table is the real one: the
-   Standard/Black/Inverted/Magnified rows are copied from the registry's
-   HKLM ...\Control Panel\Cursors\Schemes (which still carries them today),
-   and the XP-only schemes are composed from the same files XP shipped for
-   them — the bronze set really is 3dg*, the dinosaur really walks.
-
-   The scheme dresses your desktop pointer. It used to dress your arena cursors
-   too — until the arena needed the arrow to mean your weight class, which is
-   earned rather than chosen (see TIER_SKINS in main.js: one rank per 4x —
-   3D-White at 4x, 3D-Bronze at 16x, the Dinosaur at 64x). So the flex moved:
-   out there you are not what you picked, you are what you have eaten.
-   Import-free sibling module; main.js injects the shell. */
 export function initMouse(deps) {
   const { $, store, sysSnd, CURFILES, openWin, closeWin, icoNode, onScheme } = deps;
 
   const url = f => CURFILES["./assets/xp/cursors/" + f];
 
-  /* role order and names exactly as the Pointers tab listed them */
   const ROLES = [
     ["arrow", "Normal Select"], ["help", "Help Select"], ["appstart", "Working In Background"],
     ["wait", "Busy"], ["cross", "Precision Select"], ["beam", "Text Select"],
@@ -34,8 +18,7 @@ export function initMouse(deps) {
   const mapf = (r, f) => { const o = {}; for (const k in r) o[k] = r[k] && f(r[k]); return o; };
 
   const SCHEMES = [
-    { id: "", label: "Windows Default", roles: {} },   /* the OS pointer you already have */
-    /* verbatim from the registry's Schemes key */
+    { id: "", label: "Windows Default", roles: {} },
     { id: "std-l", label: "Windows Standard (large)", roles: mapf(std("_m"), cur) },
     { id: "std-xl", label: "Windows Standard (extra large)", roles: mapf(std("_l"), cur) },
     { id: "black", label: "Windows Black", roles: mapf(std("_r"), cur) },
@@ -48,7 +31,6 @@ export function initMouse(deps) {
       "libeam.cur", null, "lnodrop.cur", "lns.cur", "lwe.cur", "lnwse.cur", "lnesw.cur", "lmove.cur", null, null) },
     { id: "animated", label: "Windows Animated", roles: set(null, null, "appstart.ani", "hourglas.ani",
       null, null, null, null, null, null, null, null, null, null, null) },
-    /* the famous ones: composed from the exact files XP installed for them */
     { id: "bronze", label: "3D-Bronze", roles: set("3dgarro.cur", null, "appstar2.ani", "hourgla2.ani", null, null,
       null, "3dgno.cur", "3dgns.cur", "3dgwe.cur", "3dgnwse.cur", "3dgnesw.cur", "3dgmove.cur", null, null) },
     { id: "white", label: "3D-White", roles: set("3dwarro.cur", null, "appstar3.ani", "hourgla3.ani", null, null,
@@ -66,7 +48,6 @@ export function initMouse(deps) {
   ];
   const byId = id => SCHEMES.find(s => s.id === id) || SCHEMES[0];
 
-  /* ---------- .ani: RIFF ACON with embedded .cur frames ---------- */
   const aniCache = {};
   async function aniLoad(u) {
     if (aniCache[u]) return aniCache[u];
@@ -91,7 +72,6 @@ export function initMouse(deps) {
     const steps = order.map((f, i) => ({ u: frames[f], ms: ((rate[i] || jif) * 1000) / 60 }));
     return (aniCache[u] = { frames, steps });
   }
-  /* an <img> that actually plays the .ani, honouring rate and seq chunks */
   function aniImg(u, cls) {
     const img = document.createElement("img");
     if (cls) img.className = cls;
@@ -99,9 +79,6 @@ export function initMouse(deps) {
       if (!a.steps.length) return;
       let i = 0;
       const tick = () => {
-        /* stop when it is gone OR merely not rendered: closeWin only hides the
-           dialog, so isConnected stayed true and nine .ani chains kept decoding
-           frames for the life of the page — a real battery cost on a phone */
         if (img._started && (!img.isConnected || !img.getClientRects().length)) { img._started = 0; return; }
         img._started = 1;
         img.src = a.steps[i].u;
@@ -113,7 +90,6 @@ export function initMouse(deps) {
     });
     return img;
   }
-  /* the arena and CSS need a static picture of an animated cursor: frame 0 */
   function stillOf(file, cb) {
     const u = url(file);
     if (!u) return cb(null);
@@ -121,7 +97,6 @@ export function initMouse(deps) {
     aniLoad(u).then(a => cb(a.frames[0] || null));
   }
 
-  /* ---------- applying a scheme to the whole shell ---------- */
   const CSSROLES = ["arrow", "hand", "beam", "cross", "move", "ns", "we", "nwse", "nesw", "no"];
   function applyScheme(id) {
     const s = byId(id);
@@ -138,19 +113,13 @@ export function initMouse(deps) {
   const FALLBACK = { arrow: "default", hand: "pointer", beam: "text", cross: "crosshair", move: "move",
     ns: "ns-resize", we: "ew-resize", nwse: "nwse-resize", nesw: "nesw-resize", no: "not-allowed" };
 
-  /* what the arena shows for a player on this scheme; null = the stock glyph */
   function arenaArrow(id, cb) {
     const s = byId(id);
-    /* Dinosaur, Conductor and Old Fashioned have no Normal Select — XP only
-       ever shipped them animating in the Busy and Background roles. The arena
-       wears schemes as weight classes now, so it takes whichever role the
-       scheme actually has rather than refusing to render one at all. */
     const role = s.roles.arrow || s.roles.appstart || s.roles.wait;
     if (!s.id || !role) return cb(null);
     stillOf(role, cb);
   }
 
-  /* ---------- pointer trails / hide-while-typing / Ctrl locate ---------- */
   let trailEls = [], trailN = 0, lastTrail = 0;
   function syncTrails() {
     trailEls.forEach(t => t.remove()); trailEls = [];
@@ -167,7 +136,6 @@ export function initMouse(deps) {
     const now = performance.now();
     if (now - lastTrail < 28) return;
     lastTrail = now;
-    /* each trail element lags one step behind the one before it */
     for (let i = trailEls.length - 1; i > 0; i--) {
       trailEls[i].style.left = trailEls[i - 1].style.left;
       trailEls[i].style.top = trailEls[i - 1].style.top;
@@ -179,7 +147,6 @@ export function initMouse(deps) {
   addEventListener("keydown", e => {
     if (store.data.moHideType !== 0 && e.target && /^(INPUT|TEXTAREA)$/.test(e.target.tagName))
       document.body.classList.add("typing");
-    /* the Ctrl ripple: XP's concentric locator circles */
     if (e.key === "Control" && store.data.moCtrl && !e.repeat) {
       const d = document.createElement("div");
       d.className = "ctrl-locate";
@@ -191,8 +158,7 @@ export function initMouse(deps) {
   const lastMouse = { x: innerWidth / 2, y: innerHeight / 2 };
   addEventListener("pointermove", e => { lastMouse.x = e.clientX; lastMouse.y = e.clientY; document.body.classList.remove("typing"); }, { passive: true });
 
-  /* ---------- the dialog ---------- */
-  let pending = null;   /* scheme picked in the dropdown but not yet applied */
+  let pending = null;
   function renderRoles(id) {
     const s = byId(id);
     const host = $("#mo-roles"); host.innerHTML = "";
@@ -204,7 +170,7 @@ export function initMouse(deps) {
       const f = s.roles[key];
       if (f && /\.ani$/i.test(f)) pic.appendChild(aniImg(url(f)));
       else if (f) { const im = document.createElement("img"); im.src = url(f); pic.appendChild(im); }
-      else pic.className += " mo-def " + key;   /* default pointer: drawn by CSS keyword on a probe element */
+      else pic.className += " mo-def " + key;
       row.appendChild(name); row.appendChild(pic);
       row.addEventListener("click", () => { [...host.children].forEach(c => c.classList.toggle("on", c === row)); });
       host.appendChild(row);
@@ -256,7 +222,6 @@ export function initMouse(deps) {
   $("#mo-trails").addEventListener("change", e => { $("#mo-traillen").disabled = !e.target.checked; });
   $("#mo-hwprops").addEventListener("click", () => deps.openDevice && deps.openDevice());
 
-  /* the double-click test folder: opens and closes, like it always did */
   {
     const box = $("#mo-dctest");
     let openState = false;
@@ -265,7 +230,6 @@ export function initMouse(deps) {
     box.addEventListener("dblclick", () => { openState = !openState; draw(); sysSnd("nav", .4); });
   }
 
-  /* boot: restore the saved scheme and switches */
   applyScheme(store.data.curScheme || "");
   syncTrails();
 

@@ -1,17 +1,3 @@
-/* The Windows XP screensavers — the real roster, not approximations of it.
-
-   The dropdown is XP's own list: 3D FlowerBox, 3D Flying Objects, 3D Pipes,
-   3D Text, Beziers, Marquee, My Pictures Slideshow, Mystify, Starfield,
-   Windows XP. Pipes is the default because Pipes was the whole point.
-   Mystify, Beziers, Marquee and Starfield are specified geometry, so they
-   are exact. The 3D ones are raw WebGL - no libraries.
-
-   Every saver is create(type,w,h) -> {frame(ctx2d,dt), destroy()} and draws
-   into a plain 2D canvas (the GL savers render offscreen and blit), so the
-   fullscreen saver and the Display Properties monitor preview share one
-   code path at any size.
-
-   Import-free sibling module; main.js injects store + assets. */
 export function initSavers(deps) {
   const { store, IMG, hooks } = deps;
 
@@ -32,7 +18,6 @@ export function initSavers(deps) {
     { id: "none", label: "(None)" },
   ];
 
-  /* ================= tiny mat4 ================= */
   const M = {
     ident: () => [1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1],
     mul(a, b) {
@@ -50,7 +35,6 @@ export function initSavers(deps) {
     rotX(a){ const c=Math.cos(a),s=Math.sin(a); return [1,0,0,0, 0,c,s,0, 0,-s,c,0, 0,0,0,1]; },
     rotY(a){ const c=Math.cos(a),s=Math.sin(a); return [c,0,-s,0, 0,1,0,0, s,0,c,0, 0,0,0,1]; },
     rotZ(a){ const c=Math.cos(a),s=Math.sin(a); return [c,s,0,0, -s,c,0,0, 0,0,1,0, 0,0,0,1]; },
-    /* orient +Z along an axis direction (axis-aligned unit vectors only) */
     aim(d){
       if (d[2] === 1) return M.ident();
       if (d[2] === -1) return M.rotX(Math.PI);
@@ -61,7 +45,6 @@ export function initSavers(deps) {
     },
   };
 
-  /* ================= a minimal lit-mesh GL pipeline ================= */
   function glCtx(w, h) {
     const cv = document.createElement("canvas");
     cv.width = w; cv.height = h;
@@ -107,7 +90,6 @@ export function initSavers(deps) {
     gl.uniform3fv(loc.col, color);
     gl.drawArrays(gl.TRIANGLES, 0, m.n);
   }
-  /* unit cylinder: radius 1, from z=0 to z=1 */
   function cylinder(G, seg = 12) {
     const v = [], n = [];
     for (let i = 0; i < seg; i++) {
@@ -143,10 +125,8 @@ export function initSavers(deps) {
     return mesh(G, v, n);
   }
 
-  /* the classic glossy-plastic palette pipes cycled through */
   const PIPECOLS = [[.83,.68,.21],[.75,.1,.1],[.1,.55,.14],[.15,.25,.75],[.1,.6,.6],[.65,.15,.6],[.7,.7,.72]];
 
-  /* ================= 3D Pipes ================= */
   function mkPipes(w, h) {
     const G = glCtx(w, h); if (!G) return mk2DFallback(w, h);
     const cyl = cylinder(G), sph = sphere(G);
@@ -158,7 +138,6 @@ export function initSavers(deps) {
     const key = (x,y,z) => x + y * 100 + z * 10000;
     function reset() {
       grid = new Set(); pipes = []; placed = []; total = 0; fading = false; fade = 0;
-      /* a fresh random vantage each run, like the real thing */
       const ang = Math.random() * Math.PI * 2, elev = .25 + Math.random() * .4;
       const d = 16;
       view = M.mul(M.mul(M.rotX(elev), M.rotY(ang)), M.trans(-GX/2, -GY/2, -GZ/2));
@@ -180,7 +159,6 @@ export function initSavers(deps) {
     function step() {
       for (const p of pipes) {
         if (p.dead) continue;
-        /* straight on 55%, else a legal turn; blocked = the pipe ends */
         const opts = DIRS.filter(d => {
           const nx = p.x + d[0], ny = p.y + d[1], nz = p.z + d[2];
           return nx >= 0 && ny >= 0 && nz >= 0 && nx < GX && ny < GY && nz < GZ && !grid.has(key(nx,ny,nz));
@@ -190,11 +168,7 @@ export function initSavers(deps) {
         const dir = (keep && Math.random() < .55) ? keep : opts[Math.floor(Math.random() * opts.length)];
         const turned = !(dir[0] === p.dir[0] && dir[1] === p.dir[1] && dir[2] === p.dir[2]);
         placed.push({ kind: "seg", x: p.x, y: p.y, z: p.z, dir, col: p.col });
-        /* joints live at turns only; ball mode just wears the bigger sphere */
         if (turned) {
-          /* Mixed joints hid a Utah teapot, roughly one turn in forty. It is
-             the oldest joke in computer graphics and it shipped in a
-             screensaver, so it ships in this one. */
           if (conf.joint === "mixed" && Math.random() < .025)
             placed.push({ kind: "teapot", x: p.x, y: p.y, z: p.z, col: p.col,
               rot: Math.random() * Math.PI * 2 });
@@ -224,8 +198,6 @@ export function initSavers(deps) {
             const model = M.mul(M.trans(s.x, s.y, s.z), M.mul(M.aim(s.dir), M.scale(.24, .24, STEP)));
             drawMesh(G, cyl, model, view, proj, col);
           } else if (s.kind === "teapot") {
-            /* body, lid, spout and handle out of the two primitives already
-               loaded — a teapot at joint scale, not a Bezier patch set */
             const at = M.mul(M.trans(s.x, s.y, s.z), M.rotY(s.rot));
             drawMesh(G, sph, M.mul(at, M.scale(.40, .32, .40)), view, proj, col);
             drawMesh(G, sph, M.mul(M.mul(at, M.trans(0, .30, 0)), M.scale(.15, .12, .15)), view, proj, col);
@@ -244,11 +216,8 @@ export function initSavers(deps) {
     };
   }
 
-  /* ================= 3D FlowerBox ================= */
   function mkFlower(w, h) {
     const G = glCtx(w, h); if (!G) return mk2DFallback(w, h);
-    /* a sphere whose radius breathes toward a cube and out into spikes -
-       per-vertex, rebuilt each frame, like the original morph */
     const LA = 22, LO = 30;
     const proj = M.persp(.8, w / h, .5, 40);
     const { gl, loc } = G;
@@ -258,7 +227,7 @@ export function initSavers(deps) {
     return {
       frame(ctx, dt) {
         t += dt;
-        const sp = (Math.sin(t * .7) + 1) / 2;        /* 0 sphere .. 1 spiky */
+        const sp = (Math.sin(t * .7) + 1) / 2;
         const v = [], n = [], c = [];
         const P = (i, j) => {
           const th = (i / LA) * Math.PI, ph = (j / LO) * Math.PI * 2;
@@ -271,7 +240,6 @@ export function initSavers(deps) {
         for (let i = 0; i < LA; i++) for (let j = 0; j < LO; j++) {
           const a = P(i,j), b = P(i+1,j), d = P(i,j+1), e = P(i+1,j+1);
           v.push(...a,...b,...e, ...a,...e,...d);
-          /* face normal is fine at this density */
           const u = [b[0]-a[0], b[1]-a[1], b[2]-a[2]], q = [d[0]-a[0], d[1]-a[1], d[2]-a[2]];
           const fn = [u[1]*q[2]-u[2]*q[1], u[2]*q[0]-u[0]*q[2], u[0]*q[1]-u[1]*q[0]];
           const l = Math.hypot(...fn) || 1; fn.forEach((x2, ii) => fn[ii] = x2 / l);
@@ -287,7 +255,6 @@ export function initSavers(deps) {
         const mv = M.mul(view, model);
         gl.uniformMatrix4fv(loc.mv, false, mv);
         gl.uniformMatrix4fv(loc.mvp, false, M.mul(proj, mv));
-        /* the classic multi-colour body: cycle hue with the morph */
         const ci = Math.floor(t * .35) % FACECOL.length;
         gl.uniform3fv(loc.col, FACECOL[ci]);
         gl.drawArrays(gl.TRIANGLES, 0, v.length / 3);
@@ -297,7 +264,6 @@ export function initSavers(deps) {
     };
   }
 
-  /* ================= 3D Flying Objects (ribbon) ================= */
   function mkFlying(w, h) {
     const G = glCtx(w, h); if (!G) return mk2DFallback(w, h);
     const proj = M.persp(.85, w / h, .5, 60);
@@ -307,7 +273,6 @@ export function initSavers(deps) {
     return {
       frame(ctx, dt) {
         t += dt;
-        /* a twisting band chasing a lissajous path - the "ribbon" style */
         const v = [], n = [];
         const path = s => [Math.sin(s * 1.3 + t) * 2.2, Math.sin(s * 1.7 + t * 1.3) * 1.4, Math.cos(s * 1.1 + t * .8) * 2.2];
         const SEGS = 70, HW = .35;
@@ -346,13 +311,10 @@ export function initSavers(deps) {
     return [f(0), f(8), f(4)];
   }
 
-  /* ================= 3D Text ================= */
   function mkText3D(w, h) {
     const G = glCtx(w, h); if (!G) return mk2DFallback(w, h);
     const conf = Object.assign({ text: "CURSORS", rot: "spin" }, cfgOf("text3d"));
     const proj = M.persp(.7, w / h, .5, 40);
-    /* the text lives on a slab: front face textured, extrusion dark - the
-       cheap and correct-looking version of GDI's real extrusion */
     const tc = document.createElement("canvas");
     tc.width = 512; tc.height = 128;
     const tg = tc.getContext("2d");
@@ -360,7 +322,6 @@ export function initSavers(deps) {
     tg.font = "bold 84px Arial"; tg.textAlign = "center"; tg.textBaseline = "middle";
     tg.fillStyle = "#9fc7ff"; tg.fillText(conf.text.slice(0, 16) || "CURSORS", 256, 70);
     const { gl } = G;
-    /* textured shader for the face */
     const vs2 = `attribute vec3 p;attribute vec2 t;uniform mat4 mvp;varying vec2 vt;
       void main(){ gl_Position=mvp*vec4(p,1.); vt=t; }`;
     const fs2 = `precision mediump float;uniform sampler2D s;varying vec2 vt;
@@ -376,7 +337,6 @@ export function initSavers(deps) {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    /* slab: several parallel textured layers fake the extrusion */
     const quads = [];
     for (let z = 0; z < 7; z++) quads.push(-.12 + z * .04);
     const verts = [], uvs = [];
@@ -410,9 +370,7 @@ export function initSavers(deps) {
     };
   }
 
-  /* ================= the exact 2D ones ================= */
   function mkMystify(w, h) {
-    /* two 4-vertex polygons, colour-cycling, with trails: the specification */
     const poly = () => ({
       pts: Array.from({ length: 4 }, () => ({ x: Math.random()*w, y: Math.random()*h,
         dx: (Math.random()*2-1)*(w/340+.6)*2.4, dy: (Math.random()*2-1)*(h/260+.6)*2.4 })),
@@ -540,7 +498,6 @@ export function initSavers(deps) {
     };
   }
   function mkWinXP(w, h) {
-    /* the logo drifts, dims, and relocates - the shipped "Windows XP" saver */
     const img = new Image(); img.src = IMG.logoFlag;
     let x = w * .3, y = h * .4, t = 0, alpha = 0, phase = 0;
     return {
@@ -572,7 +529,6 @@ export function initSavers(deps) {
       destroy() {},
     };
   }
-  /* machines without WebGL still deserve a screensaver */
   function mk2DFallback(w, h) { return mkMystify(w, h); }
 
   const MAKERS = {

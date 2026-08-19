@@ -1,11 +1,4 @@
-/* CURSORS.EXE shell — sits on top of xp.css (imported first in main.js).
-   Taskbar + start menu values ported from ShizukuIchi/winXP (MIT). */
-
 *{margin:0;padding:0;box-sizing:border-box;user-select:none}
-/* Nothing in this shell scrolls the page, so a drag that reaches the end of an
-   inner scroller must stop there. Without this, Android Chrome takes the
-   overscroll as pull-to-refresh and reloads the whole game mid-round — arena,
-   socket and balance gone for several seconds. */
 html,body{height:100%;overscroll-behavior:none}
 body{margin:0;overflow:hidden;background:#5A7EDC;font:11px Tahoma,"Segoe UI",Verdana,sans-serif;cursor:default;color:#000;touch-action:manipulation}
 button,input,select,textarea{font-family:Tahoma,"Segoe UI",Verdana,sans-serif}
@@ -13,38 +6,21 @@ input{user-select:text}
 .xico img,.xico svg{width:100%;height:100%;display:block}
 .xico{display:inline-block;flex:none}
 .svgbox{display:block;width:100%;height:100%}
-/* the Recycle Bin fills up: the empty-bin PNG with dead cursors drawn poking
-   out of it. One shadow on the wrapper, not one per layer. */
 .binico{display:block;position:relative;width:100%;height:100%}
 .binico img,.binico svg{position:absolute;inset:0;width:100% !important;height:100% !important;overflow:visible}
 .icon .binico img,.icon .binico svg{filter:none}
 
-/* ---------- desktop ---------- */
-/* --tb taskbar · --hud the mobile thumb bar (0 on desktop) · --sab phone home-indicator inset */
 :root{--tb:30px;--hud:0px;--rail:0px;--sab:0px;--sal:0px;--sar:0px;--kb:0px}
-/* 84, not 64: the four money verbs are the only controls that move SOL without
-   opening an app, and at 64 they were 28px tall — 64% of the 44px touch floor,
-   at the bottom edge where a thumb is least accurate. The landscape rail was
-   already giving them 44. */
 body.mobile{--hud:112px;--sat:env(safe-area-inset-top,0px);--sab:env(safe-area-inset-bottom,0px);--sal:env(safe-area-inset-left,0px);--sar:env(safe-area-inset-right,0px)}
-/* phone lying down: height is the scarce axis, so the HUD leaves the bottom
-   and becomes a right-hand rail. Everything below reads --hud/--rail, so the
-   two orientations are the same layout with one variable moved. */
 body.mobile.land{--hud:0px;--rail:112px}
 @supports (height:100dvh){body.mobile{height:100dvh}}
 #desktop{position:absolute;inset:0 calc(var(--rail) + var(--sar)) calc(var(--tb) + var(--hud) + var(--sab)) 0;overflow:hidden}
-/* the notch eats into the desktop only where icons live — the arena is
-   letterboxed and centred anyway, so shifting it would only make it lopsided */
 #icons{position:absolute;inset:var(--sat) 0 0 var(--sal)}
-/* the page declares viewport-fit=cover, so with no top inset the status bar
-   and the notch sat on the first row of icons and on every sheet's title bar
-   — the one row carrying the close button */
 body.mobile #desktop>.window:not(.fixed){padding-top:var(--sat)}
 body.mobile #desktop>.window.fixed{margin-top:var(--sat)}
 body.mobile #startmenu{padding-top:var(--sat)}
 #wallpaper{position:absolute;inset:0;background:#3A6EA5;background-position:center;background-size:cover;background-repeat:no-repeat}
 
-/* ---------- desktop icons ---------- */
 .icon{position:absolute;left:12px;width:78px;text-align:center;padding:5px 2px;border:1px solid transparent}
 .icon img,.icon svg,.icon>span{width:32px;height:32px;filter:drop-shadow(1px 2px 2px rgba(0,0,0,.45))}
 .icon>span{margin:0 auto}
@@ -57,7 +33,6 @@ body.mobile .icon .lbl{font-size:10px}
 
 #marquee{position:absolute;border:1px solid #316AC5;background:rgba(49,106,197,.28);display:none;z-index:60;pointer-events:none}
 
-/* ---------- windows: xp.css chrome + our layout ---------- */
 .window{position:absolute;display:none;flex-direction:column;min-width:220px;max-width:96vw;z-index:100}
 .window.maxed{border-radius:0}
 .title-bar{flex:none}
@@ -66,18 +41,14 @@ body.mobile .icon .lbl{font-size:10px}
 .title-bar-text{overflow:hidden;white-space:nowrap;text-overflow:ellipsis;pointer-events:none}
 .win-body{flex:1;min-height:0;background:#ECE9D8;padding:9px;font-size:11px;margin:0 3px}
 .win-body.pad{background:#fff;padding:0;display:flex;flex-direction:column;min-height:0;overflow:hidden}
-/* xp.css ships no inactive state — real Luna pale-blue it is */
 .title-bar.inactive{background:linear-gradient(180deg,#9DB9EB,#8CA9E4 8%,#8CA9E4 40%,#7A96DF 88%,#7A96DF 93%,#7A96DF 95%,#5F82D9 96%,#5F82D9)}
 .title-bar.inactive .title-bar-text{color:#D8E4F8}
 .title-bar.inactive .title-bar-controls button{filter:saturate(.55) brightness(1.06)}
 .menubar{background:#ECE9D8;padding:3px 7px;display:flex;gap:13px;color:#111;border-bottom:1px solid #D4D0C8;flex:none}
 .menubar span:hover{background:#316AC5;color:#fff;padding:0 3px;margin:0 -3px}
-/* min-height:0 + a hard cap: without them a flex-sized pane in an
-   auto-height window sizes to its CONTENT, so the window grows forever */
 .paper{font:11px "Lucida Console",Consolas,monospace;padding:7px;flex:1;height:150px;min-height:0;max-height:52vh;overflow-y:auto;white-space:pre-wrap;line-height:1.55;color:#111;background:#fff}
 .paper.tall{height:250px}
 
-/* ---------- controls: xp.css does the look, we do layout ---------- */
 .xbtn{min-width:0}
 .xbtn.big{width:100%;padding:7px;font-weight:bold;font-size:12px;min-height:0;height:auto}
 .chiprow{display:flex;gap:4px;margin:4px 0}
@@ -92,11 +63,7 @@ body.mobile .icon .lbl{font-size:10px}
 .walletrow{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
 .walletrow .amt{font:bold 17px "Lucida Console",Consolas,monospace}
 .walletrow .wamt{margin-left:auto}
-/* small, quiet, and never mistaken for DEPLOY underneath it */
 .wbtn{flex:none;align-self:center;padding:2px 7px;font-size:11px;min-width:0}
-/* what is banked and what is still on the desktop, in one place. The
-   unrealized figure only exists while cursors are out, so an idle wallet
-   reads exactly as it always did. */
 .wamt{display:flex;flex-direction:column;align-items:flex-end;line-height:1.15}
 .unreal{font-size:11px;color:#0A6B2E}
 .unreal:empty{display:none}
@@ -104,7 +71,6 @@ body.mobile .icon .lbl{font-size:10px}
 .aprow{display:flex;align-items:center;gap:6px;margin:4px 0}
 .aprow .lb{width:70px;color:#555}
 
-/* ---------- taskbar (winXP values) ---------- */
 #taskbar{position:fixed;left:0;right:0;bottom:0;height:calc(var(--tb) + var(--sab));padding-bottom:var(--sab);padding-left:var(--sal);padding-right:var(--sar);display:flex;align-items:stretch;z-index:9000;background:linear-gradient(to bottom,#1f2f86 0,#3165c4 3%,#3682e5 6%,#4490e6 10%,#3883e5 12%,#2b71e0 15%,#2663da 18%,#235bd6 20%,#2258d5 23%,#2157d6 38%,#245ddb 54%,#2562df 86%,#245fdc 89%,#2158d4 92%,#1d4ec0 95%,#1941a5 98%)}
 #startbtn{height:30px;width:auto;cursor:pointer;flex:none}
 #startbtn:hover{filter:brightness(105%)}
@@ -115,9 +81,6 @@ body.mobile .icon .lbl{font-size:10px}
 .qlb:hover{background:rgba(255,255,255,.22)}
 .qlb svg,.qlb .xico{width:16px;height:16px}
 #tabs{flex:1;display:flex;gap:3px;padding:0 4px;overflow:hidden;align-items:flex-start}
-/* past the third app the phone strip simply stopped drawing buttons, so a
-   window's only restore route vanished. It scrolls now, and the drag does not
-   chain out to the page behind it. */
 body.mobile #tabs{overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:none}
 body.mobile #tabs::-webkit-scrollbar{display:none}
 body.mobile .task-tab{flex:0 0 auto}
@@ -133,12 +96,11 @@ body.mobile .task-tab{flex:0 0 auto}
 #phasechip{font-family:"Lucida Console",Consolas,monospace;font-size:11px;white-space:nowrap}
 #clock{margin:0 5px;font-variant-numeric:tabular-nums}
 body.mobile #clock{display:none}
-body.mobile #phasechip{display:none} /* the HUD carries the round clock */
+body.mobile #phasechip{display:none}
 body.mobile .task-tab{flex:none;width:42px;min-width:0;justify-content:center;padding:0}
 body.mobile .task-tab span{display:none}
 body.mobile #tray{padding:0 8px;margin-left:0;gap:8px}
 
-/* ---------- start menu (winXP values) ---------- */
 #startmenu{position:fixed;left:0;bottom:calc(var(--tb) + var(--sab));display:none;flex-direction:column;z-index:9500;font-size:11px;line-height:14px;background-color:#4282d6;border-top-left-radius:5px;border-top-right-radius:5px;box-shadow:2px -2px 6px rgba(0,0,0,.4)}
 #startmenu.open{display:flex}
 .sm-head{position:relative;cursor:pointer;display:flex;align-items:center;color:#fff;height:54px;padding:6px 5px 5px;border-radius:5px 5px 0 0;overflow:hidden;background:linear-gradient(to bottom,#1868ce 0%,#0e60cb 12%,#0e60cb 20%,#1164cf 32%,#1667cf 33%,#1b6cd3 47%,#1e70d9 54%,#2476dc 60%,#297ae0 65%,#3482e3 77%,#3786e5 79%,#428ee9 90%,#4791eb 100%)}
@@ -171,7 +133,6 @@ body.mobile #tray{padding:0 8px;margin-left:0;gap:8px}
 .sm-fitem:hover:active>*{transform:translate(1px,1px)}
 .sm-fitem .xico{width:22px;height:22px;margin-right:2px;border-radius:3px}
 
-/* ---------- minesweeper (classic metrics: 16px cells, 13x23 LEDs) ---------- */
 #win-mine{min-width:0}
 .win-body.ms-body{background:#BDBDBD;display:block;overflow:visible;padding:0}
 .menubar.ms-menubar{background:#BDBDBD;border-bottom:0;padding:3px 6px;gap:13px}
@@ -182,13 +143,10 @@ body.mobile #tray{padding:0 8px;margin-left:0;gap:8px}
 .ms-face{width:26px;height:26px;min-width:0;min-height:0;padding:0;margin:0;display:grid;place-items:center;background:#BDBDBD;background-image:none;border-top:2px solid #FFF;border-left:2px solid #FFF;border-right:2px solid #7B7B7B;border-bottom:2px solid #7B7B7B;border-radius:0;box-shadow:none;cursor:default}
 .ms-face:active{border-top-color:#7B7B7B;border-left-color:#7B7B7B;border-right-color:#FFF;border-bottom-color:#FFF}
 .ms-face img{width:17px;height:17px;display:block;-webkit-user-drag:none}
-/* content-box: the JS sets the exact cell-grid size, borders sit outside it */
 .ms-grid{box-sizing:content-box;display:flex;flex-wrap:wrap;align-content:flex-start;border-top:3px solid #7B7B7B;border-left:3px solid #7B7B7B;border-right:3px solid #FFF;border-bottom:3px solid #FFF}
-/* every sprite is a bare transparent glyph — the cell draws its own bevel */
 .ms-c{width:16px;height:16px;flex:none;box-sizing:border-box;background-color:#BDBDBD;background-repeat:no-repeat;background-position:center;background-origin:border-box;background-clip:border-box;border-top:2px solid #FFF;border-left:2px solid #FFF;border-right:2px solid #7B7B7B;border-bottom:2px solid #7B7B7B}
 .ms-c.open{border:0;border-top:1px solid #7B7B7B;border-left:1px solid #7B7B7B}
 
-/* ---------- Windows Explorer ---------- */
 .win-body.ex-body{background:#ECE9D8;display:flex;flex-direction:column;padding:0;overflow:hidden}
 .ex-bar{flex:none;display:flex;align-items:center;gap:2px;padding:2px 4px;background:linear-gradient(180deg,#F1F0E8,#E5E2D5);border-bottom:1px solid #D4D0C8}
 .ex-tb{display:flex;align-items:center;gap:4px;min-width:0;min-height:0;padding:2px 6px 2px 4px;background:none;border:1px solid transparent;border-radius:3px;box-shadow:none;cursor:default;font-size:11px;color:#000}
@@ -202,7 +160,6 @@ body.mobile #tray{padding:0 8px;margin-left:0;gap:8px}
 .ex-addrbox img{width:16px;height:16px;flex:none}
 .ex-addrbox input{flex:1;min-width:0;border:0;outline:none;font:11px Tahoma;background:none;color:#000}
 .ex-main{flex:1;min-height:0;display:flex;background:#fff}
-/* the blue task pane is the single most XP thing in Explorer */
 .ex-tasks{flex:none;width:176px;overflow-y:auto;padding:8px 6px;display:flex;flex-direction:column;gap:9px;background:linear-gradient(180deg,#7CA2E3,#5F8AD9 40%,#4E7BD2)}
 .ex-tasks.off{display:none}
 .ex-panel{border-radius:4px;overflow:hidden;background:#D6E5F5;box-shadow:0 1px 2px rgba(0,0,0,.18)}
@@ -225,7 +182,6 @@ body.mobile #tray{padding:0 8px;margin-left:0;gap:8px}
 .ex-nm{min-width:0;overflow:hidden}
 .ex-sub{color:#666;font-size:10px}
 .ex-item.on .ex-sub{color:#CFE0FF}
-/* four real view modes */
 .ex-ico{flex:none;display:block}
 .ex-list.v-tiles{display:flex;flex-wrap:wrap;gap:2px}
 .ex-list.v-tiles .ex-item{width:186px;align-items:center;gap:6px}
@@ -252,14 +208,12 @@ body.mobile #tray{padding:0 8px;margin-left:0;gap:8px}
 body.mobile .ex-tasks{display:none}
 body.mobile .ex-col.ty,body.mobile .ex-col.dt{display:none}
 body.mobile .ex-tb span{display:none}
-/* drive properties */
 .dp-pie{display:flex;align-items:center;gap:14px;padding:6px 2px}
 .dp-key{display:flex;align-items:center;gap:6px;margin:3px 0}
 .dp-key i{width:12px;height:12px;display:inline-block;border:1px solid #666}
 .dp-bar{height:14px;border:1px solid #808080;background:#D64B4B;margin:8px 0 4px;overflow:hidden}
 .dp-bar i{display:block;height:100%;background:#1B5FAE}
 
-/* ---------- CURSORS.EXE panes ---------- */
 .cx-body{display:flex;flex-direction:column;overflow:hidden}
 .cx-body .menubar,.cx-body .phaseline,.cx-tabs{flex:none}
 .cx-tabs{display:flex;gap:1px;margin:0 0 7px;border-bottom:1px solid #ACA899}
@@ -267,10 +221,9 @@ body.mobile .ex-tb span{display:none}
   border-radius:3px 3px 0 0;background:#EFEDE0;cursor:pointer;color:#444}
 .cx-tab.on{background:#fff;color:#000;position:relative;top:1px;padding-bottom:3px;font-weight:bold}
 .cx-pane{display:none;overflow-y:auto}
-.cx-pane.on{display:block;flex:none}   /* flex-basis would collapse the fixed heights below */
-/* the data panes hold the window at the Play pane's height instead of reflowing it */
+.cx-pane.on{display:block;flex:none}
 #cx-stats.on,#cx-hist.on,#cx-verify.on{height:368px}
-body.mobile .cx-pane.on{height:auto !important;flex:1;min-height:0}   /* sheets size themselves */
+body.mobile .cx-pane.on{height:auto !important;flex:1;min-height:0}
 .cx-kv{display:flex;align-items:baseline;gap:8px;padding:2.5px 0;font-size:11px}
 .cx-kv span{width:110px;flex:none;color:#5A5648}
 .cx-kv b{flex:1;min-width:0}
@@ -285,7 +238,6 @@ table.cxh td.n,table.cxh th.n{text-align:right}
 table.cxh td.pos{color:#0A7A2F;font-weight:bold}
 table.cxh td.neg{color:#A32020;font-weight:bold}
 
-/* ---------- death certificate + Hall of Pain ---------- */
 .cert-head{display:flex;align-items:center;gap:10px}
 .cert-ico{width:32px;height:32px;flex:none;display:block;filter:grayscale(1) brightness(.75)}
 .cert-file{font-weight:bold;font-size:12px;word-break:break-all}
@@ -309,7 +261,6 @@ table.hall tbody tr.me td{font-weight:bold;color:#0A246A}
 table.hall td.bad{color:#A32020}
 .hall-foot{flex:none;padding:4px 10px;background:#ECE9D8;border-top:1px solid #fff}
 
-/* ---------- Paint (real MS Paint metrics: 25x24 tools, 16px swatches) ---------- */
 .win-body.pt-body{background:#ECE9D8;display:flex;flex-direction:column;padding:0;overflow:hidden}
 .pt-main{flex:1;min-height:0;display:flex}
 .pt-left{flex:none;width:52px;padding:2px 0 0 1px;display:flex;flex-direction:column;gap:4px}
@@ -318,7 +269,6 @@ table.hall td.bad{color:#A32020}
 .pt-tool{width:25px;height:24px;min-width:0;min-height:0;padding:0;border-radius:0;box-shadow:none;background-color:#ECE9D8;border:1px solid #ECE9D8;cursor:default;display:grid;place-items:center}
 .pt-tool i{width:16px;height:16px;display:block;background-image:var(--pt-tools);background-repeat:no-repeat;background-size:256px 16px}
 .pt-tool:hover{border-color:#B4B2A6}
-/* the pressed tool is genuinely sunken — Paint never used a highlight colour */
 .pt-tool.on{background-color:#DCD8CC;border-top:1px solid #808080;border-left:1px solid #808080;border-right:1px solid #FFF;border-bottom:1px solid #FFF}
 .pt-opts{border-top:1px solid #808080;border-left:1px solid #808080;border-right:1px solid #FFF;border-bottom:1px solid #FFF;background:#ECE9D8;padding:3px;min-height:56px}
 .pt-optgrid{display:grid;justify-content:center;gap:1px}
@@ -336,7 +286,6 @@ table.hall td.bad{color:#A32020}
 .pt-box{position:relative;background:#fff;box-shadow:0 0 0 1px #000}
 .pt-box canvas{position:absolute;left:0;top:0;image-rendering:pixelated;touch-action:none}
 .pt-box canvas:first-child{position:relative}
-/* Paint's three canvas grips, in Paint's blue */
 .pt-h{position:absolute;width:5px;height:5px;background:#0A246A;font-style:normal}
 .pt-h.e{right:-3px;top:50%;margin-top:-2px;cursor:ew-resize}
 .pt-h.s{bottom:-3px;left:50%;margin-left:-2px;cursor:ns-resize}
@@ -348,8 +297,6 @@ table.hall td.bad{color:#A32020}
 .pt-cur i{position:absolute;width:17px;height:17px;border:1px solid #808080;box-shadow:inset 1px 1px #000}
 .pt-cur .pt-fg{left:2px;top:2px;z-index:2}
 .pt-cur .pt-bg{left:12px;top:12px}
-/* flex:none — a grid item's min-width is min-content, so without it the whole
-   palette collapses to a couple of columns on a phone */
 .pt-swatches{flex:none;display:grid;grid-template-rows:repeat(2,16px);grid-auto-flow:column;gap:1px}
 .pt-sw{width:16px;height:16px;min-width:0;min-height:0;padding:0;border-radius:0;box-shadow:none;border-top:1px solid #808080;border-left:1px solid #808080;border-right:1px solid #FFF;border-bottom:1px solid #FFF;cursor:default}
 .pt-status{flex:none;display:flex;gap:2px;padding:2px;border-top:1px solid #D4D0C8;font-size:11px}
@@ -359,7 +306,6 @@ table.hall td.bad{color:#A32020}
 .pt-status span+span{width:74px;flex:none;text-align:center}
 body.mobile .pt-status span:first-child{display:none}
 
-/* ---------- Windows Messenger ---------- */
 .win-body.msn-win{background:#fff;display:flex;flex-direction:column}
 .msn-hdr{display:flex;align-items:center;gap:7px;padding:6px 8px;flex:none;cursor:default;background:linear-gradient(180deg,#F4F9FF,#DCEAFB 55%,#C8DEF6);border-bottom:1px solid #A6C3E4}
 .msn-hdr:hover{background:linear-gradient(180deg,#FFFFFF,#E6F1FE 55%,#D2E6FA)}
@@ -388,7 +334,6 @@ body.mobile .pt-status span:first-child{display:none}
 .msn-foot a{color:#1B5FAE;text-decoration:underline;cursor:default;display:block}
 .msn-foot a:hover{color:#D77800}
 
-/* conversation windows */
 .conv-body{background:#fff;display:flex;flex-direction:column}
 .conv-to{display:flex;align-items:center;gap:7px;padding:5px 8px;flex:none;background:linear-gradient(180deg,#F4F9FF,#DCEAFB 60%,#C8DEF6);border-bottom:1px solid #A6C3E4}
 .conv-toico{width:20px;height:20px}
@@ -415,13 +360,11 @@ body.mobile .pt-status span:first-child{display:none}
 @keyframes nudge{0%,100%{transform:translate(0,0)}20%{transform:translate(-6px,4px)}40%{transform:translate(5px,-5px)}60%{transform:translate(-5px,-4px)}80%{transform:translate(6px,5px)}}
 body.mobile .conv-right{display:none}
 
-/* emoticon picker */
 .emo-picker{position:fixed;z-index:99995;background:#fff;border:1px solid #7F9DB9;box-shadow:3px 3px 7px rgba(0,0,0,.3);padding:3px;width:230px;display:flex;flex-wrap:wrap;gap:1px}
 .emo-picker button{width:21px;height:21px;min-width:0;min-height:0;padding:0;border:1px solid transparent;background:none;box-shadow:none;border-radius:0;display:grid;place-items:center;cursor:default}
 .emo-picker button:hover{border-color:#2A66C9;background:#DCEAFB}
 .emo-picker img{width:19px;height:19px;display:block}
 
-/* sign-in / message toast */
 .msn-toast{position:fixed;right:12px;bottom:40px;width:222px;transition:opacity .25s,transform .25s,bottom .2s;background:#F2F7FE;border:1px solid #6E93BE;box-shadow:2px 3px 9px rgba(0,0,0,.35);z-index:99700;opacity:0;transform:translateY(14px);cursor:default}
 .msn-toast.in{opacity:1;transform:translateY(0)}
 .mt-head{display:flex;align-items:center;gap:5px;padding:3px 5px;background:linear-gradient(180deg,#3E90E8,#1B5FAE);color:#fff;font-weight:bold}
@@ -432,13 +375,9 @@ body.mobile .conv-right{display:none}
 .mt-dp{width:40px;height:40px;flex:none;border:1px solid #7FA5CE;background:#fff;image-rendering:pixelated}
 .mt-text{color:#123;line-height:1.4;overflow:hidden;max-height:56px}
 
-/* ---------- winamp (real Webamp) ---------- */
-/* zero-size anchor at desktop center: webamp centers its window stack on this node's rect */
 #webamp-slot{position:absolute;left:50%;top:50%;width:0;height:0}
-/* webamp's windows also carry class "window" — undo our shell window rules for them */
 #webamp .window{display:block;min-width:0;max-width:none;flex-direction:row;z-index:auto}
 
-/* ---------- Help and Support Center ---------- */
 .win-body.hlp-body{background:#ECE9D8;display:flex;flex-direction:column;padding:0;overflow:hidden}
 .hlp-head{flex:none;display:flex;align-items:baseline;gap:9px;padding:7px 12px;color:#fff;
   background:linear-gradient(180deg,#4A80D8,#2B5CB8 55%,#20489E)}
@@ -465,41 +404,22 @@ body.mobile .conv-right{display:none}
 body.mobile .hlp-side{width:132px;font-size:11px}
 body.mobile .hlp-doc{padding:10px 12px}
 
-/* ---------- the disk meter: the round clock, since the disk is the clock ---------- */
 .diskbar{position:relative;flex:none;height:15px;margin:0 6px 5px;border:1px solid #7F9DB9;background:#fff;overflow:hidden}
 .diskbar i{position:absolute;left:0;top:0;bottom:0;width:0;
   background:repeating-linear-gradient(90deg,#3B6EA5 0 9px,#5C8FC7 9px 11px);transition:width .35s linear}
 .diskbar.warn i{background:repeating-linear-gradient(90deg,#C08000 0 9px,#E0A020 9px 11px)}
 .diskbar.crit i{background:repeating-linear-gradient(90deg,#B00000 0 9px,#E03030 9px 11px);animation:diskpulse 1s ease-in-out infinite}
 @keyframes diskpulse{50%{opacity:.62}}
-/* the label runs to within a couple of pixels of the bar's width at a fresh
-   0/900 — a three-digit corpse count or a wider GB figure walked it straight
-   out of the box. It ellipsises now instead of spilling over the border. */
 .diskbar span{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
   font:11px Tahoma,sans-serif;color:#000;mix-blend-mode:luminosity;letter-spacing:.2px;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 3px}
 body.mobile .diskbar{margin:0 4px 4px}
 
-/* ---------- Internet Explorer 6: the chrome ---------- */
-/* dial-up */
-
-
-/* MSN Search */
-
-/* "The page cannot be displayed", carbon copy */
-
-
-/* ---------- balloon (XP notification) ---------- */
 #balloon{position:fixed;right:calc(14px + var(--rail) + var(--sar));bottom:calc(var(--tb) + var(--hud) + var(--sab) + 18px);width:236px;background:#FFFFE1;border:1px solid #000;border-radius:7px;padding:9px 22px 9px 11px;display:none;z-index:9600;box-shadow:2px 3px 8px rgba(0,0,0,.35);line-height:1.45}
 #balloon:after{content:"";position:absolute;right:28px;bottom:-11px;border:11px solid transparent;border-top-color:#FFFFE1;border-bottom:0}
 #balloon b{display:block;margin-bottom:3px}
 #balloon-x{position:absolute;right:6px;top:5px;font-size:9px;border:1px solid #8A867A;padding:0 2px;cursor:pointer;background:#ECE9D8}
 
-/* ---------- the kill feed ---------- */
-/* Every death in the arena, streamed into a fixed strip instead of thrown at
-   you as a window. It sits along the bottom of the field, over the arena and
-   under every dialog, and it takes no clicks except on your own death row —
-   so it can never swallow a window's close button or trap anybody in it. */
 #feed{position:fixed;z-index:5200;left:var(--sal);right:calc(var(--rail) + var(--sar));
   bottom:calc(var(--tb) + var(--hud) + var(--sab) + 8px);
   display:flex;flex-direction:column-reverse;align-items:center;gap:3px;
@@ -513,7 +433,6 @@ body.mobile .diskbar{margin:0 4px 4px}
 .fd .fd-n{overflow:hidden;text-overflow:ellipsis}
 .fd .fd-v{color:#93A6CE}
 .fd b{color:#FFD24A;font-weight:400}
-/* your kill is green down the edge, your death is red — the two rows you look for */
 .fd.fd-kill{border-left-color:#7FD25A;color:#E4F2DC}
 .fd.fd-lost{border-left-color:#E04A32;color:#F4DAD4}
 .fd.fd-mine{border-left-color:#E04A32;background:rgba(38,8,6,.82);
@@ -526,18 +445,14 @@ body.mobile .diskbar{margin:0 4px 4px}
 .fd-x{position:absolute;right:4px;top:3px;width:15px;height:15px;line-height:13px;text-align:center;
   border:1px solid rgba(255,255,255,.3);border-radius:2px;color:#F2D4CE;font-size:10px;background:rgba(0,0,0,.3)}
 @keyframes fdIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
-/* a phone gets fatter hit targets on the one row that takes a touch */
 body.mobile .fd{max-width:min(320px,80vw);border-left-width:4px}
 body.mobile .fd-x{width:24px;height:24px;line-height:22px;font-size:12px;right:2px;top:2px}
 body.mobile .fd.fd-mine{padding:5px 32px 6px 8px}
 body.mobile.land .fd{max-width:min(320px,48vw)}
 
-/* ---------- game layer ---------- */
-/* the field is sized per epoch by the server; syncArena writes --aw/--ah */
 #arena{position:absolute;left:0;top:0;width:var(--aw,1280px);height:var(--ah,800px);transform-origin:0 0;z-index:5000;pointer-events:none}
 body.mobile #arena{transition:opacity .18s ease-out}
 
-/* the crash hiccup: filter-only, because syncArena owns this element's transform */
 #arena.crashed{animation:crashfx .9s steps(1) both}
 @keyframes crashfx{
   0%{filter:invert(1) saturate(3)}
@@ -556,44 +471,25 @@ body.mobile #arena{transition:opacity .18s ease-out}
 .cur .tag{position:absolute;left:13px;top:25px;white-space:nowrap;font-weight:bold;font-family:Tahoma,sans-serif;font-size:calc(11px * var(--cmag,1));color:#fff;text-shadow:1px 1px 2px #000,-1px 1px 2px #000,0 0 3px #000}
 .cur .tag .bt{margin-left:4px}
 .cur .tag .mx{margin-left:4px;color:#FFD24A}
-/* YOUR cursors read first. On a small screen your arrow was one of twenty
-   identical arrows and finding your own money in the crowd was guesswork.
-   Everyone else is left exactly as they were — the field stays busy, yours
-   just stops blending into it: a white outline, a brighter drop shadow, and
-   the name on its Luna-blue plate. */
 .cur.me svg{filter:drop-shadow(0 0 0 #fff) drop-shadow(1px 0 0 #fff) drop-shadow(-1px 0 0 #fff)
   drop-shadow(0 1px 0 #fff) drop-shadow(0 -1px 0 #fff) drop-shadow(1px 2px 3px rgba(0,0,0,.6))}
 .cur.me .nm{background:#316AC5;padding:0 4px;border-radius:2px;box-shadow:0 0 0 1px rgba(255,255,255,.75)}
 .cur.me .tag{color:#FFFFFF}
 .cur.me .bt{color:#BFE3FF}
-/* a soft halo under your own arrow, so it is findable even mid-scrum */
 .cur.me::before{
   content:"";position:absolute;left:-5px;top:-4px;width:26px;height:26px;border-radius:50%;
   background:radial-gradient(circle,rgba(120,190,255,.55) 0,rgba(120,190,255,0) 70%);
   pointer-events:none;
 }
 .cur.grace{opacity:.55}
-/* Leaving is a state you have to be able to read across a crowded desktop,
-   and it was the only one with no treatment at all — a gliding cursor looked
-   exactly like a roaming one, which is a poor thing to be unsure about when
-   it is your money crossing the field. Green because it is a bank in
-   progress, and deliberately not red: red is a duel.
-
-   Filter and opacity only, NO transform — see .promote for why. A keyframe
-   that sets transform overwrites the -90deg counter-rotation the portrait
-   view depends on, which is why .dueling needs a rotated twin and this
-   does not. */
 .cur.recalling svg,.cur.recalling img.curskin{
   filter:drop-shadow(0 0 3px #2ECC57) drop-shadow(0 0 8px rgba(46,204,87,.6));
   animation:recallpulse .55s ease-in-out infinite alternate}
 @keyframes recallpulse{from{opacity:.6}to{opacity:1}}
 @media (prefers-reduced-motion:reduce){
   .cur.recalling svg,.cur.recalling img.curskin{animation:none;opacity:.85} }
-/* a duel outranks the glide: a cursor caught on its way out is fighting */
 .cur.dueling svg{animation:shake .13s infinite;filter:drop-shadow(0 0 3px #FF3B20) drop-shadow(0 0 7px rgba(255,40,20,.55))}
 @keyframes shake{0%{transform:translate(0,0)}25%{transform:translate(-1.5px,1px)}50%{transform:translate(1.5px,-1px)}75%{transform:translate(-1px,-1.5px)}100%{transform:translate(1px,1px)}}
-/* portrait phones show the arena rotated 90° (the sim is untouched); every
-   text-bearing element counter-rotates so it reads upright on screen */
 #arena.rot .cur>svg{transform:rotate(-90deg)}
 #arena.rot .cur .tag{transform:rotate(-90deg);transform-origin:0 0}
 #arena.rot .duelfx{transform:rotate(-90deg);transform-origin:50% 50%}
@@ -615,31 +511,20 @@ body.mobile #arena{transition:opacity .18s ease-out}
 .float.sm{font-size:calc(11px * var(--cmag,1));color:#fff}
 @keyframes rise{to{transform:translateY(-48px);opacity:0}}
 
-/* ---------- BSOD / power-off screen ---------- */
-/* ---------- the CRT: you are not looking at a desktop, you are looking at a
-   monitor showing one. Every layer is a static composited overlay (no filters
-   on live content), so it costs almost nothing at 60fps. ---------- */
 #crt{position:fixed;inset:0;z-index:100020;pointer-events:none;animation:crtflick 7s steps(1) infinite}
 #crt>div{position:absolute;inset:0}
-/* phosphor triads: the RGB stripes of an aperture grille, barely-there */
 #crt .px{background:repeating-linear-gradient(90deg,rgba(255,0,0,.045) 0 1px,rgba(0,255,0,.038) 1px 2px,rgba(0,70,255,.05) 2px 3px)}
-/* scanlines: static, like the real raster — rolling lines are VHS, not CRT */
 #crt .lines{background:repeating-linear-gradient(0deg,rgba(0,0,0,.15) 0 1px,transparent 1px 3px)}
-/* mains hum: a faint brightness band drifting down the tube */
 #crt .hum{inset:auto 0;height:130px;background:linear-gradient(180deg,transparent,rgba(255,255,255,.04) 50%,transparent);animation:humdrift 8s linear infinite}
 @keyframes humdrift{from{top:-140px}to{top:100%}}
-/* the glass: vignette toward the corners + a fixed glare high on the left */
 #crt .glass{background:
   radial-gradient(ellipse 55% 38% at 30% 20%,rgba(255,255,255,.09),transparent 62%),
   radial-gradient(ellipse at center,transparent 56%,rgba(0,0,10,.16) 86%,rgba(0,0,14,.42) 100%)}
-/* the tube: black rounded corners = the silhouette of curved glass */
 #crt .frame{border-radius:1.8%/2.6%;box-shadow:0 0 0 60px #060608,inset 0 0 110px rgba(0,0,25,.30)}
 @keyframes crtflick{0%,100%{opacity:1}88%{opacity:.965}90%{opacity:1}93%{opacity:.94}94%{opacity:1}}
-/* phones: no phosphor (hiDPI moiré), lighter lines, same glass */
 body.mobile #crt .px{display:none}
 body.mobile #crt .lines{opacity:.55}
 body.crt-off #crt{display:none}
-/* degauss: the THUNK of a tube collecting itself — used at logon and after the BSOD */
 body.degaussing{animation:degauss .9s ease-out}
 @keyframes degauss{
   0%{filter:brightness(2.1) saturate(.15) contrast(1.5)}
@@ -648,7 +533,6 @@ body.degaussing{animation:degauss .9s ease-out}
   55%{filter:brightness(.94) hue-rotate(7deg)}
   100%{filter:none}}
 
-/* ---------- the ×10 jackpot: two seconds of VHS ---------- */
 #jackpot{position:fixed;inset:0;z-index:99998;display:none;pointer-events:none;overflow:hidden}
 .jk-scan{position:absolute;inset:-4px 0;background:repeating-linear-gradient(0deg,rgba(0,0,0,.24) 0 1px,transparent 1px 3px);animation:jkroll .14s steps(2) infinite}
 @keyframes jkroll{to{transform:translateY(3px)}}
@@ -665,7 +549,6 @@ body.degaussing{animation:degauss .9s ease-out}
 .jk-sub{font:11px "Lucida Console",Consolas,monospace;color:#EFE49B;margin-top:9px;text-shadow:0 1px 3px #000}
 body.mobile .jk-x{font-size:54px}
 
-/* the real NT stop screen: text-mode metrics, top-left start, tight leading */
 #bsod{position:fixed;inset:0;background:#0000AA;color:#FFF;display:none;z-index:99999;
   font:15px/1.45 "Lucida Console",Consolas,monospace;padding:28px 38px;
   white-space:pre-wrap;overflow:hidden;cursor:default}
@@ -676,7 +559,6 @@ body.mobile #bsod{font-size:11px;padding:16px 14px}
 .blink{animation:blink 1s steps(1) infinite}
 @keyframes blink{50%{opacity:0}}
 
-/* ---------- boot screen ---------- */
 #boot{position:fixed;inset:0;background:#000;z-index:100006;display:none}
 .boot-mid{position:absolute;left:50%;top:40%;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center}
 .boot-flag{width:92px;margin-bottom:10px;filter:drop-shadow(0 0 16px rgba(80,110,240,.28))}
@@ -693,7 +575,6 @@ body.mobile #bsod{font-size:11px;padding:16px 14px}
 .boot-copy{position:absolute;left:24px;bottom:20px;font:12px Tahoma;color:#B8B8B8}
 .boot-ms{position:absolute;right:26px;bottom:16px;font:bold italic 21px "Franklin Gothic Medium","Segoe UI",Tahoma;color:#fff}
 
-/* ---------- welcome screen ---------- */
 #login{position:fixed;inset:0;z-index:100005;display:none;flex-direction:column;transition:opacity .5s}
 .lg-top,.lg-bot{height:64px;background:linear-gradient(180deg,#1C3E9C 0%,#122A78 60%,#0C1E5E 100%);flex:none}
 .lg-top{border-bottom:1px solid rgba(255,255,255,.35)}
@@ -715,13 +596,7 @@ body.mobile #bsod{font-size:11px;padding:16px 14px}
 .lg-ava{width:52px;height:52px;flex:none;border:2px solid #fff;border-radius:5px;background:#fff;overflow:hidden;display:grid;place-items:center;box-shadow:1px 2px 5px rgba(0,0,0,.35)}
 .lg-ava img{width:100%;height:100%;display:block}
 .lg-ava.guest{background:linear-gradient(160deg,#9AA6BC,#5A6478);font:bold 24px Tahoma;color:#fff}
-/* the wallet tile: XP never had one, so it gets the one avatar that is not a
-   photograph -- Solana's own gradient behind a mark, which reads as an
-   account picture at 52px and as a brand at any size */
 .lg-ava.wallet{background:linear-gradient(160deg,#9945FF,#14F195);font:30px Tahoma;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.4)}
-/* The way out. The tile's own click is spoken for -- it logs you on -- so the
-   exit is its own control at the tile's edge, and it exists only while there
-   is a connection to end. */
 .lg-off{align-self:center;margin-left:6px;padding:3px 8px;border:1px solid #00000066;border-radius:3px;
   background:linear-gradient(180deg,#d24b4b,#8f2020);color:#fff;font:11px Tahoma;cursor:pointer}
 .lg-off:hover{filter:brightness(1.12)}
@@ -744,11 +619,6 @@ body.mobile #bsod{font-size:11px;padding:16px 14px}
 #lg-back:hover{background:rgba(255,255,255,.14);color:#fff}
 #lg-back[hidden]{display:none}
 
-/* ---------- My Wallet, on the welcome screen ----------
-   It belongs to this screen and is dressed as part of it: the tiles' own
-   translucent-white-on-blue, not a panel from somewhere else pasted on top.
-   Money text is 11px at its very smallest and the two balances are 15px,
-   because a number you squint at is a number you misread. */
 .lg-bank{max-width:290px;margin-top:4px;padding:10px 12px 11px;border-radius:6px;color:#fff;
   background:rgba(255,255,255,.13);box-shadow:inset 0 0 0 1px rgba(255,255,255,.22),0 2px 10px rgba(0,0,0,.18)}
 .lg-bank[hidden]{display:none}
@@ -762,8 +632,6 @@ body.mobile #bsod{font-size:11px;padding:16px 14px}
 .lgb-bal span{font:11px Tahoma;color:#CFDCF6}
 .lgb-bal b{font:15px Tahoma;font-weight:bold;letter-spacing:.2px}
 .lgb-bal b.stale{opacity:.55}
-/* the sub-unit remainder, said out loud rather than left as a disagreement
-   between this number and the one CURSORS.EXE prints */
 .lgb-dust{font:11px Tahoma;color:#F3D79A;margin:-4px 0 8px}
 .lgb-dust[hidden]{display:none}
 .lgb-tabs{display:flex;gap:4px;margin-bottom:7px}
@@ -780,10 +648,6 @@ body.mobile #bsod{font-size:11px;padding:16px 14px}
 .lgb-max{flex:none;padding:0 10px;font:11px Tahoma;color:#12305F;cursor:pointer;border:1px solid #7B96C8;border-radius:3px;
   background:linear-gradient(180deg,#FDFEFF,#D6E1F3);min-width:0}
 .lgb-max:hover{filter:brightness(1.06)}
-/* THE AMOUNTS PEOPLE ACTUALLY TYPE, as buttons. A number pad on a phone is
-   the slowest control on this panel and the four sums below cover most of
-   what anybody sends; a preset that costs more than the wallet holds is
-   greyed rather than hidden, so the row does not reshuffle under a thumb. */
 .lgb-presets{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-bottom:7px}
 .lgb-preset{padding:4px 0 5px;font-variant-numeric:tabular-nums;font:11px Tahoma;color:#DCE6FA;cursor:pointer;border:0;border-radius:3px;min-width:0;
   background:rgba(0,0,0,.16);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14)}
@@ -802,9 +666,6 @@ body.mobile #bsod{font-size:11px;padding:16px 14px}
 .lgb-say.busy{color:#FFE9A8}
 .lgb-say a{color:#BFE0FF}
 .lgb-say code{font:11px "Lucida Console",monospace;word-break:break-all;color:#DCE6FA}
-/* One tab, one book: the deposit half lists deposits and the withdrawal half
-   lists withdrawals, five at a time, because a mixed list of four was where
-   the receipt somebody came looking for went missing. */
 .lgb-logh{display:flex;justify-content:space-between;gap:10px;margin-top:8px;padding-top:6px;font:11px Tahoma;color:#9FB4DC;
   box-shadow:inset 0 1px 0 rgba(255,255,255,.18)}
 .lgb-logh[hidden]{display:none}
@@ -824,12 +685,6 @@ body.mobile #bsod{font-size:11px;padding:16px 14px}
 .lgb-le a:hover{text-decoration:underline}
 .lg-banknote{max-width:290px;font:11px Tahoma;color:#B9C8EC;line-height:1.45;padding:0 2px}
 .lg-banknote[hidden]{display:none}
-/* THE SIGNED-OUT PANEL IS A CONTROL, NOT A CAPTION. Somebody arriving with the
-   arcade's domain-wide connect cookie is named on the tile and signed out
-   underneath it, and the money screen used to answer that by disappearing and
-   leaving a grey line pointing at another control. It is a button now, sized
-   and coloured like the Deposit one it stands in for, so the thing to press is
-   the thing being looked at. */
 .lgb-notetxt{margin-bottom:7px}
 .lgb-signin{width:100%;max-width:290px;padding:7px 10px;font:bold 12px Tahoma;color:#fff;cursor:pointer;
   border:1px solid #2C6B12;border-radius:4px;background:linear-gradient(180deg,#8CC63F,#4E9A06);
@@ -838,7 +693,6 @@ body.mobile #bsod{font-size:11px;padding:16px 14px}
 .lgb-signin:active:not(:disabled){background:linear-gradient(180deg,#4E9A06,#8CC63F)}
 .lgb-signin:disabled{cursor:default;color:#E4EAF5;border-color:#5F7392;background:linear-gradient(180deg,#8492AB,#6E7B92);box-shadow:none}
 
-/* ---------- context menus / tooltip ---------- */
 #ctx{position:fixed;display:none;z-index:100010;background:#fff;border:1px solid #ACA899;box-shadow:4px 4px 3px -1px rgba(0,0,0,.28);padding:2px;min-width:166px;font-size:11px}
 .cit{position:relative;display:flex;justify-content:space-between;gap:16px;padding:4px 26px 4px 18px;cursor:default;white-space:nowrap;line-height:14px}
 .cit:hover,.cit.kbd{background:#316AC5;color:#fff}
@@ -848,18 +702,13 @@ body.mobile #bsod{font-size:11px;padding:16px 14px}
 .caccel{color:inherit}
 .cit.chk:before{content:"\2714";position:absolute;left:5px;font-size:10px}
 .cit.has-sub:after{content:"";position:absolute;right:8px;top:50%;margin-top:-3.5px;border:3.5px solid transparent;border-left-color:currentColor;border-right:0}
-/* XP opened submenus after a beat of hover, not instantly */
 .csub{visibility:hidden;position:absolute;left:100%;top:-3px;background:#fff;border:1px solid #ACA899;box-shadow:4px 4px 3px -1px rgba(0,0,0,.28);padding:2px;min-width:150px;color:#000;transition:visibility 0s .28s}
 .cit.has-sub:hover>.csub,.csub.open{visibility:visible}
 .csep{border-top:1px solid #ACA899;margin:3px 2px}
 #errtext{white-space:pre-line}
-/* the confirm box grew a paragraph when leaving the machine mid-round became
-   something worth spelling out, and a 
- that renders as a space is a wall */
 #conftext{white-space:pre-line}
 #xptip{position:fixed;display:none;z-index:99900;background:#FFFFE1;border:1px solid #000;padding:3px 7px;font-size:11px;box-shadow:1px 2px 4px rgba(0,0,0,.3);pointer-events:none;white-space:nowrap}
 
-/* ---------- xp tabs / dialogs / task manager ---------- */
 .xtabs{display:flex;gap:2px;padding:6px 8px 0;border-bottom:1px solid #919B9C;background:#ECE9D8;flex:none}
 .xtab{padding:4px 12px;border:1px solid #919B9C;border-bottom:0;border-radius:3px 3px 0 0;background:#F0EEE1;cursor:pointer}
 .xtab.on{background:#FCFBF6;position:relative;top:1px;padding-bottom:5px}
@@ -876,11 +725,6 @@ body.mobile #bsod{font-size:11px;padding:16px 14px}
 .cal th{width:24px;padding:2px;color:#666;font-weight:normal}
 .cal td{width:24px;text-align:center;padding:3px 0;cursor:default}
 .cal td.today{background:#316AC5;color:#fff;border-radius:2px}
-/* xp.css draws a checkbox entirely through an ADJACENT label — the input
-   itself is position:fixed and opacity:0. Every checkbox in this app is
-   wrapped inside its label instead, so all of them have been rendering as
-   nothing but text: "Save this user name and password" with no box to tick.
-   Give the wrapped form its own XP-accurate box. */
 label>input[type=checkbox]{position:static;opacity:1;flex:none;display:inline-block;
   width:13px;height:13px;margin:0;background:#fff;
   box-shadow:inset -1px -1px #fff,inset 1px 1px grey,inset -2px -2px #dfdfdf,inset 2px 2px #0a0a0a}
@@ -889,10 +733,6 @@ label>input[type=checkbox]:active{background-color:#ECE9D8}
 label>input[type=checkbox][disabled]{background-color:#ECE9D8}
 label>input[type=checkbox][disabled]:checked{background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg width='7' height='7' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath fill-rule='evenodd' clip-rule='evenodd' d='M7 0H6v1H5v1H4v1H3v1H2V3H1V2H0v3h1v1h1v1h1V6h1V5h1V4h1V3h1V0z' fill='gray'/%3E%3C/svg%3E")}
 
-/* ...and the same for radios, which nothing had fixed: every wrapped radio in
-   this app was rendering as 0x0 at opacity 0, so Folder Options, System
-   Restore, MSConfig and Group Policy were showing bare labels with nothing to
-   click. XP's radio is a 13px sunken circle with a black dot. */
 label>input[type=radio]{position:static;opacity:1;flex:none;display:inline-block;
   width:13px;height:13px;margin:0;border-radius:50%;background:#fff;
   box-shadow:inset -1px -1px #fff,inset 1px 1px grey,inset -2px -2px #dfdfdf,inset 2px 2px #0a0a0a}
@@ -902,9 +742,6 @@ label>input[type=radio][disabled]:checked{background:#ECE9D8 radial-gradient(cir
 
 .tz-chk{display:flex;align-items:center;gap:5px;margin:9px 0 0;color:#555}
 .tz-chk input{margin:0}
-/* the old Time Zone tab was a grey box saying "map data went home". XP put a
-   world map there; we cannot ship one, so the space holds the one thing a time
-   zone tab is actually for — what time it is somewhere else. */
 .tz-world{margin-top:9px;border:1px solid #7F9DB9;background:#fff;max-height:104px;overflow:auto}
 .tz-world div{display:flex;justify-content:space-between;padding:2px 7px;font-size:11px;border-bottom:1px solid #EEE}
 .tz-world div:last-child{border-bottom:0}
@@ -921,38 +758,23 @@ label>input[type=radio][disabled]:checked{background:#ECE9D8 radial-gradient(cir
 .renamer{width:76px;font:11px Tahoma;border:1px solid #316AC5;text-align:center}
 .usertxtarea{flex:1;border:0;resize:none;font:12px "Lucida Console",Consolas,monospace;padding:7px;outline:none;background:#fff;color:#111;min-height:120px;box-shadow:none}
 
-/* ---------- the mobile shell (body.mobile, set at boot below 760px) ---------- */
-
-/* the game HUD leaves its window: a permanent thumb bar above the taskbar.
-   App sheets never cover it — the desktop area stops where it starts. */
 #mhud{position:fixed;left:0;right:0;bottom:calc(var(--tb) + var(--sab));height:var(--hud);display:none;flex-direction:column;z-index:9100;padding:3px 6px 5px;background:linear-gradient(180deg,#2E6FE0 0,#245DDB 40%,#1E4FC4 90%,#1941A5 100%);border-top:1px solid #4E7DE8}
 body.mobile #mhud{display:flex}
 .mh-top{display:flex;align-items:center;justify-content:space-between;gap:8px;color:#fff;padding:0 2px 3px}
 .mh-wallet{font-weight:bold;font-size:12px}
-/* the chip carries the SHUTDOWN countdown — the window in which you recall or
-   lose the round — so it is the last thing allowed to run out of room, and it
-   sits at the 11px money floor rather than under it */
 .mh-phase{background:#FFF7DE;color:#000;border:1px solid #E0C05A;border-radius:2px;padding:0 5px;font-size:11px;line-height:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1 1 auto;min-width:0;text-align:center}
 .mh-phase.battle{background:#FFE9E0;border-color:#E08A5A}
 .mh-wallet{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis}
-/* what is still on the desktop and not yours yet, next to what is */
 .mh-live{font-size:11px;font-weight:bold;white-space:nowrap;flex:none;color:#9FF0BC}
 .mh-live:empty{display:none}
-/* am I up? the one number this audience checks, and it used to live three taps
-   away behind a sheet and a tab */
 .mh-pl{font-size:12px;font-weight:bold;white-space:nowrap;flex:none;color:#CFE0FF}
 .mh-pl.up{color:#8CF0A8}
 .mh-pl.down{color:#FFB3A6}
-/* autoplay had no state on the bar at all: it looked identical whether or not
-   money was being spent on your behalf */
 .mh-auto{flex:none;font-size:10px;font-weight:bold;letter-spacing:.04em;white-space:nowrap;
   padding:1px 6px;border-radius:2px;border:1px solid rgba(255,255,255,.34);color:#D6E4FF}
 .mh-auto.on{background:#7BD160;border-color:#4E9E36;color:#06210A}
 .mh-auto.dim{opacity:.62}
 
-/* ---- the cursor strip: one slot per live cursor, click/tap to recall it ---- */
-/* RECALL ALL is all-or-nothing; this is the only way to bank the x5 and leave
-   the fresh one running. Same component on the desktop and the phone. */
 .curstrip{display:flex;gap:4px;align-items:stretch}
 .cslot{
   flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
@@ -971,31 +793,19 @@ body.mobile #mhud{display:flex}
   flex:1 1 0;min-height:30px;border:1px dashed rgba(255,255,255,.34);
   border-radius:2px;background:rgba(255,255,255,.05);cursor:default;
 }
-/* on the desktop the strip lives inside the Play pane, on a lighter ground */
 .striprow{margin-top:6px}
 .striprow .lb{display:block;font-size:10px;color:#5A6472;margin:0 0 3px}
 #cx-strip .cslot.empty{border-color:#B8C2D2;background:#F2F4F8}
-/* and on the phone it is a row of its own between the readout and the disk */
 body.mobile #mh-strip{margin:3px 2px 0;flex:none}
 body.mobile #mh-strip .cslot{min-height:32px}
-body.mobile .striprow{display:none}   /* the bar already carries it */
-/* `body.mobile .xbtn{min-height:28px}` outranks `.mh-btns .xbtn`, so without
-   this the money verbs quietly shrank back below the touch floor the moment
-   the strip took a slice of the bar */
+body.mobile .striprow{display:none}
 body.mobile .mh-btns .xbtn{min-height:44px}
-/* lying down the rail is 112px wide — five slots in a row would be 15px each.
-   Two columns keeps every multiplier readable and every slot tappable. */
 body.mobile.land #mh-strip{display:grid;grid-template-columns:1fr 1fr;gap:3px;margin:0 0 5px}
 body.mobile.land #mh-strip .cslot{min-height:30px}
 .mh-btns{display:flex;gap:6px;flex:1;min-height:0}
 .mh-btns .xbtn{min-height:44px;min-width:0;height:100%;font-weight:bold;font-size:12px;padding:0 2px}
-/* Two verbs left, and they are opposites — one spends, one banks — so they get
-   real dead space between them rather than the 6px the stance chips used to
-   sit in. A thumb that misses DEPLOY must not find RECALL. */
 #mh-deploy{flex:1.5}
 #mh-recall{flex:1.15;margin-left:14px}
-/* the round clock, in the thumb bar: C: filling is the only thing that ends a
-   round, so it belongs where a phone player is already looking */
 .mh-disk{display:block;height:5px;margin:3px 2px 0;background:#0E2E6E;border:1px solid #14357C;border-radius:2px;overflow:hidden}
 .mh-disk b{display:block;height:100%;width:0;background:linear-gradient(180deg,#7BD160 0,#3E9E27 100%);transition:width .3s linear}
 .mh-disk.warn b{background:linear-gradient(180deg,#F5D14E 0,#D89A1E 100%)}
@@ -1003,7 +813,6 @@ body.mobile.land #mh-strip .cslot{min-height:30px}
 .mh-disk.crit{animation:mhdiskpulse 1s steps(2,end) infinite}
 @keyframes mhdiskpulse{50%{border-color:#FF9C90}}
 
-/* ---- landscape: the thumb bar stands up as a right rail ---- */
 body.mobile.land #mhud{top:0;bottom:calc(var(--tb) + var(--sab));left:auto;right:0;
   width:calc(var(--rail) + var(--sar));height:auto;padding:6px 6px 8px;
   padding-right:calc(6px + var(--sar));border-top:0;border-left:1px solid #4E7DE8;
@@ -1013,12 +822,8 @@ body.mobile.land .mh-wallet{font-size:13px}
 body.mobile.land .mh-phase{font-size:11px;line-height:1.4;white-space:normal}
 body.mobile.land .mh-live{font-size:11px}
 body.mobile.land .mh-disk{margin:0 0 6px;order:-1}
-/* buttons sit at the FOOT of the rail — that is where a thumb is when the
-   phone is held in two hands — and keep XP-sized rows instead of stretching
-   into slabs just because the rail is tall */
 body.mobile.land .mh-btns{display:grid;grid-template-columns:1fr;grid-auto-rows:44px;gap:10px;flex:none;margin-top:auto}
 body.mobile.land .mh-btns .xbtn{height:auto;margin:0}
-/* the full-screen launcher and every sheet stop at the rail, never under it */
 body.mobile.land #startmenu{right:calc(var(--rail) + var(--sar));bottom:calc(var(--tb) + var(--sab))}
 body.mobile.land .sm-head{height:38px}
 body.mobile.land .sm-ava{width:30px;height:30px}
@@ -1033,29 +838,16 @@ body.mobile.land .lg-mid{gap:14px}
 body.mobile.land .lg-brandtext{font-size:26px}
 body.mobile.land .lg-flag{width:40px}
 
-/* apps become full-screen sheets: one at a time, no dragging, no overlap.
-   Dialogs (.fixed) stay small popups, centered by fitWin(). The > keeps
-   Webamp's own .window elements (inside #webamp-wrap) out of this. */
 body.mobile #desktop>.window:not(.fixed){left:0 !important;top:0 !important;width:100% !important;height:100% !important;max-width:none;min-width:0}
 body.mobile #desktop>.window:not(.fixed) .title-bar{padding:5px 5px 5px 3px}
 body.mobile #desktop>.window:not(.fixed) .paper{max-height:none}
 body.mobile .title-bar-controls button{min-width:26px;min-height:26px}
-/* a dialog taller than the phone scrolls its own body rather than running off
-   the bottom of the screen with its buttons on it */
 body.mobile #desktop>.window.fixed{max-height:calc(100% - 12px)}
 body.mobile #desktop>.window.fixed>.win-body{overflow:auto;-webkit-overflow-scrolling:touch}
-/* sheets need it too: several app bodies lay out as plain blocks, so content
-   past the fold was simply clipped with no way to reach it */
 body.mobile #desktop>.window:not(.fixed)>.win-body{min-height:0;overflow:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
 body.mobile .ms-body{overflow:auto}
 
-/* the Start menu becomes a full-screen launcher (HUD stays visible) */
 body.mobile #startmenu{left:0;right:0;top:0;bottom:calc(var(--tb) + var(--hud) + var(--sab));border-radius:0;font-size:12px;line-height:16px}
-/* All Programs is the door to everything that is not pinned, and on a phone the
-   left column outgrew the menu and pushed it under the fold — in landscape it
-   sat at y=371 in a 360px-tall menu, i.e. nowhere, with no scroll cue. XP pins
-   it to the foot of its own column and scrolls the list above it. Each column
-   scrolls on its own now, so Search and Run stay reachable too. */
 body.mobile .sm-menu{flex:1;min-height:0;overflow:hidden}
 body.mobile .sm-left{width:50%;padding:8px 6px 0;min-height:0}
 body.mobile #sm-mru{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain}
@@ -1067,7 +859,6 @@ body.mobile .sm-left .sm-item.allprog{height:34px}
 body.mobile .sm-right .sm-item{height:38px}
 body.mobile .sm-foot{flex:none}
 
-/* welcome screen stacks: brand above the user tiles */
 body.mobile .lg-mid{flex-direction:column;justify-content:center;gap:30px}
 body.mobile .lg-left{flex:none;align-items:center;padding:0;gap:12px}
 body.mobile .lg-brandtext{font-size:34px}
@@ -1076,56 +867,30 @@ body.mobile .lg-hint{font-size:13px}
 body.mobile .lg-div{display:none}
 body.mobile .lg-right{flex:none;width:100%;padding:0 34px;max-height:none;overflow:visible}
 body.mobile .lg-note{display:none}
-/* With My Wallet open this screen is taller than a phone, so it scrolls and
-   the stack tightens. `hasbank` rather than :has() -- one class, set where the
-   panel is shown, and no support question to answer. */
 body.mobile .lg-mid{overflow-y:auto}
 body.mobile #login.hasbank .lg-mid{justify-content:flex-start;gap:16px;padding:18px 0}
 body.mobile #login.hasbank .lg-brandtext{font-size:26px}
 body.mobile #login.hasbank .lg-flag{width:44px}
 body.mobile .lg-bank,body.mobile .lg-banknote{max-width:none}
 
-/* ---- the phone keyboard ---- */
-/* iOS shrinks the visual viewport without touching layout, so a composer at
-   the bottom of a sheet ends up under the keys. --kb is the measured keyboard
-   height (see mobKeyboard() in main.js): the taskbar and HUD step aside and
-   the desktop ends where the keyboard begins, which puts every sheet's own
-   bottom row right above it. Nothing here fires unless a keyboard is up. */
-/* The taskbar may go — it is a switcher. The thumb bar may NOT: hiding it took
-   the balance, the round clock and RECALL off the screen for as long as a
-   keyboard was up, which on a phone is most of a Messenger conversation. It
-   rides above the keys instead. In landscape the rail is vertical and the
-   keyboard never reaches it, so it does not move at all. */
 body.mobile.kb #taskbar{display:none}
 body.mobile.kb #mhud{bottom:var(--kb)}
 body.mobile.land.kb #mhud{bottom:0}
 body.mobile.kb #desktop{inset:0 calc(var(--rail) + var(--sar)) calc(var(--kb) + var(--hud)) 0}
-/* the feed and the balloon hang off the taskbar, which .kb has just removed —
-   without this they render inside the keyboard */
 body.mobile.kb #feed{bottom:calc(var(--kb) + var(--hud) + 8px)}
 body.mobile.kb #balloon{bottom:calc(var(--kb) + var(--hud) + 18px)}
 body.mobile.kb .msn-toast{bottom:calc(var(--kb) + var(--hud) + 10px)}
-/* and 16px stops iOS zooming the page in the moment you tap a text field —
-   the one place XP's 11px type has to give way to the hardware */
-/* every text control, not the eight that got named: anything under 16px makes
-   iOS zoom the page on focus, and the shell cannot zoom back out */
 body.mobile input[type=text],body.mobile input[type=search],body.mobile input[type=number],
 body.mobile input[type=password],body.mobile input[type=url],body.mobile input:not([type]),
 body.mobile textarea{font-size:16px}
-/* a menu bar wider than the phone was simply cut off below about 330px */
 body.mobile .menubar{overflow-x:auto;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch;scrollbar-width:none}
 body.mobile .menubar::-webkit-scrollbar{display:none}
 body.mobile .menubar span{flex:none}
 
-/* ---------- the arena is a place, so it has edges ---------- */
-/* The field is a fixed 1280x800 for fairness, letterboxed into whatever room
-   the desktop has. Without a frame that boundary is invisible and cursors look
-   like they are wandering off under the taskbar. */
 #arena:before{content:"";position:absolute;inset:0;pointer-events:none;
   border:1px solid rgba(255,255,255,.28);
   box-shadow:inset 0 0 0 1px rgba(0,0,0,.30),inset 0 0 26px rgba(0,0,0,.14),0 0 0 1px rgba(0,0,0,.22)}
 
-/* ---------- tray: the volume flyout ---------- */
 #volflyout{position:fixed;display:none;flex-direction:column;align-items:center;gap:6px;z-index:9700;
   width:74px;padding:7px 6px 7px;background:#ECE9D8;border:1px solid #808080;
   box-shadow:1px 1px 0 #404040,inset 1px 1px 0 #fff,2px 3px 8px rgba(0,0,0,.35);font-size:11px}
@@ -1136,9 +901,6 @@ body.mobile .menubar span{flex:none}
 .vf-mute{display:flex;align-items:center;gap:3px;white-space:nowrap;font-size:11px}
 .vf-mute input{margin:0}
 
-
-
-/* ================= cmd.exe ================= */
 .cmd-body{padding:0;background:#000;overflow:hidden}
 .cmd-screen{flex:1;min-height:0;overflow-y:auto;background:#000;color:#C0C0C0;
   font:14px/1.18 "Lucida Console",Consolas,"Courier New",monospace;padding:2px 4px;
@@ -1150,7 +912,6 @@ body.mobile .menubar span{flex:none}
 @keyframes cmdblink{50%{opacity:0}}
 body.mobile .cmd-screen{font-size:12px}
 
-/* ================= MMC: Services, Device Manager, Group Policy ================= */
 .mmc-body{padding:0;background:#ECE9D8;overflow:hidden}
 .mmc-tb{display:flex;align-items:center;gap:3px;padding:3px 5px;border-bottom:1px solid #C9C4B0;
   background:linear-gradient(180deg,#FDFDFD 0,#EFEDE2 55%,#E4E0D0 100%);flex:none}
@@ -1210,7 +971,6 @@ body.mobile .mmc-tree{width:150px}
 body.mobile .c-name{width:130px}
 body.mobile .c-desc,body.mobile .c-log,body.mobile .c-start{display:none}
 
-/* properties sheets shared by the three consoles */
 .pr-row{display:flex;gap:8px;align-items:flex-start;margin:5px 0}
 .pr-k{width:118px;flex:none;color:#333}
 .pr-v{flex:1;min-width:0;word-break:break-word}
@@ -1226,7 +986,6 @@ body.mobile .c-desc,body.mobile .c-log,body.mobile .c-start{display:none}
 .pol-radio{display:flex;align-items:center;gap:6px;margin:5px 0}
 .pol-note{margin-top:9px;color:#666}
 
-/* ================= Control Panel ================= */
 .cpl-body{padding:0;background:#fff;overflow:hidden}
 .cpl-split{flex:1;min-height:0;display:flex;overflow:hidden}
 .cpl-side{width:186px;flex:none;overflow:auto;padding:9px 8px;
@@ -1260,7 +1019,6 @@ body.mobile .cpl-side{display:none}
 body.mobile .cpl-cats{grid-template-columns:1fr}
 body.mobile .cpl-main{padding:10px}
 
-/* policy effects: Group Policy settings are not decorative */
 body.showodds .cur .tag .mx{display:inline !important}
 body.classic-theme .title-bar{background:linear-gradient(180deg,#0A246A 0,#0A246A 100%) !important}
 body.classic-theme #taskbar{background:#C0C0C0 !important;border-top:1px solid #fff}
@@ -1269,17 +1027,11 @@ body.classic-theme .window{border-radius:0}
 body.verbose-boot #boot:after{content:"Applying computer settings...  Loading arena.dll...  Starting CURSORS.EXE Arena Service...";
   position:absolute;left:16px;bottom:16px;color:#9AA;font:11px "Lucida Console",monospace}
 
-
-/* ================= the Search Companion ================= */
-/* Real Microsoft Agent sprite sheets (see companion.js). The wrapper is a
-   fixed box; the sheet is a frame-sized element centred inside it and scaled
-   to fit, so characters with 80x80 frames and 200x160 frames both land right. */
 .cmp{display:block;position:relative;width:78px;height:78px;flex:none;overflow:hidden}
 .cmp.big{width:92px;height:92px}
 .cmp-sheet{position:absolute;left:50%;top:50%;transform-origin:center;
   background-repeat:no-repeat;image-rendering:auto;display:block}
 
-/* the search pane that replaces the blue task pane */
 .ex-panel.srch .ex-pbody{padding:6px 8px 10px}
 .ex-tasks:has(.srch){min-height:0}
 .srch-ask{font-weight:bold;color:#0C3B94;margin:2px 0 7px;line-height:1.35}
@@ -1294,7 +1046,6 @@ body.verbose-boot #boot:after{content:"Applying computer settings...  Loading ar
 .srch-links{display:flex;flex-direction:column;align-items:center;gap:1px;width:100%}
 .srch-links .ex-task{text-align:center}
 
-/* the chooser */
 .cmp-head{font-weight:bold;color:#0C3B94;margin-bottom:8px}
 .cmp-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
 .cmp-cell{display:flex;flex-direction:column;align-items:center;gap:2px;padding:7px 3px;border:1px solid transparent;border-radius:4px;cursor:pointer;background:#fff}
@@ -1306,9 +1057,6 @@ body.mobile .cmp-grid{grid-template-columns:repeat(2,1fr)}
 
 @media (prefers-reduced-motion:reduce){*{animation-duration:.01ms !important;animation-iteration-count:1 !important;transition:none !important}}
 
-/* ---------- pointer schemes: the whole shell wears the chosen cursors ---------- */
-/* body.skinned * outweighs any single-class cursor rule, which is the point:
-   on XP a scheme changed every surface at once */
 body.skinned,body.skinned *{cursor:var(--cur-arrow,default)}
 body.skinned a,body.skinned [data-go],body.skinned [data-act],body.skinned .sm-item,
 body.skinned .cpl-task,body.skinned .qlb,body.skinned #startbtn,body.skinned .trayico,
@@ -1320,35 +1068,27 @@ body.skinned .pt-h.e{cursor:var(--cur-we,ew-resize)}
 body.skinned .pt-h.s{cursor:var(--cur-ns,ns-resize)}
 body.skinned .pt-h.se{cursor:var(--cur-nwse,nwse-resize)}
 body.typing,body.typing *{cursor:none!important}
-/* the trail: images of the current arrow chasing the real one */
 .cur-trail{position:fixed;left:-100px;top:-100px;width:32px;height:32px;pointer-events:none;z-index:99995;opacity:0}
-/* Ctrl locate: XP's shrinking circle */
 .ctrl-locate{position:fixed;width:120px;height:120px;margin:-60px 0 0 -60px;border:2px solid #000;
   border-radius:50%;pointer-events:none;z-index:99996;animation:ctrlloc .65s ease-out forwards}
 @keyframes ctrlloc{from{transform:scale(1);opacity:.85}to{transform:scale(.06);opacity:.2}}
-/* Mouse Properties */
 .mo-fs{border:1px solid #D0CDC0;border-radius:3px;padding:7px 9px 9px;margin-bottom:8px}
 .mo-fs legend{padding:0 3px}
 .mo-role{display:flex;justify-content:space-between;align-items:center;padding:2px 6px;min-height:26px}
 .mo-role.on{background:#316AC5;color:#fff}
 .mo-pic{width:34px;height:26px;display:grid;place-items:center;flex:none}
 .mo-pic img{max-width:32px;max-height:26px}
-/* a default-role row shows the real system pointer via the cursor property on hover,
-   and a neutral glyph otherwise */
 .mo-def:after{content:"\2196";font-size:13px;color:#444}
 .mo-role.on .mo-def:after{color:#fff}
-/* the arena: a skinned player's cursor is their scheme's arrow */
 .cur img.curskin{width:24px;height:24px;filter:drop-shadow(1px 2px 2px rgba(0,0,0,.55))}
 #arena.rot .cur>img.curskin{transform:rotate(-90deg)}
 .cur.dueling img.curskin{animation:shake .13s infinite;filter:drop-shadow(0 0 3px #FF3B20) drop-shadow(0 0 7px rgba(255,40,20,.55))}
 #arena.rot .cur.dueling img.curskin{animation:shakeRot .13s infinite}
 
-/* ---------- IE: the Explorer bar, Find, Internet Options ---------- */
 .io-advgroup{font-weight:bold;padding:3px 2px 1px}
 .io-advrow{display:flex;gap:6px;align-items:flex-start;padding:1px 2px 1px 14px;font-size:11px}
 .ex-tb.on{background:#fff;border-color:#ACA899;box-shadow:inset 1px 1px 2px rgba(0,0,0,.12)}
 
-/* ---------- Paint: the Fonts toolbar ---------- */
 .pt-fontbar{position:absolute;left:70px;top:8px;z-index:40;display:flex;gap:4px;align-items:center;
   background:#ECE9D8;border:1px solid #ACA899;box-shadow:2px 2px 5px rgba(0,0,0,.3);padding:4px 6px}
 .pt-fonttitle{font-weight:bold;margin-right:2px}
@@ -1358,7 +1098,6 @@ body.typing,body.typing *{cursor:none!important}
 .pt-fontbtn.u{text-decoration:underline}
 .pt-fontbtn.on{background:#fff;box-shadow:inset 1px 1px 2px rgba(0,0,0,.25);border:1px solid #ACA899}
 
-/* ---------- tray chevron + Alt+Tab ---------- */
 #tray-chev{width:14px;height:16px;display:grid;place-items:center;font-size:13px;font-weight:bold;color:#fff;
   cursor:pointer;border-radius:2px;background:rgba(255,255,255,.12)}
 #tray-chev:hover{background:rgba(255,255,255,.28)}
@@ -1373,7 +1112,6 @@ body.tray-open .tray-idle{display:inline-block}
 .at-cell img,.at-cell .xico,.at-cell svg{width:24px;height:24px}
 .at-cap{margin-top:8px;padding-top:5px;border-top:1px solid #ACA899;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:320px}
 
-/* ---------- Calculator ---------- */
 #calc-display{border:1px solid #7F9DB9;background:#fff;text-align:right;font:13px "Lucida Console",Consolas,monospace;
   padding:4px 6px;margin:6px 0;min-height:20px;overflow:hidden;white-space:nowrap}
 #calc-keys{display:flex;flex-direction:column;gap:4px;padding-bottom:4px}
@@ -1381,14 +1119,11 @@ body.tray-open .tray-idle{display:inline-block}
 .calc-k{min-width:36px;height:27px;min-height:0;padding:0;font-size:11px;flex:1}
 .calc-k.num{color:#00007F}
 .calc-k.op,.calc-k.mem{color:#7F0000}
-/* ---------- Character Map ---------- */
 #cm-grid{border:1px solid #7F9DB9;background:#fff;height:190px;overflow:auto;display:flex;flex-wrap:wrap;align-content:flex-start;padding:1px}
 .cm-cell{width:18px;height:20px;display:grid;place-items:center;border:1px solid #E4E4E4;margin:-1px 0 0 -1px;font-size:12px;cursor:default}
 .cm-cell:hover{transform:scale(1.7);background:#fff;border:1px solid #316AC5;z-index:5;box-shadow:1px 2px 4px rgba(0,0,0,.35)}
 .cm-cell.on{background:#316AC5;color:#fff}
-/* ---------- Disk Defragmenter ---------- */
 .df-sw{display:inline-block;width:10px;height:10px;margin-right:3px;vertical-align:-1px}
-/* ---------- Registry Editor ---------- */
 .reg-split{flex:1;display:flex;min-height:0;border:1px solid #ACA899;background:#fff}
 #reg-tree{width:44%;border-right:1px solid #ACA899;overflow:auto;padding:2px 0;font-size:11px}
 .reg-key{white-space:nowrap;padding:1px 4px;cursor:default}
@@ -1405,9 +1140,6 @@ body.tray-open .tray-idle{display:inline-block}
 .rv-t{width:20%;color:#555}
 .rv-v{flex:1;overflow:hidden;text-overflow:ellipsis;color:#333}
 
-/* ---------- Phase 8: file-operation dialog, multi-select ---------- */
-/* XP's copy animation: two folders and sheets of paper crossing between them.
-   The folders are the shell's own 32px icons, dropped in from JS. */
 .cpy-anim{position:relative;height:56px;margin:10px 6px 6px;overflow:hidden}
 .cpy-src,.cpy-dst{position:absolute;top:12px;width:32px;height:32px;background-size:32px 32px;background-repeat:no-repeat}
 .cpy-src{left:14px}
@@ -1426,20 +1158,16 @@ body.tray-open .tray-idle{display:inline-block}
 }
 .cpy-line{padding:0 8px;font-weight:700}
 .cpy-sub{padding:2px 8px 10px;color:#3a3a3a}
-/* the sunken trough + the classic segmented blue fill */
 .xprog{height:17px;margin:0 8px;border:1px solid;border-color:#808080 #fff #fff #808080;background:#fff;padding:1px}
 .xprog-in{height:100%;width:0%;
   background:repeating-linear-gradient(90deg,#1c5fd4 0 8px,transparent 8px 10px);
   transition:width .12s linear}
 
-/* a selected icon that is part of a multi-drag ghosts with the rest */
 .icon.dragging{opacity:.55}
 
-/* auto-hide: park the bar off the bottom, leave a 2px lip to find it by */
 body.tb-auto #taskbar{transition:transform .18s ease-out;transform:translateY(calc(100% - 2px))}
 body.tb-auto.tb-peek #taskbar{transform:none}
 
-/* ---------- Phase 9: the writing apps ---------- */
 .np-text{flex:1;min-height:0;resize:none;border:0;outline:0;background:#fff;color:#000;
   font:13px "Lucida Console",monospace;padding:2px 4px;white-space:pre;overflow:auto}
 .np-text[wrap="soft"]{white-space:pre-wrap}
@@ -1476,7 +1204,6 @@ body.tb-auto.tb-peek #taskbar{transform:none}
 .cb-empty{color:#666;text-align:center;padding-top:30px}
 .cb-item{display:flex;gap:10px;align-items:center}
 
-/* ---------- Phase 10: the noise apps ---------- */
 .sv32-cols{flex:1;display:flex;gap:0;padding:6px;min-height:0}
 .sv32-col{flex:1;border-right:1px solid #ACA899;padding:4px 8px;display:flex;flex-direction:column;gap:6px}
 .sv32-col:last-child{border-right:0}
@@ -1492,13 +1219,7 @@ body.tb-auto.tb-peek #taskbar{transform:none}
 .sr-btns{display:flex;gap:4px;justify-content:center}
 .sr-btns .xbtn{min-width:44px;height:26px}
 .wmp-body{background:#10151d!important;color:#dfe7f2}
-/* the picture is the app: it takes every pixel the window is not using for
-   the transport and the list, so maximising the player maximises the clip.
-   The playlist keeps a fixed strip at the bottom instead of eating the growth,
-   which is what it used to do. */
 #wmp-viz{flex:1 1 auto;min-height:90px;width:100%;background:#000;border-bottom:1px solid #2b3a52}
-/* a clip takes the visualiser slot: same box, same border, one of the two
-   is shown at a time so the layout never moves */
 #wmp-video{flex:1 1 auto;display:none;min-height:90px;width:100%;background:#000;
   border-bottom:1px solid #2b3a52;object-fit:contain}
 #win-wmp.playing-video #wmp-viz{display:none}
@@ -1516,12 +1237,10 @@ body.tb-auto.tb-peek #taskbar{transform:none}
 .wmp-row:hover{background:#1b2a40}
 .wmp-row.on{background:#265088;color:#fff}
 
-/* ---------- Phase 12: Task Manager, all five tabs ---------- */
 .tm-gaugerow{display:flex;gap:8px;margin-bottom:6px}
 .tm-fs{border:1px groove #fff;padding:4px 6px;margin:0}
 .tm-fs legend{font-size:10px;padding:0 3px}
 .tm-fs canvas{background:#000;border:1px solid #333;display:block;width:100%}
-/* the LED bar gauge: black well, green segments lit from the bottom */
 .tm-gauge{position:relative;width:44px;height:62px;background:#000;border:1px solid #333;
   display:flex;align-items:flex-end;justify-content:center}
 .tm-gauge i{display:block;width:26px;margin:0 auto 2px;
@@ -1532,13 +1251,10 @@ body.tb-auto.tb-peek #taskbar{transform:none}
   padding:4px 2px;line-height:1.7}
 .tm-list .row.hdr{font-weight:700;border-bottom:1px solid #ACA899;background:#ECE9D8;position:sticky;top:0}
 .tm-list .row.dim{color:#777}
-/* the tray CPU meter while Task Manager is open */
 #tray-cpu{display:none;width:16px;height:16px;background:#000;border:1px solid #3c6;
   align-items:flex-end;justify-content:center;padding:1px;box-sizing:border-box}
 #tray-cpu i{display:block;width:10px;background:#2FD858;height:10%}
 
-/* ================= Phase 12b — System Restore, MSConfig, Folder Options ================= */
-/* rstrui's own chrome: a white page with a blue header and a task strip */
 .sr-body{display:flex;flex-direction:column;padding:0;background:#fff}
 .sr-head{background:linear-gradient(#F0F4FB,#D6E2F5);border-bottom:1px solid #8FA8CC;
   padding:8px 12px;font-size:15px;font-weight:bold;color:#1B3F87;flex:0 0 auto}
@@ -1580,7 +1296,6 @@ body.tb-auto.tb-peek #taskbar{transform:none}
 .sr-warnh{font-size:11px;font-weight:bold;margin-bottom:3px}
 .sr-warnp{font-size:11px;color:#444;line-height:1.4}
 
-/* msconfig */
 .mc-radio{display:flex;gap:6px;align-items:flex-start;font-size:11px;margin:3px 0;cursor:default}
 .mc-check{display:flex;gap:6px;align-items:center;font-size:11px;margin:2px 0;cursor:default}
 .mc-note{font-size:11px;color:#666;margin:0 0 3px 19px}
@@ -1605,7 +1320,6 @@ body.tb-auto.tb-peek #taskbar{transform:none}
 .mc-sc{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#333}
 .mc-sl{width:124px;flex:0 0 124px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#555}
 
-/* folder options */
 .io-advrow.indent{padding-left:28px}
 .fo-advsub{font-size:11px;padding:2px 2px 0 14px}
 .fo-trow{display:flex;gap:6px;align-items:center;font-size:11px;padding:1px 4px;cursor:default}
@@ -1615,7 +1329,6 @@ body.tb-auto.tb-peek #taskbar{transform:none}
 .fo-ttype{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #fo-typelist{border:1px solid #7F9DB9;background:#fff;height:150px;overflow:auto}
 .fo-det{border:1px solid #ACA899;background:#F7F6F1;padding:6px 8px;margin-top:7px;font-size:11px;line-height:1.5;min-height:52px}
-/* Explorer under Folder Options: the system-folder warning and single-click */
 .ex-list.v-warn{display:block;padding:22px 26px}
 .ex-warn{max-width:420px;font-size:11px;line-height:1.55}
 .ex-warn b{display:block;margin-bottom:6px}
@@ -1623,12 +1336,10 @@ body.tb-auto.tb-peek #taskbar{transform:none}
 .ex-list.sc .ex-nm{color:#00379B;text-decoration:underline}
 .ex-list.sc .ex-item:hover .ex-nm{color:#D03030}
 
-/* ---- Recycle Bin Properties ---- */
 .bp-row{display:flex;gap:8px;align-items:center;margin-top:8px}
 .bp-slider{flex:1}
 .bp-pct{width:38px;text-align:right;font-size:11px;font-weight:bold}
 
-/* ---- Add or Remove Programs ---- */
 .aw-body{display:flex;padding:0;background:#fff}
 .aw-side{width:150px;flex:0 0 150px;background:#F1EFE2;border-right:1px solid #ACA899;padding:8px 0}
 .aw-tab{display:flex;gap:6px;align-items:flex-start;padding:8px 8px;cursor:default;font-size:11px}
@@ -1665,7 +1376,6 @@ body.tb-auto.tb-peek #taskbar{transform:none}
 .aw-compn{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .aw-compsz{width:56px;flex:0 0 56px;text-align:right;color:#555}
 
-/* ---- the Fonts folder ---- */
 .fnt-list{flex:1;min-height:0;border:1px solid #ACA899;background:#fff;overflow:auto;
   display:flex;flex-wrap:wrap;align-content:flex-start;gap:2px;padding:6px}
 .fnt-item{width:96px;padding:5px 3px;text-align:center;cursor:default}
@@ -1681,14 +1391,11 @@ body.tb-auto.tb-peek #taskbar{transform:none}
 .fv-rule{border-top:1px solid #ACA899;margin:8px 0}
 .fv-line{white-space:nowrap;overflow:hidden;text-overflow:clip;line-height:1.25;margin-bottom:4px}
 
-/* ---- ClearType ---- */
 .ct-sample{border:1px solid #ACA899;background:#fff;padding:6px 8px;margin:2px 0 8px 19px;font-size:15px}
 .ct-on,body.ct-on{-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
 .ct-off,body.ct-off{-webkit-font-smoothing:none;text-rendering:optimizeSpeed}
-/* Task Manager, Options > Always On Top */
 .window.always-on-top{z-index:5900 !important}
 
-/* ---- Magnifier: the docked strip ---- */
 #magnifier{display:none;position:fixed;left:0;top:0;right:0;height:124px;z-index:9500;
   background:#fff;border-bottom:2px solid #0A246A;overflow:hidden;pointer-events:none}
 #magnifier.flash{animation:magflash .35s}
@@ -1697,11 +1404,8 @@ body.tb-auto.tb-peek #taskbar{transform:none}
 #magnifier .mag-clone{position:absolute;pointer-events:none}
 body.mag-on #desktop,body.mag-on #icons{margin-top:0}
 body.mag-on #taskbar{z-index:9400}
-/* the strip spans the raw viewport, so lying down it covered the wallet and the
-   round clock at the head of the money rail */
 body.mobile.land #magnifier{right:calc(var(--rail) + var(--sar))}
 
-/* ---- On-Screen Keyboard ---- */
 .osk-keys{flex:1;min-height:0;display:flex;flex-direction:column;gap:3px;padding:4px 2px}
 .osk-row{display:flex;gap:3px;flex:1}
 .osk-key{flex:1;min-width:0;font:inherit;font-size:11px;padding:0;cursor:default;
@@ -1709,7 +1413,6 @@ body.mobile.land #magnifier{right:calc(var(--rail) + var(--sar))}
 .osk-key:active,.osk-key.on{border-color:#808080 #fff #fff #808080;background:#D8D4C4}
 .osk-gap{flex:.4}
 
-/* ---- Scheduled Tasks ---- */
 .st-head,.st-row{display:flex;gap:6px;font-size:11px;padding:2px 5px;align-items:center}
 .st-head{background:#ECE9D8;border:1px solid #ACA899;font-weight:bold}
 .st-list{flex:1;min-height:0;overflow:auto;border:1px solid #ACA899;border-top:0;background:#fff}
@@ -1723,7 +1426,6 @@ body.mobile.land #magnifier{right:calc(var(--rail) + var(--sar))}
 .st-t{width:64px;flex:0 0 64px}
 .st-ico{width:16px;height:16px;flex:0 0 16px}
 
-/* ---- High Contrast: the black scheme, applied to the whole shell ---- */
 body.high-contrast{filter:none}
 body.high-contrast .window{background:#000;color:#fff;border-color:#fff}
 body.high-contrast .win-body,body.high-contrast .win-body.pad{background:#000 !important;color:#fff}
@@ -1750,13 +1452,6 @@ body.high-contrast .ex-list,body.high-contrast .ex-tasks{background:#000;color:#
 body.high-contrast #startmenu,body.high-contrast #ctx{background:#000;color:#fff;border-color:#fff}
 body.high-contrast .cit:hover,body.high-contrast .sm-item:hover{background:#fff;color:#000}
 
-/* ---------- Phase 13: the Round-2 apps, folded for a phone ---------- */
-/* Everything below only fires on body.mobile. The rule throughout: a pane that
-   sat beside another on a 1024px screen sits above it on a 390px one, lists
-   grow instead of scrolling inside a 150px box, and nothing is 150px of
-   permanent chrome on a 390px screen. */
-
-/* Add or Remove Programs: the left rail becomes a scrolling row of tabs */
 body.mobile .aw-body{flex-direction:column}
 body.mobile .aw-side{width:auto;flex:none;display:flex;overflow-x:auto;padding:4px;
   border-right:0;border-bottom:1px solid #ACA899;gap:4px}
@@ -1771,7 +1466,6 @@ body.mobile .aw-det{margin-left:0}
 body.mobile .aw-panel{flex-direction:column;align-items:stretch;gap:7px}
 body.mobile .aw-compsz{display:none}
 
-/* System Restore: the blue task pane goes on top and shrinks to its text */
 body.mobile .sr-split{flex-direction:column;overflow:auto}
 body.mobile .sr-side{width:auto;flex:none;border-right:0;border-bottom:1px solid #C2D2E8;padding:8px 10px}
 body.mobile .sr-main{padding:10px}
@@ -1783,8 +1477,6 @@ body.mobile .sr-list{height:132px}
 body.mobile .sr-foot{padding:7px 10px}
 body.mobile .sr-foot .xbtn{flex:1;min-width:0}
 
-/* MSConfig, Folder Options, Recycle Bin, Accessibility: dialogs on a phone get
-   full width and finger-sized rows */
 body.mobile #win-msconfig,body.mobile #win-foldopt,body.mobile #win-binprops,
 body.mobile #win-access,body.mobile #win-cleartype,body.mobile #win-magnifier,
 body.mobile #win-awprog{width:calc(100% - 12px) !important;max-width:none}
@@ -1801,61 +1493,39 @@ body.mobile .fo-ttype{display:none}
 body.mobile #fo-viewfoot{flex-wrap:wrap}
 body.mobile #fo-viewfoot .xbtn{flex:1;min-width:0}
 
-/* the Fonts folder: fewer, bigger tiles */
 body.mobile .fnt-item{width:calc(33.33% - 2px)}
 body.mobile .fnt-glyph{font-size:26px;line-height:30px;height:32px}
 body.mobile .fv-line{white-space:normal}
 
-/* Scheduled Tasks: name and schedule only, the rest is desktop trivia */
 body.mobile .st-r,body.mobile .st-l,body.mobile .st-t{display:none}
 body.mobile .st-s{width:120px;flex:0 0 120px}
 body.mobile .st-row{min-height:30px}
 
-/* Task Manager's five tabs wrap instead of overflowing */
 body.mobile #win-taskmgr .xtabs{flex-wrap:wrap}
 body.mobile .tm-statgrid{grid-template-columns:1fr}
 
-/* the On-Screen Keyboard is the one window that must fit the width exactly */
 body.mobile #desktop>#win-osk{left:0 !important;right:0;width:100% !important;
   top:auto !important;bottom:calc(var(--tb) + var(--hud) + var(--sab)) !important;
   height:210px !important}
 body.mobile .osk-key{font-size:12px}
 body.mobile #win-osk .menubar{display:none}
-/* with the keyboard up, the HUD is not in the way of anything */
 body.mobile.kb #desktop>#win-osk{bottom:0 !important}
-/* the keyboard is a palette, not a page: it never covers the whole screen */
 #win-osk .win-body{padding:2px}
 
-/* the Magnifier strip on a phone is shorter, and never over the taskbar */
 body.mobile #magnifier{height:96px}
 
-/* the tour balloon points at a tray that a sheet is covering, so on the phone
-   it steps aside as soon as an app is open */
 body.mobile.sheeted #balloon{display:none !important}
-/* and so do the arena's name tags and the kill feed: over a full-screen sheet
-   they print across the wallet and the money buttons. The cursors themselves
-   keep crawling — the fight is still the product. */
 body.mobile.sheeted .cur .tag{display:none}
 body.mobile.sheeted #feed{display:none}
-/* Task Manager on a phone: a tab pane fills the sheet instead of sitting in a
-   470px-tall box at the top of a 844px screen */
 body.mobile #win-taskmgr .win-body{display:flex;flex-direction:column}
 body.mobile #win-taskmgr .xpane.on{flex:1;min-height:0;display:flex;flex-direction:column}
 body.mobile #win-taskmgr .tm-list{flex:1;min-height:0;height:auto}
 body.mobile #win-taskmgr .tm-fs{flex:none}
 body.mobile #tmgraph,body.mobile #tmpf,body.mobile #tmnet{width:100%}
-/* the launcher covers the tray the balloon points at */
 body.mobile #startmenu.open ~ #balloon{display:none !important}
 
-/* ---- phone: things a finger has to hit ---- */
-/* XP's menu rows are 22px because a mouse is a pixel. A finger is not. */
 body.mobile .cit{padding:8px 24px 8px 18px;line-height:16px;font-size:12px}
 body.mobile #ctx,body.mobile .csub{min-width:180px}
-/* A submenu must NOT be a scroll box by default: overflow clips the level
-   below it, so on a phone every third-level flyout (Accessories > System
-   Tools) painted nothing, and in landscape the second level went too — about
-   twenty apps unreachable until you rotated. placeSub() takes each submenu out
-   of the flow (position:fixed) and clamps it only when it genuinely overflows. */
 body.mobile .trayico{width:20px;height:20px}
 body.mobile #tray{gap:11px}
 body.mobile #tray-chev{font-size:14px;padding:0 3px}
@@ -1863,8 +1533,6 @@ body.mobile .menubar span{padding:4px 9px}
 body.mobile .xtab{padding:6px 10px}
 body.mobile .xbtn{min-height:28px}
 body.mobile .ex-item{min-height:34px}
-/* the mixer is a 300px-tall utility window, not a page: as a full-screen sheet
-   its vertical sliders grew to 1200px and the columns came apart */
 body.mobile #desktop>#win-sndvol{height:330px !important;top:52px !important}
 body.mobile .sv32-col{padding:4px 5px;gap:4px}
 body.mobile .sv32-name{font-size:10px}
@@ -1872,17 +1540,13 @@ body.mobile .sv32-brow{display:none}
 body.mobile .sv32-mute span{display:none}
 body.mobile .sv32-vrow input{min-height:110px}
 
-/* ---- audit pass: phone targets and drag ergonomics ---- */
 body.mobile .cx-tab{padding:8px 12px 7px;font-size:12px}
 body.mobile .task-tab{height:30px}
 body.mobile .mmc-row{height:26px}
 body.mobile .mmc-row.mmc-head{height:24px}
 body.mobile #balloon-x{font-size:12px;padding:1px 5px}
-/* while a window drags or resizes, iframes must not eat the pointerup */
 body.win-drag iframe{pointer-events:none}
 
-/* ---------- How to Play: the intro card ---------- */
-/* XP chrome outside, flat and glanceable inside: one picture, three bullets */
 .tour-body{display:flex;min-height:0;padding:0;background:#fff}
 .tour-rail{flex:0 0 148px;background:linear-gradient(180deg,#5A7EDC 0,#3B62C4 40%,#2B51B4 100%);
   color:#fff;padding:16px 0 10px;display:flex;flex-direction:column;gap:2px}
@@ -1906,15 +1570,13 @@ body.mobile .tour-dot{flex:none;padding:6px 9px}
 body.mobile .tour-dot span{display:none}
 body.mobile #tour-img{max-height:44vh}
 
-/* ---- mobile pass: touch ergonomics ---- */
-.icon{touch-action:none}          /* drags must not become scrolls */
-.title-bar{touch-action:none}     /* dialogs drag by the bar on the phone too */
+.icon{touch-action:none}
+.title-bar{touch-action:none}
 body.mobile .msn-toast{bottom:calc(var(--tb) + var(--hud) + var(--sab) + 8px)}
 body.mobile.land .msn-toast{right:calc(var(--rail) + var(--sar) + 8px);bottom:calc(var(--tb) + var(--sab) + 8px)}
 body.mobile .tour-pts{flex:none}
 body.mobile .tour-foot{padding-top:12px}
 
-/* ---- audit pass: money at 11px, phone targets, markup Max hidden on sheets ---- */
 #win-cursors .small{font-size:11px}
 body.mobile .title-bar-controls button[aria-label="Maximize"]{display:none}
 body.mobile .trayico{width:26px;height:26px}
@@ -1922,7 +1584,6 @@ body.mobile #tray-chev{padding:4px 6px}
 body.mobile .msn-row{min-height:30px}
 body.mobile .wp-bar button{min-height:26px}
 
-/* ---- winver / utilman / system shutdown ---- */
 .wv-banner{display:flex;align-items:center;gap:12px;font-size:15px}
 .wv-banner img{width:44px;height:44px;object-fit:contain}
 .wv-hr{border:0;border-top:1px solid #ACA899;margin:8px 0}
@@ -1931,9 +1592,6 @@ body.mobile .wp-bar button{min-height:26px}
 .um-row{display:flex;justify-content:space-between;align-items:center;padding:4px 6px;font-size:11px}
 .um-row span i{color:#666;font-style:normal}
 
-/* ---- Windows Update, 2003 green ---- */
-
-/* ---------------- Outlook Express ---------------- */
 .oe-win{background:#ECE9D8;display:flex;flex-direction:column;padding:0;overflow:hidden}
 .oe-toolbar{display:flex;align-items:center;gap:2px;padding:3px 6px;background:#ECE9D8;border-bottom:1px solid #ACA899;flex:none}
 .oe-tb{min-width:0;min-height:0;padding:3px 8px;background:none;border:1px solid transparent;border-radius:3px;box-shadow:none;cursor:default;font-size:11px;color:#000}
@@ -1986,7 +1644,6 @@ body.mobile .wp-bar button{min-height:26px}
 .oe-fres{flex:1;overflow:auto;background:#fff;border-top:1px solid #ACA899}
 .oe-fnone{padding:10px;color:#777}
 
-/* ===== Event Viewer ===== */
 .ev-ctype{width:96px}
 .ev-cdate{width:64px}
 .ev-ctime{width:78px}
@@ -2001,13 +1658,11 @@ body.mobile .wp-bar button{min-height:26px}
 .ev-pnav{position:absolute;top:2px;right:0;display:flex;flex-direction:column;gap:3px}
 .ev-pnav .xbtn{padding:1px 5px;min-width:34px}
 .ev-pdesc{width:100%;height:110px;resize:none;font:11px Tahoma,"Segoe UI",sans-serif;background:#fff;border:1px solid #7F9DB9;margin-top:3px;box-sizing:border-box}
-/* ===== System Information (msinfo32) ===== */
 .msi-citem{width:200px}
 .msi-cval{flex:1;min-width:0}
 .msi-find{flex:none;display:flex;align-items:center;gap:6px;padding:5px 8px;border-top:1px solid #ACA899;background:#ECE9D8;font-size:11px}
 .msi-find input{flex:1;min-width:40px;height:20px;border:1px solid #7F9DB9;font:11px Tahoma,"Segoe UI",sans-serif;padding:1px 3px}
 body.mobile .msi-citem{width:130px}
-/* ===== DirectX Diagnostic Tool (dxdiag) ===== */
 .dx-body{padding:0;background:#ECE9D8;overflow:hidden}
 .dx-pane{flex:1;min-height:0;overflow:auto;padding:8px 12px;font-size:11px}
 .dx-h{font-weight:bold;margin:8px 0 4px;border-bottom:1px solid #ACA899;padding-bottom:2px}
@@ -2026,7 +1681,6 @@ body.mobile .msi-citem{width:130px}
 .dx-testdlg .xbtn{min-width:66px;margin:10px 4px 0}
 body.mobile .dx-k{width:110px}
 
-/* ================= FreeCell / Spider ================= */
 .win-body.fc-body,.win-body.sp-body{background:#008000;padding:0;display:flex;flex-direction:column;overflow:hidden}
 .fc-scroll,.sp-scroll{flex:1;min-height:0;overflow:auto}
 .fc-board{position:relative;width:633px;height:430px;margin:0 auto;flex:none}
@@ -2034,11 +1688,9 @@ body.mobile .dx-k{width:110px}
 .fc-card,.sp-card{position:absolute;width:71px;height:96px;box-sizing:border-box;border:1px solid #000;border-radius:4px;background-color:#fff;background-repeat:no-repeat}
 .fc-card.up{background-image:var(--fc-sheet)}
 .sp-card.up{background-image:var(--sp-sheet)}
-/* the back is CSS, exactly as the vendored deck draws it */
 .fc-card.down,.sp-card.down{background-color:#02027f;background-size:4px 4px;background-image:linear-gradient(45deg,hsla(0,0%,100%,0),hsla(0,0%,100%,0) 44.9%,#fff 45%,#fff 55%,hsla(0,0%,100%,0) 55.1%,hsla(0,0%,100%,0)),linear-gradient(-45deg,hsla(0,0%,100%,0),hsla(0,0%,100%,0) 44.9%,#fff 45%,#fff 55%,hsla(0,0%,100%,0) 55.1%,hsla(0,0%,100%,0))}
 .fc-card.sel,.sp-card.sel{filter:invert(.85)}
 .fc-slot,.sp-slot{position:absolute;width:71px;height:96px;box-sizing:border-box;border:1px solid #060;border-radius:4px}
-/* if the sprite sheet never arrives, ranks print in the corner */
 .fc-nosheet .fc-card.up::before,.sp-nosheet .sp-card.up::before{content:attr(data-face);position:absolute;left:4px;top:2px;font-size:12px;color:#000}
 .fc-nosheet .fc-card.up[data-red="1"]::before,.sp-nosheet .sp-card.up[data-red="1"]::before{color:#c00}
 .sp-score{position:absolute;left:0;right:0;bottom:48px;text-align:center;color:#fff;font-size:11px;pointer-events:none}
@@ -2048,15 +1700,10 @@ body.mobile .dx-k{width:110px}
 .fc-modal-btns{display:flex;gap:6px;justify-content:flex-end}
 .solb-canvas{position:absolute;z-index:40;cursor:default}
 
-/* Winamp on a phone: the stack scales into whatever the desktop has left */
-/* the wrap owns the adopted #webamp; once scaled it becomes a stacking
-   context, so it must carry Winamp's z-band itself (4800: over normal
-   windows, under the always-on-top CURSORS.EXE at 4900) */
 body.mobile #webamp-wrap{position:fixed;left:0;top:0;transform-origin:0 0;z-index:4800}
 body.mobile.land #tour-img{max-height:26vh}
 body.mobile.land .tour-pts li{line-height:1.35}
 
-/* ---- Log Off: the full-screen band, not a dialog ---- */
 #win-logoff.lgo{left:0 !important;top:0 !important;width:100% !important;height:100% !important;
   border:0 !important;box-shadow:none !important;background:transparent !important;z-index:99998 !important;
   display:none;flex-direction:column;align-items:center;justify-content:center;padding:0 !important}
@@ -2080,12 +1727,10 @@ body.mobile.land .tour-pts li{line-height:1.35}
 .lgo-foot{margin-top:22px}
 body.mobile .lgo-btns{gap:26px}
 body.mobile .lgo-h{font-size:18px}
-/* ---- autoplay list ---- */
 .ap-list{background:#fff;border:1px solid #7F9DB9;max-height:132px;overflow:auto}
 .ap-row{display:flex;align-items:center;gap:7px;padding:4px 7px;cursor:default}
 .ap-row.on{background:#316AC5;color:#fff}
 .ap-row .xico{width:16px;height:16px;flex:none}
-/* ---- the taskbar's other toolbars ---- */
 .tb-bar{display:none;align-items:center;gap:5px;padding:0 6px;color:#fff;font-size:11px;
   border-left:1px solid rgba(0,0,0,.25);box-shadow:inset 1px 0 0 rgba(255,255,255,.16);flex:none;max-width:46%}
 .tb-bar.on{display:flex}
@@ -2099,21 +1744,12 @@ body.mobile .lgo-h{font-size:18px}
 .tb-bar .tbb .xico,.tb-bar .tbb svg{width:14px;height:14px;vertical-align:-3px;margin-right:3px}
 body.mobile .tb-bar{display:none !important}
 
-/* iOS long-press: the OS steals the gesture for its callout and text selection
-   unless the surface opts out, and the stolen gesture is exactly the one that
-   is supposed to open our context menu. */
 #taskbar,#tabs,.task-tab,#tray,#ql,.icon,.title-bar,.cit,#startmenu{
   -webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
 .task-tab,#tray,.trayico,#tray-chev{touch-action:none}
 
-/* ================= Hearts ================= */
-/* the Hearts table is teal, not Solitaire's green - that is how you tell the
-   two felts apart at a glance in the taskbar preview */
 .win-body.ht-body{background:#008080;padding:0;display:flex;flex-direction:column;overflow:hidden}
 .ht-scroll{flex:1;min-height:0;overflow:auto}
-/* the board is scaled to fit on a phone (hearts.js fit()), and Chrome does not
-   shrink a parent's scrollable overflow for a scaled-DOWN child — without this
-   the felt can still be panned off the side of the screen */
 body.mobile .ht-scroll{overflow:hidden}
 .ht-board{position:relative;width:700px;height:500px;margin:0 auto;flex:none;font:11px Tahoma,"Segoe UI",sans-serif;color:#fff}
 .ht-card{position:absolute;width:71px;height:96px;box-sizing:border-box;border:1px solid #000;border-radius:4px;background-color:#fff;background-repeat:no-repeat}
@@ -2145,11 +1781,6 @@ body.mobile .ht-scroll{overflow:hidden}
 .ht-modal td:first-child{text-align:left;padding-right:12px}
 .ht-modal-btns{display:flex;gap:6px;justify-content:flex-end;margin-top:8px}
 
-/* ================= Tour Windows XP (tourstart.exe) ================= */
-/* The Microsoft tour, not ours: a Luna-blue title panel, a chapter rail, and a
-   Bliss-green theater. Every chapter picture is composed in tourxp.js out of
-   assets this machine already ships — Bliss, the flag, shell32 icons, the real
-   arrow cursor — so the only new bytes on disk are the mp3. */
 .txp-body{display:flex;flex-direction:column;min-height:0;padding:0;background:#ECE9D8;overflow:hidden}
 .txp-banner{flex:none;padding:9px 16px 8px;color:#fff;border-bottom:1px solid #0A2E77;
   background:linear-gradient(180deg,#3C81E8 0,#1B5CC4 46%,#0B3E9E 100%);text-shadow:0 1px 1px rgba(0,0,0,.45)}
@@ -2184,9 +1815,7 @@ body.mobile .ht-scroll{overflow:hidden}
 .txp-spk.off::after{content:"";position:absolute;left:3px;right:3px;top:50%;height:2px;border-radius:1px;
   background:#C0392B;transform:rotate(-32deg)}
 
-/* ---- chapter scenes ---- */
 .txp-scene{position:relative;width:100%;height:100%;overflow:hidden}
-/* Basics: Bliss, real shell icons, the real arrow_r.cur, the real Start bitmap */
 .txp-desk{background-size:cover;background-position:center}
 .txp-icons{position:absolute;left:10px;top:10px;display:flex;flex-direction:column;gap:13px}
 .txp-icons span{display:flex;flex-direction:column;align-items:center;gap:2px;width:66px}
@@ -2202,7 +1831,6 @@ body.mobile .ht-scroll{overflow:hidden}
 .txp-tray{margin-left:auto;display:flex;align-items:center;gap:5px;height:26px;padding:0 8px;
   background:linear-gradient(180deg,#149CE0 0,#0C77C4 100%)}
 .txp-tray img{width:14px;height:14px}
-/* What's New: the genuine flag over Luna, beside a task pane */
 .txp-luna{display:flex;align-items:center;gap:18px;padding:14px 18px;
   background:linear-gradient(135deg,#2F6FD8 0,#12439E 55%,#0A2E77 100%)}
 .txp-flag{width:96px;height:auto;flex:none;filter:drop-shadow(0 3px 6px rgba(0,0,0,.4))}
@@ -2210,7 +1838,6 @@ body.mobile .ht-scroll{overflow:hidden}
 .txp-pane-h{padding:4px 10px;font-size:11px;font-weight:bold;color:#fff;background:linear-gradient(180deg,#6D9BE8 0,#3B6FD4 100%)}
 .txp-pane-r{display:flex;align-items:center;gap:9px;padding:6px 10px;font-size:11px;color:#0A3E9E;border-top:1px solid #E2E8F5}
 .txp-pane-r img{width:28px;height:28px;flex:none}
-/* Getting Started: the Help and Support Center masthead */
 .txp-help{display:flex;flex-direction:column;gap:9px;padding:10px 14px;background:linear-gradient(180deg,#F3F7FF 0,#DDE8FA 100%)}
 .txp-hbar{display:flex;align-items:center;gap:9px;font-size:14px;color:#0A3E9E}
 .txp-hbar img{width:30px;height:30px}
@@ -2222,21 +1849,18 @@ body.mobile .ht-scroll{overflow:hidden}
   border-radius:6px;border:1px solid #C5D4EC;background:#fff;font-size:10px;color:#26467F}
 .txp-hcols img{width:28px;height:28px}
 .txp-hcols i{font-style:normal}
-/* Music and Movies */
 .txp-media{display:flex;flex-direction:column;gap:8px;padding:10px 14px;background:linear-gradient(180deg,#1B2B4A 0,#0A1326 100%)}
 .txp-eq{flex:1;min-height:0;display:flex;align-items:flex-end;gap:3px}
 .txp-eq i{flex:1;border-radius:1px 1px 0 0;background:linear-gradient(180deg,#7CE6A0 0,#2FA8D8 55%,#1B5CC4 100%)}
 .txp-mrow{display:flex;align-items:center;gap:12px}
 .txp-mrow img{width:28px;height:28px}
 .txp-mlist{display:flex;gap:14px;font-size:10px;color:#9FC4E8}
-/* Digital Photography: three crops of the real Bliss, in a filmstrip */
 .txp-photo{display:flex;flex-direction:column;gap:8px;padding:10px 12px;background:linear-gradient(180deg,#F1EFE2 0,#D8D3BE 100%)}
 .txp-strip{flex:1;min-height:0;display:flex;gap:8px}
 .txp-strip span{flex:1;background-size:280%;border:3px solid #fff;border-radius:2px;box-shadow:0 2px 5px rgba(0,0,0,.28)}
 .txp-prow{display:flex;align-items:center;gap:7px;font-size:11px;color:#3B4A22}
 .txp-prow img{width:22px;height:22px}
 .txp-prow i{font-style:normal;margin-right:12px}
-/* Networking and the Web */
 .txp-net{display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:12px 0 14px;
   background:linear-gradient(180deg,#2F6FD8 0,#0E3B92 100%)}
 .txp-wire{position:absolute;inset:0;width:100%;height:100%}
@@ -2245,7 +1869,6 @@ body.mobile .ht-scroll{overflow:hidden}
 .txp-globe{width:18px;height:18px}
 .txp-nodes{position:relative;display:flex;gap:56px}
 .txp-nodes img{width:30px;height:30px;filter:drop-shadow(0 2px 3px rgba(0,0,0,.4))}
-/* Safety and Security */
 .txp-safe{display:flex;align-items:center;gap:16px;padding:12px 18px;background:linear-gradient(135deg,#E7EEF8 0,#C3D6EE 100%)}
 .txp-shield{flex:none;width:74px;height:86px;display:grid;place-items:center;border:2px solid #fff;
   border-radius:8px 8px 38px 38px;box-shadow:0 2px 6px rgba(0,0,0,.3);
@@ -2255,28 +1878,14 @@ body.mobile .ht-scroll{overflow:hidden}
 .txp-slist>div{display:flex;align-items:center;gap:9px;padding:5px 9px;font-size:11px;color:#123B84;
   border:1px solid #B8CCE6;border-radius:5px;background:#fff}
 .txp-slist img{width:24px;height:24px;flex:none}
-/* a phone cannot spare 168px for a rail it can scroll instead */
 body.mobile .txp-rail{flex:0 0 116px}
 body.mobile .txp-ch{font-size:10px;padding:5px 7px;gap:6px}
 body.mobile .txp-art{height:132px}
 body.mobile .txp-banner b{font-size:15px}
 
-/* Hearts: which cards you may actually play. XP left you to know the rules;
-   this table has to be legible to someone who has never played a trick. */
 .ht-card.ht-ok{box-shadow:0 0 0 2px #FFD800,0 4px 10px rgba(0,0,0,.45);cursor:pointer}
 .ht-card.ht-no{filter:brightness(.62) saturate(.7);cursor:default}
 
-/* ---------- the last four unfolded apps: mail, the players, the tour -------- */
-/* Same rule as the Phase 13 block above, plus one this round made explicit:
-   portrait and landscape want opposite things. A side pane costs width, which
-   portrait has none of and landscape has plenty of; height is the other way
-   round. So the stacking rules are gated on :not(.land) and the trims that buy
-   vertical room are gated on .land. */
-
-/* ---- Outlook Express ---- */
-/* Three panes need 1024px. Portrait gets the folders as a row of chips over a
-   list and a reading pane that finally have the width; landscape keeps the
-   folder rail, where 148px of 726 is affordable and 40px of height is not. */
 body.mobile .oe-toolbar{flex-wrap:nowrap;overflow-x:auto;overscroll-behavior-x:contain;
   -webkit-overflow-scrolling:touch;scrollbar-width:none}
 body.mobile .oe-toolbar::-webkit-scrollbar{display:none}
@@ -2297,8 +1906,6 @@ body.mobile:not(.land) .oe-frow{flex:none;display:flex;align-items:center;paddin
 body.mobile:not(.land) .oe-frow.sel{background:#316AC5;color:#fff;border-color:#2A5BB0}
 body.mobile:not(.land) .oe-list{flex:1 1 36%}
 body.mobile:not(.land) .oe-preview{flex:1 1 64%}
-/* the received date is the first thing a 390px row can lose: the list is
-   already sorted by it, and the reading pane still carries it */
 body.mobile:not(.land) .oe-c-recv{display:none}
 body.mobile:not(.land) .oe-c-from{width:112px}
 body.mobile .oe-a-st{display:none}
@@ -2307,13 +1914,6 @@ body.mobile .oe-cfields input{min-height:32px}
 body.mobile .oe-fbar input{min-height:30px}
 body.mobile .oe-fbar .xbtn{min-height:30px;padding:3px 12px}
 
-/* ---- Windows Media Player ---- */
-/* The visualiser was the only thing sized in percent, so on a sheet it ate the
-   screen and pushed the transport — volume knob first — off the side and out
-   the bottom. Cap the picture, wrap the row, and let the volume have a line of
-   its own in portrait, which is the one place there is no room beside it. */
-/* on a sheet the picture still grows into the window, but it starts from a
-   floor rather than a fixed height so the transport keeps its row */
 body.mobile #wmp-viz,body.mobile #wmp-video{min-height:150px}
 body.mobile.land #wmp-viz,body.mobile.land #wmp-video{min-height:92px}
 body.mobile .wmp-ctl{flex-wrap:wrap;gap:8px;padding:8px 9px}
@@ -2326,9 +1926,6 @@ body.mobile .wmp-seek,body.mobile #wmp-vol{min-height:26px}
 body.mobile .wmp-row{padding:7px 11px}
 body.mobile .wmp-list{flex:0 0 96px}
 
-/* ---- Sound Recorder ---- */
-/* 150px of transport, like the mixer: a sheet only gave it 550px of empty
-   beige, so it sits at the top of the screen the way sndvol32 does. */
 body.mobile #desktop>#win-sndrec{height:222px !important;top:52px !important}
 body.mobile .srec-main{padding:9px 10px;gap:9px}
 body.mobile .sr-labels{justify-content:center;gap:16px}
@@ -2336,10 +1933,6 @@ body.mobile #sr-slider{min-height:26px}
 body.mobile .sr-btns{gap:6px;width:100%;max-width:430px;margin:0 auto}
 body.mobile .sr-btns .xbtn{flex:1;min-width:0;height:40px;font-size:15px}
 
-/* ---- Tour Windows XP ---- */
-/* Portrait lies the chapter rail down across the top — icons only, because the
-   chapter's name is already the panel's heading — and drops the Exit button,
-   which on a sheet is the close box two rows above it. */
 body.mobile:not(.land) .txp-mid{flex-direction:column}
 body.mobile:not(.land) .txp-rail{flex:none;display:flex;gap:4px;padding:5px 6px;
   border-right:0;border-bottom:1px solid #17398C;
@@ -2349,12 +1942,9 @@ body.mobile:not(.land) .txp-ch{flex:none;padding:7px 10px;border-radius:3px 3px 
 body.mobile:not(.land) .txp-ch span{display:none}
 body.mobile:not(.land) .txp-ch.on{box-shadow:inset 0 -3px 0 #FFC83D}
 body.mobile:not(.land) .txp-chico{width:18px;height:18px}
-/* the picture takes whatever the four lines of copy leave */
 body.mobile:not(.land) .txp-art{flex:1 1 168px;height:auto;min-height:150px}
 body.mobile:not(.land) #txp-exit{display:none}
 body.mobile .txp-foot .xbtn{min-height:32px}
-/* landscape: 244px of middle has to hold a picture and four lines, so the
-   banner loses its subtitle and the picture loses a third of its height */
 body.mobile.land .txp-banner{padding:5px 12px}
 body.mobile.land .txp-banner span{display:none}
 body.mobile.land .txp-stage{padding:8px 12px}
@@ -2364,9 +1954,6 @@ body.mobile.land .txp-headrow h2{font-size:13px}
 body.mobile.land .txp-pts li{font-size:11px;line-height:1.38}
 body.mobile.land .txp-foot{padding:5px 10px}
 
-/* ---------- Hall of Fame / Guestbook / Gallery ---------- */
-/* Three plain windows where a browser used to be. XP chrome outside, flat
-   and readable inside — the same rule the thumb bar follows. */
 .np{display:flex;flex-direction:column;gap:6px;min-height:0}
 .np-scroll{flex:1;min-height:0;overflow:auto;background:#fff;border:1px solid #7F9DB9;padding:6px}
 .np-foot{flex:none;display:flex;align-items:center;justify-content:space-between;gap:8px;
@@ -2407,18 +1994,12 @@ body.mobile .np-sign .xbtn{min-height:44px}
 body.mobile figure.gal{width:calc(50% - 4px)}
 body.mobile .npt td.note{display:none}
 
-/* A promotion: crossing a weight-class boundary swaps the pointer scheme under
-   you mid-round, so the swap gets one flare to make sure it is not missed. */
 @keyframes promote{
   0%{filter:none;transform:scale(1)}
   35%{filter:drop-shadow(0 0 6px #ffd75e) drop-shadow(0 0 14px #ffb020);transform:scale(1.22)}
   100%{filter:none;transform:scale(1)}
 }
 .cur.promote>svg,.cur.promote>img.curskin{animation:promote .5s ease-out}
-/* Portrait phones counter-rotate the sprite, and an animation that sets
-   transform overwrites that rotation for its whole duration — a promoting
-   cursor spun to point up-RIGHT for half a second. Same reason .dueling has
-   shakeRot; promote needs its own rotated twin. */
 @keyframes promoteRot{
   0%{filter:none;transform:rotate(-90deg) scale(1)}
   35%{filter:drop-shadow(0 0 6px #ffd75e) drop-shadow(0 0 14px #ffb020);transform:rotate(-90deg) scale(1.22)}
@@ -2427,10 +2008,6 @@ body.mobile .npt td.note{display:none}
 #arena.rot .cur.promote>svg,#arena.rot .cur.promote>img.curskin{animation:promoteRot .5s ease-out}
 @media (prefers-reduced-motion:reduce){ .cur.promote>svg,.cur.promote>img.curskin{animation:none} }
 
-
-/* Fight range, at a glance. Everything outside your own weight class goes quiet
-   and slightly cold; your own cursors carry a soft green ring. No legend, no
-   tooltip — you learn it the first time a monster drifts through you. */
 .cur.nofight{opacity:.42;filter:grayscale(.55) brightness(.9) drop-shadow(0 0 3px rgba(200,40,40,.55))}
 .cur.me>svg,.cur.me>img.curskin{filter:drop-shadow(0 0 3px rgba(70,225,120,.95)) drop-shadow(0 0 7px rgba(40,190,90,.5))}
 .cur{transition:opacity .18s ease-out}

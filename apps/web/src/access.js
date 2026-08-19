@@ -1,12 +1,3 @@
-/* Accessibility: the Magnifier, the On-Screen Keyboard, Accessibility Options,
-   and the StickyKeys dialog that five taps on Shift has been summoning since
-   Windows 95.
-
-   These are the two XP applets nobody expected to work, so they work. The
-   Magnifier really magnifies whatever the pointer is over. The On-Screen
-   Keyboard really types into the window that had focus, including Notepad, the
-   Run box and the command prompt. High Contrast really repaints the shell.
-   Import-free sibling module; main.js injects the shell. */
 export function initAccess(deps) {
   const { $, store, sysSnd, showError, openWin, closeWin, hooks } = deps;
 
@@ -24,13 +15,6 @@ export function initAccess(deps) {
     return d;
   }
 
-  /* ================================================================
-     1. Magnifier
-     ================================================================ */
-  /* XP docks a strip at the top of the screen and shows what is under the
-     pointer, blown up. This one clones the node under the pointer into the
-     strip and scales it, which magnifies the real thing rather than a picture
-     of it: the clock in the strip keeps ticking. */
   let magOn = false, magNode = null, magRaf = 0, magX = 0, magY = 0, magT = 0;
   function magStrip() { return $("#magnifier"); }
   function openMagnifier() {
@@ -39,8 +23,6 @@ export function initAccess(deps) {
     document.body.classList.add("mag-on");
     magStrip().style.display = "block";
     addEventListener("pointermove", magMove, { passive: true });
-    /* the strip claims to be the live desktop: a parked pointer still gets a
-       ticking clock and typed text, so re-clone once a second */
     magT = setInterval(() => { magNode = null; magPaint(); }, 1000);
     magPaint();
     openWin("win-magnifier");
@@ -68,12 +50,9 @@ export function initAccess(deps) {
     const strip = magStrip();
     const view = strip.querySelector(".mag-view");
     const f = opts().magFactor;
-    /* the deepest element under the pointer that is not the strip itself */
     let node = document.elementFromPoint(magX, magY);
     while (node && (node.closest("#magnifier") || node === document.body)) node = node.parentElement;
     if (!node) { view.innerHTML = ""; return; }
-    /* a window is too big to clone every frame; climb down to the panel the
-       pointer is actually in and clone that */
     let host = node;
     for (let i = 0; i < 4 && host.parentElement; i++) {
       const r = host.getBoundingClientRect();
@@ -85,13 +64,9 @@ export function initAccess(deps) {
       view.innerHTML = "";
       const c = host.cloneNode(true);
       c.classList.add("mag-clone");
-      /* clones must not shadow the live windows' ids, and an iframe clone
-         would re-fetch its whole document once a second */
       c.removeAttribute("id");
       c.querySelectorAll("[id]").forEach(n => n.removeAttribute("id"));
       c.querySelectorAll("iframe").forEach(f => { const d = document.createElement("div"); d.style.cssText = "background:#000;width:100%;height:100%"; f.replaceWith(d); });
-      /* cloneNode does not carry what a field holds or what a canvas has drawn,
-         so copy both across: the strip has to show the real screen */
       const src = host.querySelectorAll("input,textarea,canvas");
       const dst = c.querySelectorAll("input,textarea,canvas");
       for (let i = 0; i < src.length; i++) {
@@ -107,7 +82,6 @@ export function initAccess(deps) {
     if (!clone) return;
     clone.style.width = r.width + "px";
     clone.style.height = r.height + "px";
-    /* keep the point under the pointer in the middle of the strip */
     const sw = strip.clientWidth, sh = strip.clientHeight;
     const ox = (magX - r.left) * f - sw / 2;
     const oy = (magY - r.top) * f - sh / 2;
@@ -140,11 +114,6 @@ export function initAccess(deps) {
     host.appendChild(foot);
   }
 
-  /* ================================================================
-     2. On-Screen Keyboard
-     ================================================================ */
-  /* Rows are "label|width" so the layout is data, not markup. A key with a
-     second face types the shifted character. */
   const OSK_ROWS = [
     [["esc", "esc", 1], ["", "", .5], ["F1", "F1", 1], ["F2", "F2", 1], ["F3", "F3", 1], ["F4", "F4", 1],
      ["", "", .3], ["F5", "F5", 1], ["F6", "F6", 1], ["F7", "F7", 1], ["F8", "F8", 1],
@@ -169,7 +138,6 @@ export function initAccess(deps) {
   function openOSK() {
     oskRender();
     openWin("win-osk");
-    /* XP's OSK never takes focus; it types into whatever had it */
     const w = $("#win-osk");
     if (!w.dataset.oskWired) {
       w.dataset.oskWired = "1";
@@ -207,7 +175,6 @@ export function initAccess(deps) {
     if (/[a-z]/.test(lo)) return up ? lo.toUpperCase() : lo;
     return oskShift ? hi : lo;
   }
-  /* the window that had focus before the keyboard was touched */
   function oskFocus() {
     const a = document.activeElement;
     if (a && !a.closest("#win-osk") && (a.tagName === "INPUT" || a.tagName === "TEXTAREA" || a.isContentEditable)) {
@@ -225,7 +192,6 @@ export function initAccess(deps) {
     if (t) {
       t.focus();
       if (t.id === "cmd-kbd") {
-        /* the prompt reads keydown and wipes value on input — send the key */
         t.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true }));
       } else if (key === "Backspace") oskEdit(t, "");
       else if (key === "Enter") {
@@ -235,7 +201,6 @@ export function initAccess(deps) {
         t.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true }));
       } else oskEdit(t, key, 1);
     } else {
-      /* nothing is taking text, so it goes to the shell as a real keystroke */
       document.dispatchEvent(new KeyboardEvent("keydown", { key: key.length === 1 ? key : key, bubbles: true }));
     }
     if (oskShift) { oskShift = false; oskRender(); }
@@ -257,9 +222,6 @@ export function initAccess(deps) {
     t.dispatchEvent(new Event("input", { bubbles: true }));
   }
 
-  /* ================================================================
-     3. Accessibility Options, and StickyKeys
-     ================================================================ */
   function applyAccess() {
     const d = opts();
     document.body.classList.toggle("high-contrast", !!d.contrast);
@@ -305,7 +267,6 @@ export function initAccess(deps) {
       check("mousekeys", "MouseKeys", "Moves the pointer with the numeric keypad. This computer cannot move your real pointer, and says so rather than pretending."),
     ]);
   }
-  /* five taps on Shift, the dialog everyone has seen and nobody meant to open */
   let shiftTaps = 0, shiftT = 0;
   addEventListener("keydown", e => {
     if (e.key !== "Shift" || e.repeat) return;
@@ -319,7 +280,6 @@ export function initAccess(deps) {
       "Do you want to turn on StickyKeys?\n\nStickyKeys is intended for people who have difficulty holding down two or more keys at a time. When StickyKeys is on, you can press a modifier key and have it remain active until another key is pressed.",
       () => { opts().sticky = 1; store.save(); sysSnd("ding", .5); accRender(); });
   });
-  /* StickyKeys, on: a modifier pressed alone latches for the next keystroke */
   let latched = null;
   addEventListener("keydown", e => {
     if (!opts().sticky) return;
@@ -328,16 +288,10 @@ export function initAccess(deps) {
   });
   const stickyLatched = () => latched;
 
-  /* ================================================================
-     4. Narrator
-     ================================================================ */
-  /* speechSynthesis is the voice. #nr-events reads shell events handed to
-     narrate(); #nr-typed reads keys as they land in a text box. Both only
-     while the window is open. */
   const narOpen = () => { const w = $("#win-narrator"); return !!(w && w.offsetParent); };
   function narSpeak(text) {
     if (!window.speechSynthesis || !text) return;
-    if (hooks.getMuted && hooks.getMuted()) return;   /* the mixer wins */
+    if (hooks.getMuted && hooks.getMuted()) return;
     speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(String(text));
     u.rate = 1.1;
@@ -351,7 +305,6 @@ export function initAccess(deps) {
     if (!narOpen() || !c || !c.checked) return;
     narSpeak(text);
   }
-  /* typed characters — capture phase, because the text boxes stopPropagation */
   addEventListener("keydown", e => {
     const c = $("#nr-typed");
     if (!narOpen() || !c || !c.checked) return;

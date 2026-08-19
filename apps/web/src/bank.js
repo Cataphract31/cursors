@@ -1,64 +1,12 @@
-/* MY WALLET: money into the arcade and back out, on the welcome screen.
-
-   WHY IT IS HERE AND NOT IN A PANEL OF ITS OWN
-   The arcade ships one BANK for every world it hosts -- one gold button in
-   the corner of the page, one modal behind it, the same on every table. That
-   is exactly right for a shelf of games that look like each other. This
-   machine is a Windows XP desktop, so the shared furniture arrived as a gold
-   OSRS button floating over the taskbar: the single most important control on
-   the page, and the one thing on screen that looked like somebody else's
-   browser extension. A control people distrust is a control they do not press.
-
-   So the arcade's bank is switched off for this world (`ownBank` in the
-   arcade's games.js) and this is what stands in its place. Same ledger, same
-   custody wallet, same withdrawal that can only ever pay the address that
-   signed in -- nothing about the money changed. What changed is that it is
-   XP furniture now, on the screen this machine already uses to ask who you
-   are, beside the tile that signs you in. A balance is what an identity is
-   for; putting the two in one place is not decoration.
-
-   THE DEPOSIT DOES THE TRANSFER FOR YOU, WHICH IS THE REAL CHANGE
-   Depositing used to be: here is our address, copy it, paste it into your
-   wallet, type the amount, get the network right, and hope. Every one of
-   those steps is a place to lose money nobody can give back, and pasting an
-   address is the step clipboard-swapping malware was written for. Now the
-   arcade builds the transfer and your wallet is asked to approve it, with the
-   destination and the amount rendered by the wallet -- software you trust,
-   not this page.
-
-   THE BYTES ARE NOT BUILT HERE. /api/custody/deposit/prepare returns them,
-   because the arcade already owns one tested implementation of a System
-   Program transfer and its withdrawal signer builds against the same
-   function. A second implementation of money-moving bytes, in a browser, is
-   the mistake the arcade's signer-core.mjs exists to warn about. See
-   `approve` in wallet.js for what this page does and does not vouch for.
-
-   THE MANUAL PATH IS STILL HERE, one press away, for a wallet that will not
-   answer signAndSendTransaction. It is a fallback rather than the front door,
-   and it is the only place the "money from an exchange is credited to the
-   exchange" warning still appears -- because on the automatic path the
-   transfer comes out of the wallet you signed in with, by construction, so
-   there is nothing left to warn about. */
-
 import { approve, arcadeUrl, authHeaders, forgetSession, onDepositArrival, sessionToken, shortAddress } from "./wallet.js";
 
 const LAMPORTS = 1_000_000_000;
 
-/** Lamports as a number of SOL a person would actually write. */
 export function sol(lamports) {
   const n = Number(lamports ?? 0) / LAMPORTS;
   return n.toFixed(9).replace(/0+$/, "").replace(/\.$/, "");
 }
 
-/**
- * A typed amount of SOL as whole lamports, or null if it is not one.
- *
- * Deliberately NOT Math.round(parseFloat(x) * 1e9). 0.1 + 0.2 is the oldest
- * joke in the language and this is somebody's money: parseFloat("4.35") * 1e9
- * is 4349999999.999999, and rounding hides it right until the amount that
- * rounds the wrong way. The halves of the decimal string are made whole
- * separately, so nothing is ever a fraction.
- */
 export function toLamports(text) {
   const s = String(text ?? "").trim();
   if (!/^\d*(\.\d*)?$/.test(s) || s === "" || s === ".") return null;
@@ -68,39 +16,8 @@ export function toLamports(text) {
   return Number.isSafeInteger(n) ? n : null;
 }
 
-/* The game deals in thousandths of a SOL and the books count lamports, so a
-   balance can hold a remainder too small for the arena to see. Rather than let
-   this panel and CURSORS.EXE print two different numbers at each other, the
-   remainder gets said out loud. */
 const UNIT = 1_000_000;
 
-/* HOW MUCH A PRESS IS WORTH, AND WHY THESE NUMBERS AND NOT OURS.
-
-   THE RUNGS ARE THE ARCADE'S. This panel replaced the arcade's own BANK on
-   this world (`ownBank` in the registry), and the thing it replaced has since
-   grown a quick-amount row of its own -- `PRESETS` in arcade/web/bank.js. A
-   player who funds an account on the portal and then funds one here should be
-   pressing the same ladder in both places, so the ladder is copied rather than
-   invented: same six rungs, in the same order. What is ours is the furniture
-   around them.
-
-   BOTH HALVES GET THE SAME RUNGS, which is the arcade's rule and worth keeping
-   for its reason: the withdraw tab feels like the deposit tab because the row
-   under the field does not change shape between them. The two are FILTERED
-   differently -- a deposit rung greys against what the wallet can send, a
-   withdrawal rung against the balance and the withdrawal floor -- and that is
-   the whole difference.
-
-   It starts at 0.01 rather than 0.05 because the first thing anybody does with
-   a bank holding real money is put a trivial amount through it to see whether
-   it works.
-
-   MIN AND MAX ARE COMPUTED, not typed, so they follow the box: MIN is whatever
-   the arcade currently calls the smallest withdrawal (50,000 lamports today,
-   and nothing here has to change when that moves), and MAX is what the wallet
-   can send after the network fee, or the whole balance in the books. MIN is on
-   the withdraw half only, because a floor is a real refusal there and nothing
-   at all on the deposit side. */
 const RUNGS = [
   { lamports: 10_000_000, label: "0.01" },
   { lamports: 50_000_000, label: "0.05" },
@@ -110,84 +27,38 @@ const RUNGS = [
   { lamports: 1_000_000_000, label: "1" },
 ];
 
-/** Receipts per page. Five fits the panel without pushing the fold on a phone. */
 const PER_PAGE = 5;
 
-/*
- * HOW LONG THIS PANEL WAITS. fetch() has no deadline of its own, and without
- * one there is no moment at which this panel HAS to admit it does not know
- * what happened -- which is what UNTOUCHED below is for.
- *
- * Two numbers, because the two kinds of call fail differently: a read is
- * repeated every four seconds by the poll and may give up quickly, while a
- * withdrawal waits on a signer on another machine whose worst case is over a
- * minute, so cutting it short turns answers that were coming into unknowns.
- */
 const READ_MS = 15_000;
 const MOVE_MS = 60_000;
 
-/*
- * THE REFUSALS THAT MEAN THE MONEY DEFINITELY DID NOT MOVE.
- *
- * The box DEBITS THE LEDGER BEFORE it asks the signer, so "your balance has
- * not been touched" is a sentence that has to be earned by a named refusal
- * rather than said after every failure -- a dropped connection can reject this
- * fetch with the transfer already on its way. Each code below is a path in the
- * arcade's custody.withdraw() that either refuses before the debit or refunds
- * it; anything else means this browser does not know, and says so.
- *
- * ADDING A CODE HERE IS A CLAIM ABOUT THE SERVER. The list is the arcade's, in
- * arcade/web/bank.js, which has the long version and must not drift from this.
- */
 const UNTOUCHED = new Set([
-  "NO_SESSION",           /* never reached the withdrawal at all */
+  "NO_SESSION",
   "BAD_BODY",
   "BAD_AMOUNT",
   "BAD_ACCOUNT",
   "BELOW_MINIMUM",
   "DEPOSIT_NOT_FINAL",
   "ALREADY_WITHDRAWING",
-  "INSUFFICIENT_FUNDS",   /* the ledger refused the debit, atomically */
-  "CHAIN_UNREACHABLE",    /* before the debit, or refunded after it */
+  "INSUFFICIENT_FUNDS",
+  "CHAIN_UNREACHABLE",
   "CUSTODY_SHORT",
   "SIGNER_AWAY",
-  "SIGNER_REFUSED",       /* refunded, and nothing was ever signed */
-  "SIGNER_TIMEOUT",       /* ditto -- no signature means nothing can land */
-  "BAD_SIGNATURE",        /* refunded before anything went on the wire */
+  "SIGNER_REFUSED",
+  "SIGNER_TIMEOUT",
+  "BAD_SIGNATURE",
 ]);
 
-/**
- * The box's sentence, ended properly, so another can be put after it.
- *
- * Half the messages from the arcade's custody.js end in a full stop and half
- * do not, and this panel puts a second sentence after every one of them.
- * Without this, the screen that moves money says things like "the signer did
- * not answer Your balance has not been touched."
- */
 const ended = (text) => {
   const t = String(text ?? "").trim();
   return !t || /[.!?]$/.test(t) ? t : `${t}.`;
 };
 
-/**
- * A BUTTON THAT HAS TO BE PRESSED TWICE, because withdrawing is the only
- * control on this desktop that cannot be undone. An XP confirm dialog would do
- * the job and would also put a modal in front of the one panel this machine
- * deliberately built without one.
- *
- * KEYED ON THE AMOUNT: arm at 0.1, retype 0.5, press once, and a confirm that
- * only remembered "they pressed it before" would send the 0.5 unconfirmed. It
- * expires too, so an armed button is not a trap left for whoever next touches
- * the machine.
- *
- * Ported from createArming in the arcade's bank.js, which has the test.
- */
 const HOLD_MS = 5000;
 function createArming({ holdMs = HOLD_MS, clock = Date.now } = {}) {
   let key = null;
   let at = 0;
   return {
-    /** @returns {'armed'|'fire'} whether this press asked or acted */
     press(next) {
       const live = key !== null && key === next && clock() - at < holdMs;
       if (live) { key = null; return "fire"; }
@@ -204,27 +75,14 @@ function createArming({ holdMs = HOLD_MS, clock = Date.now } = {}) {
   };
 }
 
-/**
- * Which chain the box is pointed at, so a receipt links somewhere real.
- * The box tells us; guessing mainnet for a devnet signature shows "not found",
- * which reads as a lost deposit rather than as a wrong link.
- */
 function explorer(signature, network) {
   const q = network && network !== "mainnet" ? `?cluster=${encodeURIComponent(network)}` : "";
   return `https://solscan.io/tx/${encodeURIComponent(signature)}${q}`;
 }
 
-/**
- * @param {object} deps
- * @param {(sel: string) => Element} deps.$
- * @param {object} deps.wallet the Wallet from wallet.js -- for its provider
- * @param {(name: string, vol?: number) => void} deps.sysSnd
- */
 export function initBank({ $, wallet, sysSnd = () => {}, onArcadeBalance = () => {}, onSignIn = () => {} }) {
   const panel = $("#lg-bank");
   const note = $("#lg-banknote");
-  /* One sign-in at a time: the button is disabled while it runs, but draw()
-     rebuilds the button, so the guard has to outlive the element. */
   let signingIn = false;
   const amtEl = $("#lgb-amt");
   const goEl = $("#lgb-go");
@@ -244,52 +102,28 @@ export function initBank({ $, wallet, sysSnd = () => {}, onArcadeBalance = () =>
   const tabs = [$("#lgb-t-dep"), $("#lgb-t-wd")];
 
   let which = "deposit";
-  let page = 0;               /* which page of this tab's receipts is showing */
-  let info = null;            /* address, network, minWithdrawal, networkFee */
-  let arcade = 0;             /* lamports in the books */
-  let chain = null;           /* lamports in the player's own wallet, or null */
-  let spendable = 0;          /* chain minus the fee the transfer itself costs */
+  let page = 0;
+  let info = null;
+  let arcade = 0;
+  let chain = null;
+  let spendable = 0;
   let history = { deposits: [], withdrawals: [] };
-  let served = false;         /* the box paged this answer itself */
-  let pending = 0;            /* deposited, not yet final -- cannot leave yet */
-  let sessionWallet = null;   /* who the BOX says it pays; never the cookie */
+  let served = false;
+  let pending = 0;
+  let sessionWallet = null;
   const arming = createArming();
-  let seenTop;                /* newest deposit's signature; undefined = never looked */
-  /* A PHONE DEPOSIT THAT FINISHED WHILE THIS PAGE DID NOT EXIST. Approving on
-     a phone is a NAVIGATION: the wallet app takes over, this tab is destroyed,
-     and the answer arrives on a fresh load before there is a panel to show it
-     on. Held here until there is. */
+  let seenTop;
   let arrival = null;
   let onScreen = false;
   let busy = false;
   let timer = null;
-  /* A deposit just approved: poll harder until the arcade sees it, then stop.
-     Counted in ticks so a tab left open overnight is not still hammering. */
   let watching = 0;
 
   const put = (el, text) => { el.textContent = String(text ?? ""); };
   const say = (text, kind = "") => { sayEl.className = "lgb-say" + (kind ? " " + kind : ""); put(sayEl, text); };
 
-  /* ---------- talking to the arcade ---------- */
-
-  /**
-   * WHAT A FAILURE FROM HERE CARRIES, because the withdraw half decides what
-   * it is allowed to promise from it:
-   *
-   *   code      what the box called it, when the box answered at all
-   *   status    the HTTP status, same condition
-   *   answered  whether an answer was received AND understood. FALSE means the
-   *             request may or may not have been carried out, and this panel
-   *             must not claim otherwise. See UNTOUCHED above.
-   *
-   * @param {string} path
-   * @param {RequestInit & {timeoutMs?: number}} [opts]
-   */
   async function api(path, opts = {}) {
     const { timeoutMs = READ_MS, ...init } = opts;
-    /* AbortController rather than AbortSignal.timeout(): the timer is cleared
-       on the way out, so a welcome screen left open for an hour is not also
-       leaving a pending timeout behind for every poll it ever ran. */
     const stop = new AbortController();
     const bell = setTimeout(() => stop.abort(), timeoutMs);
     let res;
@@ -300,8 +134,6 @@ export function initBank({ $, wallet, sysSnd = () => {}, onArcadeBalance = () =>
         headers: { ...(init.headers ?? {}), ...authHeaders() },
       });
     } catch (err) {
-      /* Aborted, DNS, reset, offline. From here none of them can be told
-         apart, and none of them says whether the box acted on the request. */
       throw Object.assign(
         new Error(stop.signal.aborted ? "The arcade did not answer in time." : "Could not reach the arcade."),
         { code: stop.signal.aborted ? "TIMEOUT" : "OFFLINE", answered: false });
@@ -309,48 +141,17 @@ export function initBank({ $, wallet, sysSnd = () => {}, onArcadeBalance = () =>
       clearTimeout(bell);
     }
 
-    /* A BODY IS JSON BECAUSE THE HEADER SAYS SO. Anything else is somebody
-       between this desktop and the box -- a proxy's error page, a captive
-       portal, a CDN -- and its contents are not a message from the arcade. */
     const isJson = /\bapplication\/json\b/i.test(res.headers.get("content-type") ?? "");
     let parsed = null;
     if (isJson) {
       try { parsed = await res.text().then(t => (t ? JSON.parse(t) : null)); } catch (e) { parsed = null; }
     }
     if (!res.ok) {
-      /*
-       * A COOKIE THIS BROWSER STILL HAS AND THE BOX HAS STOPPED HONOURING.
-       *
-       * zinc_session lasts a month and everything here tested it for PRESENCE,
-       * but the box can retire a token at any moment and has no way to
-       * announce it: signing in on a second device retires the first (one live
-       * session per wallet), a fresh database forgets every token, and the
-       * server's month can end before the browser's.
-       *
-       * From then on this panel believed it was signed in, drew itself that
-       * way, and every read 401'd into a catch that says nothing -- so it sat
-       * there showing stale numbers and a Deposit button that could not work.
-       * The only escape was pressing disconnect, whose signOut() clears the
-       * cookie as a side effect of a button nobody had a reason to press.
-       * That is exactly how it was reported.
-       *
-       * So a refusal is believed. The cookie goes, locally and with no
-       * signature asked for -- this runs from a four-second poll rather than a
-       * gesture, and a wallet popup fired by a background timer is the habit
-       * every drainer relies on. The panel simply becomes what it already was,
-       * signed out, where the Sign in button says what it does.
-       *
-       * ONLY A REFUSAL. A 502, a timeout or a captive portal is not the box
-       * declining a session, and treating one as though it were would sign
-       * people out of a perfectly good session over a bad minute of wifi.
-       */
       if (res.status === 401 || res.status === 403 || parsed?.error?.code === "NO_SESSION") {
         forgetSession();
         draw();
       }
       throw Object.assign(new Error(parsed?.error?.message ?? `The arcade said ${res.status}.`),
-        /* A status from the box is an answer even when the body was junk;
-           what makes it useful is the code, and UNTOUCHED checks for that. */
         { status: res.status, code: parsed?.error?.code, answered: true });
     }
     if (!isJson) {
@@ -360,42 +161,10 @@ export function initBank({ $, wallet, sysSnd = () => {}, onArcadeBalance = () =>
     return parsed;
   }
 
-  /**
-   * WHAT CAN LEAVE RIGHT NOW, which is not the balance.
-   *
-   * A deposit is credited the moment the cluster confirms it, and the box will
-   * not pay it out again until it is FINAL -- so for a few seconds after a
-   * deposit lands there is money in the books that cannot go anywhere. Read,
-   * not guessed: `pending` comes from the same place the refusal does. A MAX
-   * that offers more than the box will accept is a refusal somebody has to
-   * read to understand.
-   */
   const free = () => Math.max(0, arcade - pending);
 
-  /**
-   * THE BOX PAYS THE SESSION'S WALLET, AND THIS BROWSER MAY BE ON ANOTHER ONE.
-   *
-   * The extension can be switched to a different account at any moment, and
-   * the session it was signed with does not move with it. Whichever of the two
-   * is stale, the player is not looking at the account that is about to be
-   * paid -- and a withdrawal whose destination they cannot see is the one
-   * press on this panel that must not be available. Reconnecting settles it,
-   * because signing in again is what makes the two agree.
-   *
-   * BOTH ARE READ AS FUNCTIONS. The poll refreshes the session's wallet and
-   * the extension can change under it, so a value taken once when the panel
-   * was drawn is a value that stops being true while somebody looks at it.
-   */
   const mismatch = () => Boolean(sessionWallet && wallet?.address && sessionWallet !== wallet.address);
 
-  /**
-   * THE NUMBERS ONLY -- never the markup.
-   *
-   * A poll that redrew the form would take the caret out of the amount field
-   * every few seconds, and worse, it would wipe the receipt line the moment
-   * after a deposit lands, which is the one moment somebody is reading it.
-   * So this writes text nodes and nothing else.
-   */
   async function refresh() {
     if (!sessionToken()) {
       arcade = 0; chain = null; history = { deposits: [], withdrawals: [] };
@@ -405,14 +174,8 @@ export function initBank({ $, wallet, sysSnd = () => {}, onArcadeBalance = () =>
       drawLog();
       return;
     }
-    /* Three calls, one round trip's worth of waiting. A failure in any of them
-       leaves that number stale rather than blanking the panel: a balance that
-       flickers to "—" on one bad request teaches people to distrust it. */
     const [bal, hist, mine] = await Promise.allSettled([
       api("/api/ledger/balance"),
-      /* ONE PAGE OF ONE DIRECTION, chosen by the tab that is up. An older box
-         has never heard of these three and answers with everything, which is
-         exactly the shape this panel used to read -- see drawLog. */
       api(`/api/custody/history?kind=${which === "deposit" ? "in" : "out"}`
         + `&page=${page + 1}&perPage=${PER_PAGE}`),
       api("/api/custody/wallet"),
@@ -420,31 +183,14 @@ export function initBank({ $, wallet, sysSnd = () => {}, onArcadeBalance = () =>
     if (bal.status === "fulfilled") {
       const was = arcade;
       arcade = Number(bal.value.balance ?? 0);
-      /* THE DESKTOP IS SHOWING THE SAME MONEY, and this poll is the only thing
-         in the build that notices it move. The arena's balance is PUSHED by
-         the server -- on sign-in and on every settlement -- so it covers every
-         way money moves inside the game and none of the ways it moves outside
-         one: a deposit made right here, a withdrawal, a win paid by another
-         game in the arcade. Somebody funded their account on this screen,
-         clicked back to the desktop, and CURSORS.EXE went on showing what it
-         showed before the deposit until the next kill or a reload.
-
-         The number is NOT handed over, only the fact that it moved: the arena
-         counts in whole play units and the books count in lamports, and a
-         second place doing that conversion is a second place to get it wrong.
-         main.js asks the server, which answers in the units it owns. */
       if (arcade !== was) { try { onArcadeBalance(arcade); } catch (e) {} }
       put(arcadeEl, `${sol(arcade)} SOL`);
       arcadeEl.classList.remove("stale");
-      /* WHO THE BOX SAYS IT PAYS. Never the cookie: an extension switched to
-         another account leaves the cookie saying one thing and the session
-         another, and the session is the one the money follows. */
       sessionWallet = typeof bal.value.wallet === "string" ? bal.value.wallet : null;
       const held = Number(bal.value.held ?? 0);
       put(whoEl, held > 0
         ? `${shortAddress(bal.value.wallet)} · ${sol(held)} staked`
         : shortAddress(bal.value.wallet));
-      /* the remainder the arena cannot see, named rather than hidden */
       const dust = arcade % UNIT;
       dustEl.hidden = dust === 0;
       if (dust) put(dustEl, `CURSORS.EXE shows ${(Math.floor(arcade / UNIT) / 1000).toFixed(3)} — the last ${sol(dust)} is under its 0.001 step.`);
@@ -453,28 +199,10 @@ export function initBank({ $, wallet, sysSnd = () => {}, onArcadeBalance = () =>
     }
     if (hist.status === "fulfilled") {
       history = hist.value ?? {};
-      /* WHICH SHAPE CAME BACK. A box that pages sends `rows` and the
-         arithmetic that goes with them; one that does not sends the two whole
-         lists it always sent. Both are handled, because the browser code and
-         the box deploy separately and for the length of that gap a page and
-         the server it is talking to are different versions of the same
-         feature -- in whichever direction happens to be ahead. A money screen
-         that answers a version skew with an empty panel is the worst possible
-         way to fail. */
       served = Array.isArray(history.rows);
       pending = Number(history.pending ?? 0);
-      /* The pager draws the page it was GIVEN, not the one it asked for: the
-         box clamps both numbers, so trusting our own would let the pager
-         disagree with the list underneath it. */
       if (served) page = Math.max(0, Number(history.page ?? 1) - 1);
 
-      /* A deposit landing while somebody watches is the whole point of the
-         fast poll, and it is worth saying out loud rather than leaving them to
-         notice a number changed. Keyed on the newest deposit's SIGNATURE
-         rather than on how many there are, because with the box paging there
-         is no total to count -- the withdraw tab is not even sent deposits,
-         which is why an answer about the other direction is skipped rather
-         than read as "they all disappeared". */
       if (!served || history.kind !== "out") {
         const top = newestDeposit();
         const id = top?.signature ?? null;
@@ -494,39 +222,23 @@ export function initBank({ $, wallet, sysSnd = () => {}, onArcadeBalance = () =>
       chainEl.classList.remove("stale");
       put(chainLbl, `in ${wallet?.walletName || "your wallet"}`);
     } else {
-      /* The chain being unreachable is not this player's problem and must not
-         block a withdrawal, which needs none of this. */
       chainEl.classList.add("stale");
       if (chain === null) put(chainEl, "—");
     }
     restate();
   }
 
-  /** "Somebody is watching." The box holds a cooldown; leaning on it is safe. */
   async function poke() {
     try { await api("/api/custody/deposit/check", { method: "POST" }); }
-    catch (e) { /* the box's own minute-wide tick still gets it */ }
+    catch (e) {}
   }
 
-  /* ---------- the preset row ---------- */
-
-  /**
-   * What each chip is worth RIGHT NOW, in lamports.
-   *
-   * A rung is a constant; MIN and MAX are questions asked fresh every time,
-   * because the balance moves under this panel while somebody reads it -- the
-   * arena below is still settling duels on the same money.
-   */
   function presetValue(pre) {
     if (pre.lamports !== undefined) return pre.lamports;
     if (pre.kind === "min") return info?.minWithdrawal ?? 0;
-    /* MAX on the withdraw half is what can LEAVE, not what is in the books:
-       offering a number the box will refuse is a refusal somebody has to read
-       to understand. */
     return which === "deposit" ? spendable : free();
   }
 
-  /** Build the row. Once per tab, not once per poll: see syncPresets. */
   function buildPresets() {
     presetsEl.textContent = "";
     const list = [
@@ -553,19 +265,11 @@ export function initBank({ $, wallet, sysSnd = () => {}, onArcadeBalance = () =>
     syncPresets();
   }
 
-  /** Hands off while a transfer is in flight, the same as the amount field. */
   function lockPresets(on) {
     for (const b of presetsEl.children) b.disabled = on || b.disabled;
     if (!on) syncPresets();
   }
 
-  /**
-   * Which presets are affordable, and which one is currently typed.
-   *
-   * Separate from buildPresets because the four-second poll runs through here:
-   * replacing the buttons under a thumb that is already on one is how a press
-   * lands on a different amount than the one it aimed at.
-   */
   function syncPresets() {
     const typed = toLamports(amtEl.value);
     for (const b of presetsEl.children) {
@@ -578,8 +282,6 @@ export function initBank({ $, wallet, sysSnd = () => {}, onArcadeBalance = () =>
       b.classList.toggle("on", typed !== null && typed === want && want > 0);
     }
   }
-
-  /* ---------- what the form is allowed to do right now ---------- */
 
   function restate() {
     if (busy) return;
@@ -602,19 +304,11 @@ export function initBank({ $, wallet, sysSnd = () => {}, onArcadeBalance = () =>
       return;
     }
     goEl.classList.add("out");
-    /* AN ARMED BUTTON SAYS WHAT THE NEXT PRESS DOES. Anything that changes the
-       amount has already disarmed by the time this runs, so the label can only
-       be showing for the number in the field. */
     const armed = arming.armed();
     put(goEl, armed !== null && armed === amtEl.value.trim()
       ? `Press again to send ${sol(want ?? 0)} SOL`
       : (want ? `Withdraw ${sol(want)} SOL` : "Withdraw"));
 
-    /*
-     * THE BOX PAYS THE SESSION'S WALLET AND THIS BROWSER IS ON ANOTHER ONE, so
-     * whoever is looking at this cannot see the account about to be paid. That
-     * is the one press here that must not be available.
-     */
     if (mismatch()) {
       goEl.disabled = true;
       say(`Wrong wallet. The arcade pays ${shortAddress(sessionWallet)}, this browser is on `
@@ -625,11 +319,6 @@ export function initBank({ $, wallet, sysSnd = () => {}, onArcadeBalance = () =>
     if (want === null || want <= 0) { goEl.disabled = true; say("That is not an amount of SOL.", "bad"); return; }
     if (want > free()) {
       goEl.disabled = true;
-      /* TWO DIFFERENT REFUSALS, because they need two different answers from
-         the person reading them. "You do not have it" means go and win some;
-         "it is still confirming" means wait a few seconds and press again --
-         and saying the first when the second is true reads as the arcade
-         having lost the deposit sitting right there in the balance above. */
       say(arcade > free()
         ? `${sol(arcade - free())} SOL is still confirming on chain. ${sol(free())} SOL can go now.`
         : `You have ${sol(arcade)} SOL in the arcade.`, "bad");
@@ -655,14 +344,9 @@ export function initBank({ $, wallet, sysSnd = () => {}, onArcadeBalance = () =>
   }
   function withdrawHint() {
     const to = wallet?.address ? shortAddress(wallet.address) : "the wallet you signed in with";
-    /* The floor is the box's to set and it is small now, so it is worth saying
-       up front: somebody with 0.0004 SOL in the books should be able to see,
-       before typing anything, that it is theirs to take out. */
     const floor = info ? ` Smallest is ${sol(info.minWithdrawal)} SOL.` : "";
     return `Paid to ${to} — the only address the arcade will pay, so a stolen session cannot send your balance anywhere else.${floor}`;
   }
-
-  /* ---------- the two verbs ---------- */
 
   async function doDeposit() {
     const want = toLamports(amtEl.value);
@@ -672,19 +356,12 @@ export function initBank({ $, wallet, sysSnd = () => {}, onArcadeBalance = () =>
     put(goEl, "Check your wallet…");
     say("Building the transfer…", "busy");
     try {
-      /* No destination in this body. `to` is custody and `from` is whoever the
-         session proved -- neither is ours to choose. See the arcade's
-         createCustodyRoutes for why that is not a courtesy. */
       const prep = await api("/api/custody/deposit/prepare", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ amount: want }),
       });
       say("Approve it in your wallet.", "busy");
-      /* THE WHOLE ANSWER, not just the message: the box publishes the transfer
-         in two encodings because the wallet in front of us may refuse the
-         documented one. See approve() in wallet.js for the deposit that failed
-         and made that necessary. */
       const signature = await approve(wallet?.provider, prep);
       sysSnd("ding", .55);
       say("");
@@ -697,17 +374,12 @@ export function initBank({ $, wallet, sysSnd = () => {}, onArcadeBalance = () =>
       sayEl.className = "lgb-say ok";
       sayEl.append(line, a);
       amtEl.value = "";
-      /* Poll hard for two minutes. The arcade's own scan is a minute wide,
-         which is far too slow for somebody standing here watching. */
       watching = 30;
       await poke();
       await refresh();
     } catch (err) {
       if (err?.code === "CANCELLED") say("Cancelled. Nothing was sent.");
       else if (err?.code === "NO_TX_API") manualFallback();
-      /* The extension moved and the session did not. Its message already says
-         which way round it is and what to do, and "Nothing has left your
-         wallet" is true here -- the wallet was never asked. */
       else if (err?.code === "WRONG_ACCOUNT") say(err.message, "bad");
       else say(`${ended(err.message)} Nothing has left your wallet.`, "bad");
     } finally {
@@ -725,15 +397,10 @@ export function initBank({ $, wallet, sysSnd = () => {}, onArcadeBalance = () =>
     put(goEl, "Sending…");
     say("Asking the signer…", "busy");
     try {
-      /* An amount, and nothing else. There is no destination field, and adding
-         one would be the whole vulnerability. */
       const out = await api("/api/custody/withdraw", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ amount: want }),
-        /* The box debits, then waits on a signer on another machine whose own
-           worst case is over a minute. Cutting this short would turn answers
-           that were coming into unknowns. */
         timeoutMs: MOVE_MS,
       });
       sysSnd("ding", .55);
@@ -755,17 +422,9 @@ export function initBank({ $, wallet, sysSnd = () => {}, onArcadeBalance = () =>
       arming.disarm();
       await refresh();
     } catch (err) {
-      /* SAY WHAT THE BOX SAID -- AND ONLY PROMISE WHAT THE BOX ANSWERED. A
-         named refusal from UNTOUCHED gets the reassurance; anything else gets
-         the truth, which is that this browser does not know, and somewhere to
-         go and find out. */
       const sure = err?.answered && UNTOUCHED.has(err.code);
       const why = ended(err.message);
-      /* Red is "this did not happen". The yellow this panel already uses for a
-         withdrawal in flight is the honest colour for "we do not know". */
       say(sure
-        /* The box sometimes says it itself, and saying it twice in two
-           different sentences reads as a script that is not listening. */
         ? (/untouched/i.test(why) ? why : `${why} Your balance has not been touched.`)
         : `${why} It may or may not have gone. Do not send it again — check the log below `
           + "and the balance above in a few seconds.",
@@ -777,14 +436,6 @@ export function initBank({ $, wallet, sysSnd = () => {}, onArcadeBalance = () =>
     }
   }
 
-  /**
-   * THE OLD WAY, for a wallet that will not be asked to send a transaction.
-   *
-   * This is the only place the exchange warning still belongs: on the
-   * automatic path the money leaves the wallet that signed in, so it cannot
-   * arrive from an address the player is unable to sign for. Here it can, and
-   * that mistake is the one nothing in this panel can undo.
-   */
   function manualFallback() {
     if (!info) { say("This wallet cannot send a transaction from a page, and the arcade is not taking deposits on this box.", "bad"); return; }
     sayEl.className = "lgb-say";
@@ -816,21 +467,6 @@ export function initBank({ $, wallet, sysSnd = () => {}, onArcadeBalance = () =>
     sayEl.append(p, code, document.createElement("br"), copy, warn);
   }
 
-  /* ---------- receipts ---------- */
-
-  /**
-   * THE ROWS THIS TAB IS ABOUT, newest first.
-   *
-   * The two books are separate here because they were separate in the
-   * question: somebody on the withdrawal tab is checking whether a payout
-   * went out, and a merged list of four meant that receipt was as likely as
-   * not to have been pushed off the bottom by deposits they were not asking
-   * about.
-   */
-  /**
-   * The most recent deposit in whatever shape this answer came in, or null.
-   * Sorted rather than assumed: two shapes, two orderings to trust otherwise.
-   */
   function newestDeposit() {
     const rows = Array.isArray(history.rows)
       ? history.rows.filter(r => r.kind === "in").map(r => ({ at: r.at, signature: r.signature, lamports: r.amount }))
@@ -841,8 +477,6 @@ export function initBank({ $, wallet, sysSnd = () => {}, onArcadeBalance = () =>
   function rowsForTab() {
     const want = which === "deposit" ? "in" : "out";
     if (Array.isArray(history.rows)) {
-      /* Filtered by the box already; filtered again because a page drawing
-         withdrawals under a DEPOSITS heading is worse than a short list. */
       return history.rows
         .filter(r => r.kind === want)
         .map(r => ({ at: r.at, kind: r.kind, lamports: r.amount, signature: r.signature, state: r.state }))
@@ -860,15 +494,9 @@ export function initBank({ $, wallet, sysSnd = () => {}, onArcadeBalance = () =>
 
   function drawLog() {
     const rows = rowsForTab();
-    /* THE BOX'S ARITHMETIC WHEN THERE IS SOME. It sent one page and the
-       numbers that describe it; slicing that page again here would be this
-       panel doing the sum a second time and getting to disagree. An older box
-       sent everything, and then the slice below is the only paging there is. */
     const pages = served ? Math.max(1, Number(history.pages ?? 1))
       : Math.max(1, Math.ceil(rows.length / PER_PAGE));
     const total = served ? Number(history.total ?? rows.length) : rows.length;
-    /* A deposit landing while page 2 is open must not leave somebody staring
-       at a page that no longer exists. */
     if (page > pages - 1) page = pages - 1;
     if (page < 0) page = 0;
     const shown = served ? rows : rows.slice(page * PER_PAGE, page * PER_PAGE + PER_PAGE);
@@ -917,18 +545,10 @@ export function initBank({ $, wallet, sysSnd = () => {}, onArcadeBalance = () =>
     put(pgatEl, `${page + 1} of ${pages}`);
   }
 
-  /**
-   * SHOW WHAT THE WALLET APP SAID, once there is somewhere to show it.
-   *
-   * Cleared on read: a success line reappearing the next time somebody opens
-   * this screen would be the arcade telling them money had just moved when
-   * nothing had.
-   */
   function showArrival() {
     if (!arrival || !onScreen) return;
     const done = arrival;
     arrival = null;
-    /* Whatever tab was up, the answer is about a deposit. */
     which = "deposit";
     page = 0;
     draw();
@@ -949,13 +569,9 @@ export function initBank({ $, wallet, sysSnd = () => {}, onArcadeBalance = () =>
       a.textContent = "view it on chain";
       sayEl.appendChild(a);
     }
-    /* Same watch the desktop path arms: the box's own scan is a minute wide
-       and somebody standing here has just been sent back from their wallet. */
     watching = 30;
     poke().then(refresh).catch(() => {});
   }
-
-  /* ---------- the panel's own life ---------- */
 
   function draw() {
     const signedIn = Boolean(sessionToken() && wallet?.address);
@@ -963,30 +579,6 @@ export function initBank({ $, wallet, sysSnd = () => {}, onArcadeBalance = () =>
     note.hidden = signedIn;
     document.getElementById("login")?.classList.toggle("hasbank", signedIn);
     if (!signedIn) {
-      /*
-       * A CONNECTED WALLET IS NOT A SIGNED-IN ONE, and this is where that
-       * costs somebody their deposit screen.
-       *
-       * zinc_wallet is domain-wide, so somebody who pressed connect anywhere
-       * in the arcade arrives here already named -- and resume() deliberately
-       * does not sign in, because a signature popup belongs to a gesture
-       * rather than to a page load. So the ordinary way to arrive is
-       * CONNECTED AND SIGNED OUT, with the address showing on the tile above
-       * and the money screen missing.
-       *
-       * This used to be one grey sentence saying "press the wallet tile
-       * again". That sentence is true and nobody read it: it sits under a
-       * panel that has vanished, it asks for a press on a DIFFERENT control,
-       * and nothing about a tile that already shows your address suggests it
-       * has anything left to do. The owner's report is the proof -- the only
-       * route they found was disconnecting and connecting again, which is a
-       * workaround for a button that was never drawn.
-       *
-       * So the panel does not disappear any more; it becomes the one thing
-       * there is to do. Still a PRESS and never automatic, for the reason
-       * above -- what changes is that the press is now in the place the
-       * player is already looking, and says what it buys.
-       */
       note.replaceChildren();
       if (wallet?.address) {
         const line = document.createElement("div");
@@ -1019,26 +611,17 @@ export function initBank({ $, wallet, sysSnd = () => {}, onArcadeBalance = () =>
   function tick() {
     if (!onScreen || !sessionToken()) return;
     if (watching > 0) watching -= 1;
-    /* Ask the box to look for the deposit only while there is a reason to:
-       a transfer we just watched go out, or a deposit tab somebody is sitting
-       in front of. Otherwise this is a balance refresh and nothing more. */
     if (watching > 0 || which === "deposit") poke().then(refresh).catch(() => {});
     else refresh().catch(() => {});
   }
 
-  /** Load what the box says about itself. Once; it does not change. */
   async function learn() {
     if (info) return;
     try { info = await api("/api/custody/deposit"); }
-    catch (e) { info = null; }   /* custody off on this box; the panel says so */
+    catch (e) { info = null; }
   }
 
   return {
-    /**
-     * The welcome screen is up (or has gone away). Polling follows the screen:
-     * a panel nobody can see must not be asking the arcade anything, and the
-     * arena underneath this screen is still running on somebody's money.
-     */
     async active(on) {
       onScreen = Boolean(on);
       clearInterval(timer); timer = null;
@@ -1052,22 +635,11 @@ export function initBank({ $, wallet, sysSnd = () => {}, onArcadeBalance = () =>
       showArrival();
     },
 
-    /** Something about the wallet changed: connected, signed in, gone. */
     sync() {
       if (!onScreen) return;
       this.active(true);
     },
 
-    /**
-     * Refresh and report, for the one decision this panel does not make:
-     * whether the player has anything to play with. Signing in with an empty
-     * arcade balance is the moment to be standing in front of a deposit
-     * screen, not the moment to be dropped onto a desktop whose only button
-     * says "not enough SOL".
-     *
-     * `arcade` is null when the box could not be asked -- which must read as
-     * "carry on", never as "you are broke".
-     */
     async check() {
       if (!sessionToken()) return { signedIn: false, arcade: null };
       await learn();
@@ -1080,28 +652,15 @@ export function initBank({ $, wallet, sysSnd = () => {}, onArcadeBalance = () =>
       }
     },
 
-    /** Say something in the panel's own voice, from outside it. */
     tell(text, kind) { say(text, kind); },
 
-    /** Which half to show. Used by the shortcut that says "deposit". */
     show(tab) {
       if (tab === "deposit" || tab === "withdraw") which = tab;
       draw();
-      /* A phone opens the welcome screen scrolled to the brand; somebody who
-         pressed My Wallet wants the panel, so put it in front of them. */
       if (!panel.hidden) panel.scrollIntoView({ block: "nearest" });
     },
 
-    /** Wire the controls. Called once, after the DOM exists. */
     mount() {
-      /*
-       * AND TELL THE SHARED WALLET WHERE A FINISHED PHONE DEPOSIT GOES.
-       *
-       * Without this the arcade's own bank opens on top of the desktop at the
-       * end of a deposit -- a gold OSRS panel over Windows XP, which is the
-       * exact thing `ownBank` exists to prevent. onDepositArrival is the seam
-       * for it; see completeDeeplink in src/arcade/wallet.js.
-       */
       onDepositArrival(done => { arrival = done ?? null; showArrival(); });
       for (const t of tabs) t.addEventListener("click", () => {
         if (busy) return;
@@ -1112,21 +671,13 @@ export function initBank({ $, wallet, sysSnd = () => {}, onArcadeBalance = () =>
         arming.disarm();
         say("");
         draw();
-        /* The other half is a different question to the box now, so the log
-           under it is a fetch rather than a re-slice. */
         if (sessionToken()) refresh().catch(() => {});
       });
       amtEl.addEventListener("input", () => {
-        /* THE AMOUNT CHANGED, SO THE CONFIRMATION IS FOR A NUMBER NOBODY IS
-           LOOKING AT ANY MORE. press() is keyed on the text and would refuse
-           anyway; this is what makes the button stop SAYING it is armed. */
         arming.disarm();
         restate();
       });
       amtEl.addEventListener("keydown", e => { if (e.key === "Enter" && !goEl.disabled) goEl.click(); });
-      /* A page the box holds has to be ASKED for; a page we sliced ourselves
-         is already here. turn() covers both, so the arrows do not have to know
-         which kind of box they are talking to. */
       const turn = (to) => {
         page = to;
         sysSnd("nav", .3);
@@ -1138,14 +689,9 @@ export function initBank({ $, wallet, sysSnd = () => {}, onArcadeBalance = () =>
       goEl.addEventListener("click", () => {
         if (busy || goEl.disabled) return;
         if (which === "deposit") { void doDeposit(); return; }
-        /* THE ONLY IRREVERSIBLE PRESS ON THIS DESKTOP GETS TWO. Keyed on the
-           text in the field, so re-typing the amount between the two presses
-           asks again rather than sending the new number unconfirmed. */
         if (arming.press(amtEl.value.trim()) === "armed") {
           sysSnd("nav", .4);
           restate();
-          /* Re-draw when the arming lapses, so a button that has quietly gone
-             back to meaning "ask me" does not go on saying "press again". */
           setTimeout(() => { if (onScreen && !busy) restate(); }, HOLD_MS + 60);
           return;
         }

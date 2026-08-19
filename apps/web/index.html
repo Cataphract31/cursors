@@ -9,9 +9,6 @@
 <link rel="icon" href="./favicon.ico" sizes="48x48">
 <link rel="icon" href="./favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="./apple-touch-icon.png">
-<!-- added to a home screen this opens with no browser toolbars, which is also
-     the cleanest answer to iOS Safari disagreeing about where the bottom of
-     the screen is: with no toolbars there is nothing left to disagree about -->
 <link rel="manifest" href="./manifest.webmanifest">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -87,11 +84,6 @@
       <path d="M20.4 23 l1.8 1.9 3.6 -3.9" fill="none" stroke="#4A3800" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
     </symbol>
     <symbol id="ic-check" viewBox="0 0 32 32"><path d="M6 17 L13 24 L26 8" fill="none" stroke="#1B7E28" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
-    <!-- My Wallet. A billfold rather than another rounded app tile: it sits on
-         the desktop next to CURSORS.EXE, and two blue squares would be two
-         things nobody can tell apart at 32px. The coin carries the Solana
-         gradient the login tile already wears, so the shortcut and the tile
-         it opens are visibly the same subject. -->
     <symbol id="ic-wallet" viewBox="0 0 32 32">
       <linearGradient id="ic-wallet-sol" x1="0" y1="1" x2="1" y2="0">
         <stop offset="0" stop-color="#14F195"/><stop offset="1" stop-color="#9945FF"/>
@@ -103,12 +95,6 @@
       <path d="M21 18.5 h8.5 v5.5 h-8.5 a2.75 2.75 0 0 1 0 -5.5 z" fill="#8A5322" stroke="#43260C"/>
       <circle cx="24" cy="21.2" r="1.5" fill="#EFEADC" stroke="#43260C" stroke-width=".8"/>
     </symbol>
-    <!-- ZINC, the arcade this desktop is one machine on. Drawn rather than
-         borrowed: the nearest real XP icon (309, the globe-and-plug) is
-         already the Start menu's "Connect To", and two identical globes in one
-         menu meaning different things is worse than no icon at all. A monitor
-         in front of a world is XP's own way of saying "somewhere else on the
-         network", which is exactly what the portal is from in here. -->
     <symbol id="ic-zinc" viewBox="0 0 32 32">
       <circle cx="17" cy="14" r="12.5" fill="#2C7AC6" stroke="#0E3763"/>
       <path d="M4.7 10.4 h24.6 M4.7 17.8 h24.6" stroke="#D9EEFF" stroke-width="1.35"/>
@@ -135,7 +121,6 @@
   <div id="icons"></div>
   <div id="marquee"></div>
 
-  <!-- CURSORS.EXE control panel -->
   <div class="window" id="win-cursors" data-minw="318" data-minh="520" style="left:calc(100% - 348px);top:44px;width:318px">
     <div class="title-bar">
       <div class="tb-l"><i class="xico tb-ico" data-ico="@ic-app"></i><div class="title-bar-text">CURSORS.EXE</div></div>
@@ -144,8 +129,6 @@
     <div class="win-body cx-body">
       <div class="menubar"><span>Game</span><span>View</span><span>Help</span></div>
       <div class="phaseline" id="phaseline">BOOTING…</div>
-      <!-- the disk IS the round clock now: every death is a 12 MB corpse, and
-           when C: fills the system crashes and banks everyone -->
       <div class="diskbar" id="diskbar" title="Local Disk (C:) — full disk = crash, everyone banked">
         <i id="diskfill"></i>
         <span id="disktext">C: —</span>
@@ -157,10 +140,6 @@
         <span class="cx-tab" data-cx="cx-verify">Verify</span>
       </div>
       <div class="cx-pane on" id="cx-play">
-        <!-- The balance, and the way to change it. A separate small control
-             rather than a clickable row: this sits directly above DEPLOY, and
-             a row that navigates on any stray click is a row that will eat
-             one somebody meant for the button below it. -->
         <div class="walletrow"><span>WALLET</span><div class="wamt"><span class="amt" id="walletamt">5.000 SOL</span><span class="unreal mono" id="walletlive"></span></div><button class="xbtn wbtn" id="wallet-manage" title="My Wallet — deposit or withdraw SOL">in / out</button></div>
         <div class="hr"></div>
         <button class="xbtn big" id="btn-deploy">▸ DEPLOY 0.1 SOL</button>
@@ -184,7 +163,6 @@
     </div>
   </div>
 
-  <!-- Windows Messenger: the contact list -->
   <div class="window" id="win-chat" data-minw="196" data-minh="260" style="left:10px;top:calc(100% - 448px);width:226px;height:416px">
     <div class="title-bar">
       <div class="tb-l"><i class="xico tb-ico" data-ico="msn16"></i><div class="title-bar-text">Windows Messenger</div></div>
@@ -207,10 +185,8 @@
     </div>
   </div>
 
-  <!-- Winamp (Webamp) mounts here -->
   <div id="webamp-wrap" style="display:none"><div id="webamp-slot"></div></div>
 
-  <!-- fights.log -->
   <div class="window" id="win-log" data-minw="240" data-minh="150" style="left:calc(100% - 348px);top:calc(100% - 258px);width:318px;height:226px">
     <div class="title-bar">
       <div class="tb-l"><i class="xico tb-ico" data-ico="note16"></i><div class="title-bar-text">fights.log - Notepad</div></div>
@@ -222,7 +198,6 @@
     </div>
   </div>
 
-  <!-- README -->
   <div class="window" id="win-readme" data-minw="260" data-minh="200" style="left:330px;top:52px;width:340px">
     <div class="title-bar">
       <div class="tb-l"><i class="xico tb-ico" data-ico="note16"></i><div class="title-bar-text">README.txt - Notepad</div></div>
@@ -260,8 +235,6 @@ icons/sounds: winXP (MIT)</div>
     </div>
   </div>
 
-  <!-- Hall of Fame, the guestbook, the gallery: what the browser used to host.
-       Plain windows now — the data always came over the game's own socket. -->
   <div class="window" id="win-fame" data-minw="330" data-minh="240" style="left:180px;top:60px;width:520px;height:400px">
     <div class="title-bar">
       <div class="tb-l"><i class="xico tb-ico" data-ico="@ic-cursor"></i><div class="title-bar-text">Hall of Fame</div></div>
@@ -301,7 +274,6 @@ icons/sounds: winXP (MIT)</div>
     </div>
   </div>
 
-  <!-- Death certificate: the receipt for one collision -->
   <div class="window fixed" id="win-cert" style="left:calc(50% - 186px);top:56px;width:372px;max-width:calc(100vw - 8px)">
     <div class="title-bar">
       <div class="tb-l"><i class="xico tb-ico" data-ico="@ic-cursor"></i><div class="title-bar-text">Properties</div></div>
@@ -324,7 +296,6 @@ icons/sounds: winXP (MIT)</div>
     </div>
   </div>
 
-  <!-- Hall of Pain -->
   <div class="window" id="win-hall" data-minw="420" data-minh="240" style="left:230px;top:80px;width:494px;height:344px">
     <div class="title-bar">
       <div class="tb-l"><i class="xico tb-ico" data-ico="err32"></i><div class="title-bar-text">Hall of Pain</div></div>
@@ -346,7 +317,6 @@ icons/sounds: winXP (MIT)</div>
     </div>
   </div>
 
-  <!-- Windows Explorer / My Computer -->
   <div class="window" id="win-explorer" data-minw="420" data-minh="300" style="left:120px;top:50px;width:660px;height:452px">
     <div class="title-bar">
       <div class="tb-l"><i class="xico tb-ico" data-ico="computer16"></i><div class="title-bar-text">My Computer</div></div>
@@ -377,7 +347,6 @@ icons/sounds: winXP (MIT)</div>
     </div>
   </div>
 
-  <!-- Local Disk properties -->
   <div class="window fixed" id="win-driveprops" style="left:calc(50% - 160px);top:70px;width:320px">
     <div class="title-bar">
       <div class="tb-l"><i class="xico tb-ico" data-ico="hdd32"></i><div class="title-bar-text">Local Disk (C:) Properties</div></div>
@@ -407,7 +376,6 @@ icons/sounds: winXP (MIT)</div>
     </div>
   </div>
 
-  <!-- System Properties -->
   <div class="window fixed" id="win-sysprops" style="left:calc(50% - 175px);top:60px;width:350px">
     <div class="title-bar">
       <div class="tb-l"><i class="xico tb-ico" data-ico="computer16"></i><div class="title-bar-text">System Properties</div></div>
@@ -447,7 +415,6 @@ icons/sounds: winXP (MIT)</div>
   </div>
 
 
-  <!-- Outlook Express -->
   <div class="window" id="win-oe" data-minw="480" data-minh="340" style="left:110px;top:56px;width:640px;height:460px">
     <div class="title-bar">
       <div class="tb-l"><i class="xico tb-ico" data-ico="outlook32"></i><div class="title-bar-text">Inbox - Outlook Express</div></div>
@@ -489,7 +456,6 @@ icons/sounds: winXP (MIT)</div>
     </div>
   </div>
 
-  <!-- regedit's Edit String -->
   <div class="window fixed" id="win-regstr" style="left:calc(50% - 165px);top:170px;width:330px">
     <div class="title-bar"><div class="tb-l"><div class="title-bar-text">Edit String</div></div>
       <div class="title-bar-controls"><button aria-label="Close"></button></div></div>
@@ -505,7 +471,6 @@ icons/sounds: winXP (MIT)</div>
     </div>
   </div>
 
-  <!-- Narrator -->
   <div class="window fixed" id="win-narrator" style="left:calc(50% - 170px);top:120px;width:340px">
     <div class="title-bar"><div class="tb-l"><div class="title-bar-text">Narrator</div></div>
       <div class="title-bar-controls"><button aria-label="Close"></button></div></div>
@@ -517,7 +482,6 @@ icons/sounds: winXP (MIT)</div>
     </div>
   </div>
 
-  <!-- Volume Control: Advanced Controls -->
   <div class="window fixed" id="win-svadv" style="left:calc(50% - 150px);top:160px;width:300px">
     <div class="title-bar"><div class="tb-l"><div class="title-bar-text">Advanced Controls for Volume Control</div></div>
       <div class="title-bar-controls"><button aria-label="Close"></button></div></div>
@@ -531,7 +495,6 @@ icons/sounds: winXP (MIT)</div>
     </div>
   </div>
 
-  <!-- Minesweeper: Custom Field -->
   <div class="window fixed" id="win-minecustom" style="left:calc(50% - 130px);top:170px;width:260px">
     <div class="title-bar"><div class="tb-l"><div class="title-bar-text">Custom Field</div></div>
       <div class="title-bar-controls"><button aria-label="Close"></button></div></div>
@@ -548,7 +511,6 @@ icons/sounds: winXP (MIT)</div>
     </div>
   </div>
 
-  <!-- About Windows -->
   <div class="window fixed" id="win-winver" style="left:calc(50% - 205px);top:120px;width:410px">
     <div class="title-bar"><div class="tb-l"><div class="title-bar-text">About Windows</div></div>
       <div class="title-bar-controls"><button aria-label="Close"></button></div></div>
@@ -563,7 +525,6 @@ icons/sounds: winXP (MIT)</div>
     </div>
   </div>
 
-  <!-- the recovered-from-a-serious-error dialog -->
   <div class="window fixed" id="win-errrep" style="left:calc(50% - 200px);top:150px;width:400px">
     <div class="title-bar"><div class="tb-l"><div class="title-bar-text">CURSORS.EXE</div></div>
       <div class="title-bar-controls"><button aria-label="Close"></button></div></div>
@@ -581,7 +542,6 @@ icons/sounds: winXP (MIT)</div>
     </div>
   </div>
 
-  <!-- shutdown.exe's countdown box: no buttons, exactly like the worm summer -->
   <div class="window fixed" id="win-sysshut" style="left:calc(50% - 180px);top:140px;width:360px">
     <div class="title-bar"><div class="tb-l"><div class="title-bar-text">System Shutdown</div></div>
       <div class="title-bar-controls"></div></div>
@@ -597,7 +557,6 @@ icons/sounds: winXP (MIT)</div>
     </div>
   </div>
 
-  <!-- Utility Manager -->
   <div class="window fixed" id="win-utilman" style="left:calc(50% - 175px);top:130px;width:350px">
     <div class="title-bar"><div class="tb-l"><div class="title-bar-text">Utility Manager</div></div>
       <div class="title-bar-controls"><button aria-label="Close"></button></div></div>
@@ -607,8 +566,6 @@ icons/sounds: winXP (MIT)</div>
     </div>
   </div>
 
-  <!-- How to Play: six slides, real screenshots — two sets, same file names:
-       the desktop shell in public/tour/, the phone in public/tour/m/ -->
   <div class="window" id="win-tour" data-minw="420" data-minh="300" style="left:calc(50% - 292px);top:52px;width:584px">
     <div class="title-bar">
       <div class="tb-l"><i class="xico tb-ico" data-ico="@ic-app"></i><div class="title-bar-text">How to Play CURSORS.EXE</div></div>
@@ -628,7 +585,6 @@ icons/sounds: winXP (MIT)</div>
     </div>
   </div>
 
-  <!-- Tour Windows XP - tourstart.exe. Chapters, copy and pictures: src/tourxp.js -->
   <div class="window" id="win-tourxp" data-minw="560" data-minh="430"
        style="left:calc(50% - 332px);top:44px;width:664px;height:520px">
     <div class="title-bar">
@@ -660,7 +616,6 @@ icons/sounds: winXP (MIT)</div>
 
 
 
-  <!-- Help and Support Center -->
   <div class="window" id="win-help" data-minw="420" data-minh="300" style="left:130px;top:56px;width:660px;height:470px">
     <div class="title-bar">
       <div class="tb-l"><i class="xico tb-ico" data-ico="help16"></i><div class="title-bar-text">Help and Support Center</div></div>
@@ -684,9 +639,6 @@ icons/sounds: winXP (MIT)</div>
     </div>
   </div>
 
-  <!-- Display Properties -->
-
-  <!-- ===== Command Prompt ===== -->
   <div class="window" id="win-cmd" data-minw="380" data-minh="200" style="left:150px;top:100px;width:604px;height:352px">
     <div class="title-bar">
       <div class="tb-l"><i class="xico tb-ico" data-ico="@ic-cmd"></i><div class="title-bar-text">C:\WINDOWS\system32\cmd.exe</div></div>
@@ -698,7 +650,6 @@ icons/sounds: winXP (MIT)</div>
     </div>
   </div>
 
-  <!-- ===== Control Panel ===== -->
   <div class="window" id="win-control" data-minw="480" data-minh="320" style="left:110px;top:64px;width:700px;height:474px">
     <div class="title-bar">
       <div class="tb-l"><i class="xico tb-ico" data-ico="@ic-cpl"></i><div class="title-bar-text">Control Panel</div></div>
@@ -707,7 +658,6 @@ icons/sounds: winXP (MIT)</div>
     <div class="win-body cpl-body" id="cpl-body"></div>
   </div>
 
-  <!-- ===== MMC consoles: Services, Device Manager, Group Policy ===== -->
   <div class="window" id="win-services" data-minw="520" data-minh="300" style="left:60px;top:64px;width:880px;height:470px">
     <div class="title-bar">
       <div class="tb-l"><i class="xico tb-ico" data-ico="@ic-mmc"></i><div class="title-bar-text">Services</div></div>
@@ -730,8 +680,6 @@ icons/sounds: winXP (MIT)</div>
     <div class="win-body mmc-body" data-mmc="gpedit"></div>
   </div>
 
-  <!-- one properties sheet, retitled per console (XP opens one at a time too) -->
-  <!-- ===== Event Viewer / System Information / DirectX Diagnostic Tool ===== -->
   <div class="window" id="win-eventvwr" data-minw="560" data-minh="300" style="left:84px;top:70px;width:720px;height:460px">
     <div class="title-bar">
       <div class="tb-l"><i class="xico tb-ico" data-ico="@ic-mmc"></i><div class="title-bar-text">Event Viewer</div></div>
@@ -761,7 +709,6 @@ icons/sounds: winXP (MIT)</div>
     <div class="win-body pad" id="mmcprops-body" style="background:#ECE9D8"></div>
   </div>
 
-  <!-- choose your companion -->
   <div class="window fixed" id="win-companion" style="left:calc(50% - 215px);top:80px;width:430px">
     <div class="title-bar">
       <div class="tb-l"><i class="xico tb-ico" data-ico="search32"></i><div class="title-bar-text">Choose a Search Companion</div></div>
@@ -821,7 +768,6 @@ icons/sounds: winXP (MIT)</div>
     </div>
   </div>
 
-  <!-- Date and Time Properties -->
   <div class="window fixed" id="win-datetime" style="left:calc(50% - 200px);top:90px;width:400px">
     <div class="title-bar">
       <div class="tb-l"><i class="xico tb-ico" data-ico="cpanel16"></i><div class="title-bar-text">Date and Time Properties</div></div>
@@ -853,7 +799,6 @@ icons/sounds: winXP (MIT)</div>
     </div>
   </div>
 
-  <!-- Task Manager -->
   <div class="window" id="win-taskmgr" data-minw="380" data-minh="380" style="left:120px;top:60px;width:412px;height:470px">
     <div class="title-bar">
       <div class="tb-l"><i class="xico tb-ico" data-ico="@ic-app"></i><div class="title-bar-text">Windows Task Manager</div></div>
@@ -909,7 +854,6 @@ icons/sounds: winXP (MIT)</div>
     </div>
   </div>
 
-  <!-- Minesweeper -->
   <div class="window fixed" id="win-mine" style="left:210px;top:110px;width:auto">
     <div class="title-bar">
       <div class="tb-l"><i class="xico tb-ico" data-ico="mine16"></i><div class="title-bar-text">Minesweeper</div></div>
@@ -928,7 +872,6 @@ icons/sounds: winXP (MIT)</div>
     </div>
   </div>
 
-  <!-- Paint -->
   <div class="window" id="win-paint" data-minw="360" data-minh="300" style="left:150px;top:44px;width:604px;height:456px">
     <div class="title-bar">
       <div class="tb-l"><i class="xico tb-ico" data-ico="paint16"></i><div class="title-bar-text">untitled - Paint</div></div>
@@ -954,7 +897,6 @@ icons/sounds: winXP (MIT)</div>
     </div>
   </div>
 
-  <!-- Paint: Attributes -->
   <div class="window fixed" id="win-paintattr" style="left:calc(50% - 150px);top:110px;width:300px">
     <div class="title-bar">
       <div class="tb-l"><div class="title-bar-text">Attributes</div></div>
@@ -972,7 +914,6 @@ icons/sounds: winXP (MIT)</div>
     </div>
   </div>
 
-  <!-- Run dialog -->
   <div class="window fixed" id="win-run" style="left:8px;top:calc(100% - 190px);width:346px">
     <div class="title-bar">
       <div class="tb-l"><i class="xico tb-ico" data-ico="run16"></i><div class="title-bar-text">Run</div></div>
@@ -988,7 +929,6 @@ icons/sounds: winXP (MIT)</div>
     </div>
   </div>
 
-  <!-- Error dialog -->
   <div class="window fixed" id="win-error" style="left:calc(50% - 172px);top:calc(50% - 84px);width:344px">
     <div class="title-bar">
       <div class="tb-l"><div class="title-bar-text">Error</div></div>
@@ -1003,7 +943,6 @@ icons/sounds: winXP (MIT)</div>
     </div>
   </div>
 
-  <!-- Calculator -->
   <div class="window fixed" id="win-calc" tabindex="-1" style="left:calc(50% - 132px);top:120px;width:264px">
     <div class="title-bar">
       <div class="tb-l"><i class="xico tb-ico" data-ico="calc16"></i><div class="title-bar-text">Calculator</div></div>
@@ -1016,7 +955,6 @@ icons/sounds: winXP (MIT)</div>
     </div>
   </div>
 
-  <!-- Character Map -->
   <div class="window fixed" id="win-charmap" style="left:calc(50% - 190px);top:70px;width:380px">
     <div class="title-bar">
       <div class="tb-l"><i class="xico tb-ico" data-ico="note16"></i><div class="title-bar-text">Character Map</div></div>
@@ -1035,7 +973,6 @@ icons/sounds: winXP (MIT)</div>
     </div>
   </div>
 
-  <!-- Disk Defragmenter -->
   <div class="window" id="win-defrag" data-minw="480" data-minh="300" style="left:180px;top:90px;width:600px;height:380px">
     <div class="title-bar">
       <div class="tb-l"><i class="xico tb-ico" data-ico="@ic-mmc"></i><div class="title-bar-text">Disk Defragmenter</div></div>
@@ -1062,7 +999,6 @@ icons/sounds: winXP (MIT)</div>
     </div>
   </div>
 
-  <!-- Registry Editor -->
   <div class="window" id="win-regedit" data-minw="460" data-minh="280" style="left:150px;top:60px;width:640px;height:420px">
     <div class="title-bar">
       <div class="tb-l"><i class="xico tb-ico" data-ico="@ic-file"></i><div class="title-bar-text">Registry Editor</div></div>
@@ -1081,7 +1017,6 @@ icons/sounds: winXP (MIT)</div>
     </div>
   </div>
 
-  <!-- Stretch and Skew: the real four-field dialog -->
   <div class="window fixed" id="win-stretchskew" style="left:calc(50% - 160px);top:calc(50% - 120px);width:320px">
     <div class="title-bar">
       <div class="tb-l"><i class="xico tb-ico" data-ico="paint16"></i><div class="title-bar-text">Stretch and Skew</div></div>
@@ -1106,7 +1041,6 @@ icons/sounds: winXP (MIT)</div>
 
 
 
-  <!-- ===== System Restore (rstrui.exe): the wizard, the calendar, the real revert ===== -->
   <div class="window" id="win-restore" data-minw="540" data-minh="380" style="left:calc(50% - 315px);top:48px;width:630px;height:452px">
     <div class="title-bar">
       <div class="tb-l"><i class="xico tb-ico" data-ico="computer16"></i><div class="title-bar-text">System Restore</div></div>
@@ -1122,7 +1056,6 @@ icons/sounds: winXP (MIT)</div>
     </div>
   </div>
 
-  <!-- ===== System Configuration Utility (msconfig.exe) ===== -->
   <div class="window fixed" id="win-msconfig" style="left:calc(50% - 245px);top:52px;width:490px">
     <div class="title-bar">
       <div class="tb-l"><i class="xico tb-ico" data-ico="@ic-mmc"></i><div class="title-bar-text">System Configuration Utility</div></div>
@@ -1152,7 +1085,6 @@ icons/sounds: winXP (MIT)</div>
     </div>
   </div>
 
-  <!-- ===== Folder Options: the three tabs, and the switches that work, work ===== -->
   <div class="window fixed" id="win-foldopt" style="left:calc(50% - 195px);top:56px;width:390px">
     <div class="title-bar">
       <div class="tb-l"><i class="xico tb-ico" data-ico="openfolder32"></i><div class="title-bar-text">Folder Options</div></div>
@@ -1183,7 +1115,6 @@ icons/sounds: winXP (MIT)</div>
     </div>
   </div>
 
-  <!-- ===== Recycle Bin Properties ===== -->
   <div class="window fixed" id="win-binprops" style="left:calc(50% - 180px);top:70px;width:360px">
     <div class="title-bar">
       <div class="tb-l"><i class="xico tb-ico" data-ico="bin32"></i><div class="title-bar-text">Recycle Bin Properties</div></div>
@@ -1201,7 +1132,6 @@ icons/sounds: winXP (MIT)</div>
     </div>
   </div>
 
-  <!-- ===== Add or Remove Programs ===== -->
   <div class="window" id="win-appwiz" data-minw="520" data-minh="360" style="left:100px;top:52px;width:660px;height:470px">
     <div class="title-bar">
       <div class="tb-l"><i class="xico tb-ico" data-ico="@ic-cpl"></i><div class="title-bar-text">Add or Remove Programs</div></div>
@@ -1213,7 +1143,6 @@ icons/sounds: winXP (MIT)</div>
     </div>
   </div>
 
-  <!-- the install/remove progress both pages share -->
   <div class="window fixed" id="win-awprog" style="left:calc(50% - 170px);top:calc(50% - 60px);width:340px">
     <div class="title-bar">
       <div class="tb-l"><div class="title-bar-text">Add or Remove Programs</div></div>
@@ -1225,7 +1154,6 @@ icons/sounds: winXP (MIT)</div>
     </div>
   </div>
 
-  <!-- ===== the Fonts folder and its preview window ===== -->
   <div class="window" id="win-fonts" data-minw="420" data-minh="300" style="left:150px;top:70px;width:560px;height:420px">
     <div class="title-bar">
       <div class="tb-l"><i class="xico tb-ico" data-ico="folder16"></i><div class="title-bar-text">Fonts</div></div>
@@ -1251,7 +1179,6 @@ icons/sounds: winXP (MIT)</div>
     </div>
   </div>
 
-  <!-- ===== ClearType tuner ===== -->
   <div class="window fixed" id="win-cleartype" style="left:calc(50% - 200px);top:80px;width:400px">
     <div class="title-bar">
       <div class="tb-l"><i class="xico tb-ico" data-ico="cpanel16"></i><div class="title-bar-text">ClearType Tuner</div></div>
@@ -1265,7 +1192,6 @@ icons/sounds: winXP (MIT)</div>
     </div>
   </div>
 
-  <!-- ===== Accessibility: the Magnifier strip, its window, the OSK, the options ===== -->
   <div id="magnifier"><div class="mag-view"></div></div>
   <div class="window fixed" id="win-magnifier" style="left:calc(50% - 170px);top:220px;width:340px">
     <div class="title-bar">
@@ -1309,7 +1235,6 @@ icons/sounds: winXP (MIT)</div>
     </div>
   </div>
 
-  <!-- ===== Scheduled Tasks ===== -->
   <div class="window" id="win-tasks" data-minw="460" data-minh="280" style="left:140px;top:78px;width:600px;height:380px">
     <div class="title-bar">
       <div class="tb-l"><i class="xico tb-ico" data-ico="@ic-mmc"></i><div class="title-bar-text">Scheduled Tasks</div></div>
@@ -1326,7 +1251,6 @@ icons/sounds: winXP (MIT)</div>
     </div>
   </div>
 
-  <!-- per-screensaver Settings dialog: content built by main.js -->
   <div class="window fixed" id="win-saveropts" style="left:calc(50% - 160px);top:calc(50% - 90px);width:320px">
     <div class="title-bar">
       <div class="tb-l"><div class="title-bar-text">Settings</div></div>
@@ -1341,7 +1265,6 @@ icons/sounds: winXP (MIT)</div>
     </div>
   </div>
 
-  <!-- Mouse Properties: main.cpl, all five tabs -->
   <div class="window fixed" id="win-mouse" style="left:calc(50% - 190px);top:52px;width:380px">
     <div class="title-bar">
       <div class="tb-l"><i class="xico tb-ico" data-ico="cpanel16"></i><div class="title-bar-text">Mouse Properties</div></div>
@@ -1443,7 +1366,6 @@ icons/sounds: winXP (MIT)</div>
     </div>
   </div>
 
-  <!-- Run As dialog: the real radio pair, and only one identity on this machine -->
   <div class="window fixed" id="win-runas" style="left:calc(50% - 178px);top:calc(50% - 120px);width:356px">
     <div class="title-bar">
       <div class="tb-l"><div class="title-bar-text">Run As</div></div>
@@ -1468,7 +1390,6 @@ icons/sounds: winXP (MIT)</div>
     </div>
   </div>
 
-  <!-- Create Shortcut wizard -->
   <div class="window fixed" id="win-shortcutwiz" style="left:calc(50% - 210px);top:calc(50% - 140px);width:420px">
     <div class="title-bar">
       <div class="tb-l"><div class="title-bar-text">Create Shortcut</div></div>
@@ -1494,7 +1415,6 @@ icons/sounds: winXP (MIT)</div>
     </div>
   </div>
 
-  <!-- Desktop Cleanup Wizard: sweeps what you never open into a folder -->
   <div class="window fixed" id="win-cleanup" style="left:calc(50% - 220px);top:calc(50% - 160px);width:440px">
     <div class="title-bar">
       <div class="tb-l"><div class="title-bar-text">Desktop Cleanup Wizard</div></div>
@@ -1524,10 +1444,6 @@ icons/sounds: winXP (MIT)</div>
     </div>
   </div>
 
-  <!-- Confirm dialog -->
-  <!-- the file-operation progress dialog: XP's flying paper, a real bar -->
-  <!-- Solitaire: rjanjic/js-solitaire (MIT), already styled as the classic
-       Windows game. Vendored under public/solitaire, lazy like pinball. -->
   <div class="window" id="win-solitaire" data-minw="420" data-minh="320" style="left:170px;top:56px;width:660px;height:520px">
     <div class="title-bar">
       <div class="tb-l"><i class="xico tb-ico" data-ico="@ic-cards"></i><div class="title-bar-text">Solitaire</div></div>
@@ -1538,7 +1454,6 @@ icons/sounds: winXP (MIT)</div>
     </div>
   </div>
 
-  <!-- FreeCell -->
   <div class="window" id="win-freecell" data-minw="480" data-minh="360" style="left:190px;top:64px;width:660px;height:516px">
     <div class="title-bar">
       <div class="tb-l"><i class="xico tb-ico" data-ico="@ic-cards"></i><div class="title-bar-text">FreeCell</div></div>
@@ -1550,7 +1465,6 @@ icons/sounds: winXP (MIT)</div>
     </div>
   </div>
 
-  <!-- Spider Solitaire -->
   <div class="window" id="win-spider" data-minw="520" data-minh="380" style="left:120px;top:40px;width:806px;height:556px">
     <div class="title-bar">
       <div class="tb-l"><i class="xico tb-ico" data-ico="@ic-cards"></i><div class="title-bar-text">Spider Solitaire</div></div>
@@ -1562,7 +1476,6 @@ icons/sounds: winXP (MIT)</div>
     </div>
   </div>
 
-  <!-- Hearts -->
   <div class="window" id="win-hearts" data-minw="520" data-minh="420" style="left:150px;top:36px;width:727px;height:586px">
     <div class="title-bar">
       <div class="tb-l"><i class="xico tb-ico" data-ico="@ic-cards"></i><div class="title-bar-text">Hearts</div></div>
@@ -1574,7 +1487,6 @@ icons/sounds: winXP (MIT)</div>
     </div>
   </div>
 
-  <!-- ===== the noise apps ===== -->
   <div class="window" id="win-sndvol" data-minw="430" data-minh="240" style="left:250px;top:120px;width:560px;height:300px">
     <div class="title-bar">
       <div class="tb-l"><i class="xico tb-ico" data-ico="trayVol"></i><div class="title-bar-text">Volume Control</div></div>
@@ -1617,7 +1529,6 @@ icons/sounds: winXP (MIT)</div>
     </div>
     <div class="win-body pad wmp-body">
       <canvas id="wmp-viz" width="430" height="200"></canvas>
-      <!-- the same slot as the visualiser: a clip replaces the bars -->
       <video id="wmp-video" playsinline preload="none"></video>
       <div class="wmp-title" id="wmp-title">Ready</div>
       <input type="range" id="wmp-seek" min="0" max="1000" value="0" class="wmp-seek">
@@ -1633,7 +1544,6 @@ icons/sounds: winXP (MIT)</div>
     </div>
   </div>
 
-  <!-- ===== the writing apps ===== -->
   <div class="window" id="win-notepad" data-minw="300" data-minh="220" style="left:250px;top:80px;width:470px;height:360px">
     <div class="title-bar">
       <div class="tb-l"><i class="xico tb-ico" data-ico="note16"></i><div class="title-bar-text">Untitled - Notepad</div></div>
@@ -1776,7 +1686,6 @@ icons/sounds: winXP (MIT)</div>
     </div>
   </div>
 
-  <!-- Icon properties -->
   <div class="window fixed" id="win-props" style="left:calc(50% - 152px);top:calc(50% - 118px);width:304px">
     <div class="title-bar">
       <div class="tb-l"><div class="title-bar-text">Properties</div></div>
@@ -1791,7 +1700,6 @@ icons/sounds: winXP (MIT)</div>
     </div>
   </div>
 
-  <!-- Folder viewer -->
   <div class="window" id="win-folder" data-minw="260" data-minh="170" style="left:240px;top:120px;width:330px">
     <div class="title-bar">
       <div class="tb-l"><i class="xico tb-ico" data-ico="folder16"></i><div class="title-bar-text">New Folder</div></div>
@@ -1803,7 +1711,6 @@ icons/sounds: winXP (MIT)</div>
     </div>
   </div>
 
-  <!-- User notepad -->
   <div class="window" id="win-usertxt" data-minw="280" data-minh="200" style="left:280px;top:100px;width:360px">
     <div class="title-bar">
       <div class="tb-l"><i class="xico tb-ico" data-ico="note16"></i><div class="title-bar-text">Untitled - Notepad</div></div>
@@ -1815,7 +1722,6 @@ icons/sounds: winXP (MIT)</div>
     </div>
   </div>
 
-  <!-- Shutdown warning -->
   <div class="window fixed" id="win-shutdown" style="left:calc(50% - 160px);top:calc(50% - 90px);width:320px">
     <div class="title-bar">
       <div class="tb-l"><div class="title-bar-text">System Shutdown</div></div>
@@ -1829,7 +1735,6 @@ icons/sounds: winXP (MIT)</div>
     </div>
   </div>
 
-  <!-- Log Off dialog -->
   <div class="window fixed lgo" id="win-logoff">
     <div class="title-bar"><div class="tb-l"><div class="title-bar-text">Log Off Windows</div></div>
       <div class="title-bar-controls"></div></div>
@@ -1849,7 +1754,6 @@ icons/sounds: winXP (MIT)</div>
     </div>
   </div>
 
-  <!-- the autoplay list a disc raises -->
   <div class="window fixed" id="win-autoplay" style="left:calc(50% - 175px);top:120px;width:350px">
     <div class="title-bar"><div class="tb-l"><i class="xico tb-ico" data-ico="cd32"></i><div class="title-bar-text">Audio CD (D:)</div></div>
       <div class="title-bar-controls"><button aria-label="Close"></button></div></div>
@@ -1867,15 +1771,12 @@ icons/sounds: winXP (MIT)</div>
     </div>
   </div>
 
-  <!-- the battlefield is a fixed logical playfield, scaled to fit any screen,
-       so every player fights on exactly the same arena -->
   <div id="arena">
     <div id="curlayer"></div>
     <div id="fxlayer"></div>
   </div>
 </div>
 
-<!-- taskbar -->
 <div id="taskbar">
   <img id="startbtn" alt="start" draggable="false" data-tip="Click here to begin">
   <div id="ql"><span class="ql-grip"></span><button class="qlb" id="ql-desk" data-tip="Show Desktop"><svg><use href="#ic-desk"/></svg></button><button class="qlb" id="ql-zinc" data-tip="ZINC — the arcade"><svg><use href="#ic-zinc"/></svg></button><button class="qlb" data-app="win-amp" data-tip="Winamp"><i class="xico" data-ico="amp16"></i></button><button class="qlb" data-app="win-chat" data-tip="Windows Messenger"><i class="xico" data-ico="msn16"></i></button><span class="ql-grip"></span></div>
@@ -1895,14 +1796,12 @@ icons/sounds: winXP (MIT)</div>
   </div>
 </div>
 
-<!-- the tray volume flyout: XP's little panel, not a menu -->
 <div id="volflyout">
   <div class="vf-title">Volume</div>
   <input id="vf-slider" type="range" min="0" max="100" step="1" value="70" orient="vertical" aria-label="Volume">
   <label class="vf-mute"><input type="checkbox" id="vf-mute"> Mute</label>
 </div>
 
-<!-- mobile game HUD: the permanent thumb bar (shown by body.mobile only) -->
 <div id="mhud">
   <div class="mh-top" id="mh-info">
     <span class="mh-wallet mono" id="mh-wallet">5.000 SOL</span>
@@ -1911,9 +1810,7 @@ icons/sounds: winXP (MIT)</div>
     <span class="mh-phase mono" id="mh-phase">BOOT</span>
     <span class="mh-auto" id="mh-auto">AUTO</span>
   </div>
-  <!-- one slot per live cursor: tap one to recall just that cursor -->
   <div class="curstrip" id="mh-strip"></div>
-  <!-- the round clock, glanceable: C: filling up is the only thing that ends a round -->
   <i class="mh-disk" id="mh-disk"><b id="mh-diskfill"></b></i>
   <div class="mh-btns">
     <button class="xbtn" id="mh-deploy">▸ DEPLOY 0.1</button>
@@ -1921,22 +1818,16 @@ icons/sounds: winXP (MIT)</div>
   </div>
 </div>
 
-<!-- start menu -->
 <div id="startmenu">
   <header class="sm-head"><img class="sm-ava" id="sm-ava" alt=""><span id="sm-user">Administrator</span></header>
   <section class="sm-menu">
     <hr class="orange-hr">
     <div class="sm-left">
-      <!-- XP pinned "Internet" at the very top of this column. There is no
-           browser on this machine any more, and the one address it ever wants
-           is the arcade it lives in, so that slot says ZINC. -->
       <div class="sm-item two" data-act="arcade"><i class="xico" data-ico="@ic-zinc"></i><div class="sm-texts"><div class="sm-text b">ZINC</div><div class="sm-sub">the arcade</div></div></div>
       <div class="sm-item two" data-app="win-fame"><i class="xico" data-ico="@ic-cursor"></i><div class="sm-texts"><div class="sm-text b">Hall of Fame</div><div class="sm-sub">live from the arena</div></div></div>
       <div class="sm-item two" data-act="email"><i class="xico" data-ico="outlook32"></i><div class="sm-texts"><div class="sm-text b">E-mail</div><div class="sm-sub">Outlook Express</div></div></div>
       <div id="sm-pinned"></div>
       <div class="sm-sep"></div>
-      <!-- XP's left column below the pins is a most-recently-used list, not a
-           fixed roster: it rebuilds itself from what you actually open -->
       <div id="sm-mru"></div>
       <div style="flex:1"></div>
       <div class="sm-sep"></div>
@@ -1947,8 +1838,6 @@ icons/sounds: winXP (MIT)</div>
       <div class="sm-item" data-act="mypics"><i class="xico" data-ico="pics32"></i><div class="sm-texts"><div class="sm-text b">My Pictures</div></div></div>
       <div class="sm-item" data-app="win-amp"><i class="xico" data-ico="music32"></i><div class="sm-texts"><div class="sm-text b">My Music</div></div></div>
       <div class="sm-item" data-app="win-explorer"><i class="xico" data-ico="computer32"></i><div class="sm-texts"><div class="sm-text b">My Computer</div></div></div>
-      <!-- with the other My-things, in bold, because it is one of them: the
-           place this account's money is, rather than a utility -->
       <div class="sm-item" data-act="wallet"><i class="xico" data-ico="@ic-wallet"></i><div class="sm-texts"><div class="sm-text b">My Wallet</div></div></div>
       <div class="sm-sep"></div>
       <div class="sm-item" data-app="win-control"><i class="xico" data-ico="@ic-cpl"></i><div class="sm-texts"><div class="sm-text">Control Panel</div></div></div>
@@ -1968,18 +1857,12 @@ icons/sounds: winXP (MIT)</div>
   </footer>
 </div>
 
-<!-- the kill feed: every death in the arena, streamed. This is where a loss
-     lands now — a popup for your own death covered the whole phone and, if you
-     died again while it was up, put another one on top of it. Nothing here
-     blocks: rows fade, and your own death waits a little longer with the
-     receipt one tap away. -->
 <div id="feed"></div>
 
 <div id="balloon"><span id="balloon-x">✕</span><b id="balloon-h">Take a tour of CURSORS.EXE</b><span id="balloon-t">auto-battler. deploy any time. you only fight your own weight class. bank before shutdown.</span></div>
 
 <div id="bsod"></div>
 <div id="jackpot"></div>
-<!-- the monitor itself: glass in front of everything, including the BSOD -->
 <div id="crt"><div class="px"></div><div class="lines"></div><div class="hum"></div><div class="glass"></div><div class="frame"></div></div>
 <div id="shutdown"><div>It is now safe to turn off<br>your computer.<br><span class="shut-sub">click anywhere to log back in</span></div></div>
 
@@ -2008,34 +1891,11 @@ icons/sounds: winXP (MIT)</div>
     </div>
     <div class="lg-div"></div>
     <div class="lg-right">
-      <!-- TWO TILES, BECAUSE THIS MACHINE HAS TWO ANSWERS.
-           There was a third: Administrator, the typed name, which had been the
-           way in since before there was a wallet at all. It bought nothing any
-           more. The server refuses to deploy a cursor for anybody without an
-           arcade session (see deploy() in server/server.js), so a player who
-           logged on by typing a name got exactly what Guest gives them -- the
-           field, visible, with no money on it -- reached by a tile that looked
-           like the real one and did not say so. Two tiles that mean two
-           different things is the whole point of this screen.
-
-           THE NAME SURVIVED THE TILE. It was never an account, only a label
-           for the scoreboard, so it belongs to whoever is logging on rather
-           than to a login of its own: the box below is part of the wallet
-           tile now, and the name it holds is what the arena is told to call
-           you instead of your address. -->
       <div class="lg-tile" id="tile-wallet"><span class="lg-ava wallet">◈</span><div style="flex:1"><b id="w-name">Connect wallet</b><div class="lg-sub" id="w-sub">Phantom, Solflare or Backpack</div>
         <div class="lg-inputrow" id="lg-inputrow" style="display:none"><input id="lg-user" maxlength="14" placeholder="name for the scoreboard" autocomplete="off" spellcheck="false"><button id="lg-go" title="Save this name">→</button></div>
       </div><button id="w-off" class="lg-off" hidden>disconnect</button></div>
       <div class="lg-tile" id="tile-guest"><span class="lg-ava guest">?</span><div><b>Guest</b><div class="lg-sub" id="guest-sub">look around, in the sandbox</div></div></div>
 
-      <!-- MY WALLET, ON THE SCREEN THAT ALREADY ASKS WHO YOU ARE.
-           Money in and out used to be a gold button belonging to the arcade,
-           floating over a Windows XP desktop that had never heard of it. It
-           lives here now because this screen is already the one place this
-           machine talks about identity, and a balance is what an identity is
-           for. Everything behind it is unchanged: the same ledger, the same
-           custody wallet, the same withdrawal that can only ever pay the
-           address that signed in. bank.js has the argument in full. -->
       <div class="lg-bank" id="lg-bank" hidden>
         <div class="lgb-hdr">
           <i class="xico lgb-ico" data-ico="@ic-wallet"></i>
@@ -2055,9 +1915,6 @@ icons/sounds: winXP (MIT)</div>
           <input id="lgb-amt" inputmode="decimal" autocomplete="off" spellcheck="false" placeholder="0.0" aria-label="Amount in SOL">
           <span class="lgb-unit">SOL</span>
         </div>
-        <!-- The amounts people actually type, as buttons. Filled in by bank.js
-             because the two tabs mean different things by a preset: a deposit
-             is a sum you decide, a withdrawal is a share of what you have. -->
         <div class="lgb-presets" id="lgb-presets"></div>
         <button class="lgb-go" id="lgb-go">Deposit</button>
         <div class="lgb-say" id="lgb-say"></div>
@@ -2077,9 +1934,6 @@ icons/sounds: winXP (MIT)</div>
   <div class="lg-bot">
     <div class="lg-botl">
       <button id="lg-off"><img id="lg-offimg" alt="">Turn off computer</button>
-      <!-- Only while a session is already running behind this screen. Coming
-           here from the desktop is switching users, not logging off, and the
-           way out of it should not be a tile that says "log on". -->
       <button id="lg-back" hidden>&laquo; Back to the desktop</button>
     </div>
     <div class="lg-note">After you log on, you can add or lose funds.</div>

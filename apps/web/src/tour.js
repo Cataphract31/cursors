@@ -1,12 +1,3 @@
-/* How to Play — the intro card. Six slides, one screenshot each, bullets you
-   can read while a fight is happening behind the window. The screenshots are
-   real captures of this build, served from tour/ and loaded only when the
-   window opens, so first paint never pays for them.
-   Two sets, same file names: the desktop shell in tour/, the phone in tour/m/.
-   A phone player's whole client is the thumb bar, so the desktop captures were
-   teaching a machine most of the table never sees.
-   Import-free like the other app modules; main.js injects the shell. */
-
 export function initTour(deps) {
   const { $, store, openWin, closeWin, sysSnd } = deps;
 
@@ -55,12 +46,10 @@ export function initTour(deps) {
     $("#tour-step").textContent = (at + 1) + " of " + SLIDES.length;
     $("#tour-title").textContent = s.t;
     const img = $("#tour-img");
-    img.onerror = () => { img.style.visibility = "hidden"; };   /* a 404 shows nothing, not a broken glyph */
+    img.onerror = () => { img.style.visibility = "hidden"; };
     img.onload = () => { img.style.visibility = ""; };
-    /* the shell is chosen once at boot, so this is read per render rather than
-       cached: the same window has to be right after a rotate or a reload */
     const set = document.body.classList.contains("mobile") ? "tour/m/" : "tour/";
-    img.src = set + s.img;              /* lazy: only ever set while open */
+    img.src = set + s.img;
     $("#tour-pts").innerHTML = s.pts.map(p => `<li>${p}</li>`).join("");
     $("#tour-rail").innerHTML = SLIDES.map((x, i) =>
       `<div class="tour-dot${i === at ? " on" : ""}"><i></i>${x.t}</div>`).join("");
@@ -77,9 +66,6 @@ export function initTour(deps) {
   }
   function done() {
     store.data.tourSeen = 1; store.save();
-    /* nav() walked `at` one PAST the last slide to get here. Left there, the
-       next opening rendered the final slide and Back only stepped from 5 to
-       5 — a card that could not be read a second time. */
     at = 0;
     closeWin("win-tour");
   }
@@ -92,7 +78,6 @@ export function initTour(deps) {
   function init() {
     $("#tour-back").addEventListener("click", () => nav(-1));
     $("#tour-next").addEventListener("click", () => nav(1));
-    /* the X means "seen it" too — it must not come back on every boot */
     $('#win-tour .title-bar-controls button[aria-label="Close"]')
       .addEventListener("click", () => { store.data.tourSeen = 1; store.save(); });
     $("#tour-rail").addEventListener("click", e => {

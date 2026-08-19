@@ -1,15 +1,3 @@
-/* The maintenance apps: System Restore, the System Configuration Utility and
-   Folder Options.
-
-   These three are the ones a delver goes looking for when they want to prove
-   the desktop is a prop, so all three are load-bearing. System Restore takes a
-   real snapshot of every cosmetic setting on the machine and really puts it
-   back. MSConfig's Startup tab really stops things from starting. Folder
-   Options really changes how Explorer and the desktop behave.
-
-   What none of them touch: the wallet, the arena, the ledger, the corpses in
-   the bin. A restore point is a photograph of the wallpaper, not of the money.
-   Import-free sibling module; main.js injects the shell. */
 export function initSysMaint(deps) {
   const { $, store, sysSnd, showMenu, showError, showConfirm, openWin, closeWin, hooks } = deps;
 
@@ -26,11 +14,6 @@ export function initSysMaint(deps) {
     return b;
   };
 
-  /* ================================================================
-     0. the snapshot — what a restore point is made of
-     ================================================================ */
-  /* Everything in here is cosmetic and lives on this computer only. Nothing
-     in here can be sold, lost or won. That is the whole selection rule. */
   const SNAP_KEYS = ["wallpaper", "wallpaperMode", "curScheme", "crt", "cplClassic",
     "iconSort", "alignGrid", "showIcons", "autoArr", "expView", "tbAuto", "lockTb",
     "tbDesk", "tbLinks", "tbAddr", "quickLaunch"];
@@ -56,32 +39,25 @@ export function initSysMaint(deps) {
     if (hooks.shellRefresh) hooks.shellRefresh();
   }
 
-  /* ================================================================
-     1. System Restore (rstrui.exe)
-     ================================================================ */
   const RP_MAX = 12;
   const MONTHS = ["January", "February", "March", "April", "May", "June", "July",
     "August", "September", "October", "November", "December"];
   const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
   function rps() { return (store.data.rp = store.data.rp || []); }
-  /* a real moment on this machine gets a real restore point */
   function point(desc, kind) {
     const list = rps();
     const last = list[list.length - 1];
-    /* XP coalesces: no second point for the same thing inside five minutes */
     if (last && last.d === desc && Date.now() - last.t < 5 * 60000) { last.t = Date.now(); last.snap = snapshot(); store.save(); return last; }
     const p = { t: Date.now(), d: desc, k: kind || "auto", snap: snapshot() };
     list.push(p);
     while (list.length > RP_MAX) {
-      /* the oldest manual point outlives the oldest automatic one, like XP */
       const i = list.findIndex(x => x.k !== "manual");
       list.splice(i < 0 ? 0 : i, 1);
     }
     store.save();
     return p;
   }
-  /* one checkpoint per calendar day, taken the first time the desktop loads */
   function dailyCheckpoint() {
     const today = new Date().toDateString();
     if (store.data.rpDay === today) return;
@@ -167,7 +143,6 @@ export function initSysMaint(deps) {
       ["Possible types of restore points are: system checkpoints (scheduled restore points created by your computer), manual restore points (restore points created by you), and installation restore points (automatic restore points created when certain programs are installed)."]);
 
     const grid = el("div", "sr-cols");
-    /* --- the calendar --- */
     const cal = el("div", "sr-cal");
     const hd = el("div", "sr-calhead");
     const prev = el("button", "sr-arrow", "<");
@@ -193,7 +168,6 @@ export function initSysMaint(deps) {
     cal.appendChild(gr);
     grid.appendChild(cal);
 
-    /* --- the points on the selected day --- */
     const listWrap = el("div", "sr-listwrap");
     listWrap.appendChild(el("div", "sr-listhead", srDay ? new Date(srDay).toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" }) : "No date selected"));
     const list = el("div", "sr-list");
@@ -265,7 +239,7 @@ export function initSysMaint(deps) {
     foot.appendChild(btn("Cancel", () => closeWin("win-restore")));
   }
 
-  let srWorkT = null;   /* the working screen's ticker: owned, so a close kills it */
+  let srWorkT = null;
   function srWorkingScreen(head, side, main, foot) {
     head.textContent = "Restoration In Progress";
     srSideNotes(side, "Do not turn off your computer while the restoration is in progress.", []);
@@ -287,7 +261,6 @@ export function initSysMaint(deps) {
       step.textContent = STEPS[Math.min(i, STEPS.length - 1)];
       if (i >= STEPS.length) {
         clearInterval(t);
-        /* the undo point is taken from where we are standing, not from the target */
         if (!srPick.undo) store.data.rpUndo = { t: Date.now(), snap: snapshot() };
         else store.data.rpUndo = null;
         applySnapshot(srPick.snap);
@@ -308,9 +281,6 @@ export function initSysMaint(deps) {
     foot.appendChild(btn("Close", () => closeWin("win-restore")));
   }
 
-  /* ================================================================
-     2. System Configuration Utility (msconfig.exe)
-     ================================================================ */
   const STARTUP = [
     { id: "ctfmon", item: "ctfmon", cmd: "C:\\WINDOWS\\system32\\ctfmon.exe",
       loc: "HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run" },
@@ -340,11 +310,9 @@ export function initSysMaint(deps) {
     if (!d.boot) d.boot = { timeout: 30 };
     return d;
   }
-  /* one function decides whether a startup item runs, so General's radios and
-     the Startup tab's checkboxes can never disagree */
   function startupOn(id) {
     const d = mc();
-    if (d.mode === "normal") return true;      /* Normal = load everything */
+    if (d.mode === "normal") return true;
     if (d.mode === "diagnostic") return false;
     if (d.mode === "selective" && !d.sel.startup) return false;
     return !!d.start[id];
@@ -394,7 +362,7 @@ export function initSysMaint(deps) {
       const r = el("input"); r.type = "radio"; r.name = "mcmode"; r.checked = d.mode === val;
       r.addEventListener("change", () => {
         d.mode = val; mcDirty = true;
-        if (val === "normal") store.data.msNag = 0;   /* back to normal, no more nag */
+        if (val === "normal") store.data.msNag = 0;
         store.save(); mcRenderGeneral(); mcRenderStartup();
       });
       lab.appendChild(r); lab.appendChild(el("span", null, label));
@@ -555,7 +523,6 @@ export function initSysMaint(deps) {
       () => { hooks.restart(); });
   }
 
-  /* XP nags you on the next boot, every boot, until you tick the box */
   function maybeNag() {
     if (!store.data.msNag) return;
     if (mc().mode === "normal") { store.data.msNag = 0; store.save(); return; }
@@ -567,9 +534,6 @@ export function initSysMaint(deps) {
       () => openMsconfig());
   }
 
-  /* ================================================================
-     3. Folder Options
-     ================================================================ */
   const FO_DEF = { tasks: 1, browse: "same", click: "double", hidden: 1, ext: 0,
     fullpath: 0, addrpath: 1, sysfolders: 1, cplincomp: 1, tips: 1, simpleview: 1,
     remember: 1, restorewins: 0, sepproc: 0, ntfscolor: 1, simpleshare: 1,
@@ -579,7 +543,6 @@ export function initSysMaint(deps) {
     for (const k in FO_DEF) if (d[k] === undefined) d[k] = FO_DEF[k];
     return d;
   }
-  /* the advanced tree, in XP's order. `k` means the switch is load-bearing. */
   const FO_ADV = [
     ["Files and Folders", [
       { t: "Automatically search for network folders and printers", k: "autonet" },
@@ -723,9 +686,6 @@ export function initSysMaint(deps) {
     hooks.folderOptions();
   }
 
-  /* ================================================================
-     5. Recycle Bin Properties
-     ================================================================ */
   const BIN_DEF = { pct: 10, nobin: 0, confirm: 1 };
   function binOpts() {
     const d = store.data.binOpts = store.data.binOpts || {};
@@ -785,12 +745,6 @@ export function initSysMaint(deps) {
     return Math.round(b / 1024) + " KB";
   }
 
-  /* ================================================================
-     6. Add or Remove Programs (appwiz.cpl)
-     ================================================================ */
-  /* Removing something here removes it from this desktop: the shortcut, the
-     menu entry, the Run name. Nothing leaves the server, and everything comes
-     back from the Windows Components page. */
   const COMPONENTS = [
     { id: "calc", n: "Calculator", grp: "acc", mb: 0.1 },
     { id: "notepad", n: "Notepad", grp: "acc", mb: 0.1 },
@@ -815,7 +769,6 @@ export function initSysMaint(deps) {
     hooks.shellRefresh();
   }
 
-  /* the programs page: real sizes where we know them, real usage from the shell */
   const PROGRAMS = [
     { id: "cursors", n: "CURSORS.EXE", win: "win-cursors", ico: "@ic-app", mb: 1.2, pub: "the house",
       lock: "CURSORS.EXE is installed and updated by the server. It cannot be removed from this computer." },
@@ -921,7 +874,6 @@ export function initSysMaint(deps) {
         });
       });
   }
-  /* the little progress dialog both pages share */
   function awProgress(text, then) {
     $("#awp-text").textContent = text;
     const fill = $("#awp-bar");
@@ -1006,19 +958,12 @@ export function initSysMaint(deps) {
     }
     main.appendChild(p);
   }
-  /* the one thing this page ever really did: hide a player */
   function awApplyAccess() {
     const mode = store.data.awAccess || "Microsoft Windows";
     if (mode === "Non-Microsoft") setInstalled("wmp", false);
     else if (mode === "Microsoft Windows") setInstalled("wmp", true);
   }
 
-  /* ================================================================
-     7. the Fonts folder, and the preview window
-     ================================================================ */
-  /* Only fonts this computer can actually render are listed. The check is a
-     measurement, not a list: a missing font falls back and measures the same
-     as the fallback. */
   const FONT_CANDIDATES = [
     ["Arial", "arial.ttf"], ["Arial Black", "ariblk.ttf"], ["Comic Sans MS", "comic.ttf"],
     ["Courier New", "cour.ttf"], ["Franklin Gothic Medium", "framd.ttf"], ["Georgia", "georgia.ttf"],
@@ -1092,9 +1037,6 @@ export function initSysMaint(deps) {
     openWin("win-fontview");
   }
 
-  /* ================================================================
-     8. the ClearType tuner
-     ================================================================ */
   function ctApply() {
     const m = store.data.ctMode || "standard";
     document.body.classList.toggle("ct-on", m === "cleartype");
@@ -1120,12 +1062,6 @@ export function initSysMaint(deps) {
     }
   }
 
-  /* ================================================================
-     8b. Scheduled Tasks
-     ================================================================ */
-  /* Everything in this folder is something this computer really does on a
-     schedule. Run Now really runs it, and Last Run Time is the last time it
-     actually happened, not a printed date. */
   function taskDefs() {
     const d = store.data.taskRuns = store.data.taskRuns || {};
     return [
@@ -1193,11 +1129,7 @@ export function initSysMaint(deps) {
     taskRender();
   }
 
-  /* ================================================================
-     9. wiring
-     ================================================================ */
   function init() {
-    /* the tabs are shell-standard; only the panes are ours */
     const ok = $("#mc-ok"), can = $("#mc-cancel"), app = $("#mc-apply"), hlp = $("#mc-help");
     if (ok) ok.addEventListener("click", () => mcApply(true));
     if (app) app.addEventListener("click", () => mcApply(false));
@@ -1216,7 +1148,6 @@ export function initSysMaint(deps) {
     }
     applyStartup();
     ctApply();
-    /* the day's System Checkpoint belongs to the boot, not to the logon */
     dailyCheckpoint();
   }
 
@@ -1226,7 +1157,6 @@ export function initSysMaint(deps) {
     startupOn, applyStartup, bootIniText,
     openBinProps, binOpt, openAddRemove, openFonts, openClearType, openTasks,
     installed, ctApply,
-    /* the boot screen asks how long to sit there */
     bootWaitMs: () => Math.max(900, Math.min(99, mc().boot.timeout | 0) * 143),
     verboseBoot: () => !!mc().boot.sos,
     fo,

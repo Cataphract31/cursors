@@ -1,12 +1,3 @@
-/* The Search Companion — the real Microsoft Agent characters.
-
-   These are the actual sprite sheets, vendored out of clippyjs (an MIT wrapper
-   around the original .acs assets): Rover at 80x80 with 29 animations, Merlin,
-   Clippy, Links, Genie and Bonzi. An approximation of Rover is not Rover, and
-   the whole value of this feature is recognition.
-
-   Sheets are lazy: the PNG urls are just strings until a character is shown,
-   and the animation tables load on demand, so none of it touches first paint. */
 export function initCompanion(deps) {
   const { $, store, sysSnd, openWin, closeWin, AGENT_PNG, AGENT_DEF } = deps;
 
@@ -19,8 +10,6 @@ export function initCompanion(deps) {
     { id: "bonzi", name: "BonziBUDDY", blurb: "A purple gorilla that asked for your details in 1999. Ships here as a museum piece — he does nothing but talk." },
   ];
 
-  /* the mood the app asks for, and the first animation each character has that
-     can carry it — the casts do not share a vocabulary */
   const MOODS = {
     idle: ["RestPose", "Idle", "Blink", "Alert", "Greet"],
     hunting: ["Searching", "Search", "Thinking", "Processing", "Process", "Read", "GetTechy", "Wave"],
@@ -30,7 +19,7 @@ export function initCompanion(deps) {
   };
 
   const url = id => AGENT_PNG["./assets/xp/agent/" + id + ".png"];
-  const defs = {};              /* id -> {framesize, animations} once loaded */
+  const defs = {};
   const loading = {};
   function load(id) {
     if (defs[id]) return Promise.resolve(defs[id]);
@@ -44,7 +33,6 @@ export function initCompanion(deps) {
   const pick = () => (CAST.some(c => c.id === store.data.companion) ? store.data.companion : "rover");
   const named = id => CAST.find(c => c.id === id) || CAST[0];
 
-  /* ---- one running character ---- */
   const live = new Set();
   function node(id, cls) {
     const who = id || pick();
@@ -69,8 +57,6 @@ export function initCompanion(deps) {
       const [fw, fh] = def.framesize;
       sheet.style.width = fw + "px";
       sheet.style.height = fh + "px";
-      /* the sheets differ wildly in frame size (80x80 to 200x160), so the
-         wrapper is a fixed box and the sprite scales into it */
       const fit = () => {
         const r = box.getBoundingClientRect();
         const k = Math.min((r.width || 78) / fw, (r.height || 78) / fh);
@@ -83,7 +69,6 @@ export function initCompanion(deps) {
 
   function anim(def, mood) {
     for (const want of MOODS[mood] || MOODS.idle) if (def.animations[want]) return def.animations[want];
-    /* nothing matched: any animation is better than a frozen sprite */
     const keys = Object.keys(def.animations);
     return def.animations[keys[0]];
   }
@@ -100,8 +85,6 @@ export function initCompanion(deps) {
       const f = a.frames[i];
       if (f && f.i) box._sheet.style.backgroundPosition = `-${f.i[0]}px -${f.i[1]}px`;
       let next = i + 1;
-      /* the sheets carry weighted branches; honouring them is what makes an
-         idle character look alive rather than looped */
       if (f && f.b) {
         let roll = Math.random() * 100;
         for (const [to, w] of f.b) { if (roll < w) { next = to; break; } roll -= w; }
@@ -109,7 +92,7 @@ export function initCompanion(deps) {
       i = next;
       if (i >= a.frames.length) {
         if (box._mood === "idle") { i = 0; box._t = setTimeout(step, 1200 + Math.random() * 2600); return; }
-        i = a.frames.length - 1;            /* hold the last frame */
+        i = a.frames.length - 1;
         box._t = setTimeout(() => play(box, "idle"), 900);
         return;
       }
@@ -127,7 +110,6 @@ export function initCompanion(deps) {
     mount(box, id);
   }
 
-  /* ---- "choose your companion" ---- */
   let onPicked = null;
   function chooser(after) {
     onPicked = after || null;

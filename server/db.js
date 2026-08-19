@@ -1,7 +1,3 @@
-/* Persistence — node:sqlite (built into Node 22.5+, same as THIN ICE's box).
-   One file, synchronous API, single writer. Play money: this DB will be wiped
-   before any real-money launch. */
-
 import { DatabaseSync } from "node:sqlite";
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
@@ -108,30 +104,12 @@ export function openDb(path) {
     );
   `);
 
-  /* Migrations. CREATE TABLE IF NOT EXISTS only ever builds a FRESH database —
-     it silently does nothing to one that already exists, so adding a column to
-     the schema above and shipping it takes the live server down with "table
-     players has no column named X" (it did, once). Every future column goes in
-     this list instead, and the pragma makes it idempotent. */
   const addColumn = (table, col, decl) => {
     const cols = db.prepare(`PRAGMA table_info(${table})`).all().map(c => c.name);
     if (!cols.includes(col)) db.exec(`ALTER TABLE ${table} ADD COLUMN ${col} ${decl}`);
   };
   addColumn("players", "published", "INTEGER NOT NULL DEFAULT 0");
 
-  /*
-   * THE BALANCE COLUMN GOES, AND IT HAS TO GO RATHER THAN JUST STOP BEING USED.
-   *
-   * Money lives in the arcade's double-entry ledger now (see ledger.js). Left
-   * in the file it would be a second answer to "what does this player own",
-   * stale from the first deploy and readable by anyone who writes the obvious
-   * query -- and it was a REAL, a float, which cannot hold money exactly in the
-   * first place. Two sources of truth is the disease being cured; a disused one
-   * is worse than an active one because nothing keeps it honest.
-   *
-   * Existing files are playtest data with no real money behind them, so the
-   * column is dropped rather than reconciled.
-   */
   const cols = db.prepare("PRAGMA table_info(players)").all();
   if (cols.some(c => c.name === "balance")) db.exec("ALTER TABLE players DROP COLUMN balance");
 
@@ -163,8 +141,6 @@ export function openDb(path) {
     chatTrim: db.prepare("DELETE FROM chat WHERE id NOT IN (SELECT id FROM chat ORDER BY id DESC LIMIT 300)"),
     dmPost: db.prepare("INSERT INTO dms (fromTok,toTok,fromName,toName,txt,at) VALUES (?,?,?,?,?,?)"),
     dmTrim: db.prepare("DELETE FROM dms WHERE id NOT IN (SELECT id FROM dms ORDER BY id DESC LIMIT 4000)"),
-    /* the CURRENT name of each side, falling back to the one stored with the
-       message, so a rename moves the whole history with the person */
     dmFor: db.prepare(`
       SELECT d.fromTok, d.toTok, d.txt, d.at,
              COALESCE(pf.name, d.fromName) AS fromName,
@@ -177,7 +153,6 @@ export function openDb(path) {
     tokenForName: db.prepare("SELECT token FROM players WHERE lower(name) = lower(?)"),
   };
 
-  /* the canonical first six entries, so a fresh server's guestbook is not empty */
   if (q.guestCount.get().n === 0) {
     const seedEntries = [
       ["mumu", "first!!! also i am up 4.2 SOL all time (this account)"],
@@ -204,9 +179,6 @@ export function openDb(path) {
     galleryPost: (name, by, png) => { q.galleryPost.run(name, by, Date.now(), png); q.galleryTrim.run(); },
     epochAdd: r => q.epochAdd.run(r.no, Date.now(), r.up, r.pot, r.deploys, r.deaths, r.seed, r.commit, JSON.stringify(r.top || null)),
 
-    /* A bank that has been promised to a player but not yet to the arcade.
-       Written before the settle is fired and deleted when it lands -- see the
-       note on the settlements table. */
     settleOpen: (ref, wallet, lamports) => q.settleOpen.run(ref, wallet, lamports, Date.now()),
     settleDone: ref => q.settleDone.run(ref),
     settlePending: () => q.settlePending.all(),
@@ -214,8 +186,6 @@ export function openDb(path) {
     chatList: () => q.chatList.all().reverse(),
     chatPost: (who, txt) => { q.chatPost.run(who, txt, Date.now()); q.chatTrim.run(); },
     dmPost: d => { q.dmPost.run(d.fromTok, d.toTok, d.fromName, d.toName, d.txt, Date.now()); q.dmTrim.run(); },
-    /* two plain placeholders, bound twice: node:sqlite counts ?1 used twice
-       as two parameters and throws "column index out of range" on one arg */
     dmFor: tok => q.dmFor.all(tok, tok).reverse(),
     tokenForName: name => q.tokenForName.get(name)?.token || null,
     tx: fn => { db.exec("BEGIN"); try { fn(); db.exec("COMMIT"); } catch (e) { try { db.exec("ROLLBACK"); } catch {} throw e; } },

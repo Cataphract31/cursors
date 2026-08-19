@@ -1,7 +1,3 @@
-/* Minesweeper — the real rules, the real sprites (winXP repo, MIT).
-   No asset imports here on purpose: the build-time smoke runner executes this
-   file in node, so it must stay pure JS. main.js injects sprites + shell hooks. */
-
 export const LEVELS = {
   beginner:     { w: 9,  h: 9,  m: 10, label: "Beginner" },
   intermediate: { w: 16, h: 16, m: 40, label: "Intermediate" },
@@ -29,7 +25,6 @@ export function initMinesweeper(deps) {
     return out;
   }
 
-  /* ---- digits & face ---- */
   function setDigits(node, n) {
     const neg = n < 0;
     const v = Math.min(neg ? 99 : 999, Math.abs(n));
@@ -58,7 +53,6 @@ export function initMinesweeper(deps) {
     }, 1000);
   }
 
-  /* ---- board ---- */
   function newGame(lv) {
     if (lv) level = lv;
     if (!LEVELS[level]) level = "beginner";
@@ -101,14 +95,7 @@ export function initMinesweeper(deps) {
     fit();
   }
 
-  /* ---- the phone: the board is sized to the sheet, not to 2001 ---- */
-  /* A 16px cell is a third of a thumb and the page forbids pinch-zoom, so on a
-     phone the whole frame — LEDs, face and grid — rides one transform, the way
-     the Solitaire sheet does. Scaling the frame instead of the cells keeps
-     every XP metric (the 3px bevel, the 13x23 LEDs) exactly in proportion, and
-     an Expert board that is wider than the phone scales DOWN so it fits rather
-     than shoving the title bar's close button off the right edge. */
-  const MAXCELL = 34;                 /* past this a Beginner board is comedy */
+  const MAXCELL = 34;
   let fitBox = null, fitting = false;
   function isMobile() {
     try { return !!document.body.classList.contains("mobile"); } catch (e) { return false; }
@@ -120,8 +107,6 @@ export function initMinesweeper(deps) {
     if (!frame || !body || !frame.style || !body.getBoundingClientRect) return;
     fitting = true;
     try {
-      /* one wrapper, created on first fit: it takes the scaled size so the
-         sheet never gains a scroll area the transform alone would invent */
       if (!fitBox || fitBox.parentNode !== body) {
         fitBox = document.createElement("div");
         fitBox.style.cssText = "overflow:hidden;margin:6px auto 0";
@@ -131,18 +116,11 @@ export function initMinesweeper(deps) {
         frame.style.display = "inline-block";
         frame.style.transformOrigin = "0 0";
       }
-      /* measure with the margin reset, or each fit would read back the gap the
-         previous one added and walk the board down the sheet */
       frame.style.transform = "";
       fitBox.style.width = fitBox.style.height = "";
       fitBox.style.margin = "0 auto";
       const fw = frame.offsetWidth, fh = frame.offsetHeight;
       if (!fw || !fh) return;
-      /* LAYOUT metrics only. The shell animates a window on open, and every
-         getBoundingClientRect() under a transform reports the animated size —
-         measuring that way fitted a Beginner board at 16% and never recovered,
-         because the animation ends without resizing anything the observer
-         watches. offsetHeight and clientHeight ignore transforms. */
       let above = 0;
       for (let n = body.firstElementChild; n && n !== fitBox; n = n.nextElementSibling)
         above += n.offsetHeight;
@@ -158,8 +136,6 @@ export function initMinesweeper(deps) {
     } finally { fitting = false; }
   }
   addEventListener("resize", fit);
-  /* the sheet measures 0 until it is shown, so a board rendered while the box
-     was shut would be fitted to nothing */
   try {
     if (typeof ResizeObserver === "function" && host.closest) {
       const b = host.closest(".win-body");
@@ -171,8 +147,6 @@ export function initMinesweeper(deps) {
     const c = cells[i], el = els[i];
     if (!el) return;
     let cls = "ms-c", bg = "";
-    /* sprites are transparent glyphs; "open" supplies the sunken cell itself,
-       and there is no open0 sprite because a cleared blank square is just that */
     if (c.st === "open") {
       cls += " open";
       if (c.mine) bg = MINE["mine-ceil"];
@@ -191,7 +165,6 @@ export function initMinesweeper(deps) {
     const c = cells[i];
     if (c.st !== "hidden" && c.st !== "question") return;
     if (c.mine) { c.st = "boom"; paint(i); return lose(); }
-    /* iterative flood fill */
     const stack = [i];
     while (stack.length) {
       const j = stack.pop(), cc = cells[j];
@@ -234,13 +207,12 @@ export function initMinesweeper(deps) {
     if (onWin) onWin(level, time);
   }
 
-  /* ---- best times ---- */
   function bestTimes() {
     store.data.mineBest = store.data.mineBest || {};
     return store.data.mineBest;
   }
   function recordBest() {
-    if (level === "custom") return;   /* XP keeps bests for the three named boards only */
+    if (level === "custom") return;
     const b = bestTimes(), prev = b[level];
     if (!prev || time < prev.t) {
       b[level] = { t: time, who: deps.playerName() };
@@ -257,7 +229,6 @@ export function initMinesweeper(deps) {
   }
   function resetBest() { store.data.mineBest = {}; store.save(); showBest(); }
 
-  /* ---- input ---- */
   function cellAt(e) {
     const t = e.target.closest(".ms-c");
     return t ? +t.dataset.i : -1;
@@ -301,7 +272,7 @@ export function initMinesweeper(deps) {
     press(cellAt(e), lDown && rDown);
   });
   host.addEventListener("mouseleave", () => { if (!over) clearPressed(); });
-  let chordDone = false;   /* the second release of a chord must not reveal */
+  let chordDone = false;
   addEventListener("mouseup", e => {
     const wasChord = lDown && rDown;
     if (e.button === 0) lDown = false;
@@ -315,15 +286,11 @@ export function initMinesweeper(deps) {
     if (wasChord) { chord(i); chordDone = true; return; }
     if (chordDone) { chordDone = false; return; }
     if (e.button !== 0) return;
-    if (!started) { started = true; placeMines(i); time = 1; syncTimer(); startTimer(); }   /* XP shows 1 the moment the clock starts */
+    if (!started) { started = true; placeMines(i); time = 1; syncTimer(); startTimer(); }
     reveal(i);
   });
   headEls.face.addEventListener("click", () => newGame());
 
-  /* ---- xyzzy ---- */
-  /* type x-y-z-z-y, then Shift+Enter: a 1px oracle in the screen's top-left
-     corner, white when the square under the pointer is safe, black over a
-     mine. Off again on repeat or a new game. */
   let oracle = null, xyzzyArmed = false, xyzzySeq = 0;
   function oracleOff() { if (oracle) { oracle.remove(); oracle = null; } }
   function oracleToggle() {
@@ -333,7 +300,7 @@ export function initMinesweeper(deps) {
     document.body.appendChild(oracle);
   }
   document.addEventListener("keydown", e => {
-    if (!host.offsetParent) return;          /* only while the box is on screen */
+    if (!host.offsetParent) return;
     if (xyzzyArmed && e.key === "Enter" && e.shiftKey) { oracleToggle(); return; }
     const k = e.key.length === 1 ? e.key.toLowerCase() : "";
     if (!k) return;
@@ -346,7 +313,6 @@ export function initMinesweeper(deps) {
     oracle.style.background = c && c.mine ? "#000" : "#fff";
   });
 
-  /* ---- menus ---- */
   function customGame() {
     if (!deps.customDialog) return;
     deps.customDialog(r => {
@@ -397,8 +363,6 @@ export function initMinesweeper(deps) {
     setLevel: lv => { store.data.mineLevel = lv; store.save(); newGame(lv); },
     currentLevel: () => level,
     pause: stopTimer,
-    /* reopening the box restarts the clock of an unfinished game — a paused
-       clock must not turn into a 3-second Expert record */
     resume: () => { fit(); if (started && !over && !timer) startTimer(); },
     fit,
   };

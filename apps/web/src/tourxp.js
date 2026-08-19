@@ -1,36 +1,15 @@
-/* Tour Windows XP — tourstart.exe, the theater Windows put in front of you the
-   first time you logged on in 2001: a chapter list down the left, a picture and
-   four lines of product copy on the right, Bill Brown's score looping under it,
-   and a "Play the tour" button that walked the chapters by itself.
-
-   Two rules this file keeps. The copy is Microsoft's register, not ours — dry
-   feature statements, no jokes, no mention of the game; it is set dressing, and
-   set dressing that winks stops being set dressing. And the pictures are not
-   drawn here: every chapter panel is composed out of assets this machine
-   already ships — Bliss, the flag, the shell32 icons, the real arrow cursor —
-   over CSS gradients, so the tour costs one mp3 and nothing else.
-
-   The music is a program on this machine, so it goes through the mixer like
-   one: setVol(bus) is the same arithmetic as wampApplyVol, and
-   the speaker button in the tour's own chrome is the app's switch above it.
-
-   Import-free like the other app modules; main.js injects the shell. Nothing
-   here touches the DOM, a timer or an Audio until initTourXP is called. */
-
 export function initTourXP(deps) {
   const { $, store, sysSnd, openWin, closeWin, isFocused, IMG, CURFILES, hooks } = deps;
   const H = hooks || {};
 
   const WIN = "win-tourxp";
-  const MUSIC = "media/tourxp.mp3";   /* public/media — same relative shape as tour/*.png */
-  const STEP = 12000;                 /* "Play the tour" holds each chapter ~12s */
+  const MUSIC = "media/tourxp.mp3";
+  const STEP = 12000;
 
-  /* ---------- asset helpers: everything below composes, nothing draws ---------- */
   const curf = f => (CURFILES && CURFILES["./assets/xp/cursors/" + f]) || "";
   const im = (u, cls, alt) =>
     u ? `<img${cls ? ` class="${cls}"` : ""} src="${u}" alt="${alt || ""}" draggable="false">` : "";
 
-  /* ---------- the seven chapters, in tourstart's order ---------- */
   const CH = [
     {
       t: "Windows XP Basics",
@@ -170,15 +149,12 @@ export function initTourXP(deps) {
     },
   ];
 
-  let at = 0;               /* current chapter */
-  let live = false;         /* the window is open — the shell asks before re-opening */
-  let playing = false;      /* "Play the tour" is walking the chapters */
+  let at = 0;
+  let live = false;
+  let playing = false;
   let timer = 0;
   let audio = null;
 
-  /* ---------- music ---------- */
-  /* Same arithmetic as wampApplyVol: the mixer's Wave fader is the bus, Volume Control is the master over it, Mute is silence — with the
-     tour's own speaker button as the app's switch above all three. */
   function setVol(bus) {
     if (!audio) return;
     const wave = bus != null ? bus : (H.waveBus ? H.waveBus() : 1);
@@ -191,8 +167,6 @@ export function initTourXP(deps) {
       if (audio) { try { audio.pause(); audio.currentTime = 0; } catch (e) {} }
       return;
     }
-    /* built on first open, never before: the score is a couple of megabytes and
-       first paint must not pay for a window nobody has asked for yet */
     if (!audio) {
       try { audio = new Audio(MUSIC); audio.loop = true; } catch (e) { audio = null; return; }
     }
@@ -206,7 +180,6 @@ export function initTourXP(deps) {
     b.dataset.tip = store.data.txpSpkOff ? "Turn the tour music on" : "Turn the tour music off";
   }
 
-  /* ---------- chapters ---------- */
   function render() {
     const c = CH[at];
     $("#txp-head").textContent = c.t;
@@ -228,11 +201,10 @@ export function initTourXP(deps) {
   }
   function nav(d) {
     if (at + d < 0) return;
-    if (at + d >= CH.length) { play(false); return; }   /* the end of the tour stops the tour */
+    if (at + d >= CH.length) { play(false); return; }
     goto(at + d);
   }
 
-  /* ---------- "Play the tour" ---------- */
   function arm() {
     clearTimeout(timer);
     timer = setTimeout(() => {
@@ -245,14 +217,13 @@ export function initTourXP(deps) {
     playing = !!on;
     clearTimeout(timer);
     if (playing) {
-      if (at >= CH.length - 1) { at = 0; render(); }   /* replay from the top */
+      if (at >= CH.length - 1) { at = 0; render(); }
       arm();
     }
     const b = $("#txp-play");
     if (b) b.textContent = playing ? "Pause" : "Play the tour";
   }
 
-  /* ---------- lifecycle ---------- */
   function open() {
     at = 0;
     live = true;
@@ -262,7 +233,6 @@ export function initTourXP(deps) {
     openWin(WIN, { silent: true });
     music(true);
   }
-  /* closeWin calls this: a hidden window that keeps making noise is a bug */
   function stop() {
     live = false;
     play(false);
@@ -286,8 +256,6 @@ export function initTourXP(deps) {
       const i = [...$("#txp-rail").children].indexOf(row);
       if (i >= 0) { play(false); goto(i); }
     });
-    /* the arrows walk the tour and Escape leaves it — but only when the tour is
-       the focused window, or they would steal keys from every other program */
     addEventListener("keydown", e => {
       if (!live || !isFocused()) return;
       if (e.key === "ArrowRight") { e.preventDefault(); play(false); nav(1); }
@@ -296,8 +264,6 @@ export function initTourXP(deps) {
     });
   }
 
-  /* The real tour had no menu bar, so neither does this one. The hook exists so
-     menubarMenu has an answer if a later build ever grows one. */
   function menus() { return null; }
 
   return { init, open, stop, setVol, menus, live: () => live };

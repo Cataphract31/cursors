@@ -1,18 +1,3 @@
-/* Event Viewer, System Information and the DirectX Diagnostic Tool.
-   Import-free sibling module, same contract as sysapps: main.js injects the
-   shell (deps) and the build's smoke runner executes this file in node.
-
-   All three consoles are read-only. They report the machine — the live game
-   feed through hooks.appLog(), the session through hooks.sysLog() and
-   hooks.uptime(), the field through hooks.cursorCount() — and change nothing.
-
-   Wiring contract (see wiring-sysinfo.md):
-     initSysInfo({ $, store, sysSnd, showMenu, showError, openWin, closeWin,
-                   icoNode, tone?, hooks:{ appLog?, sysLog?, uptime?, tasks?,
-                   cursorCount? } })
-   returns { menus(label, winId), wake(winId), openEventvwr, openMsinfo,
-             openDxdiag }. wake() builds and renders a console but never calls
-   openWin, so the openWin(id) branch in main.js cannot re-enter itself. */
 export function initSysInfo(deps) {
   const { $, showError, openWin, closeWin, hooks } = deps;
 
@@ -34,7 +19,6 @@ export function initSysInfo(deps) {
     return d + " Days, " + h + " Hours, " + m + " Minutes, " + Math.floor(t % 60) + " Seconds";
   }
 
-  /* ---- live values the three consoles share ---- */
   function uaModel() {
     const ua = navigator.userAgent;
     const m = /(Edg|OPR|Firefox|Chrome|Version)\/(\d+)/.exec(ua) || [];
@@ -56,9 +40,6 @@ export function initSysInfo(deps) {
   const OSVER = "5.1.2600 Service Pack 2 Build 2600";
   const HOST = "CURSORLAND";
 
-  /* ================================================================
-     1. Event Viewer — eventvwr.msc
-     ================================================================ */
   const TYPES = {
     info: { label: "Information",
       svg: '<svg viewBox="0 0 12 12"><circle cx="6" cy="6" r="5.5" fill="#316AC5"/><rect x="5.1" y="4.9" width="1.8" height="4.2" fill="#fff"/><rect x="5.1" y="2.3" width="1.8" height="1.8" fill="#fff"/></svg>' },
@@ -80,7 +61,6 @@ export function initSysInfo(deps) {
   const EVLOGS = ["Application", "Security", "System"];
   let evLog = "Application", evSel = -1, evRowsNow = [], evBuilt = false;
 
-  /* Security = audit-success rows generated from the session start time */
   function secRows() {
     const start = Date.now() - upSecs() * 1000;
     const mk = (off, id, cat, text) =>
@@ -100,7 +80,7 @@ export function initSysInfo(deps) {
       else if (evLog === "System") raw = (hooks.sysLog && hooks.sysLog()) || [];
       else raw = secRows();
     } catch (e) { raw = []; }
-    return raw.slice().sort((a, b) => (b.at || 0) - (a.at || 0));   /* newest first */
+    return raw.slice().sort((a, b) => (b.at || 0) - (a.at || 0));
   }
 
   function evShell(body) {
@@ -189,7 +169,6 @@ export function initSysInfo(deps) {
       "\nComputer:\t" + HOST +
       "\nDescription:\n" + (r.text || "");
   }
-  /* the Event Properties dialog, in the shared MMC properties window */
   function evProps(i) {
     const rows = evRowsNow;
     if (!rows.length) return;
@@ -250,9 +229,6 @@ export function initSysInfo(deps) {
     evRefresh();
   }
 
-  /* ================================================================
-     2. System Information — msinfo32
-     ================================================================ */
   function sumPage() {
     const i = intl();
     return { cols: ["Item", "Value"], rows: [
@@ -272,7 +248,6 @@ export function initSysInfo(deps) {
       ["System Up Time", fmtUpLong(upSecs())],
     ] };
   }
-  /* device names below echo Device Manager's, because they are the same machine */
   const irqPage = () => ({ cols: ["Resource", "Device"], rows: [
     ["IRQ 0", "System timer"],
     ["IRQ 1", "Standard 101/102-Key or Microsoft Natural PS/2 Keyboard"],
@@ -315,7 +290,6 @@ export function initSysInfo(deps) {
   const startupPage = () => ({ cols: ["Program", "Location"], rows: [
     ["CURSORS.EXE", "Startup Folder"],
   ] });
-  /* static but true: this is the Services console's list, states as shipped */
   const svcPage = () => ({ cols: ["Display Name", "State"], rows: [
     ["Alerter", "Stopped"],
     ["Automatic Updates", "Stopped"],
@@ -448,9 +422,6 @@ export function initSysInfo(deps) {
     msiList();
   }
 
-  /* ================================================================
-     3. DirectX Diagnostic Tool — dxdiag
-     ================================================================ */
   const DXTABS = ["System", "Display", "Sound", "Input"];
   let dxTab = 0, dxBuilt = false, dxTest = null, dxAC = null;
 
@@ -564,7 +535,6 @@ export function initSysInfo(deps) {
     }
   }
 
-  /* --- Test DirectDraw: bouncing rectangle, then the spinning cube --- */
   function ddTestEnd(cancel) {
     if (!dxTest) return;
     cancelAnimationFrame(dxTest.raf);
@@ -591,7 +561,7 @@ export function initSysInfo(deps) {
     const H = cv.height = ov.clientHeight || window.innerHeight;
     const g = cv.getContext("2d");
     const box = { x: W * .1, y: H * .12, w: Math.max(90, W * .12), h: Math.max(66, H * .1), vx: W / 260, vy: H / 320 };
-    const L = { x: -.45, y: -.6, z: .66 };            /* light, roughly normalized */
+    const L = { x: -.45, y: -.6, z: .66 };
     const V = [[-1, -1, -1], [1, -1, -1], [1, 1, -1], [-1, 1, -1], [-1, -1, 1], [1, -1, 1], [1, 1, 1], [-1, 1, 1]];
     const F = [[0, 1, 2, 3], [4, 5, 6, 7], [0, 1, 5, 4], [3, 2, 6, 7], [0, 3, 7, 4], [1, 2, 6, 5]];
     const t0 = performance.now();
@@ -619,7 +589,7 @@ export function initSysInfo(deps) {
         let ny = (B[2] - A[2]) * (C[0] - A[0]) - (B[0] - A[0]) * (C[2] - A[2]);
         let nz = (B[0] - A[0]) * (C[1] - A[1]) - (B[1] - A[1]) * (C[0] - A[0]);
         const cx = (R[f[0]][0] + R[f[2]][0]) / 2, cy = (R[f[0]][1] + R[f[2]][1]) / 2, cz = (R[f[0]][2] + R[f[2]][2]) / 2;
-        if (nx * cx + ny * cy + nz * cz < 0) { nx = -nx; ny = -ny; nz = -nz; }   /* outward */
+        if (nx * cx + ny * cy + nz * cz < 0) { nx = -nx; ny = -ny; nz = -nz; }
         const len = Math.hypot(nx, ny, nz) || 1;
         return { f, z: cz, nx: nx / len, ny: ny / len, nz: nz / len };
       }).filter(x => x.nz > 0).sort((p, q) => p.z - q.z);
@@ -653,7 +623,6 @@ export function initSysInfo(deps) {
     st.raf = requestAnimationFrame(frame);
   }
 
-  /* --- Test DirectSound: three tones through the machine's own mixer --- */
   function dsTest() {
     const seq = [[440, 0], [554, .45], [659, .9]];
     if (deps.tone) { for (const [f, d] of seq) deps.tone(f, .3, "sine", .12, d); return; }
@@ -679,9 +648,6 @@ export function initSysInfo(deps) {
     dxRender();
   }
 
-  /* ================================================================
-     menubar menus for the delegated handler in main.js
-     ================================================================ */
   function menus(label, winId) {
     const about = (t, b) => ({ label: "About " + t, action: () => showError("About " + t, b, true) });
     if (winId === "win-eventvwr") {
@@ -739,7 +705,6 @@ export function initSysInfo(deps) {
     return [{ label: "(nothing here)", disabled: 1 }];
   }
 
-  /* openWin(id) routes here; wake never calls openWin, so it cannot re-enter */
   function wake(id) {
     if (id === "win-eventvwr") evWake();
     else if (id === "win-msinfo") msiWake();

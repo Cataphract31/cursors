@@ -1,12 +1,3 @@
-/* The apps nobody expects to work: Calculator, Character Map,
-   Disk Defragmenter and the Registry Editor.
-
-   The rule from sysapps applies here too: they read real state and do real
-   (local, cosmetic) things. The defragmenter's block map is drawn from the
-   actual disk numbers - the corpses on C: are the red stripes. The registry
-   shows live game state under keys that look exactly where XP would put
-   them, and everything under HKLM is as read-only as the house edge.
-   Import-free sibling module; main.js injects the shell. */
 export function initDepthApps(deps) {
   const { $, store, sysSnd, showMenu, showError, openWin, closeWin, hooks } = deps;
 
@@ -17,9 +8,6 @@ export function initDepthApps(deps) {
     return d;
   };
 
-  /* ================================================================
-     1. Calculator - Standard mode, with the real key bindings
-     ================================================================ */
   let acc = null, pendOp = null, entry = "0", fresh = true, mem = 0;
   let calcSci = !!store.data.calcSci, calcDeg = true;
   function calcShow() { $("#calc-display").textContent = entry; }
@@ -45,7 +33,6 @@ export function initDepthApps(deps) {
     return s.length > 20 ? n.toExponential(8) : s;
   }
   function calcOp(op) {
-    /* 5 + * means "I meant *": replace the pending operator, don't apply it */
     if (fresh && pendOp != null) { pendOp = op; calcShow(); return; }
     calcApply();
     pendOp = op; fresh = true;
@@ -85,7 +72,6 @@ export function initDepthApps(deps) {
     calcShow();
   }
   function calcInit() {
-    /* the real layouts: Standard, and View > Scientific's longer rows */
     const rows = calcSci ? [
       ["deg:Degrees", "rad:Radians", "back:Backspace", "CE:CE", "C:C"],
       ["MC", "7", "8", "9", "/", "sqrt", "sin", "log", "x^y"],
@@ -120,15 +106,13 @@ export function initDepthApps(deps) {
           else if (k === "x^y") calcOp("^");
           else if (k === "mod") calcOp("mod");
           else if (k === "deg" || k === "rad") { calcDeg = k === "deg"; calcInit(); }
-          else if (k === "Exp") { /* the real key: entry to scientific notation */ entry = fmt(parseFloat(entry)); calcShow(); }
+          else if (k === "Exp") { entry = fmt(parseFloat(entry)); calcShow(); }
           else calcCmd(k);
         });
         r.appendChild(b);
       }
       host.appendChild(r);
     }
-    /* the keyboard drives it, exactly like the real one (wired once; View
-       toggles rebuild the keys but must not stack listeners) */
     if ($("#win-calc").dataset.kbd) { calcShow(); return; }
     $("#win-calc").dataset.kbd = "1";
     $("#win-calc").addEventListener("keydown", e => {
@@ -147,19 +131,15 @@ export function initDepthApps(deps) {
     calcShow();
   }
 
-  /* ================================================================
-     2. Character Map - the grid, the U+ readout, Select and Copy
-     ================================================================ */
   const CM_FONTS = ["Arial", "Courier New", "Tahoma", "Times New Roman", "Verdana", "Webdings", "Wingdings", "Symbol"];
   let cmSel = 65, cmBuf = "";
   function cmRanges() {
-    /* the printable BMP stretches XP actually showed first */
     const r = [];
     for (let c = 33; c <= 126; c++) r.push(c);
     for (let c = 161; c <= 255; c++) r.push(c);
-    for (let c = 0x0100; c <= 0x017F; c++) r.push(c);          /* Latin Extended-A */
-    for (let c = 0x0391; c <= 0x03C9; c++) if (c !== 0x03A2) r.push(c);   /* Greek */
-    for (let c = 0x0410; c <= 0x044F; c++) r.push(c);          /* Cyrillic */
+    for (let c = 0x0100; c <= 0x017F; c++) r.push(c);
+    for (let c = 0x0391; c <= 0x03C9; c++) if (c !== 0x03A2) r.push(c);
+    for (let c = 0x0410; c <= 0x044F; c++) r.push(c);
     for (const c of [0x2013, 0x2014, 0x2018, 0x2019, 0x201C, 0x201D, 0x2020, 0x2021, 0x2022, 0x2026,
       0x20AC, 0x2122, 0x2190, 0x2191, 0x2192, 0x2193, 0x2200, 0x2211, 0x221A, 0x221E, 0x2260,
       0x2264, 0x2265, 0x25A0, 0x25B2, 0x25BA, 0x25CF, 0x263A, 0x263B, 0x2640, 0x2642, 0x2660,
@@ -205,14 +185,9 @@ export function initDepthApps(deps) {
     cmRender();
   }
 
-  /* ================================================================
-     3. Disk Defragmenter - the coloured map IS the disk
-     ================================================================ */
-  /* legend, as shipped: blue contiguous, red fragmented, green unmovable,
-     white free. Here fragmented = the corpses, unmovable = the system. */
   let dfState = null, dfTimer = 0;
   function dfBuild() {
-    const d = hooks.disk();     /* {pct, corpses, corpseTotal} */
+    const d = hooks.disk();
     const CELLS = 780;
     const frag = Math.round(CELLS * d.pct / 100 * .55);
     const sys = Math.round(CELLS * .1);
@@ -221,7 +196,6 @@ export function initDepthApps(deps) {
     for (let i = 0; i < CELLS; i++) cells.push("w");
     let placed = 0;
     for (let i = 0; i < sys; i++) cells[i] = "g";
-    /* corpses scatter: fragmentation you can see growing between epochs */
     let seed = 1234 + d.corpses * 7;
     const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
     while (placed < frag && cells.includes("w")) { const i = sys + Math.floor(rnd() * (CELLS - sys)); if (cells[i] === "w") { cells[i] = "r"; placed++; } }
@@ -259,10 +233,7 @@ export function initDepthApps(deps) {
     $("#df-status").textContent = "Defragmenting... 0%";
     clearInterval(dfTimer);
     dfTimer = setInterval(() => {
-      /* the state can be swapped out under us (Analyze mid-run, reopen) */
       if (!dfState || !dfState.defragging) { clearInterval(dfTimer); return; }
-      /* red cells migrate left and turn blue, a few at a time - watching it
-         is the entire product */
       const cells = dfState.cells;
       let moved = 0;
       for (let i = cells.length - 1; i >= 0 && moved < 6; i--) {
@@ -299,14 +270,8 @@ export function initDepthApps(deps) {
     openWin("win-defrag");
   }
 
-  /* ================================================================
-     4. Registry Editor - the tree is real where it matters
-     ================================================================ */
-  /* live values pull from the game; everything else is the furniture XP
-     actually had. Writes are refused with the real error, because the only
-     numbers worth editing live on the server. */
   function regTree() {
-    const g = hooks.regGame();   /* {name, wallet, kills, deaths, scheme, epoch, uptime} */
+    const g = hooks.regGame();
     return {
       "HKEY_CLASSES_ROOT": { ".cur": { "(Default)": "curfile" }, ".ani": { "(Default)": "anifile" },
         "curfile": { "(Default)": "Cursor" }, "exefile": { "(Default)": "Application" } },
@@ -434,7 +399,6 @@ export function initDepthApps(deps) {
     return null;
   }
 
-  /* ---------- boot (regedit renders on open: its values are live game state) ---------- */
   calcInit(); cmInit(); dfInit();
 
   return {

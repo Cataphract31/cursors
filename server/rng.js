@@ -1,14 +1,3 @@
-/* Deterministic randomness for the arena — a straight JS port of THIN ICE's
-   audited rng.ts (sfc32, 128-bit seed). Every draw the sim makes during an
-   epoch flows through one of these streams, and the seed is committed
-   (sha256 published) before the epoch and revealed at the crash.
-
-   Why sfc32 and not something smaller: the commit ceremony publishes a hash
-   of the seed BEFORE play. A 32-bit seed would make that hash an oracle —
-   enumerate 4.3 billion candidates and you have every duel in advance. 128
-   bits closes that, and sfc32 uses only int32 ops, which ECMAScript specifies
-   exactly, so any replay reproduces the epoch bit for bit. */
-
 import { createHash, randomBytes } from "node:crypto";
 
 export function sfc32(a, b, c, d) {
@@ -24,8 +13,6 @@ export function sfc32(a, b, c, d) {
       return (t >>> 0) / 4294967296;
     },
   };
-  /* diffuse before anyone reads: the first draws must not correlate with the
-     raw seed bytes */
   for (let i = 0; i < 12; i++) rng.next();
   return rng;
 }

@@ -1,21 +1,10 @@
-/* The writing apps: Notepad (real), WordPad, Windows Picture and Fax Viewer,
-   Clipboard Viewer. Import-free sibling module, same pattern as depthapps.js.
-
-   Notepad is the deep one — Word Wrap and Font that genuinely apply, Go To
-   (disabled while wrapping, which is XP's actual quirk), F5 time/date, the
-   .LOG trick, and a status bar that only exists when wrap is off. WordPad is
-   a contenteditable with the format bar and the ruler. The Viewer is what
-   double-clicking an image opens, with Paint one button away, exactly like
-   Windows Picture and Fax Viewer sat in front of mspaint. */
-
 export function initWriteApps(deps) {
   const { $, store, sysSnd, showMenu, showError, openWin, closeWin, hooks } = deps;
 
-  /* ================= Notepad ================= */
   const ta = $("#np-text");
   const FONTS = ["Lucida Console", "Fixedsys", "Courier New", "Arial", "Tahoma", "Times New Roman", "MS Sans Serif"];
   const np = {
-    doc: null,            /* {title, get(), set(text)|null} — null set = read-only source */
+    doc: null,
     wrap: store.data.npWrap !== 0,
     status: !!store.data.npStatus,
     font: store.data.npFont || { f: "Lucida Console", s: 13, b: 0, i: 0 },
@@ -26,7 +15,6 @@ export function initWriteApps(deps) {
     ta.style.fontSize = np.font.s + "px";
     ta.style.fontWeight = np.font.b ? "700" : "400";
     ta.style.fontStyle = np.font.i ? "italic" : "normal";
-    /* XP: the status bar is unavailable while Word Wrap is on */
     $("#np-status").style.display = (!np.wrap && np.status) ? "flex" : "none";
     npCaret();
   }
@@ -38,11 +26,10 @@ export function initWriteApps(deps) {
   ta.addEventListener("input", () => { if (np.doc && np.doc.set) np.doc.set(ta.value); npCaret(); });
   ["keyup", "click"].forEach(ev => ta.addEventListener(ev, npCaret));
   ta.addEventListener("keydown", e => {
-    e.stopPropagation();               /* the desktop's F-keys stay out of a text box */
+    e.stopPropagation();
     if (e.key === "F5") { e.preventDefault(); npStamp(); }
   });
   function npStamp() {
-    /* XP's exact order: time then date */
     const d = new Date();
     const stamp = d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) + " " + d.toLocaleDateString();
     const at = ta.selectionStart ?? ta.value.length;
@@ -57,24 +44,17 @@ export function initWriteApps(deps) {
     np.doc = doc || { title: "Untitled", text: "", set: null };
     ta.value = np.doc.get ? np.doc.get() : (np.doc.text || "");
     ta.readOnly = false;
-    /* the .LOG trick: a first line of .LOG appends a timestamp on every open */
     if (/^\.LOG(\r?\n|$)/.test(ta.value)) {
       const d = new Date();
       ta.value += (ta.value.endsWith("\n") ? "" : "\n")
         + d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) + " " + d.toLocaleDateString() + "\n";
       if (np.doc.set) np.doc.set(ta.value);
     }
-    /* the Unicode-detection bug: saved as ANSI, guessed UTF-16LE on reopen.
-       Only the display is wrong; the stored text stays what it was. */
     if (np.doc.get && ta.value === "Bush hid the facts") ta.value = "畂桳栠摩琠敨映捡獴";
     npTitle(); npApply();
     openWin("win-notepad");
-    /* not on a phone: focusing inside the opening tap raises the keyboard,
-       which covers the document AND the money bar — on a file you tapped to
-       read. Tapping the text still opens the keyboard when you mean to edit. */
     if (!document.body.classList.contains("mobile")) ta.focus();
   }
-  /* Go To — its own tiny dialog, and the real rule: not while wrapping */
   function npGoTo() {
     if (np.wrap) return;
     openWin("win-goto");
@@ -90,8 +70,6 @@ export function initWriteApps(deps) {
   });
   $("#goto-cancel").addEventListener("click", () => closeWin("win-goto"));
   $("#goto-ln").addEventListener("keydown", e => { e.stopPropagation(); if (e.key === "Enter") $("#goto-ok").click(); });
-  /* Font — the three-list dialog, applied to the whole document (Notepad has
-     exactly one font; that is the point of Notepad) */
   function npFontDlg() {
     $("#fd-face").innerHTML = FONTS.map(f => `<option${f === np.font.f ? " selected" : ""}>${f}</option>`).join("");
     $("#fd-style").value = np.font.b ? (np.font.i ? "bolditalic" : "bold") : (np.font.i ? "italic" : "regular");
@@ -160,19 +138,16 @@ export function initWriteApps(deps) {
     };
     showMenu(M[which] || [], x, y);
   }
-  /* the shell's global menubar handler routes here (it owns every .menubar) */
   function npSave() {
     if (np.doc && np.doc.set) { np.doc.set(ta.value); sysSnd("nav", .3); }
     else npSaveAs();
   }
   function npSaveAs() {
-    /* read-only sources (fights.log, README) save a copy to the desktop */
     hooks.saveTextToDesktop(np.doc ? np.doc.title : "Untitled.txt", ta.value, ic => {
       np.doc = hooks.docForIcon(ic); npTitle();
     });
   }
 
-  /* ================= WordPad ================= */
   const wp = { doc: null, tb: 1, fb: 1 };
   const wpEd = $("#wp-edit");
   function wpTitle() { $("#win-wordpad .title-bar-text").textContent = (wp.doc ? wp.doc.title : "Document") + " - WordPad"; }
@@ -185,8 +160,6 @@ export function initWriteApps(deps) {
   }
   wpEd.addEventListener("input", () => { if (wp.doc && wp.doc.set) wp.doc.set(wpEd.innerHTML); });
   wpEd.addEventListener("keydown", e => e.stopPropagation());
-  /* the format bar drives execCommand — deprecated, universally supported, and
-     period-correct in spirit: it is literally the 2001 way to edit rich text */
   $("#wp-bar").addEventListener("click", e => {
     const b = e.target.closest("[data-cmd]"); if (!b) return;
     wpEd.focus();
@@ -195,7 +168,6 @@ export function initWriteApps(deps) {
   $("#wp-font").addEventListener("change", () => { wpEd.focus(); document.execCommand("fontName", false, $("#wp-font").value); });
   $("#wp-size").addEventListener("change", () => { wpEd.focus(); document.execCommand("fontSize", false, $("#wp-size").value); });
   $("#wp-color").addEventListener("change", () => { wpEd.focus(); document.execCommand("foreColor", false, $("#wp-color").value); });
-  /* one strip plays toolbar and format bar both; either box hides it */
   function wpBars() { $("#wp-bar").style.display = (wp.tb && wp.fb) ? "" : "none"; }
   const wpCmd = (cmd, val) => { wpEd.focus(); document.execCommand(cmd, false, val || null); };
   function wpMenu(which, x, y) {
@@ -233,7 +205,6 @@ export function initWriteApps(deps) {
     showMenu(M[which] || [], x, y);
   }
 
-  /* ================= Windows Picture and Fax Viewer ================= */
   const pv = { list: [], i: 0, zoom: 1, rot: 0, fit: 1, showT: null };
   const pvImg = $("#pv-img");
   function pvRender() {
@@ -261,7 +232,6 @@ export function initWriteApps(deps) {
   $("#pv-rotl").addEventListener("click", () => { pv.rot -= 90; pvRender(); });
   $("#pv-rotr").addEventListener("click", () => { pv.rot += 90; pvRender(); });
   $("#pv-play").addEventListener("click", () => {
-    /* the slideshow: XP went fullscreen; ours cycles in place every 5s */
     if (pv.showT) { clearInterval(pv.showT); pv.showT = null; $("#pv-play").classList.remove("on"); return; }
     $("#pv-play").classList.add("on");
     pv.showT = setInterval(() => pvStep(1), 5000);
@@ -278,7 +248,6 @@ export function initWriteApps(deps) {
     pv.i %= pv.list.length; pvRender();
   });
 
-  /* ================= Clipboard Viewer ================= */
   function openClipbook() {
     const c = hooks.shellClip();
     const host = $("#cb-body");

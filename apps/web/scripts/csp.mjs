@@ -1,33 +1,3 @@
-// CSP harness: serve the real build under the exact shipped headers, drive it
-// in a real browser, fail on any violation.
-//
-// The policy lives in vercel.json and this harness parses that file, so what
-// it tests is always what ships. Do not document it with a "//" key inside
-// vercel.json: Vercel validates the schema before it runs anything and
-// rejects unknown properties, which fails the DEPLOY while the build and the
-// git push both look green. Add new external hosts to the CSP there, then
-// re-run this. `npm run build` now refuses a config Vercel would reject.
-//
-//   node scripts/csp.mjs            (needs a build: npm run build)
-//
-// Why this exists. A Content-Security-Policy is the one header that can break
-// the site it protects, and it breaks it *silently for the author only*: your
-// browser already has the stylesheet and the Winamp skin cached, so you see a
-// working page while a first-time visitor gets unstyled HTML. Reading the
-// policy and nodding at it is not verification.
-//
-// So this serves dist/ over HTTP with the headers parsed straight out of
-// ../../vercel.json — the same file Vercel reads, so the policy under test
-// cannot drift from the policy that ships — and then exercises the parts of
-// the app that actually touch the network: the cold boot and login, the live
-// game websocket, Winamp's data:-URI skin, the same-origin Solitaire iframe
-// (which gets a <style> injected into it), and the media files Winamp and
-// Media Player load at runtime. Every
-// securitypolicyviolation, every blocked request and every security log entry
-// is collected and printed.
-//
-// Same CDP plumbing as shot.mjs — see that file for why headless Edge is
-// driven over the DevTools protocol rather than with --screenshot.
 import { spawn } from "node:child_process";
 import { readFileSync, existsSync, statSync } from "node:fs";
 import { createServer } from "node:http";
@@ -43,7 +13,6 @@ if (!existsSync(join(dist, "index.html"))) {
   process.exit(1);
 }
 
-/* ---- 1. the headers, read from the file Vercel actually serves from ---- */
 const vercel = JSON.parse(readFileSync(join(repoRoot, "vercel.json"), "utf8"));
 const rule = (vercel.headers || []).find(h => h.source === "/(.*)");
 if (!rule) { console.error("FAILED: vercel.json has no `/(.*)` header rule — nothing is protected"); process.exit(1); }
@@ -57,7 +26,6 @@ for (const need of ["X-Content-Type-Options", "Strict-Transport-Security", "Refe
 console.log("headers under test, from vercel.json:");
 for (const [k, v] of SEC) console.log("  " + k + ": " + (v.length > 100 ? v.slice(0, 100) + " …" : v));
 
-/* ---- 2. serve dist/ under exactly those headers ---- */
 const MIME = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".json": "application/json",
   ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".gif": "image/gif", ".svg": "image/svg+xml",
   ".ico": "image/x-icon", ".woff": "font/woff", ".woff2": "font/woff2", ".ttf": "font/ttf",
@@ -66,7 +34,7 @@ const server = createServer((req, res) => {
   let p = decodeURIComponent(req.url.split("?")[0]);
   if (p.endsWith("/")) p += "index.html";
   const file = normalize(join(dist, p));
-  for (const [k, v] of SEC) res.setHeader(k, v);           // every response, exactly as prod
+  for (const [k, v] of SEC) res.setHeader(k, v);
   if (!file.startsWith(dist) || !existsSync(file) || statSync(file).isDirectory()) {
     res.writeHead(404, { "Content-Type": "text/plain" });
     return res.end("not found");
@@ -75,16 +43,9 @@ const server = createServer((req, res) => {
   res.end(readFileSync(file));
 });
 await new Promise(r => server.listen(0, "127.0.0.1", r));
-// Not http://127.0.0.1 — mpUrl() in main.js returns a null socket for any
-// localhost/127./192.168. hostname, so serving on loopback would quietly put
-// the app in single-player and the whole wss:// and YouTube half of the policy
-// would go untested while the run still looked green. The browser is launched
-// with a resolver rule mapping this name to 127.0.0.1, so it stays hermetic:
-// no DNS, no network, but an origin the app treats as production.
 const HOST = "cursors.csptest", EVIL_HOST = "attacker.csptest";
 const origin = "http://" + HOST + ":" + server.address().port;
 
-/* ---- 3. a real browser ---- */
 const EDGE = "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe";
 const port = 9500 + Math.floor(Math.random() * 500);
 const profile = join(tmpdir(), "edge-csp-" + port + "-" + Date.now());
@@ -92,8 +53,6 @@ const edge = spawn(EDGE, ["--headless=new", "--disable-gpu", "--hide-scrollbars"
   "--autoplay-policy=no-user-gesture-required",
   "--host-resolver-rules=MAP " + HOST + " 127.0.0.1, MAP " + EVIL_HOST + " 127.0.0.1",
   "--remote-debugging-port=" + port, "--user-data-dir=" + profile, "about:blank"], { stdio: "ignore" });
-// on the way out, always show what the browser complained about — a failure
-// whose evidence is discarded costs another full run to diagnose
 const bail = (msg, code) => {
   try {
     for (const x of [...new Set(violations.filter(Boolean))]) console.error("  VIOLATION  " + x);
@@ -121,11 +80,10 @@ const send = (method, params = {}) => new Promise((res, rej) => {
   ws.send(JSON.stringify({ id, method, params }));
 });
 
-/* ---- 4. every channel the browser has for saying "I blocked that" ---- */
-const violations = [];     // the policy stopped the page from doing something
-const blocked = [];        // a request never left the browser
+const violations = [];
+const blocked = [];
 const requestUrl = new Map();
-const seenHosts = [];      // every host the app actually contacted
+const seenHosts = [];
 let loadFired = () => {};
 ws.addEventListener("message", ev => {
   const m = JSON.parse(ev.data);
@@ -136,16 +94,12 @@ ws.addEventListener("message", ev => {
   }
   if (m.method === "Page.loadEventFired") loadFired();
   if (m.method === "Network.requestWillBeSent") requestUrl.set(m.params.requestId, m.params.request.url);
-  // the in-page listener, from the main frame and any same-process iframe
   if (m.method === "Runtime.consoleAPICalled" && m.params.args && m.params.args[0] &&
       m.params.args[0].value === "__CSPV__")
     violations.push(m.params.args[1] && m.params.args[1].value);
-  // the browser's own log, which also covers frames we could not install into
   if (m.method === "Log.entryAdded" &&
       /Content Security Policy|Refused to/i.test(m.params.entry.text || ""))
     violations.push("log: " + m.params.entry.text.replace(/\s+/g, " ").slice(0, 200));
-  /* every host the page reaches for, so a policy that quietly permits a third
-     party the app no longer uses shows up here instead of in a code review */
   if (m.method === "Network.responseReceived") {
     try {
       const h = new URL(m.params.response.url).host;
@@ -167,8 +121,6 @@ try {
   await send("Runtime.enable");
   await send("Log.enable");
   await send("Network.enable");
-  // installed into every document — main frame and same-origin iframes — before
-  // any of their own script runs, so a violation at parse time still lands
   await send("Page.addScriptToEvaluateOnNewDocument", {
     source: 'document.addEventListener("securitypolicyviolation", e => {' +
       'console.log("__CSPV__", e.violatedDirective + " blocked " + (e.blockedURI || "inline") +' +
@@ -177,7 +129,6 @@ try {
   await send("Emulation.setDeviceMetricsOverride",
     { width: 1280, height: 800, deviceScaleFactor: 1, mobile: false, screenWidth: 1280, screenHeight: 800 });
 
-  /* --- pass 1: a first-time visitor. cold cache, boot, login, live socket. --- */
   console.log("\npass 1 — cold visit: boot, login, desktop, live game websocket");
   let loaded = new Promise(r => (loadFired = r));
   await send("Page.navigate", { url: origin + "/" });
@@ -185,23 +136,14 @@ try {
   await sleep(1500);
   await evaluate('document.getElementById("boot").dispatchEvent(new PointerEvent("pointerdown",{bubbles:true}))');
   await sleep(1200);
-  // A first visit with no wallet extension in the browser has one way in, and
-  // Guest is it: the Administrator tile that used to take a typed name and log
-  // you on is gone, because the server refuses to deploy for anybody without
-  // an arcade session and that tile could never get one. Guest still dials the
-  // game server, which is what this pass is here to exercise.
   await evaluate('document.getElementById("tile-guest").click()');
-  await sleep(9000);   // logon's 1500ms chime, enterDesktop's fade, the socket dial
+  await sleep(9000);
 
-  // the failure this harness exists to catch: a policy that blocks the app's
-  // own stylesheet. #5A7EDC is body's background in src/style.css.
   const mounted = await evaluate('(()=>{ const cs = getComputedStyle(document.body); return {' +
     'sheets: document.styleSheets.length, bg: cs.backgroundColor,' +
     'taskbar: !!document.getElementById("taskbar"),' +
     'login: document.getElementById("login").style.display,' +
     'icons: document.querySelectorAll("#icons > *").length,' +
-    // computed style reports url(...) whether or not the file arrived, so ask
-    // the network instead: a nonzero transfer means img-src really let it in
     'wallpaper: performance.getEntriesByType("resource")' +
     '.filter(r=>/bliss.*\\.jpg/.test(r.name)).map(r=>r.decodedBodySize)[0] || 0,' +
     'subresources: performance.getEntriesByType("resource").length }; })()');
@@ -220,14 +162,6 @@ try {
   console.log("  " + mounted.subresources + " subresources, " + mounted.sheets +
     " stylesheets applied, desktop reached");
 
-  /* --- pass 1b: the live socket, and the media the policy now has to allow --- */
-  // cursorTV used to carry this pass: the TV page only rendered with multiplayer
-  // up, so reaching it proved connect-src let the wss:// through. The browser and
-  // the TV are both gone, so the socket is asserted directly — and media-src
-  // takes the YouTube legs' place, because music and video are now the only
-  // sizeable things the app fetches at runtime, and they are plain files rather
-  // than bundled assets. A policy that forgot media-src would leave Winamp and
-  // Media Player with nothing to play, silently.
   console.log("");
   console.log("pass 1b — the live wss:// socket, and same-origin media under media-src");
   const sock = await evaluate('(()=>{ const n=document.getElementById("netico");' +
@@ -237,8 +171,6 @@ try {
     bail("FAILED: the arena socket never connected — connect-src is blocking wss://, " +
       "or the beta server is down. Nothing that needs a live socket got tested.", 1);
 
-  // one same-origin clip is enough: music sits in the same origin under the same
-  // directive, so if this loads the whole playlist is covered too
   await evaluate('(()=>{ window.__cspMedia = "pending";' +
     'const v = document.createElement("video"); v.preload = "metadata"; v.muted = true;' +
     'v.onloadedmetadata = () => { window.__cspMedia = v.videoWidth > 0 ? "ok" : "zero-size"; };' +
@@ -256,11 +188,7 @@ try {
       "the files Winamp and Media Player exist to play.", 1);
 
 
-  /* --- pass 2: the network-touching apps, behind the #desktop dev hash --- */
   console.log("\npass 2 — Winamp (data: skin, blob: icons) and Solitaire (same-origin iframe + injected <style>)");
-  // via about:blank: adding a #hash to the current URL is a same-document
-  // navigation, so the module would never re-run and the dev hooks it gates
-  // behind the hash would never exist
   await send("Page.navigate", { url: "about:blank" });
   await sleep(500);
   loaded = new Promise(r => (loadFired = r));
@@ -268,8 +196,6 @@ try {
   await Promise.race([loaded, sleep(20000)]);
   await sleep(5000);
 
-  // Winamp mounts on open; __amp is the dev hook that reads its audio graph,
-  // which only exists if the data:-URI skin was fetched and unzipped.
   await evaluate('document.querySelector(\'[data-app="win-amp"]\').click()');
   await sleep(5000);
   const amp = await evaluate('(()=>{ try { return window.__amp ? String(window.__amp.gain()) : "no hook"; }' +
@@ -278,7 +204,6 @@ try {
     'imgs: [...document.querySelectorAll("img")].filter(i=>/^(data|blob):/.test(i.src)).length }))()');
   console.log("  winamp: gain=" + amp + " " + JSON.stringify(wamp));
 
-  // Solitaire: a same-origin iframe the app injects a <style> element into
   await evaluate('(()=>{ const f=document.getElementById("solitaire-frame");' +
     'if(f && !f.dataset.live){ f.dataset.live="1"; f.src="solitaire/"; } })()');
   await sleep(4000);
@@ -292,14 +217,6 @@ try {
   if (sol && sol.injected === "BLOCKED")
     bail("FAILED: style-src blocked the <style> the app injects into the Solitaire iframe", 1);
 
-  /* --- pass 3: the claim the framing headers actually make --- */
-  // A policy is only worth having if the attack it names is really refused, so
-  // stand up a second origin — a different hostname, the way a real attacker's
-  // domain would be — that frames the live game the way a clickjacking page
-  // would, and prove the browser refuses it. `frame-ancestors 'self'` has to be
-  // exact here: it must still allow the app's own Solitaire iframe, which pass
-  // 2 covers. That pairing is the whole point — 'none' passes this test and
-  // breaks Solitaire; a missing directive keeps Solitaire and fails this.
   console.log("\npass 3 — an attacker's page tries to frame the game");
   const vBefore = violations.length, bBefore = blocked.length;
   const attacker = createServer((_, res) => {
@@ -325,10 +242,6 @@ try {
     bail("FAILED: a foreign origin framed the live game — frame-ancestors is not doing its job. " +
       "This is the clickjacking case: the real game at the real address, with someone else's " +
       "buttons floating on top.", 1);
-  // The refusal reports itself as a violation and a blocked request — here that
-  // is the pass, not a failure. Drop only the entries this pass added, and only
-  // the two that describe the framing of the app root; anything else pass 3
-  // turned up is a real finding and still counts.
   const isExpected = s => /frame-ancestors/i.test(s || "") ||
     s === "other: Document " + origin + "/";
   const prune = (arr, from) => {
@@ -344,7 +257,6 @@ try {
   bail("FAILED: " + (e.stack || e.message), 2);
 }
 
-/* ---- 5. the verdict ---- */
 const uniq = a => [...new Set(a.filter(Boolean))];
 const v = uniq(violations), b = uniq(blocked);
 console.log("\n" + v.length + " CSP violations, " + b.length + " blocked requests");

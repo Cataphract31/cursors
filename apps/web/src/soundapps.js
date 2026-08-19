@@ -1,19 +1,6 @@
-/* The noise apps: Volume Control (sndvol32), Sound Recorder, Windows Media
-   Player 9. Import-free sibling module, same shape as writeapps.js.
-
-   The mixer is real routing, not a prop: Volume Control is the tray master,
-   Wave scales every sound the machine itself makes (sampled and generated
-   alike, with SW Synth as a trim under it), CD Audio scales the two music
-   players — Winamp and this one. Every fader moves something you can hear.
-   Sound
-   Recorder records the actual microphone (locally — nothing leaves the
-   machine) and its Effects menu does real DSP on the buffer. WMP9 plays the
-   same library Winamp does, plus any clips, with an analyser driving the bars. */
-
 export function initSoundApps(deps) {
   const { $, store, sysSnd, showMenu, showError, openWin, closeWin, hooks } = deps;
 
-  /* ---------- shared mixer state ---------- */
   const COLS = [
     ["master", "Volume Control"],
     ["wave", "Wave"],
@@ -29,14 +16,9 @@ export function initSoundApps(deps) {
   const factor = k => { const c = mix()[k]; return c.m ? 0 : c.v / 100; };
   function applyMix() {
     if (sr && sr.gain) { try { sr.gain.gain.value = hooks.getMuted() ? 0 : hooks.getMaster() * factor("wave"); } catch (e) {} } try { wmpVol(); } catch (e) {} try { ampVol(); } catch (e) {} try { tourVol(); } catch (e) {} }
-  /* Winamp is a program on this machine, so it goes through the mixer like
-     one: its own slider is the app's volume, CD Audio is its bus (it plays the
-     same library this player does), and Volume Control is the master over
-     both. The tour's narration is the machine talking, so that one is Wave. */
   function ampVol() { if (hooks.ampVolume) hooks.ampVolume(factor("cd")); }
   function tourVol() { if (hooks.tourVolume) hooks.tourVolume(factor("wave")); }
 
-  /* ================= sndvol32 ================= */
   function volRender() {
     const m = mix();
     const host = $("#sv32-cols"); host.innerHTML = "";
@@ -59,11 +41,8 @@ export function initSoundApps(deps) {
       mc.addEventListener("change", () => {
         if (k === "master") hooks.setMuted(mc.checked);
         else { m[k].m = mc.checked ? 1 : 0; store.save(); applyMix(); }
-        if (k === "wave" && !mc.checked) sysSnd("ding", .5);   /* proof of life */
+        if (k === "wave" && !mc.checked) sysSnd("ding", .5);
       });
-      /* the tray slider dinged at its new setting in XP, and the same trick is
-         the only way a fader for sounds that are not currently playing can
-         prove it did something. Only Wave: a ding is a Wave sound. */
       vs.addEventListener("change", () => {
         if (k === "wave" && !m.wave.m) sysSnd("ding", .5);
       });
@@ -73,9 +52,6 @@ export function initSoundApps(deps) {
       host.appendChild(col);
     }
   }
-  /* Native vertical <input type=range> only reacts to clicks in some
-     engines. Owning the pointer makes the thumb ride the drag like the
-     real sndvol32 knob did. */
   let dragging = null;
   function vertDrag(inp) {
     inp.addEventListener("pointerdown", e => {
@@ -90,8 +66,6 @@ export function initSoundApps(deps) {
       };
       set(e);
       const mv = ev => set(ev);
-      /* preventDefault above means the browser never fires its own change
-         event, and the ding hangs off change so it lands once per drag */
       const up = () => { dragging = null; inp.removeEventListener("pointermove", mv); inp.removeEventListener("pointerup", up); inp.removeEventListener("pointercancel", up); inp.dispatchEvent(new Event("change", { bubbles: false })); };
       inp.addEventListener("pointermove", mv);
       inp.addEventListener("pointerup", up);
@@ -112,8 +86,6 @@ export function initSoundApps(deps) {
     };
     showMenu(M[which] || [], x, y);
   }
-  /* Advanced Controls — bass and treble, remembered and cosmetic, which is
-     what they were on most AC'97 drivers */
   function svAdvOpen() {
     const b = $("#sv-bass"), t = $("#sv-treble");
     if (!b || !t) return;
@@ -126,7 +98,6 @@ export function initSoundApps(deps) {
   if (svT) svT.addEventListener("input", () => { store.data.mixTreble = +svT.value; store.save(); });
   if (svOk) svOk.addEventListener("click", () => closeWin("win-svadv"));
 
-  /* ================= Sound Recorder ================= */
   const sr = { ac: null, buf: null, playing: null, recording: null, chunks: [], stream: null, pos: 0, raf: 0, analyser: null };
   const scope = () => $("#sr-scope");
   function srAC() { if (!sr.ac) sr.ac = new (window.AudioContext || window.webkitAudioContext)(); return sr.ac; }
@@ -137,7 +108,6 @@ export function initSoundApps(deps) {
     sl.max = sr.buf ? Math.ceil(sr.buf.duration * 100) : 0;
     sl.value = Math.round(sr.pos * 100);
   }
-  /* the green oscilloscope: a flat line at rest, the analyser when live */
   function srDrawFlat() {
     const cv = scope(), g = cv.getContext("2d");
     g.fillStyle = "#000"; g.fillRect(0, 0, cv.width, cv.height);
@@ -169,7 +139,6 @@ export function initSoundApps(deps) {
     srDrawFlat(); srLabel();
   }
   async function srRecord() {
-    /* two quick clicks = two getUserMedia awaits = an orphaned hot mic */
     if (sr.pending) return;
     srStopAll();
     sr.pending = true;
@@ -186,7 +155,7 @@ export function initSoundApps(deps) {
     const ac = srAC();
     const src = ac.createMediaStreamSource(stream);
     sr.analyser = ac.createAnalyser(); sr.analyser.fftSize = 512;
-    src.connect(sr.analyser);          /* scope only — the mic is never routed to the speakers */
+    src.connect(sr.analyser);
     srDrawLive();
     const rec = new MediaRecorder(stream);
     sr.recording = rec;
@@ -201,7 +170,6 @@ export function initSoundApps(deps) {
       srStopAll();
     };
     rec.start();
-    /* the real one recorded 60 seconds at a time */
     setTimeout(() => { if (sr.recording === rec) rec.stop(); }, 60000);
     srLabel();
   }
@@ -213,7 +181,7 @@ export function initSoundApps(deps) {
     sr.analyser = ac.createAnalyser(); sr.analyser.fftSize = 512;
     const gain = ac.createGain();
     gain.gain.value = hooks.getMuted() ? 0 : hooks.getMaster() * factor("wave");
-    sr.gain = gain;   /* applyMix re-aims this while the clip plays */
+    sr.gain = gain;
     node.connect(sr.analyser); sr.analyser.connect(gain); gain.connect(ac.destination);
     const from = Math.min(sr.pos, sr.buf.duration);
     const t0 = ac.currentTime - from;
@@ -227,7 +195,6 @@ export function initSoundApps(deps) {
     }, 60);
     node.onended = () => { sr.playing = null; sr.gain = null; sr.pos = 0; srStopAll(); };
   }
-  /* Effects — real DSP on the buffer, exactly what the menu claims */
   function srMap(fn, lenScale) {
     if (!sr.buf) return;
     const ac = srAC(), old = sr.buf;
@@ -275,7 +242,6 @@ export function initSoundApps(deps) {
   $("#sr-end").addEventListener("click", () => { if (sr.buf) sr.pos = sr.buf.duration; srLabel(); });
   $("#sr-slider").addEventListener("input", () => { sr.pos = $("#sr-slider").value / 100; srLabel(); });
 
-  /* ================= WMP 9 ================= */
   const wmp = { audio: null, i: 0, tracks: [], ac: null, analyser: null, raf: 0, srcNode: null };
   function wmpAudio() {
     if (!wmp.audio) {
@@ -289,10 +255,6 @@ export function initSoundApps(deps) {
     }
     return wmp.audio;
   }
-  /* Media Player plays clips too. The <video> is a second element rather than a
-     mode of the first: an <audio> cannot show a picture, and the analyser is
-     permanently wired to the audio element once created, so a clip has to keep
-     its own audio path. Only one of the two is ever unpaused. */
   function wmpVideo() {
     if (!wmp.video) {
       wmp.video = $("#wmp-video");
@@ -305,20 +267,16 @@ export function initSoundApps(deps) {
     }
     return wmp.video;
   }
-  /* whichever element the current item is using */
   const wmpEl = () => (wmp.isVideo ? wmpVideo() : wmpAudio());
   const clock = s => Math.floor(s / 60) + ":" + String(Math.floor(s % 60)).padStart(2, "0");
   function wmpVol() {
     const vol = Math.min(1, ($("#wmp-vol").value / 100) * hooks.getMaster() * factor("cd"));
     const mute = hooks.getMuted() || !!mix().cd.m;
-    /* both elements, always: the fader must mean the same thing to a clip */
     for (const el of [wmpAudio(), wmp.video]) if (el) { el.volume = vol; el.muted = mute; }
   }
   function wmpPlay(i) {
     const t = wmp.tracks[(i + wmp.tracks.length) % wmp.tracks.length];
     wmp.i = (i + wmp.tracks.length) % wmp.tracks.length;
-    /* stop whatever was playing before the mode flips, or a clip and a track
-       end up playing over each other */
     try { wmpAudio().pause(); } catch (e) {}
     if (wmp.video) { try { wmp.video.pause(); } catch (e) {} }
     wmp.isVideo = !!t.video;
@@ -329,12 +287,10 @@ export function initSoundApps(deps) {
     $("#wmp-title").textContent = (t.artist ? t.artist + " — " : "") + t.title;
     $$0(".wmp-row.on") && $$0(".wmp-row.on").classList.remove("on");
     const row = $("#wmp-list").children[wmp.i]; if (row) row.classList.add("on");
-    /* the bars read the analyser on the audio element; a clip is its own picture */
     if (!wmp.isVideo) wmpViz(); else cancelAnimationFrame(wmp.raf);
   }
   const $$0 = sel => document.querySelector(sel);
   function wmpViz() {
-    /* bars off an analyser — Ambience will not be missed */
     if (!wmp.ac) {
       wmp.ac = new (window.AudioContext || window.webkitAudioContext)();
       wmp.srcNode = wmp.ac.createMediaElementSource(wmpAudio());
@@ -346,13 +302,8 @@ export function initSoundApps(deps) {
     const data = new Uint8Array(wmp.analyser.frequencyBinCount);
     cancelAnimationFrame(wmp.raf);
     const loop = () => {
-      /* the loop re-armed itself forever: Stop left a 60fps canvas drawing a
-         flat line and minting 24 gradients a frame for the rest of the
-         session, which on a phone nothing ever came along to cancel */
       const a = wmpAudio();
       if (!a || a.paused || a.ended) { wmp.raf = 0; return; }
-      /* the canvas is a flex item now, so its box moves with the window; the
-         backing store has to follow or the bars come out stretched */
       const w = cv.clientWidth | 0, h = cv.clientHeight | 0;
       if (w && h && (cv.width !== w || cv.height !== h)) { cv.width = w; cv.height = h; }
       wmp.analyser.getByteFrequencyData(data);
@@ -372,9 +323,6 @@ export function initSoundApps(deps) {
   function openWmp(auto) {
     const first = !wmp.tracks.length;
     if (first) {
-      /* clips first, marked. Media Player mixes one library rather than
-         keeping two, and video is what this player is for here — the music
-         belongs to Winamp, which is where anyone goes for it. */
       wmp.tracks = [...(hooks.videos ? hooks.videos() : []), ...hooks.tracks()];
       const host = $("#wmp-list"); host.innerHTML = "";
       wmp.tracks.forEach((t, i) => {
@@ -386,12 +334,8 @@ export function initSoundApps(deps) {
       });
     }
     openWin("win-wmp");
-    /* opening the player from the Start menu starts the clip at the top, the
-       way double-clicking the program did. A file that opened the player has
-       its own track and passes auto = false. */
     if (first && auto !== false && wmp.tracks.length && wmp.tracks[0].video) wmpPlay(0);
   }
-  /* open Media Player already playing one thing — how a file opens an app */
   function playMedia(item) {
     openWmp(false);
     const i = wmp.tracks.findIndex(t => t.url === item.url);
@@ -420,16 +364,8 @@ export function initSoundApps(deps) {
       cancelAnimationFrame(wmp.raf);
     }catch(e){} },
     stopRecorder(){ srStopAll(); },
-    factor,                       /* wave/cd scaling for the shell's own sounds */
-    /* Winamp's bus. Webamp re-applies its own gain on every state change, and
-       it changes state on every time tick, so the answer has to be available
-       when it asks — not only when the fader moves. */
+    factor,
     ampBus: () => factor("cd"),
-    /* The master slider moves the shell's volume, which calls back in here.
-       Rebuilding the mixer at that point destroyed the input being dragged, so
-       the master knob moved one step per click while the other four rode the
-       drag. Patch the master column in place instead, and never touch the
-       control that currently has the pointer. */
     mixerChanged() {
       wmpVol();
       ampVol();

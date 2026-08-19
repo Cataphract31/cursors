@@ -1,62 +1,43 @@
-/* FreeCell — the real rules on the vendored deck. Card faces come out of the
-   js-solitaire sprite sheet at runtime, so both card games wear the same deck
-   and no second copy of the art ships. No imports on purpose: the build-time
-   smoke runner executes this file in node, so it must stay pure JS. */
-
 export function initFreeCell(deps) {
   const { host, store, sysSnd, showError, showConfirm, setTitle, isFocused, close } = deps;
 
-  /* sprite sheet geometry: 4 suit columns x 13 rank rows, one card 71x96 */
   const CW = 71, CH = 96;
   const SUITX = { h: 1, c: 72, d: 143, s: 214 };
   const RED = { h: 1, d: 1, c: 0, s: 0 };
-  const SUITS = ["h", "c", "d", "s"];   /* foundation slot order */
+  const SUITS = ["h", "c", "d", "s"];
   const GLYPH = { h: "♥", d: "♦", c: "♣", s: "♠" };
   const RTXT = [, "A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"];
 
-  /* fixed board, like the original: cells left, foundations right, 8 columns */
   const BW = 633, BH = 430, COLY = 118;
   const CELLX = i => 8 + i * (CW + 2);
   const FOUNDX = i => BW - 8 - 4 * CW - 6 + i * (CW + 2);
   const COLX = c => 8 + c * (CW + 7);
 
   let game = 0, casc, free, found;
-  let sel = null;          /* {t:"casc",col,idx} | {t:"free",i} */
-  let moved = false;       /* a touched game abandoned is a loss */
+  let sel = null;
+  let moved = false;
   let over = false;
 
-  /* ---- the deck art, borrowed from the solitaire bundle ---- */
   host.classList.add("fc-nosheet");
   fetch("solitaire/main.js").then(r => r.text()).then(t => {
     const m = t.match(/data:image\/png;base64,[A-Za-z0-9+/=]+/);
     if (!m) throw new Error("no sheet");
     host.style.setProperty("--fc-sheet", `url("${m[0]}")`);
     host.classList.remove("fc-nosheet");
-  }).catch(() => {});      /* text corners stand in if the sheet never comes */
+  }).catch(() => {});
 
-  /* ---- the phone fit ---- */
-  /* Eight columns and four home cells need 633px of felt; a phone hands over
-     390, so half the tableau and every foundation used to sit off the glass.
-     The board is a fixed pixel layout, so it gets scaled to the sheet rather
-     than clipped — the same trick main.js plays on the vendored Solitaire.
-     The layout box is set to the SCALED size as well, so nothing overflows the
-     pane, the felt stays centred, and a tap still hits the card drawn under
-     the finger (a transform scales hit-testing with the paint). */
   const phone = () => !!(document.body && document.body.classList.contains("mobile"));
   let scale = 1;
   function fit() {
     const pane = host.parentElement;
     if (!pane) return;
-    if (!phone()) {          /* the desktop board is already the right size */
+    if (!phone()) {
       scale = 1;
       host.style.width = host.style.height = host.style.marginTop = host.style.transform = "";
       outlines();
       return;
     }
     const w = pane.clientWidth, h = pane.clientHeight;
-    /* a hidden sheet measures 0. Keep the last good fit and wait to be shown
-       again rather than painting the felt at scale(0), which is how Solitaire
-       once came back from a minimise as an empty green rectangle. */
     if (w < 40 || h < 40) return;
     scale = Math.min((w - 2) / BW, (h - 2) / BH, 1);
     host.style.width = Math.ceil(BW * scale) + "px";
@@ -66,27 +47,17 @@ export function initFreeCell(deps) {
     host.style.marginTop = Math.max(0, Math.floor((h - BH * scale) / 2)) + "px";
     outlines();
   }
-  /* An empty cell is one hairline of #060 on green felt: scaled, it lands on
-     half a device pixel and the home cells — the things you are playing at —
-     fade off the board. Two board pixels come back as one crisp line. */
   function outlines() {
     const w = scale < 1 ? "2px" : "";
     for (const s of host.querySelectorAll(".fc-slot")) s.style.borderWidth = w;
   }
-  /* one listener per module, replaced not stacked, so rotating a phone a dozen
-     times does not leave a dozen fits running */
   if (initFreeCell._fit) removeEventListener("resize", initFreeCell._fit);
   initFreeCell._fit = fit;
   addEventListener("resize", fit);
-  /* the pane reports a size again the instant the sheet is shown, which is the
-     only reliable signal that a display:none board is back */
   if (typeof ResizeObserver === "function")
     try { new ResizeObserver(fit).observe(host.parentElement); } catch (e) {}
   fit();
 
-  /* ---- the deal ---- */
-  /* Microsoft's own shuffle — seed*214013+2531011, high bits — so the numbered
-     games are THE numbered games: #11982 still cannot be won */
   function deal(n) {
     let seed = n >>> 0;
     const rnd = () => { seed = (Math.imul(seed, 214013) + 2531011) >>> 0; return (seed >>> 16) & 0x7fff; };
@@ -103,7 +74,6 @@ export function initFreeCell(deps) {
     found = { h: 0, c: 0, d: 0, s: 0 };
   }
 
-  /* ---- rendering ---- */
   function faceEl(cls, c, x, y) {
     const d = document.createElement("div");
     d.className = cls;
@@ -117,7 +87,7 @@ export function initFreeCell(deps) {
     return d;
   }
   function render() {
-    const keep = host.querySelector(".fc-modal");   /* the Select Game box survives repaints */
+    const keep = host.querySelector(".fc-modal");
     host.innerHTML = "";
     for (let i = 0; i < 4; i++) {
       const s = faceEl("fc-slot", null, CELLX(i), 8);
@@ -146,7 +116,6 @@ export function initFreeCell(deps) {
       const s = faceEl("fc-slot", null, COLX(c), COLY);
       s.dataset.col = c;
       host.appendChild(s);
-      /* long columns squeeze so the last card stays on the felt */
       const dy = col.length > 1 ? Math.min(18, Math.floor((BH - COLY - CH - 6) / (col.length - 1))) : 18;
       col.forEach((card, i) => {
         const d = faceEl("fc-card up", card, COLX(c), COLY + i * dy);
@@ -160,7 +129,6 @@ export function initFreeCell(deps) {
     outlines();
   }
 
-  /* ---- rules ---- */
   function runOK(c, idx) {
     const a = casc[c];
     for (let i = idx; i < a.length - 1; i++)
@@ -170,7 +138,7 @@ export function initFreeCell(deps) {
   function maxMove(destEmpty) {
     const cells = free.filter(x => !x).length;
     let empties = casc.filter(a => !a.length).length;
-    if (destEmpty) empties--;   /* the destination cannot help fill itself */
+    if (destEmpty) empties--;
     return (cells + 1) * Math.pow(2, empties);
   }
   function selCards() {
@@ -180,7 +148,6 @@ export function initFreeCell(deps) {
     if (sel.t === "free") { const c = free[sel.i]; free[sel.i] = null; return [c]; }
     return casc[sel.col].splice(sel.idx);
   }
-  /* drops return 1 moved, 0 not a drop, -1 refused with the dialog shown */
   function dropCasc(c) {
     if (sel.t === "casc" && sel.col === c) return 0;
     const run = selCards(), dst = casc[c], t = dst[dst.length - 1];
@@ -207,8 +174,6 @@ export function initFreeCell(deps) {
     return 1;
   }
 
-  /* safe autoplay, the original's rule: aces and twos always, higher cards
-     only once both foundations of the other colour have caught up */
   function safe(c) {
     if (c.r <= 2) return true;
     const opp = SUITS.filter(s => RED[s] !== RED[c.s]);
@@ -247,7 +212,6 @@ export function initFreeCell(deps) {
     return false;
   }
 
-  /* ---- endings & the record ---- */
   function stats() { return store.data.fcStats = store.data.fcStats || { w: 0, l: 0, streak: 0, bw: 0, bl: 0 }; }
   function recordWin() {
     const s = stats();
@@ -283,7 +247,6 @@ export function initFreeCell(deps) {
       "\nLongest losing streak: " + s.bl, true);
   }
 
-  /* ---- games ---- */
   function newGame(n) {
     abandon();
     game = n || 1 + Math.floor(Math.random() * 32000);
@@ -301,9 +264,6 @@ export function initFreeCell(deps) {
       '<div class="fc-modal-x">Select a game number from 1 to 32000.</div>' +
       '<input type="number" min="1" max="32000" value="' + game + '">' +
       '<div class="fc-modal-btns"><button data-ok="1">OK</button><button>Cancel</button></div>';
-    /* On a phone the dialog belongs to the window, not to the board: inside the
-       board it rides the board's scale down to unreadable and slides off with
-       any scroll of the felt. It still dies with the window, being its child. */
     const win = phone() ? host.closest(".window") : null;
     (win || host).appendChild(m);
     const inp = m.querySelector("input");
@@ -311,8 +271,6 @@ export function initFreeCell(deps) {
       m.style.zIndex = "60";
       m.style.padding = "12px 14px";
       m.style.minWidth = "210px";
-      /* under 16px iOS zooms the whole sheet the moment the box takes focus,
-         and it never zooms back out */
       inp.style.fontSize = "16px";
       inp.style.width = "5em";
       inp.style.padding = "3px 5px";
@@ -334,14 +292,12 @@ export function initFreeCell(deps) {
     setTimeout(() => inp.focus(), 0);
   }
 
-  /* ---- input ---- */
   host.addEventListener("click", e => {
     if (over) return;
     const t = e.target.closest(".fc-card,.fc-slot");
     if (!t) { sel = null; render(); return; }
     const d = t.dataset;
     if (sel) {
-      /* clicking the selection again puts it down */
       if (sel.t === "casc" && d.col != null && +d.col === sel.col && d.i != null && +d.i === sel.idx) { sel = null; render(); return; }
       if (sel.t === "free" && d.free != null && +d.free === sel.i && free[sel.i]) { sel = null; render(); return; }
       let r = 0;
@@ -351,13 +307,11 @@ export function initFreeCell(deps) {
       if (r === 1) { moved = true; sel = null; settle(); return; }
       if (r === -1) { sel = null; render(); return; }
     }
-    /* not a drop (or an illegal one): try to pick instead */
     sel = null;
     if (d.free != null && free[+d.free]) sel = { t: "free", i: +d.free };
     else if (d.col != null && d.i != null && runOK(+d.col, +d.i)) sel = { t: "casc", col: +d.col, idx: +d.i };
     render();
   });
-  /* double-click sends a top card to the first open cell, as the original did */
   host.addEventListener("dblclick", e => {
     if (over) return;
     const t = e.target.closest(".fc-card");
@@ -376,7 +330,6 @@ export function initFreeCell(deps) {
     newGame();
   });
 
-  /* ---- menus ---- */
   function menus(label) {
     if (label === "Game") return [
       { label: "New Game", accel: "F2", action: () => newGame() },

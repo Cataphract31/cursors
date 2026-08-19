@@ -1,8 +1,3 @@
-/* Windows Messenger — buddy list, real conversation windows, the emoticon set.
-   Import-free on purpose (the build smoke-runner executes this in node);
-   main.js injects assets and the shell's window-manager hooks. */
-
-/* text shortcut -> emoticon file, matched longest-first so :-D beats :-  */
 export const EMOMAP = {
   ":)": "smile", ":-)": "smile", ":(": "sad-smile", ":-(": "sad-smile",
   ";)": "winking-smile", ";-)": "winking-smile",
@@ -39,7 +34,6 @@ export const EMOMAP = {
   "(R)": "rainbow", "(h5)": "high-five", "(brb)": "be-right-back", "(bunny)": "bunny",
 };
 
-/* the picker grid, in the order the real one used */
 const PICKER = [
   ":)", ":D", ";)", ":O", ":P", "(H)", ":@", ":S", ":$", ":(",
   ":'(", "|-)", "8o|", "8-)", ":-#", "^o)", "+o(", "<:o)", "(A)", "(6)",
@@ -64,7 +58,6 @@ const STATUS = {
   offline: "Offline", invisible: "Appear Offline",
 };
 
-/* per-bot reply pools — they answer you, they don't just monologue */
 const REPLIES = {
   mumu:    ["gm", "you deploying or watching", "i'm up 0.4 today (Y)", "that last round was rigged (i'm joking) (A)", "brb one more cursor"],
   bobo:    ["down bad :(", "lend me 0.1", "i only lose on purpose", "the house always wins but so do i sometimes", "(6) one more"],
@@ -75,40 +68,33 @@ const REPLIES = {
   deg404:  ["404", "message not found", "have you tried turning it off and on again", "i exist only during shutdown", "(co) beep"],
 };
 
-const LOBBY_LINES = {};   /* emptied: the lobby is real players only */
+const LOBBY_LINES = {};
 
 export function initMessenger(deps) {
   const {
     EMO, IMG, $, store, sysSnd, playerName, wireWindow,
     openWin, closeWin, isOpen, showMenu, showError, desk, rnd,
-    lobbyNet,   /* (text)=>bool — true means the server took it */
-    dmNet,      /* (toName,text)=>bool — a direct message to a real player */
-    netLive,    /* ()=>bool — connected to the server */
+    lobbyNet,
+    dmNet,
+    netLive,
   } = deps;
-  /* When the server is live the contacts marked "bot" are exactly that: they
-     play with real (play) money under the same rules, and they do not talk.
-     Offline, the sandbox still needs someone in the room. */
   const quiet = () => !!(netLive && netLive());
 
   const pick = a => a[Math.floor(Math.random() * a.length)];
   const rand = (a, b) => a + Math.random() * (b - a);
   const LOBBY = { id: "lobby", name: "everyone", dp: "messenger", group: null };
-  /* Three kinds of conversation live side by side: the lobby, a bot, and a real
-     player. A player's id is "u:" + their name — they have no CONTACTS row
-     because they exist only while they are connected. */
   const isUser = id => typeof id === "string" && id.slice(0, 2) === "u:";
   const userName = id => id.slice(2);
   const byId = id => id === "lobby" ? LOBBY
     : isUser(id) ? { id, name: userName(id), psm: "real person", human: 1 }
     : CONTACTS.find(c => c.id === id);
 
-  const state = {};              /* per-contact status */
+  const state = {};
   for (const c of CONTACTS) state[c.id] = "online";
   let myStatus = "online";
-  const convs = {};              /* id -> {el, msgs, statusEl, input, lastFrom} */
+  const convs = {};
   let lastNudge = 0, lastLobbyAt = 0;
 
-  /* ---------- emoticon rendering ---------- */
   const KEYS = Object.keys(EMOMAP).sort((a, b) => b.length - a.length);
   function emoNodes(text, into) {
     let i = 0, buf = "";
@@ -132,10 +118,6 @@ export function initMessenger(deps) {
     flush();
   }
 
-  /* ---------- conversation windows ---------- */
-  /* a player name may contain a space, a dot or a $, none of which belong in a
-     DOM id — escape everything outside [A-Za-z0-9_] to "-<code36>", which is
-     one-to-one, so two different names can never land on the same window */
   function convId(id) {
     return "win-conv-" + String(id).replace(/[^A-Za-z0-9_]/g, c => "-" + c.charCodeAt(0).toString(36));
   }
@@ -203,9 +185,7 @@ export function initMessenger(deps) {
       const t = rec.input.value.trim();
       if (!t) return;
       rec.input.value = "";
-      /* online, the lobby is real people: the server echoes it back to everyone */
       if (c.id === "lobby" && lobbyNet && lobbyNet(t)) return;
-      /* a real player is not a bot: nothing here may invent a reply */
       if (c.human) {
         say(c.id, playerName(), t, true);
         if (!(dmNet && dmNet(c.name, t))) sys(c.id, "Not connected — that message was not sent.");
@@ -243,7 +223,6 @@ export function initMessenger(deps) {
     setTimeout(() => { try { rec.input.focus(); } catch (e) {} }, 0);
   }
 
-  /* ---------- messages ---------- */
   function stamp(rec, who, mine) {
     if (rec.lastFrom === who) return;
     rec.lastFrom = who;
@@ -252,10 +231,6 @@ export function initMessenger(deps) {
     d.textContent = who + " says:";
     rec.msgs.appendChild(d);
   }
-  /* `quiet` is history being replayed at sign-in. It renders identically and
-     announces nothing: a toast and an alert mean "this just arrived", and
-     firing twenty-five of them at the moment you connect is how the lobby
-     used to greet you. */
   function say(id, who, text, mine, quiet) {
     const rec = conv(id);
     stamp(rec, who, mine);
@@ -301,8 +276,6 @@ export function initMessenger(deps) {
       say(id, who, line, false);
     }, think + rand(900, 1900));
   }
-  /* said once per conversation, so a DM to a bot is not a silence you have to
-     guess at — and so nobody thinks a bot is a person who is ignoring them */
   const told = new Set();
   function botSilence(id) {
     if (id === "lobby" || told.has(id)) return;
@@ -323,13 +296,11 @@ export function initMessenger(deps) {
     sysSnd("msnNudge", .6);
     sys(id, "You have just sent a nudge.");
     shake(conv(id).el);
-    /* a bot may nudge you back; a real player is not here to be impersonated */
     if (id !== "lobby" && !isUser(id) && !quiet() && Math.random() < .5)
       setTimeout(() => { sys(id, byId(id).name + " has just sent a nudge."); shake(conv(id).el); sysSnd("msnNudge", .5); }, rand(1800, 3200));
   }
   function shake(el) { el.classList.remove("nudged"); void el.offsetWidth; el.classList.add("nudged"); }
 
-  /* ---------- emoticon picker ---------- */
   let picker = null;
   function openPicker(anchor, input) {
     closePicker();
@@ -359,10 +330,8 @@ export function initMessenger(deps) {
     if (picker && !e.target.closest(".emo-picker,.conv-emo")) closePicker();
   }, true);
 
-  /* ---------- toasts (they stack; newest nearest the tray) ---------- */
   const toasts = [];
   function reflowToasts() {
-    /* on the mobile shell the stack starts above the game HUD, not the taskbar */
     const mob = document.body.classList.contains("mobile");
     let b = mob ? 104 : 40;
     for (const t of toasts) {
@@ -371,9 +340,9 @@ export function initMessenger(deps) {
     }
   }
   function toast(c, text, openId) {
-    if (deps.toastsOn && !deps.toastsOn()) return;   /* the Messenger service is stopped */
+    if (deps.toastsOn && !deps.toastsOn()) return;
     const balloon = document.getElementById("balloon");
-    if (balloon) balloon.style.display = "none";   /* the tray tip does not fight the toast */
+    if (balloon) balloon.style.display = "none";
     const t = document.createElement("div");
     t.className = "msn-toast";
     t.innerHTML = `<div class="mt-head"><img src="${IMG.msn16}" alt=""><span></span><i class="mt-x">✕</i></div>
@@ -399,13 +368,7 @@ export function initMessenger(deps) {
     setTimeout(() => kill(), 6000);
   }
 
-  /* ---------- contact list ---------- */
   function statusClass(s) { return "st-" + s; }
-  /* Real people, when there are any. Online, the buddy list leads
-     with whoever is actually connected — the single most useful thing a
-     multiplayer lobby can tell you is whether anyone else is in it. The bots
-     stay below, honestly labelled, because they are the liquidity floor and
-     pretending otherwise would be the one lie this game does not tell. */
   let humans = [];
   function setHumans(names) {
     humans = (names || []).filter(n => n !== playerName());
@@ -477,9 +440,8 @@ export function initMessenger(deps) {
     })), x, y);
   }
 
-  /* ---------- presence drift ---------- */
   function drift() {
-    if (quiet()) return;   /* online, the bots are always in — they are the liquidity floor */
+    if (quiet()) return;
     const c = pick(CONTACTS);
     const was = state[c.id];
     const next = pick(["online", "online", "online", "away", "busy", "brb", "offline"]);
@@ -492,12 +454,10 @@ export function initMessenger(deps) {
     }
   }
 
-  /* ---------- public surface ---------- */
   function lobbySys(text) { sys("lobby", text); }
   function lobbySay(who, text) { say("lobby", who, text, who === playerName()); }
   function botChat(kind, vars) {
-    return;   /* no scripted lobby chatter — the room is real players only */
-    /* eslint-disable no-unreachable */
+    return;
     const now = Date.now();
     if (now - lastLobbyAt < 2600 || Math.random() < .45) return;
     lastLobbyAt = now;
@@ -507,10 +467,8 @@ export function initMessenger(deps) {
     if (vars) for (const k in vars) t = t.split("{" + k + "}").join(vars[k]);
     const c = pick(CONTACTS.filter(x => state[x.id] === "online")) || CONTACTS[0];
     setTimeout(() => say("lobby", c.name, t, false), rand(300, 1400));
-    /* eslint-enable no-unreachable */
   }
 
-  /* boot: buddy list wiring */
   const myRow = $("#msn-me");
   if (myRow) myRow.addEventListener("click", e => {
     const r = myRow.getBoundingClientRect();
@@ -566,13 +524,10 @@ export function initMessenger(deps) {
   return {
     menus,
     openList: () => openWin("win-chat"),
-    /* a contact messages you out of the blue — toasts if the window is shut */
     incoming: (id, text) => say(id, byId(id).name, text, false),
     place: (id, x, y) => { const r = conv(id); r.el.style.left = x + "px"; r.el.style.top = y + "px"; },
     openConv, lobbySys, lobbySay, botChat, setHumans,
-    /* a real player messaged you — opens nothing, but toasts if the window is shut */
     dmIn: (from, text) => say("u:" + from, from, text, false),
-    /* the same two lines, replayed from the server's copy at sign-in */
     lobbySeed: (who, text) => say("lobby", who, text, who === playerName(), true),
     dmSeed: (who, text, mine) => say("u:" + who, mine ? playerName() : who, text, mine, true),
     dmSys: (who, text) => { if (convs["u:" + who]) sys("u:" + who, text); },

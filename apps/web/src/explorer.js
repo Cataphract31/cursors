@@ -1,37 +1,22 @@
-/* Windows Explorer — the address bar, the blue task pane, four view modes, and
-   a C:\ drive that is a real (if fictional) tree. The disk fills up with your
-   dead cursors, which is the only honest disk-usage metric this computer has.
-   No asset imports here on purpose: the build's smoke runner executes this file
-   in node, so it must stay pure JS. main.js injects icons + shell hooks. */
-
 const MB = 1024 * 1024, GB = 1024 * MB;
-const DISK = 20 * GB;   /* matches the server drive; the round clock lives on it */
+const DISK = 20 * GB;
 
 export function initExplorer(deps) {
-  /* icoNode is the shell's own resolver: it returns an <img> for a raster icon
-     and an inline <svg><use> for the "@symbol" ones, so both kinds work here */
   const { IMG, els, store, sysSnd, showMenu, showError, icoNode, hooks } = deps;
 
   let path = "My Computer", hist = [], fwd = [], sel = null;
   let view = store.data.expView || "tiles";
 
-  /* ---------- the drive ---------- */
   const f = (name, opts) => Object.assign({ name, kind: "file", ico: "note32", size: 4 * 1024 }, opts);
   const dir = (name, opts) => Object.assign({ name, kind: "folder", ico: "folder32", size: 0 }, opts);
 
-  /* every dead cursor is a file on this disk, and that is why it is filling up */
   function deadBytes() { return hooks.deadCount() * 12 * MB; }
-  /* online, the server owns the disk — its epoch corpses are the meter */
   function usedBytes() { const o = hooks.serverDisk && hooks.serverDisk(); return o ? o.used : 2.71 * GB + deadBytes(); }
   function freeBytes() { return Math.max(64 * MB, DISK - usedBytes()); }
 
-  /* Search Companion state. `searching` swaps the blue task pane for the
-     companion pane; results replace the listing until you navigate away. */
   let searching = false, results = null, searchQ = "", searchKind = "all";
-  /* Folder Options owns these switches; the fallbacks match that dialog's defaults */
   const FOD = { tasks: 1, click: "double", hidden: 1, ext: 0, fullpath: 0, sysfolders: 1, cplincomp: 1 };
   const fo = k => { const o = store.data.folderOpts || {}; return o[k] === undefined ? FOD[k] : o[k]; };
-  /* "Hide extensions for known file types" only ever hid the extension */
   const shownName = n => { if (!fo("ext")) return n; const i = n.lastIndexOf("."); return i > 0 ? n.slice(0, i) : n; };
   const isSystemPath = p => /windows/i.test(p);
   const BIN = "Recycle Bin";
@@ -39,10 +24,7 @@ export function initExplorer(deps) {
   const DOCS = HOME + "\\My Documents";
   const PICS = DOCS + "\\My Pictures";
 
-  /* folders are functions so the disk can answer with live state */
   const TREE = {
-    /* The bin holds two kinds of thing: files you deleted, which can come back,
-       and cursors that died, which cannot. Both take up space on the disk. */
     [BIN]: () => {
       const b = hooks.binContents();
       return b.files.map(fi => f(fi.label + (/\./.test(fi.label) ? "" : ".lnk"), {
@@ -110,12 +92,9 @@ export function initExplorer(deps) {
       dir("My Videos", { ico: "pics32", go: DOCS + "\\My Videos" }),
       f("fights.log", { size: hooks.logSize(), act: () => hooks.openWin("win-log") }),
       f("README.txt", { size: 2_048, act: () => hooks.openWin("win-readme") }),
-      /* whatever Send To > My Documents actually sent — the copy has to exist */
       ...(hooks.sentDocs ? hooks.sentDocs() : []).map(d =>
         f(d.label, { ico: d.ico, size: 4096, act: () => showError(d.label, "This file was sent here from the Desktop.") })),
     ],
-    /* opening a song opens that song. It used to open Winamp at the top of the
-       playlist no matter which file was double-clicked. */
     [DOCS + "\\My Videos"]: () => (hooks.videos ? hooks.videos() : []).map(v =>
       f(v.stem + ".wmv", { size: 6.1 * MB, ico: "wmp32",
         act: () => hooks.playVideo && hooks.playVideo(v) })),
@@ -170,20 +149,15 @@ export function initExplorer(deps) {
   function sysErr(n) { showError(n, "Access is denied.\n\nSystem files are protected. The house patches itself."); }
   function txt(name, body) { hooks.openText(name, body); }
 
-  /* dynamic branch: a user folder made on the desktop */
   function childrenOf(p) {
     if (TREE[p]) return TREE[p]();
     if (p === HOME + "\\Desktop\\Unused Desktop Shortcuts")
       return (hooks.unusedFiles ? hooks.unusedFiles() : []).map(ic =>
         f(ic.label + ".lnk", { ico: ic.ico, size: 1024, act: () => hooks.openIcon(ic) }));
-    if (p.indexOf(HOME + "\\Desktop\\") === 0) return [];   /* user folders really are empty */
+    if (p.indexOf(HOME + "\\Desktop\\") === 0) return [];
     return null;
   }
 
-  /* ---------- search: a real walk of the real tree ---------- */
-  /* Depth-first over childrenOf(), which is the same function the address bar,
-     cmd.exe and the listing all use — so the dog finds what is actually there,
-     including every dead cursor, and never anything that is not. */
   function walk(root, hit, out, seen, depth) {
     if (out.length >= 200 || depth > 6 || seen.has(root)) return;
     seen.add(root);
@@ -206,8 +180,6 @@ export function initExplorer(deps) {
       if (kind === "mine" && !(it.dead && it.dead.mine)) return false;
       if (!needle) return kind !== "all";
       if (it.name.toLowerCase().indexOf(needle) >= 0) return true;
-      /* a dead cursor is findable by who owned it and who killed it, which is
-         the only search anybody will actually run twice */
       if (it.dead && ((it.dead.name || "").toLowerCase().indexOf(needle) >= 0 ||
                       (it.dead.killer || "").toLowerCase().indexOf(needle) >= 0)) return true;
       return false;
@@ -220,7 +192,6 @@ export function initExplorer(deps) {
     return out.length;
   }
 
-  /* ---------- formatting ---------- */
   function fmtSize(b) {
     if (b >= GB) return (b / GB).toFixed(2) + " GB";
     if (b >= MB) return (b / MB).toFixed(1) + " MB";
@@ -229,7 +200,7 @@ export function initExplorer(deps) {
   }
   function parentOf(p) {
     if (p === "My Computer") return null;
-    if (p === BIN) return HOME + "\\Desktop";   /* the bin lives on the Desktop, as it should */
+    if (p === BIN) return HOME + "\\Desktop";
     if (p === "C:\\") return "My Computer";
     if (/^[A-Z]:\\[^\\]+$/.test(p)) return "C:\\";
     const i = p.lastIndexOf("\\");
@@ -252,7 +223,6 @@ export function initExplorer(deps) {
     return "openfolder32";
   }
 
-  /* ---------- navigation ---------- */
   function go(p, noHist) {
     searching = false; results = null;
     if (childrenOf(p) === null) { showError("Windows Explorer", `Cannot find '${p}'.\nCheck the spelling and try again.`); return; }
@@ -265,15 +235,12 @@ export function initExplorer(deps) {
   function forward() { if (fwd.length) { hist.push(path); path = fwd.pop(); sel = null; render(); } }
   function up() { const p = parentOf(path); if (p) go(p); }
 
-  /* ---------- rendering ---------- */
   function render() {
     let items = searching && results
       ? results.map(r => Object.assign({}, r.it, { _where: r.where }))
       : (childrenOf(path) || []);
     if (!fo("hidden")) items = items.filter(i => !i.hidden);
     if (!fo("cplincomp") && path === "My Computer") items = items.filter(i => i.name !== "Control Panel");
-    /* items are rebuilt every render, so re-point the selection by name (and
-       drop it if what was selected has just been restored or emptied) */
     if (sel) sel = items.find(i => i.name === sel.name) || null;
     els.addr.value = searching ? "Search Results" : path;
     els.addrico.src = IMG[icoOf(path)] || IMG.folder32;
@@ -301,7 +268,6 @@ export function initExplorer(deps) {
     host.className = "ex-list v-" + view + (fo("click") === "single" ? " sc" : "");
     let group = null;
     for (const it of items) {
-      /* XP files its own computer under headings; so do we */
       if (it.group && it.group !== group && (view === "tiles" || view === "icons")) {
         group = it.group;
         const g = document.createElement("div");
@@ -312,7 +278,7 @@ export function initExplorer(deps) {
       const row = document.createElement("div");
       row.className = "ex-item" + (it.hidden ? " ghost" : "") + (sel === it ? " on" : "");
       const img = icoNode(it.ico);
-      img.classList.add("ex-ico");   /* icoNode returns <img> OR <span><svg>; one class sizes both */
+      img.classList.add("ex-ico");
       const nm = document.createElement("div");
       nm.className = "ex-nm";
       nm.textContent = shownName(it.name);
@@ -327,7 +293,6 @@ export function initExplorer(deps) {
         const add = (t, cls) => { const d = document.createElement("div"); d.className = "ex-col " + (cls || ""); d.textContent = t; row.appendChild(d); };
         add(it.kind === "file" ? fmtSize(it.size) : "", "sz");
         if (it.dead) {
-          /* the bin earns its own columns: in here, who did it and at what price */
           add("killed by " + it.dead.killer, "ty");
           add(`${it.dead.odds} : ${100 - it.dead.odds}`, "dt");
         } else {
@@ -337,8 +302,6 @@ export function initExplorer(deps) {
       }
       row.addEventListener("click", () => {
         sel = it; markSel(host, row); status(items); renderTasks(items);
-        /* one click, if Folder Options says so — and always on a phone, where
-           double-tapping a 34px row is nobody's idea of a good time */
         if (fo("click") === "single" || deps.isMobile) openItem(it);
       });
       row.addEventListener("dblclick", () => openItem(it));
@@ -350,7 +313,6 @@ export function initExplorer(deps) {
       host.appendChild(row);
     }
   }
-  /* "Display the contents of system folders" off: XP shows this page instead */
   function renderSysWarning() {
     const host = els.list;
     host.innerHTML = "";
@@ -391,7 +353,6 @@ export function initExplorer(deps) {
     showError(it.name, "Windows cannot open this file:\n\n" + it.name + "\n\nTo open this file, Windows needs to know what program created it.");
   }
 
-  /* ---------- the blue task pane ---------- */
   function panel(title, rows, cls) {
     const p = document.createElement("div");
     p.className = "ex-panel " + (cls || "");
@@ -421,8 +382,6 @@ export function initExplorer(deps) {
     const host = els.tasks;
     host.innerHTML = "";
     if (path === BIN) {
-      /* XP's Recycle Bin swaps the file-tasks panel for its own two verbs.
-         The third one is ours, and it is the reason this folder exists. */
       host.appendChild(panel("Recycle Bin Tasks", [
         { label: "Empty the Recycle Bin", ico: "bin32", act: () => hooks.emptyBin() },
         { label: sel ? "Restore this item" : "Restore all items", ico: "openfolder32", act: () => hooks.restore(sel && sel.file) },
@@ -462,7 +421,6 @@ export function initExplorer(deps) {
         : [{ text: `<b>${esc(leaf(path))}</b><br>${path === "My Computer" ? "System Folder" : "File Folder"}` }];
     host.appendChild(panel("Details", rows, "details"));
   }
-  /* ---------- the Search Companion pane ---------- */
   const KINDS = [
     ["cursors", "Dead cursors", "@ic-cursor", "Every corpse on the disk. Search by owner or by who killed it."],
     ["docs", "Documents", "note32", "Text files, logs and settings."],
@@ -517,7 +475,6 @@ export function initExplorer(deps) {
     row.appendChild(go1); row.appendChild(stop);
     body.appendChild(row);
 
-    /* the dog. this is the whole reason anybody remembers this feature. */
     const pet = document.createElement("div");
     pet.className = "srch-pet";
     const cmp = deps.companion.node();
@@ -546,8 +503,6 @@ export function initExplorer(deps) {
     const cmp = document.getElementById("srch-cmp");
     deps.companion.setMood(cmp, "hunting");
     sysSnd("nav", .35);
-    /* a beat of hunting before the answer, because instant search from a dog
-       with a magnifying glass reads as broken */
     setTimeout(() => { runSearch(searchQ, searchKind); }, 620);
   }
   function openSearch() {
@@ -558,7 +513,6 @@ export function initExplorer(deps) {
 
   const esc = s => String(s).replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
 
-  /* ---------- drive properties: the pie is your body count ---------- */
   function driveProperties() {
     const used = usedBytes(), free = freeBytes();
     hooks.openDriveProps({
@@ -575,14 +529,13 @@ export function initExplorer(deps) {
     const frac = Math.max(0, Math.min(1, used / total));
     const a0 = -Math.PI / 2, a1 = a0 + frac * Math.PI * 2;
     g.beginPath(); g.moveTo(cx, cy); g.arc(cx, cy, r, a0, a1); g.closePath();
-    g.fillStyle = "#1B5FAE"; g.fill();                 /* used: XP's blue */
+    g.fillStyle = "#1B5FAE"; g.fill();
     g.beginPath(); g.moveTo(cx, cy); g.arc(cx, cy, r, a1, a0 + Math.PI * 2); g.closePath();
-    g.fillStyle = "#D64B4B"; g.fill();                 /* free: XP's magenta-red */
+    g.fillStyle = "#D64B4B"; g.fill();
     g.strokeStyle = "#555"; g.lineWidth = 1;
     g.beginPath(); g.arc(cx, cy, r, 0, Math.PI * 2); g.stroke();
   }
 
-  /* ---------- menus ---------- */
   function itemMenu(it) {
     if (it.dead || it.file) return [
       { label: it.dead ? "Certificate" : "Restore", bold: 1, action: () => it.dead ? hooks.deathCert(it.dead) : hooks.restore(it.file) },
@@ -635,7 +588,6 @@ export function initExplorer(deps) {
         { sep: 1 },
         { label: "Empty Recycle Bin", action: () => hooks.emptyBin() },
         { label: "Restore all items", action: () => hooks.restore(null) },
-        /* the phone hides the task pane, so the bin's three verbs all live here too */
         { label: "Hall of Pain", action: () => hooks.hallOfPain() },
       ] : []),
       { sep: 1 },
@@ -667,7 +619,6 @@ export function initExplorer(deps) {
   };
   function setView(v) { view = v; store.data.expView = v; store.save(); render(); }
 
-  /* ---------- wiring ---------- */
   els.back.addEventListener("click", back);
   els.fwd.addEventListener("click", forward);
   els.up.addEventListener("click", up);
@@ -715,13 +666,8 @@ export function initExplorer(deps) {
     ], e.clientX, e.clientY);
   });
 
-  /* no first render here on purpose: the tree asks main.js for live game state
-     (dead cursors, log size) which is declared further down that module, so the
-     shell calls render() once during boot instead */
-
   return {
     go, render, setView, openSearch,
-    /* cmd.exe reads the same tree this window does — one filesystem, two shells */
     list: pth => childrenOf(pth),
     paths: () => Object.keys(TREE),
     menu: (label, x, y) => (MENUS[label] || MENUS.Help)(x, y),

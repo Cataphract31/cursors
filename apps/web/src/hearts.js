@@ -1,39 +1,27 @@
-/* Hearts — the 2001 rules, four players, one deck. Card faces come out of the
-   js-solitaire sprite sheet at runtime, exactly as FreeCell and Spider take
-   them, so the whole shelf of card games wears the same deck and no second
-   copy of the art ships. No imports on purpose: the build-time smoke runner
-   executes this file in node, so it must stay pure JS. */
-
 export function initHearts(deps) {
   const { host, sysSnd, showConfirm, showError, isFocused, close } = deps;
 
-  /* sprite sheet geometry: 4 suit columns x 13 rank rows, one card 71x96.
-     The sheet counts the ace as row 0; hearts wants the ace high, so ranks
-     live as 2..14 here and only the row lookup bends back. */
   const CW = 71, CH = 96;
   const SUITX = { h: 1, c: 72, d: 143, s: 214 };
   const GLYPH = { h: "♥", d: "♦", c: "♣", s: "♠" };
   const RED = { h: 1, d: 1, c: 0, s: 0 };
-  const ORDER = { c: 0, d: 1, s: 2, h: 3 };   /* the order a hand is fanned in */
+  const ORDER = { c: 0, d: 1, s: 2, h: 3 };
   const rowOf = r => (r === 14 ? 0 : r - 1);
   const rtxt = r => (r === 14 ? "A" : r === 13 ? "K" : r === 12 ? "Q" : r === 11 ? "J" : String(r));
 
-  /* ---- the felt ---- */
   const BW = 700, BH = 500;
-  const SPREAD = 49;                       /* your thirteen, fanned */
-  const HANDY = BH - CH - 30;              /* 374 */
+  const SPREAD = 49;
+  const HANDY = BH - CH - 30;
   const NORTHX = 182, NORTHDX = 22;
   const SIDEY = 92, SIDEDY = 13;
   const EASTX = BW - 8 - CW;
-  const CX = 350, CY = 215;                /* the middle of the trick */
-  /* where a played card lands, per seat */
+  const CX = 350, CY = 215;
   const DROP = [
-    { x: CX - CW / 2, y: CY + 6 },         /* 0 south — you */
-    { x: CX - CW - 14, y: CY - CH / 2 },   /* 1 west  — on your left */
-    { x: CX - CW / 2, y: CY - CH - 6 },    /* 2 north — across */
-    { x: CX + 14, y: CY - CH / 2 },        /* 3 east  — on your right */
+    { x: CX - CW / 2, y: CY + 6 },
+    { x: CX - CW - 14, y: CY - CH / 2 },
+    { x: CX - CW / 2, y: CY - CH - 6 },
+    { x: CX + 14, y: CY - CH / 2 },
   ];
-  /* roughly where each seat's cards sit, so a play can slide out of the hand */
   const FROM = [
     { x: CX - CW / 2, y: HANDY },
     { x: 8, y: SIDEY + 100 },
@@ -41,33 +29,29 @@ export function initHearts(deps) {
     { x: EASTX, y: SIDEY + 100 },
   ];
 
-  const SLIDE = 180;    /* the card's flight */
-  const THINK = 260;    /* a computer player's pause before it plays */
-  const HOLD = 550;     /* the beat the finished trick sits there */
+  const SLIDE = 180;
+  const THINK = 260;
+  const HOLD = 550;
 
-  /* passing goes left, right, across, hold — then round again */
   const PASS = [1, 3, 2, 0];
   const PASSTXT = ["left", "right", "across", ""];
 
-  /* ---- state ---- */
   let names = ["You", "Pauline", "Michele", "Ben"];
   let seats = [[], [], [], []];
   let total = [0, 0, 0, 0];
-  let taken = [[], [], [], []];   /* the point cards each seat has won this hand */
+  let taken = [[], [], [], []];
   let handNo = 0;
-  let phase = "pass";             /* pass | play | over */
-  let sel = [];                   /* the three you are giving away */
-  let got = [];                   /* the three you were given, highlighted once */
-  let trick = [];                 /* [{seat,card}] in play order */
+  let phase = "pass";
+  let sel = [];
+  let got = [];
+  let trick = [];
   let leader = 0, turn = 0;
   let firstTrick = true, broken = false, qGone = false;
   let msg = "";
-  let modal = false;              /* a board dialog owns the clicks */
+  let modal = false;
   let paused = false;
-  let flying = null;              /* the card mid-flight, handed to render() */
+  let flying = null;
 
-  /* ---- timers: one generation counter and every pending beat dies at once,
-     so New Game (or a close) never gets played into by the last hand ---- */
   let gen = 0;
   const timers = new Set();
   function after(ms, fn) {
@@ -82,16 +66,14 @@ export function initHearts(deps) {
     timers.clear();
   }
 
-  /* ---- the deck art, borrowed from the solitaire bundle ---- */
   host.classList.add("ht-nosheet");
   fetch("solitaire/main.js").then(r => r.text()).then(t => {
     const m = t.match(/data:image\/png;base64,[A-Za-z0-9+/=]+/);
     if (!m) throw new Error("no sheet");
     host.style.setProperty("--ht-sheet", `url("${m[0]}")`);
     host.classList.remove("ht-nosheet");
-  }).catch(() => {});      /* text corners stand in if the sheet never comes */
+  }).catch(() => {});
 
-  /* ---- cards ---- */
   const pts = c => (c.s === "h" ? 1 : c.s === "s" && c.r === 12 ? 13 : 0);
   const isQ = c => c.s === "s" && c.r === 12;
   const sortHand = a => a.sort((x, y) => ORDER[x.s] - ORDER[y.s] || x.r - y.r);
@@ -112,16 +94,6 @@ export function initHearts(deps) {
     firstTrick = true; broken = false; qGone = false;
   }
 
-  /* ---- fitting the felt to a phone ----
-     The board is a fixed 700x500. A phone is 390 across standing up and 390
-     tall lying down, so on a phone something is always off the edge — and it
-     is always the thing you need: the Pass button in portrait, your own
-     thirteen cards in landscape. Scrolling to it loses the trick you are
-     following suit against. So the whole board is scaled into the sheet with
-     one transform, the same move Solitaire makes with its frame. A transform
-     scales hit-testing along with the paint, so a card is still exactly where
-     you touched it. Phones only: the desktop window has the room for 700x500
-     and keeps it pixel for pixel. */
   let fitScale = 1, fitPend = null, fitTries = 0, refitting = false;
   const onPhone = () => !!(document.body && document.body.classList &&
     document.body.classList.contains("mobile"));
@@ -143,31 +115,18 @@ export function initHearts(deps) {
       return;
     }
     const w = box.clientWidth, h = box.clientHeight;
-    /* a shut, minimised or still-opening sheet measures zero, and scaling to
-       zero is how a board comes back one pixel wide. Keep the last good fit
-       and look again in a moment — this is the bug that bit Solitaire. */
     if (w < 40 || h < 40) { fitTries++; fitLater(160); return; }
     fitTries = 0;
     const sc = Math.min(1, w / BW, h / BH);
-    /* centre the shrunken board in whatever is left over */
     const dx = Math.max(0, (w - BW * sc) / 2), dy = Math.max(0, (h - BH * sc) / 2);
     host.style.transformOrigin = "0 0";
     host.style.transform = "translate(" + dx.toFixed(2) + "px," + dy.toFixed(2) +
       "px) scale(" + sc.toFixed(4) + ")";
-    /* Shrinking a box with a transform does not shrink what its parent thinks
-       it has to scroll — the browser keeps the untransformed 700x500 and the
-       felt can still be dragged sideways off the screen. Negative end margins
-       pull the layout footprint down to the size the board actually paints at,
-       which is what finally stops the pan. Left margin is pinned because the
-       stylesheet centres the board with auto margins, and an auto margin would
-       fight the translate for the same slack. */
     host.style.marginLeft = "0";
     host.style.marginRight = Math.min(0, Math.round(w - BW)) + "px";
     host.style.marginBottom = Math.min(0, Math.round(h - BH)) + "px";
     const moved = Math.abs(sc - fitScale) > .002;
     fitScale = sc;
-    /* the scoreboard's wording depends on the scale, so a new scale wants a
-       new paint; the flag keeps render()'s own fit() from bouncing back */
     if (moved && !refitting) {
       refitting = true;
       try { render(); } finally { refitting = false; }
@@ -175,10 +134,6 @@ export function initHearts(deps) {
     }
     dress();
   }
-  /* The felt shrinks and 11px type would land at six. Type does not survive
-     that, so the words and the one button you have to hit are drawn oversized
-     in board pixels and the scale brings them back to a readable size on
-     glass. Cards are pictures, and pictures survive. */
   function px(n) { return Math.round(n / (fitScale || 1)) + "px"; }
   function dress() {
     const big = fitScale < .98;
@@ -190,18 +145,14 @@ export function initHearts(deps) {
       m.style.left = big ? px(8) : "";
       m.style.right = big ? px(8) : "";
     }
-    /* the Pass button leaves the bottom-right corner, where at this size it
-       would be a 42x13 target sitting under the last three cards, and stands
-       in the empty middle of the table just above your hand */
     const b = host.querySelector(".ht-pass");
     if (b) {
-      const pw = Math.min(BW - 40, 150 / (fitScale || 1));   /* 150 real pixels of thumb */
+      const pw = Math.min(BW - 40, 150 / (fitScale || 1));
       b.style.fontSize = big ? px(13) : "";
       b.style.minWidth = big ? Math.round(pw) + "px" : "";
       b.style.height = big ? px(32) : "";
       b.style.padding = big ? "0" : "";
       b.style.right = big ? "auto" : "";
-      /* clear of the hand, and of the 16px lift a chosen card takes */
       b.style.bottom = big ? (BH - HANDY + 26) + "px" : "";
       b.style.left = big ? Math.round((BW - pw) / 2) + "px" : "";
     }
@@ -217,9 +168,6 @@ export function initHearts(deps) {
         t.style.height = big ? px(26) : "";
       }
     }
-    /* the score box cannot get wider — north's cards start at 182 — and it
-       cannot get taller either, west's start at 92. So the type grows and the
-       lines tighten to keep the five rows inside the corner it has. */
     const t = host.querySelector(".ht-score table");
     if (t) {
       t.style.fontSize = big ? px(10) : "";
@@ -227,7 +175,6 @@ export function initHearts(deps) {
     }
   }
 
-  /* ---- rendering ---- */
   function faceEl(cls, c, x, y) {
     const d = document.createElement("div");
     d.className = cls;
@@ -254,8 +201,6 @@ export function initHearts(deps) {
   function scoreboard() {
     const d = document.createElement("div");
     d.className = "ht-score";
-    /* the corner is 166px wide whatever the screen is; at phone type sizes
-       "Hand" and "Total" no longer fit over their own columns */
     const wide = fitScale > .98;
     let h = '<table><tr><th></th><th>' + (wide ? "Hand" : "Pts") +
       "</th><th>" + (wide ? "Total" : "Tot") + "</th></tr>";
@@ -275,7 +220,6 @@ export function initHearts(deps) {
     host.innerHTML = "";
     host.appendChild(scoreboard());
 
-    /* the three computer players show backs; the count is the information */
     const n2 = seats[2].length;
     for (let i = 0; i < n2; i++) host.appendChild(faceEl("ht-card down", null, NORTHX + i * NORTHDX, 8));
     for (const [seat, x] of [[1, 8], [3, EASTX]]) {
@@ -286,7 +230,6 @@ export function initHearts(deps) {
     host.appendChild(label("ht-name", names[2], NORTHX, 106, 200));
     host.appendChild(label("ht-name ht-r", names[3], BW - 8 - 110, 348, 110));
 
-    /* the trick, and whatever is still in flight towards it */
     let flyEl = null;
     for (const p of trick) {
       const d = faceEl("ht-card up ht-trick", p.card, DROP[p.seat].x, DROP[p.seat].y);
@@ -294,9 +237,6 @@ export function initHearts(deps) {
       host.appendChild(d);
     }
 
-    /* your hand. When it is your move the legal cards are lit and the rest go
-       flat: Hearts refuses most of your hand most of the time, and a player
-       who does not know the rules cannot tell "illegal" from "broken". */
     const hand = seats[0];
     const startX = Math.round((BW - handSpan(hand.length)) / 2);
     const myMove = phase === "play" && turn === 0 && trick.length < 4;
@@ -318,7 +258,6 @@ export function initHearts(deps) {
     m.textContent = msg;
     host.appendChild(m);
 
-    /* the Pass button only exists once three cards are up */
     if (phase === "pass" && sel.length === 3) {
       const b = document.createElement("button");
       b.className = "ht-pass";
@@ -332,8 +271,6 @@ export function initHearts(deps) {
       el.style.left = Math.round(dest.fx) + "px";
       el.style.top = Math.round(dest.fy) + "px";
       flying = null;
-      /* two frames: the start position has to be painted before the move,
-         or the browser folds both into one and there is no slide at all */
       requestAnimationFrame(() => requestAnimationFrame(() => {
         el.style.transition = "left " + SLIDE + "ms linear,top " + SLIDE + "ms linear";
         el.style.left = Math.round(DROP[dest.seat].x) + "px";
@@ -341,28 +278,23 @@ export function initHearts(deps) {
       }));
     }
     if (keep) host.appendChild(keep);
-    fit();     /* every paint lands on a board that is the size of the sheet */
+    fit();
   }
 
-  /* ---- the rules ---- */
-  /* Every legal-play question in Hearts answers here, for people and
-     computers alike, so the two can never drift apart. */
   function legalCards(i) {
     const h = seats[i];
     if (!trick.length) {
-      /* the two of clubs opens the hand, always */
       if (firstTrick) return h.filter(c => c.s === "c" && c.r === 2);
       if (!broken) {
         const non = h.filter(c => c.s !== "h");
-        if (non.length) return non;      /* hearts wait until they are broken */
+        if (non.length) return non;
       }
-      return h.slice();                  /* a hand of nothing but hearts may lead one */
+      return h.slice();
     }
     const led = trick[0].card.s;
     const follow = suited(h, led);
     if (follow.length) return follow;
     if (firstTrick) {
-      /* no blood on the first trick: no heart, no queen, unless that is all there is */
       const safe = h.filter(c => !pts(c));
       if (safe.length) return safe;
     }
@@ -384,36 +316,26 @@ export function initHearts(deps) {
     return trick.reduce((b, p) => (p.card.s === led && p.card.r > b ? p.card.r : b), 0);
   }
 
-  /* ---- the computer players ----
-     Ordered heuristics, nothing cleverer. They follow suit, they duck a
-     dangerous trick, they hand the queen to whoever is already winning, and
-     they will shorten a suit while passing. They do not count the room and
-     they never try to shoot. */
-
   function botPass(i) {
     const h = seats[i].slice();
     const cnt = s => suited(h, s).length;
     const want = c => {
       if (c.s === "s") {
-        /* the queen leaves unless there are low spades to hide her behind */
         if (c.r === 12) return cnt("s") <= 3 ? 200 : 120;
-        if (c.r > 12) return cnt("s") <= 3 ? 150 : 90;   /* an unguarded ace or king eats her */
-        return c.r - 8;                                   /* low spades are the guards; keep them */
+        if (c.r > 12) return cnt("s") <= 3 ? 150 : 90;
+        return c.r - 8;
       }
-      if (c.s === "h") return c.r >= 12 ? c.r + 30 : c.r - 6;  /* keep the small hearts to duck with */
-      /* a suit of two or fewer is worth emptying — being void is a discard */
+      if (c.s === "h") return c.r >= 12 ? c.r + 30 : c.r - 6;
       return c.r + (cnt(c.s) <= 2 ? 24 : 0);
     };
     return h.sort((a, b) => want(b) - want(a)).slice(0, 3);
   }
 
-  /* if one seat has every point taken so far, the rest of the table stops
-     ducking and starts spending aces — a moon costs everybody else 26 */
   function moonThreat(i) {
     let who = -1;
     for (let k = 0; k < 4; k++) {
       if (!handPts(k)) continue;
-      if (who >= 0) return -1;        /* the points are split; nobody is running */
+      if (who >= 0) return -1;
       who = k;
     }
     if (who < 0 || who === i || handPts(who) < 6) return -1;
@@ -425,7 +347,6 @@ export function initHearts(deps) {
     if (opts.length === 1) return opts[0];
     const hand = seats[i];
     const qMine = opts.filter(isQ)[0];
-    /* the queen is "live" while she is out there and not in our own hand */
     const qLive = !qGone && !hand.filter(isQ).length;
 
     if (!trick.length) return pickLead(i, opts, qLive);
@@ -437,43 +358,37 @@ export function initHearts(deps) {
     let pool = follow;
     if (led === "s") {
       const topS = trickTop();
-      /* she lands on the ace or the king the moment one shows up */
       if (qMine && topS > 12) return qMine;
-      /* and she is never volunteered into a trick she would win herself */
       if (qMine && pool.length > 1) pool = pool.filter(c => !isQ(c));
       if (qLive) {
-        const under = pool.filter(c => c.r < 12);   /* stay below her */
+        const under = pool.filter(c => c.r < 12);
         if (under.length) pool = under;
       }
     }
     const top = trickTop();
     const losers = pool.filter(c => c.r < top);
     const winners = pool.filter(c => c.r > top);
-    if (!losers.length) return low(pool);            /* cannot avoid winning: win as cheaply as possible */
-    if (!winners.length) return high(losers);        /* cannot win at all: throw the biggest */
-    if (moonThreat(i) >= 0) return low(winners);     /* break the moon up while it is still cheap */
-    /* a clean trick with nobody left to speak is a free lead — take it early,
-       but late in the hand the lead is a liability, so duck instead */
+    if (!losers.length) return low(pool);
+    if (!winners.length) return high(losers);
+    if (moonThreat(i) >= 0) return low(winners);
     if (!trickPts() && trick.length === 3 && hand.length > 5) return low(winners);
-    return high(losers);                             /* otherwise duck as high as is safe */
+    return high(losers);
   }
 
   function pickLead(i, opts, qLive) {
     const hand = seats[i];
     const spades = opts.filter(c => c.s === "s");
     const bigS = hand.filter(c => c.s === "s" && c.r >= 12).length;
-    /* hunt the queen: lead spades from under her and let her be squeezed out */
     if (qLive) {
       const under = spades.filter(c => c.r < 12);
       if (under.length) return low(under);
     }
-    /* short suits first: leading them is a step towards being void */
     const suits = ["c", "d", "s", "h"].filter(s => opts.filter(c => c.s === s).length);
     const rank = s => {
       const n = opts.filter(c => c.s === s).length;
       let v = n * 2;
-      if (s === "h") v += 20;                 /* never lead hearts by choice */
-      if (s === "s" && bigS) v += 14;         /* nor spades while holding her court */
+      if (s === "h") v += 20;
+      if (s === "s" && bigS) v += 14;
       return v;
     };
     suits.sort((a, b) => rank(a) - rank(b));
@@ -482,21 +397,19 @@ export function initHearts(deps) {
 
   function pickDiscard(i, opts, qLive) {
     const q = opts.filter(isQ)[0];
-    if (q) return q;                                     /* to whoever is taking this one */
+    if (q) return q;
     const court = opts.filter(c => c.s === "s" && c.r > 12);
-    if (qLive && court.length) return high(court);       /* shed her future victims */
+    if (qLive && court.length) return high(court);
     const hs = opts.filter(c => c.s === "h");
-    if (hs.length) return high(hs);                      /* bleed the biggest heart */
-    /* otherwise the biggest card of the longest suit — the one we can spare */
+    if (hs.length) return high(hs);
     const suits = ["c", "d", "s", "h"].filter(s => opts.filter(c => c.s === s).length);
     suits.sort((a, b) => opts.filter(c => c.s === b).length - opts.filter(c => c.s === a).length);
     return high(opts.filter(c => c.s === suits[0]));
   }
 
-  /* ---- the passing phase ---- */
   function startPass() {
     const dir = PASS[handNo % 4];
-    if (!dir) return startPlay();          /* the fourth hand is a hold */
+    if (!dir) return startPlay();
     phase = "pass";
     sel = []; got = [];
     msg = "Select three cards to pass " + PASSTXT[handNo % 4] + ".";
@@ -505,16 +418,14 @@ export function initHearts(deps) {
   function doPass() {
     const dir = PASS[handNo % 4];
     const out = [sel.slice(), botPass(1), botPass(2), botPass(3)];
-    /* everyone gives before anyone receives, or the cards would pass twice */
     for (let i = 0; i < 4; i++) for (const c of out[i]) seats[i].splice(seats[i].indexOf(c), 1);
     for (let i = 0; i < 4; i++) seats[(i + dir) % 4].push(...out[i]);
     for (const h of seats) sortHand(h);
-    got = out[(4 - dir) % 4].slice();      /* what came back to you, briefly outlined */
+    got = out[(4 - dir) % 4].slice();
     sel = [];
     startPlay();
   }
 
-  /* ---- the play ---- */
   function startPlay() {
     phase = "play";
     trick = [];
@@ -565,11 +476,9 @@ export function initHearts(deps) {
     advance();
   }
 
-  /* ---- the arithmetic ---- */
   function endHand() {
     const hp = [0, 1, 2, 3].map(handPts);
     const moon = hp.indexOf(26);
-    /* all twenty-six: everybody else takes them instead */
     if (moon >= 0) for (let i = 0; i < 4; i++) hp[i] = i === moon ? 0 : 26;
     for (let i = 0; i < 4; i++) total[i] += hp[i];
     handNo++;
@@ -591,8 +500,6 @@ export function initHearts(deps) {
       "\n\nDo you want to play again?", () => newGame());
   }
 
-  /* the between-hands score box. It lives on the felt because the shell's
-     message box has no OK callback to hang the next deal off. */
   function boardDialog(head, hp, done) {
     modal = true;
     msg = "";
@@ -615,10 +522,9 @@ export function initHearts(deps) {
       startPass();
     });
     host.appendChild(d);
-    dress();   /* it arrives after the paint, so it asks for its own type size */
+    dress();
   }
 
-  /* ---- input ---- */
   host.addEventListener("click", e => {
     if (modal || phase === "over") return;
     if (e.target.closest("[data-pass]")) { doPass(); return; }
@@ -646,10 +552,6 @@ export function initHearts(deps) {
     e.preventDefault();
     newGame();
   });
-  /* A rotation is a resize, and a phone fires several of them while the bars
-     slide about, so the fit is repeated a beat later as well. The old handler
-     is dropped before a new one goes on: turning the phone over and over must
-     not leave a pile of listeners behind (Solitaire's rule). */
   const onFit = () => { fitTries = 0; fit(); fitLater(260); };
   if (initHearts._fit) {
     removeEventListener("resize", initHearts._fit);
@@ -659,7 +561,6 @@ export function initHearts(deps) {
   addEventListener("resize", onFit);
   addEventListener("orientationchange", onFit);
 
-  /* ---- games ---- */
   function newGame() {
     cancelAll();
     paused = false;
@@ -668,7 +569,7 @@ export function initHearts(deps) {
     try {
       const b = deps.botNames && deps.botNames();
       if (b && b.length === 3) bots = b.map(x => String(x).slice(0, 14));
-    } catch (err) { /* the shell has no names for us; the classics will do */ }
+    } catch (err) {}
     let me = "You";
     try { if (deps.playerName) me = String(deps.playerName()).slice(0, 14) || "You"; } catch (err) {}
     names = [me, bots[0], bots[1], bots[2]];
@@ -678,12 +579,8 @@ export function initHearts(deps) {
     deal();
     startPass();
   }
-  /* a shut window plays no cards; the hand is exactly where it was on reopen */
   function pause() { cancelAll(); paused = true; }
   function resume() {
-    /* re-opening or restoring the window is the other moment the board can
-       find itself the wrong size: it was measured while it was hidden, or the
-       phone was turned over while it was shut */
     fitTries = 0;
     fit();
     fitLater(300);
@@ -693,7 +590,6 @@ export function initHearts(deps) {
     advance();
   }
 
-  /* ---- menus ---- */
   function menus(label2) {
     if (label2 === "Game") return [
       { label: "New Game", accel: "F2", action: newGame },

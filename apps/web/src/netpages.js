@@ -1,21 +1,9 @@
-/* The three things that used to live inside Internet Explorer, as ordinary
-   windows: the hall of fame, the guestbook and the gallery.
-
-   They were web pages because the browser was there, not because they needed
-   one — the data has always arrived over the game's own socket. Taking the
-   browser out took the address bar, the fake DNS, the dial-up modem and the
-   YouTube embed with it; these three carried real player content, so they got
-   a window each instead.
-
-   Import-free like the other app modules; main.js injects the shell. */
-
 export function initNetPages(deps) {
   const { $, store, sysSnd, openWin, closeWin, showError, hooks } = deps;
 
   const esc = s => String(s == null ? "" : s)
     .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
-  /* ---------------------------- hall of fame ---------------------------- */
   function renderHall() {
     const h = hooks.hall();
     const rows = h.top.length ? h.top.map((t, i) => `<tr${t.mine ? ' class="me"' : ""}>
@@ -31,7 +19,6 @@ export function initNetPages(deps) {
       + ` &#183; dead <b>${h.dead}</b> &#183; your best bank <b>${esc(h.bigBank)}</b>`;
   }
 
-  /* ------------------------------ guestbook ----------------------------- */
   function renderGuest() {
     const g = hooks.netGuests();
     const box = $("#guest-body");
@@ -51,7 +38,6 @@ export function initNetPages(deps) {
     sysSnd("nav", .4);
   }
 
-  /* ------------------------------- gallery ------------------------------ */
   function renderGallery() {
     const list = hooks.netGallery();
     const box = $("#gal-body");
@@ -60,8 +46,6 @@ export function initNetPages(deps) {
       $("#gal-count").textContent = "offline";
       return;
     }
-    /* older entries were published with the author already baked into the name,
-       which read as "untitled by a by a" once this line added it again */
     const clean = g => {
       const n = String(g.name || "").trim(), suf = " by " + g.by;
       return (n.toLowerCase().endsWith(suf.toLowerCase()) ? n.slice(0, -suf.length).trim() : n) || "untitled";
@@ -73,17 +57,10 @@ export function initNetPages(deps) {
     $("#gal-count").textContent = `${list.length} ${list.length === 1 ? "work" : "works"}`;
   }
 
-  /* --------------------------------------------------------------------- */
-  /* The hall is live data, so it repaints while it is on screen; the other
-     two only change when the server says so. */
   let hallTimer = 0;
   const WIN = { hall: "win-fame", guest: "win-guest", gallery: "win-gallery" };
   const isOpen = id => hooks.isOpen(id);
 
-  /* prepare() fills the window; open() puts it on screen. They are separate
-     because main.js routes openWin() for these three ids through prepare —
-     if the router called open(), open() would call openWin() and the two
-     would bounce until the stack ran out. */
   function prepare(id) {
     if (id === WIN.hall) {
       renderHall();
@@ -107,7 +84,6 @@ export function initNetPages(deps) {
       $(`#${id} .np-refresh`).addEventListener("click", () => { sysSnd("nav", .4); fn(); });
   }
 
-  /* the socket pushes new entries; repaint only what is actually on screen */
   return { init, open, prepare, refresh: which => {
     if (which === "guest" && isOpen("win-guest")) renderGuest();
     if (which === "gallery" && isOpen("win-gallery")) renderGallery();

@@ -1,12 +1,3 @@
-/* Paint — the real MS Paint: the 16-tool box, the 28-colour palette, and a
-   rasteriser that draws ALIASED shapes the way 2001 did (canvas paths would
-   antialias them and the whole thing would stop looking like Paint).
-   Tool sprites: jspaint (Isaiah Odhner, MIT).
-   No asset imports here on purpose: the build's smoke runner executes this
-   file in node, so it must stay pure JS. main.js injects sprites + hooks. */
-
-/* toolbox order IS the sprite-sheet order, which IS the real Paint layout
-   (2 columns, read left-to-right) */
 export const TOOLS = [
   { id: "freeselect", name: "Free-Form Select", hint: "Selects a free-form part of the picture to move, copy or edit." },
   { id: "select",     name: "Select",           hint: "Selects a rectangular part of the picture to move, copy or edit." },
@@ -26,7 +17,6 @@ export const TOOLS = [
   { id: "roundrect",  name: "Rounded Rectangle",hint: "Draws a rounded rectangle with the selected fill style." },
 ];
 
-/* the default MS Paint palette, in its real order */
 export const PALETTE = [
   "#000000","#808080","#800000","#808000","#008000","#008080","#000080",
   "#800080","#808040","#004040","#0080FF","#004080","#8000FF","#804000",
@@ -37,7 +27,6 @@ export const PALETTE = [
 const LINE_WIDTHS = [1, 2, 3, 4, 5];
 const ERASER_SIZES = [4, 6, 8, 10];
 const AIR_SIZES = [3, 6, 11];
-/* 12 brush shapes: 3 round, 3 square, 3 back-diagonal, 3 forward-diagonal */
 const BRUSHES = [
   { k: "round", s: 7 }, { k: "round", s: 5 }, { k: "round", s: 3 },
   { k: "square", s: 8 }, { k: "square", s: 5 }, { k: "square", s: 2 },
@@ -55,22 +44,16 @@ export function initPaint(deps) {
   const ctx = cv.getContext("2d", { willReadFrequently: true });
   const octx = ov.getContext("2d");
 
-  let tool = 6;                       /* pencil, like a fresh install */
+  let tool = 6;
   let fg = "#000000", bg = "#FFFFFF";
-  /* A phone has no right mouse button, and that button is half of Paint: the
-     eraser's ink, the shapes' second fill, the colour picker's other slot.
-     On a phone the palette grows a two-state selector instead — the live slot
-     is what a stroke draws with and what a swatch tap sets. */
   const MOB = !!(deps.isMobile ||
     (document.body && document.body.classList && document.body.classList.contains("mobile")));
   let slot = "fg";
   let zoom = 1;
   let cw = 0, ch = 0;
-  /* fill 0 = outline only, which is what a fresh Paint gives you */
   const opt = { line: 2, eraser: 0, brush: 2, air: 1, fill: 0, transparent: false, zoomLevel: 1 };
   let custom = (store.data.paintCustom || []).slice(0, 14);
 
-  /* ---------- raster helpers: everything is aliased, on purpose ---------- */
   let paintCtx = ctx, paintColor = "#000000";
   function use(c, colour) { paintCtx = c; paintColor = colour; c.fillStyle = colour; }
   function px(x, y) { paintCtx.fillRect(x | 0, y | 0, 1, 1); }
@@ -83,7 +66,6 @@ export function initPaint(deps) {
     const a = Math.min(x0, x1) | 0, b = Math.max(x0, x1) | 0;
     paintCtx.fillRect(a, y | 0, b - a + 1, 1);
   }
-  /* Bresenham: the only line algorithm that leaves no gaps and no grey */
   function line(x0, y0, x1, y1, w, put) {
     x0 |= 0; y0 |= 0; x1 |= 0; y1 |= 0;
     const dx = Math.abs(x1 - x0), dy = -Math.abs(y1 - y0);
@@ -105,7 +87,6 @@ export function initPaint(deps) {
     const a = Math.min(x0, x1) | 0, b = Math.min(y0, y1) | 0;
     paintCtx.fillRect(a, b, Math.abs(x1 - x0) + 1, Math.abs(y1 - y0) + 1);
   }
-  /* midpoint ellipse, walked by quadrant so the outline closes exactly */
   function ellipsePts(x0, y0, x1, y1, cb) {
     const rx = Math.abs(x1 - x0) / 2, ry = Math.abs(y1 - y0) / 2;
     const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
@@ -177,7 +158,6 @@ export function initPaint(deps) {
     else for (let i2 = 0; i2 < s; i2++) paintCtx.fillRect(x + s - 1 - i2, y + i2, 1, 1);
   }
 
-  /* ---------- the image ---------- */
   function resize(w, h, keep) {
     w = Math.max(1, Math.min(2000, w | 0)); h = Math.max(1, Math.min(2000, h | 0));
     const old = keep && cw && ch ? ctx.getImageData(0, 0, cw, ch) : null;
@@ -198,15 +178,12 @@ export function initPaint(deps) {
   }
   function clearOverlay() { octx.clearRect(0, 0, cw, ch); }
 
-  /* ---------- undo: three levels, exactly like the real thing ---------- */
   let undos = [], redos = [];
   function snapshot() {
     try { undos.push({ img: ctx.getImageData(0, 0, cw, ch), w: cw, h: ch }); } catch (e) { return; }
     if (undos.length > 3) undos.shift();
     redos = [];
   }
-  /* a transform can change the canvas size; restoring pixels without
-     restoring dimensions clips the picture */
   function unstack(from, to) {
     if (!from.length) return;
     cancelPending();
@@ -219,18 +196,7 @@ export function initPaint(deps) {
   function undo() { unstack(undos, redos); }
   function redo() { unstack(redos, undos); }
 
-  /* ---------- persistence: your art survives a reboot ---------- */
-  /* Serialising the canvas to a PNG data URL and pushing it into the shell's
-     one settings blob is expensive: on a phone it is a main-thread stall and
-     a few hundred KB of localStorage, and it used to run 1.2s after every
-     single stroke. It now runs at most once every 20s while you draw, and
-     once more when you leave — and when the write does not fit, you are told,
-     because a picture that is quietly not being saved is worse than a slow
-     save. */
   const SAVE_MS = 20000;
-  /* store.flush() swallows QuotaExceededError; flushOrThrow() is the same
-     write with the error left in, which is the only way to learn the picture
-     did not fit. Falls back to flush() if the shell is older than this. */
   const writeStore = () => (store.flushOrThrow ? store.flushOrThrow() : store.flush());
   let saveT = null, unsaved = false, lastSave = Date.now(), toldFull = false;
   function dirty() {
@@ -251,8 +217,6 @@ export function initPaint(deps) {
       unsaved = false;
       if (toldFull) { toldFull = false; sayFull(false); }
     } catch (e) {
-      /* the picture comes back out so the rest of the desktop still saves —
-         one oversized canvas must not cost you your wallpaper and your files */
       store.data.paintImage = prev;
       store.save();
       sayFull(true);
@@ -263,12 +227,9 @@ export function initPaint(deps) {
     }
   }
   function flushSave() { clearTimeout(saveT); saveT = null; persist(); }
-  /* a phone kills a background tab without asking; these are the last honest
-     moments to write, and the shell's own pagehide flush runs before ours */
   addEventListener("pagehide", flushSave);
   addEventListener("blur", flushSave);
   document.addEventListener("visibilitychange", () => { if (document.hidden) flushSave(); });
-  /* the status bar carries the truth for as long as it is true */
   let fullChip = null;
   function sayFull(on) {
     if (!els.status) return;
@@ -282,7 +243,6 @@ export function initPaint(deps) {
     fullChip.style.display = on ? "" : "none";
   }
 
-  /* ---------- flood fill (exact match, no tolerance — Paint had none) ---------- */
   function floodFill(sx, sy, hex) {
     sx |= 0; sy |= 0;
     if (sx < 0 || sy < 0 || sx >= cw || sy >= ch) return;
@@ -323,7 +283,6 @@ export function initPaint(deps) {
     return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
   }
 
-  /* ---------- pointer plumbing ---------- */
   let drawing = false, btn = 0, last = null, start = null, airTimer = null;
   let poly = null, curve = null, sel = null, textBox = null;
 
@@ -331,8 +290,6 @@ export function initPaint(deps) {
     const r = cv.getBoundingClientRect();
     return { x: Math.floor((e.clientX - r.left) / zoom), y: Math.floor((e.clientY - r.top) / zoom) };
   }
-  /* the selector swaps the two colours wholesale, so the right button keeps
-     meaning "the other one" on a desktop with the selector on Back */
   const flipped = b => (b === 2) !== (slot === "bg");
   const inkFor = b => (flipped(b) ? bg : fg);
   const antiFor = b => (flipped(b) ? fg : bg);
@@ -358,7 +315,6 @@ export function initPaint(deps) {
     if (t === "pencil" || t === "brush" || t === "eraser" || t === "airbrush") {
       snapshot();
       strokeTo(p, p, ink);
-      /* the airbrush keeps spraying while you hold it still — that is the tool */
       if (t === "airbrush") {
         clearInterval(airTimer);
         airTimer = setInterval(() => { use(ctx, inkFor(btn)); spray(last.x, last.y); }, 60);
@@ -383,7 +339,7 @@ export function initPaint(deps) {
       strokeTo(last, p, ink); last = p;
     } else if (t === "select" || t === "freeselect") {
       if (sel && sel.moving) { moveSel(p); return; }
-      if (!sel) return;   /* Escape/Delete killed it mid-drag */
+      if (!sel) return;
       sel.x1 = p.x; sel.y1 = p.y;
       if (sel.free) sel.path.push(p);
       drawSelOverlay();
@@ -415,9 +371,6 @@ export function initPaint(deps) {
   }
   function strokeTo(a, b, ink) {
     const t = TOOLS[tool].id;
-    /* the eraser reads the real button, not the selector: "erase" means erase
-       to the background, and a phone switched to Back wanting black strokes
-       out of the rubber is nobody's idea of a fix */
     if (t === "eraser") { use(ctx, btn === 2 ? fg : bg); line(a.x, a.y, b.x, b.y, ERASER_SIZES[opt.eraser]); }
     else if (t === "pencil") { use(ctx, ink); line(a.x, a.y, b.x, b.y, 1); }
     else if (t === "brush") { use(ctx, ink); line(a.x, a.y, b.x, b.y, 0, (x, y) => brushStamp(x, y, opt.brush)); }
@@ -432,7 +385,7 @@ export function initPaint(deps) {
   }
   function shape(t, a, b, ink, anti) {
     const w = LINE_WIDTHS[opt.line];
-    const style = opt.fill;                        /* 0 outline · 1 outline+bg fill · 2 solid */
+    const style = opt.fill;
     const doFill = (fn) => { if (style === 1) { use(paintCtx, anti); fn(); } else if (style === 2) { use(paintCtx, ink); fn(); } };
     if (t === "line") { use(paintCtx, ink); line(a.x, a.y, b.x, b.y, w); return; }
     if (t === "rect") { doFill(() => rectFill(a.x, a.y, b.x, b.y)); if (style !== 2) { use(paintCtx, ink); rectOutline(a.x, a.y, b.x, b.y, w); } return; }
@@ -440,7 +393,6 @@ export function initPaint(deps) {
     if (t === "roundrect") { doFill(() => roundRectPath(a.x, a.y, b.x, b.y, w, true)); if (style !== 2) { use(paintCtx, ink); roundRectPath(a.x, a.y, b.x, b.y, w, false); } return; }
   }
 
-  /* ---------- polygon: click a vertex at a time, double-click to close ---------- */
   function polyClick(p, ink, anti) {
     if (!poly) { snapshot(); poly = { pts: [p], ink, anti }; return; }
     const first = poly.pts[0];
@@ -469,7 +421,6 @@ export function initPaint(deps) {
     poly = null; dirty();
   }
 
-  /* ---------- curve: drag the line, then bend it twice ---------- */
   function curveClick(p, ink) {
     if (!curve) { snapshot(); curve = { a: p, b: p, c1: null, c2: null, ink, dragging: true }; drawing = true; last = p; start = p; return; }
     if (!curve.c1) { curve.c1 = p; }
@@ -504,7 +455,6 @@ export function initPaint(deps) {
     curve = null; dirty();
   }
 
-  /* ---------- selection ---------- */
   function selRect() {
     return {
       x: Math.min(sel.x0, sel.x1), y: Math.min(sel.y0, sel.y1),
@@ -526,7 +476,6 @@ export function initPaint(deps) {
     octx.restore();
     syncStatus();
   }
-  /* lift the pixels out so they can be dragged; the hole fills with background */
   function liftSel() {
     const r = selRect();
     if (r.w < 2 || r.h < 2) { sel = null; clearOverlay(); return; }
@@ -535,7 +484,6 @@ export function initPaint(deps) {
     if (opt.transparent) maskBg();
     drawSelOverlay();
   }
-  /* free-form: knock every pixel outside the lasso out of the lifted patch */
   function maskFree(r) {
     const tmp = document.createElement("canvas");
     tmp.width = r.w; tmp.height = r.h;
@@ -546,8 +494,6 @@ export function initPaint(deps) {
     const mask = tc.getImageData(0, 0, r.w, r.h).data, d = sel.img.data;
     for (let i = 0; i < d.length; i += 4) if (mask[i + 3] < 128) d[i + 3] = 0;
   }
-  /* transparent selection: the background colour stops being part of the picture,
-     which is the whole point of the option box's second button */
   function maskBg() {
     const [r, g, b] = hexRGB(bg), d = sel.img.data;
     for (let i = 0; i < d.length; i += 4)
@@ -586,7 +532,6 @@ export function initPaint(deps) {
     octx.strokeRect(r.x + .5, r.y + .5, r.w - 1, r.h - 1);
     octx.restore();
   }
-  /* stamp a floating selection back down and forget it */
   function dropSel() {
     if (sel && sel.floatImg) {
       const r = selRect();
@@ -622,7 +567,6 @@ export function initPaint(deps) {
     renderFloating();
   }
 
-  /* ---------- Paste From / Copy To: the file half of the clipboard ---------- */
   function pasteFrom() {
     const inp = document.createElement("input");
     inp.type = "file"; inp.accept = "image/*";
@@ -663,7 +607,6 @@ export function initPaint(deps) {
     } catch (e) {}
   }
 
-  /* ---------- text, with the real Fonts toolbar ---------- */
   const FONTLIST = ["Arial", "Arial Black", "Comic Sans MS", "Courier New", "Georgia", "Impact",
     "Lucida Console", "Tahoma", "Times New Roman", "Trebuchet MS", "Verdana"];
   let fontBar = null;
@@ -756,7 +699,6 @@ export function initPaint(deps) {
   }
   function cancelPending() { commitText(); closePoly(); commitCurve(); dropSel(); }
 
-  /* ---------- toolbox / options / colours ---------- */
   function setTool(i) {
     if (TOOLS[i].id !== "text") { commitText(); hideFontBar(); }
     if (i !== tool) { closePoly(); commitCurve(); }
@@ -772,8 +714,6 @@ export function initPaint(deps) {
       b.className = "pt-tool" + (i === tool ? " on" : "");
       b.title = t.name;
       b.dataset.tip = t.name;
-      /* the glyph is its own 16px box: a 25px-wide button showing a slice of a
-         256px strip would leak the neighbouring tool into view */
       const g = document.createElement("i");
       g.style.backgroundPosition = `${-i * 16}px 0`;
       b.appendChild(g);
@@ -781,8 +721,6 @@ export function initPaint(deps) {
       host.appendChild(b);
     });
   }
-  /* the options box under the toolbox: every glyph here is a real primitive,
-     drawn at the size it represents, which is exactly what Paint showed */
   function renderOpts() {
     const host = els.opts;
     host.innerHTML = "";
@@ -861,8 +799,6 @@ export function initPaint(deps) {
       });
     }
   }
-  /* the touch route to the background colour: two buttons in Paint's own
-     palette strip, drawn with the toolbox's sunken-selected idiom */
   function slotPicker() {
     const wrap = document.createElement("div");
     wrap.style.cssText = "flex:none;display:flex;gap:3px";
@@ -880,8 +816,6 @@ export function initPaint(deps) {
       const t = document.createElement("span");
       t.textContent = label;
       b.appendChild(chip); b.appendChild(t);
-      /* tapping the live slot again mixes a colour, the way clicking the
-         overlapping swatches does on a desktop */
       b.addEventListener("click", () => { if (slot === k) editColors(); else { slot = k; renderColors(); } });
       wrap.appendChild(b);
     };
@@ -915,16 +849,13 @@ export function initPaint(deps) {
       s.addEventListener("dblclick", editColors);
       grid.appendChild(s);
     };
-    /* the grid flows down-then-across, so the palette has to be interleaved:
-       PALETTE is written row-major (14 dark, then 14 light) but each column is
-       a dark/light pair, exactly as Paint shows it */
     const half = PALETTE.length / 2;
     for (let c = 0; c < half; c++) { add(PALETTE[c]); add(PALETTE[c + half]); }
     for (let c = 0; c < custom.length; c += 2) { add(custom[c]); add(custom[c + 1] || "#FFFFFF"); }
     host.appendChild(grid);
   }
   function editColors() {
-    const into = slot;                 /* whichever half the palette is on */
+    const into = slot;
     const inp = document.createElement("input");
     inp.type = "color"; inp.value = into === "bg" ? bg : fg;
     inp.style.cssText = "position:fixed;left:-100px;top:0;opacity:0";
@@ -966,7 +897,6 @@ export function initPaint(deps) {
     }
   }
 
-  /* ---------- files & wallpaper: the meme machine ---------- */
   function newImage(silent) {
     cancelPending();
     undos = []; redos = [];
@@ -974,8 +904,6 @@ export function initPaint(deps) {
     clearOverlay();
     if (!silent) dirty();
   }
-  /* silent: the boot restore came straight OUT of the store, so writing it
-     back 20s later is a stall that buys nothing */
   function loadDataURL(url, resizeTo, silent) {
     const img = new Image();
     img.onload = () => {
@@ -1004,9 +932,6 @@ export function initPaint(deps) {
     });
     inp.click();
   }
-  /* Save As writes into My Pictures on the fake disk — where Explorer can find
-     it — and then offers you the real file, because a meme you cannot post is
-     not a meme */
   function saveAs() {
     cancelPending();
     let url;
@@ -1032,7 +957,6 @@ export function initPaint(deps) {
     }
   }
 
-  /* ---------- image menu operations ---------- */
   function transform(kind) {
     cancelPending(); snapshot();
     const tmp = document.createElement("canvas");
@@ -1054,7 +978,6 @@ export function initPaint(deps) {
     ctx.drawImage(tmp, 0, 0);
     syncStatus(); dirty();
   }
-  /* the real four-field dialog: stretch in percent, skew in degrees */
   function stretchSkew(hs, vs, hd, vd) {
     cancelPending(); snapshot();
     hs = Math.max(1, Math.min(500, hs || 100)) / 100;
@@ -1088,7 +1011,6 @@ export function initPaint(deps) {
     dirty();
   }
 
-  /* ---------- menus ---------- */
   function fileMenu(x, y) {
     showMenu([
       { label: "New", action: () => { snapshot(); newImage(); } },
@@ -1151,7 +1073,6 @@ export function initPaint(deps) {
       { label: "Attributes...", action: () => deps.openAttributes(cw, ch) },
       { label: "Clear Image", action: () => { snapshot(); newImage(); } },
       { sep: 1 },
-      /* the same switch as the selection tools' option box, because in Paint it is */
       { label: "Draw Opaque", check: !opt.transparent, action: () => { opt.transparent = !opt.transparent; renderOpts(); } },
     ], x, y);
   }
@@ -1172,12 +1093,6 @@ export function initPaint(deps) {
   }
   const MENUS = { File: fileMenu, Edit: editMenu, View: viewMenu, Image: imageMenu, Colors: colorsMenu, Help: helpMenu };
 
-  /* ---------- wiring ---------- */
-  /* One finger draws. A second one used to call begin() again, overwriting the
-     shared start point mid-stroke — so pinching to zoom slashed a line between
-     the two fingers. And a stroke the browser cancels (a system gesture, a
-     call) never reached end(), which left the airbrush spraying at its last
-     point until you touched something else. */
   let drawPid = null;
   els.box.addEventListener("pointerdown", e => {
     if (e.target.classList && e.target.classList.contains("pt-text")) return;
@@ -1197,7 +1112,6 @@ export function initPaint(deps) {
   els.box.addEventListener("contextmenu", e => { e.preventDefault(); e.stopPropagation(); });
   els.wrap.addEventListener("pointerleave", () => { if (els.st2) els.st2.textContent = ""; });
 
-  /* drop an image straight onto the canvas — the fastest path to a meme */
   const stop = e => { e.preventDefault(); e.stopPropagation(); };
   els.wrap.addEventListener("dragover", stop);
   els.wrap.addEventListener("drop", e => {
@@ -1224,10 +1138,6 @@ export function initPaint(deps) {
   }
   addEventListener("keydown", key);
 
-  /* ---------- boot ---------- */
-  /* the phone gets a canvas the shape of the phone: 384x272 is a landscape
-     sheet of paper on a screen that is not landscape, and it left half the
-     window grey */
   resize(store.data.paintW || (deps.isMobile ? 336 : 384),
          store.data.paintH || (deps.isMobile ? 460 : 272), false);
   renderTools(); renderOpts(); renderColors();
@@ -1243,8 +1153,6 @@ export function initPaint(deps) {
     },
     size: () => ({ w: cw, h: ch }),
     newImage, loadDataURL,
-    /* the shell calls this when the window closes: land the pending shape AND
-       the pending autosave, or the last 20s of drawing dies with the window */
     commit: () => { cancelPending(); flushSave(); },
     flushSave,
     toDataURL: () => cv.toDataURL("image/png"),
