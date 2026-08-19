@@ -220,9 +220,12 @@ function explorer(signature, network) {
  * @param {object} deps.wallet the Wallet from wallet.js -- for its provider
  * @param {(name: string, vol?: number) => void} deps.sysSnd
  */
-export function initBank({ $, wallet, sysSnd = () => {}, onArcadeBalance = () => {} }) {
+export function initBank({ $, wallet, sysSnd = () => {}, onArcadeBalance = () => {}, onSignIn = () => {} }) {
   const panel = $("#lg-bank");
   const note = $("#lg-banknote");
+  /* One sign-in at a time: the button is disabled while it runs, but draw()
+     rebuilds the button, so the guard has to outlive the element. */
+  let signingIn = false;
   const amtEl = $("#lgb-amt");
   const goEl = $("#lgb-go");
   const sayEl = $("#lgb-say");
@@ -930,9 +933,51 @@ export function initBank({ $, wallet, sysSnd = () => {}, onArcadeBalance = () =>
     note.hidden = signedIn;
     document.getElementById("login")?.classList.toggle("hasbank", signedIn);
     if (!signedIn) {
-      put(note, wallet?.address
-        ? "Connected, but not signed in. Press the wallet tile again to sign in and reach your money."
-        : "Connect a wallet above to deposit or withdraw. Guests play in a sandbox where nothing is staked.");
+      /*
+       * A CONNECTED WALLET IS NOT A SIGNED-IN ONE, and this is where that
+       * costs somebody their deposit screen.
+       *
+       * zinc_wallet is domain-wide, so somebody who pressed connect anywhere
+       * in the arcade arrives here already named -- and resume() deliberately
+       * does not sign in, because a signature popup belongs to a gesture
+       * rather than to a page load. So the ordinary way to arrive is
+       * CONNECTED AND SIGNED OUT, with the address showing on the tile above
+       * and the money screen missing.
+       *
+       * This used to be one grey sentence saying "press the wallet tile
+       * again". That sentence is true and nobody read it: it sits under a
+       * panel that has vanished, it asks for a press on a DIFFERENT control,
+       * and nothing about a tile that already shows your address suggests it
+       * has anything left to do. The owner's report is the proof -- the only
+       * route they found was disconnecting and connecting again, which is a
+       * workaround for a button that was never drawn.
+       *
+       * So the panel does not disappear any more; it becomes the one thing
+       * there is to do. Still a PRESS and never automatic, for the reason
+       * above -- what changes is that the press is now in the place the
+       * player is already looking, and says what it buys.
+       */
+      note.replaceChildren();
+      if (wallet?.address) {
+        const line = document.createElement("div");
+        line.className = "lgb-notetxt";
+        line.textContent = "Your wallet is connected. Sign in to reach your money.";
+        const go = document.createElement("button");
+        go.className = "lgb-signin";
+        go.textContent = "Sign in";
+        go.addEventListener("click", () => {
+          if (signingIn) return;
+          signingIn = true;
+          go.disabled = true;
+          go.textContent = "Check your wallet…";
+          Promise.resolve(onSignIn())
+            .catch(() => {})
+            .finally(() => { signingIn = false; draw(); });
+        });
+        note.append(line, go);
+        return;
+      }
+      put(note, "Connect a wallet above to deposit or withdraw. Guests play in a sandbox where nothing is staked.");
       return;
     }
     for (const t of tabs) t.classList.toggle("on", t.dataset.bk === which);

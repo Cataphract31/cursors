@@ -6483,7 +6483,13 @@ const bankPanel=initBank({$,wallet:walletAcct,sysSnd,
      with a `bal` of its own. See bank.js for why the figure is not carried
      across, and the `sync` case in server/server.js for the cooldown that
      makes leaning on this safe. */
-  onArcadeBalance:()=>mpSend({t:"sync"})});
+  onArcadeBalance:()=>mpSend({t:"sync"}),
+  /* THE PANEL'S OWN WAY IN. It draws a Sign in button when there is an address
+     and no session, and this is what that button does -- the same path the
+     tile takes, because two copies of a sign-in is two places for it to
+     drift. Declared below this call and hoisted, like every other function
+     here. */
+  onSignIn:()=>walletSignIn()});
 bankPanel.mount();
 $("#lg-back").addEventListener("click",()=>{ sysSnd("nav",.5); enterDesktop(); });
 /* The tile's click already means "log on", so the way out cannot be a second
@@ -6509,6 +6515,57 @@ function walletLogon(){
   if(PLAYER!==as||GUEST){ PLAYER=as; GUEST=false; mpHello(); }
   logon();
 }
+/* CONNECT AND SIGN IN, for the two controls that both mean it.
+   The wallet tile is one; the Sign in button My Wallet draws when it has an
+   address and no session is the other, and it exists because a player who
+   arrives already connected -- which is everybody who pressed connect anywhere
+   else in the arcade, since zinc_wallet is domain-wide -- was being shown a
+   vanished panel and a sentence pointing at a different control. Two entry
+   points, one path: a second copy of this would be a second place for the
+   sign-in to drift. */
+async function walletSignIn(){
+  $("#w-sub").textContent="check your wallet…";
+  try{
+    await walletAcct.connect();
+    /* connect() signs in as its last act, so the panel's idea of who is here
+       is one step behind until now */
+    bankPanel.sync();
+    /* AND STOP HERE, WHATEVER THE BALANCE SAYS.
+       This used to stop only for an empty account and log everybody else
+       straight in, which meant the one press that opens My Wallet was also the
+       press that took the screen away -- signing in and reaching the money
+       were the same click, and the money lost.
+
+       So a fresh sign-in lands ON the panel. The tile says what the next press
+       does and does it: this is two presses, and the second one is the one
+       that means "I am done with the money, let me in". A player who is
+       already signed in never comes through here, so nobody pays it twice. */
+    const st=await bankPanel.check();
+    if(st.signedIn){
+      bankPanel.show("deposit");
+      /* "ok" is not decoration: restate() leaves a message in that class alone
+         while the amount field is empty, and every other kind is overwritten
+         by the panel's own hint the moment the poll comes back. */
+      bankPanel.tell(st.arcade===0
+        ?"Signed in. There is nothing in the arcade yet — put some SOL in here, or press the tile above to look around first."
+        :"Signed in. Add or take out SOL here, or press the tile above to log on.","ok");
+      syncWalletTile();
+      return;
+    }
+    /* Connected, and the signature did not happen -- declined, or the box would
+       not mint one. Not a logon: dropping them on the desktop is what hid the
+       money in the first place, and the panel is about to redraw its Sign in
+       button, which is the honest next step. */
+    syncWalletTile();
+  }catch(err){
+    const t=$("#tile-wallet");
+    t.classList.remove("shake"); void t.offsetWidth; t.classList.add("shake");
+    $("#w-sub").textContent=err&&err.code==="NO_WALLET"?"no wallet here — install Phantom"
+      :err&&err.code==="CANCELLED"?"cancelled — click to try again"
+      :"that wallet would not connect";
+    sError();
+  }
+}
 $("#tile-wallet").addEventListener("click",async e=>{
   /* THE NAME BOX LIVES INSIDE THIS TILE NOW, so its → button is a press on the
      tile as far as the DOM is concerned. Without this the one control that
@@ -6533,51 +6590,7 @@ $("#tile-wallet").addEventListener("click",async e=>{
      without a popup and then signs in, which is the single dialog this press
      is asking for. */
   if(walletAcct.address&&walletAcct.session){ walletLogon(); return; }
-  $("#w-sub").textContent="check your wallet…";
-  try{
-    await walletAcct.connect();
-    /* connect() signs in as its last act, so the panel's idea of who is here
-       is one step behind until now */
-    bankPanel.sync();
-    /* AND STOP HERE IF THERE IS NOTHING TO PLAY WITH. Signing in with an
-       empty arcade balance and being dropped onto the desktop means the next
-       thing that happens is DEPLOY refusing, which reads as the game being
-       broken rather than as an account with no money in it. The screen that
-       fixes it is the one they are already standing on. */
-    /* AND STOP HERE, WHATEVER THE BALANCE SAYS.
-       This used to stop only for an empty account and log everybody else
-       straight in, which meant the one press that opens My Wallet was also the
-       press that took the screen away -- signing in and reaching the money
-       were the same click, and the money lost. Somebody who had just connected
-       had no way to deposit without going back to this screen and, until the
-       tile above learnt to sign in, no way back to it at all.
-
-       So a fresh sign-in lands ON the panel. The tile says what the next press
-       does and does it: this is now two presses, and the second one is the one
-       that means "I am done with the money, let me in". A player who is
-       already signed in never comes through here -- see the top of this
-       handler -- so nobody pays the extra press twice. */
-    const st=await bankPanel.check();
-    if(st.signedIn){
-      bankPanel.show("deposit");
-      /* "ok" is not decoration: restate() leaves a message in that class alone
-         while the amount field is empty, and every other kind is overwritten
-         by the panel's own hint the moment the poll comes back. */
-      bankPanel.tell(st.arcade===0
-        ?"Signed in. There is nothing in the arcade yet — put some SOL in here, or press the tile again to look around first."
-        :"Signed in. Add or take out SOL here, or press the tile again to log on.","ok");
-      syncWalletTile();
-      return;
-    }
-    walletLogon();
-  }catch(err){
-    const t=$("#tile-wallet");
-    t.classList.remove("shake"); void t.offsetWidth; t.classList.add("shake");
-    $("#w-sub").textContent=err&&err.code==="NO_WALLET"?"no wallet here — install Phantom"
-      :err&&err.code==="CANCELLED"?"cancelled — click to try again"
-      :"that wallet would not connect";
-    sError();
-  }
+  await walletSignIn();
 });
 void walletAcct.resume();
 $("#tile-guest").addEventListener("click",()=>{

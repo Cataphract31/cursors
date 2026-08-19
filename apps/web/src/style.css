@@ -824,6 +824,19 @@ body.mobile #bsod{font-size:11px;padding:16px 14px}
 .lgb-le a:hover{text-decoration:underline}
 .lg-banknote{max-width:290px;font:11px Tahoma;color:#B9C8EC;line-height:1.45;padding:0 2px}
 .lg-banknote[hidden]{display:none}
+/* THE SIGNED-OUT PANEL IS A CONTROL, NOT A CAPTION. Somebody arriving with the
+   arcade's domain-wide connect cookie is named on the tile and signed out
+   underneath it, and the money screen used to answer that by disappearing and
+   leaving a grey line pointing at another control. It is a button now, sized
+   and coloured like the Deposit one it stands in for, so the thing to press is
+   the thing being looked at. */
+.lgb-notetxt{margin-bottom:7px}
+.lgb-signin{width:100%;max-width:290px;padding:7px 10px;font:bold 12px Tahoma;color:#fff;cursor:pointer;
+  border:1px solid #2C6B12;border-radius:4px;background:linear-gradient(180deg,#8CC63F,#4E9A06);
+  box-shadow:1px 1px 3px rgba(0,0,0,.28);min-width:0}
+.lgb-signin:hover:not(:disabled){filter:brightness(1.1)}
+.lgb-signin:active:not(:disabled){background:linear-gradient(180deg,#4E9A06,#8CC63F)}
+.lgb-signin:disabled{cursor:default;color:#E4EAF5;border-color:#5F7392;background:linear-gradient(180deg,#8492AB,#6E7B92);box-shadow:none}
 
 /* ---------- context menus / tooltip ---------- */
 #ctx{position:fixed;display:none;z-index:100010;background:#fff;border:1px solid #ACA899;box-shadow:4px 4px 3px -1px rgba(0,0,0,.28);padding:2px;min-width:166px;font-size:11px}
