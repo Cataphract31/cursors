@@ -3,6 +3,7 @@ import { fileURLToPath } from "node:url";
 import { dirname, join, relative } from "node:path";
 
 const webRoot = dirname(dirname(fileURLToPath(import.meta.url)));
+const repoRoot = dirname(dirname(webRoot));
 const dist = join(webRoot, "dist");
 
 const FFFD = String.fromCharCode(0xfffd);
@@ -27,6 +28,30 @@ for (const f of readdirSync(join(dist, "assets"))) {
 }
 for (const u of unknown)
   console.warn("postbuild: WARNING — un-defused eval-shaped call, CSP will block it if it runs:\n  " + u);
+
+// The CSP travels with the build. Header rules in this repo's vercel.json
+// protect only this repo's Vercel project, but the build players actually load
+// is vendored into the arcade origin (docs/HANDOFF.md) — a <meta> policy ships
+// with dist/ wherever it ends up served from. frame-ancestors is ignored in a
+// meta policy, so that directive stays header-only (the arcade origin serves
+// it for /cursors/*). csp.mjs browser-verifies this exact string against the
+// built app, so the two can never drift apart.
+const vercel = JSON.parse(readFileSync(join(repoRoot, "vercel.json"), "utf8"));
+const rule = (vercel.headers || []).find(h => h.source === "/(.*)");
+const csp = rule && (rule.headers || []).find(h => h.key === "Content-Security-Policy");
+if (!csp) { console.error("postbuild: FAILED — no Content-Security-Policy in root vercel.json"); process.exit(1); }
+const metaCsp = csp.value.split(";").map(d => d.trim()).filter(Boolean)
+  .filter(d => !/^frame-ancestors\b/i.test(d)).join("; ");
+const indexPath = join(dist, "index.html");
+let html = readFileSync(indexPath, "utf8");
+if (!/http-equiv=["']Content-Security-Policy["']/i.test(html)) {
+  html = html.replace(/<head([^>]*)>/i, m => m +
+    `\n  <meta http-equiv="Content-Security-Policy" content="${metaCsp}">`);
+  writeFileSync(indexPath, html);
+  console.log(`postbuild: baked CSP meta into dist/index.html (${metaCsp.length} chars, header-only directives dropped)`);
+} else {
+  console.log("postbuild: dist/index.html already carries a CSP meta");
+}
 
 const walk = d => readdirSync(d, { withFileTypes: true }).flatMap(e =>
   e.isDirectory() ? walk(join(d, e.name)) : [join(d, e.name)]);

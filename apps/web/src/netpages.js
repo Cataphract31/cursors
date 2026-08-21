@@ -38,6 +38,16 @@ export function initNetPages(deps) {
     sysSnd("nav", .4);
   }
 
+  // The only user bytes rendered as markup on this page. The charset regex is
+  // what actually protects the attribute (base64 cannot contain quotes or
+  // angle brackets); esc() on top is belt and braces. The server enforces the
+  // same shape (server/png.js) -- neither side relies on the other.
+  const PNG_DATA_URL = /^data:image\/png;base64,[A-Za-z0-9+/=]+$/;
+  const pngSrc = g => {
+    const png = String(g && g.png || "");
+    return PNG_DATA_URL.test(png) ? esc(png) : "";
+  };
+
   function renderGallery() {
     const list = hooks.netGallery();
     const box = $("#gal-body");
@@ -51,7 +61,7 @@ export function initNetPages(deps) {
       return (n.toLowerCase().endsWith(suf.toLowerCase()) ? n.slice(0, -suf.length).trim() : n) || "untitled";
     };
     box.innerHTML = list.length ? list.map(g => `<figure class="gal">
-      <img src="${/^data:image\//.test(g.png) ? g.png : ""}" alt="">
+      <img src="${pngSrc(g)}" alt="">
       <figcaption><b>${esc(clean(g))}</b> <i>by ${esc(g.by)}</i></figcaption></figure>`).join("")
       : `<p class="empty">Nothing hangs here yet. Open Paint, then File &gt; Publish to Gallery.</p>`;
     $("#gal-count").textContent = `${list.length} ${list.length === 1 ? "work" : "works"}`;

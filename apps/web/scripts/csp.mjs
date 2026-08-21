@@ -2,7 +2,7 @@ import { spawn } from "node:child_process";
 import { readFileSync, existsSync, statSync } from "node:fs";
 import { createServer } from "node:http";
 import { tmpdir } from "node:os";
-import { join, dirname, normalize, extname } from "node:path";
+import { join, dirname, normalize, resolve, extname } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const webRoot = dirname(dirname(fileURLToPath(import.meta.url)));
@@ -30,11 +30,26 @@ const MIME = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css
   ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".gif": "image/gif", ".svg": "image/svg+xml",
   ".ico": "image/x-icon", ".woff": "font/woff", ".woff2": "font/woff2", ".ttf": "font/ttf",
   ".mp3": "audio/mpeg", ".wav": "audio/wav", ".webmanifest": "application/manifest+json" };
+// The app imports /arcade/web/wallet.js as an external absolute path; the real
+// origin serves it from the arcade checkout (vite.config.js does the same for
+// dev). Without this, the module graph 404s and the app dies before the shell
+// builds — every later assertion would fail for a reason that has nothing to
+// do with the policy under test.
+const arcadeWeb = normalize(resolve(webRoot, process.env.ARCADE ?? "../../../GIELINOR", "arcade/web"));
 const server = createServer((req, res) => {
   let p = decodeURIComponent(req.url.split("?")[0]);
   if (p.endsWith("/")) p += "index.html";
-  const file = normalize(join(dist, p));
   for (const [k, v] of SEC) res.setHeader(k, v);
+  if (p.startsWith("/arcade/web/")) {
+    const file = normalize(join(arcadeWeb, p.slice("/arcade/web/".length)));
+    if (!file.startsWith(arcadeWeb) || !existsSync(file) || statSync(file).isDirectory()) {
+      res.writeHead(404, { "Content-Type": "text/plain" });
+      return res.end("no arcade checkout for: " + p);
+    }
+    res.writeHead(200, { "Content-Type": "text/javascript; charset=utf-8" });
+    return res.end(readFileSync(file));
+  }
+  const file = normalize(join(dist, p));
   if (!file.startsWith(dist) || !existsSync(file) || statSync(file).isDirectory()) {
     res.writeHead(404, { "Content-Type": "text/plain" });
     return res.end("not found");

@@ -1018,8 +1018,24 @@ export function initPaint(deps) {
       { label: "Save As...", action: saveAs },
       deps.publish && { label: "Publish to Gallery", action: () => {
         cancelPending();
-        let url; try { url = cv.toDataURL("image/png"); } catch (e) { return; }
-        deps.publish(url);
+        // The gallery wall ships every published png to every client that
+        // opens it, so the painting is downscaled to what the wall actually
+        // shows before upload -- a full-canvas export could weigh 400 KB and
+        // the list fetch is 16 of them.
+        try {
+          const k = Math.min(1, 384 / Math.max(cv.width, cv.height));
+          if (k < 1) {
+            const t = document.createElement("canvas");
+            t.width = Math.max(1, Math.round(cv.width * k));
+            t.height = Math.max(1, Math.round(cv.height * k));
+            const tc = t.getContext("2d");
+            tc.imageSmoothingEnabled = true;
+            tc.drawImage(cv, 0, 0, t.width, t.height);
+            deps.publish(t.toDataURL("image/png"));
+            return;
+          }
+          deps.publish(cv.toDataURL("image/png"));
+        } catch (e) {}
       } },
       { sep: 1 },
       { label: "Set As Background (Tiled)", action: () => setAsWallpaper("tile") },

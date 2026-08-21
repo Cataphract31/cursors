@@ -7,6 +7,7 @@ const SKIN_IDS = new Set(["", "std-l", "std-xl", "black", "black-l", "black-xl",
   "magnified", "animated", "bronze", "white", "dinosaur", "hands", "conductor", "oldfashioned", "variations"]);
 import { openDb } from "./db.js";
 import { createLedger, LedgerError } from "./ledger.js";
+import { validGalleryPng } from "./png.js";
 
 const PORT = +(process.env.PORT || 8788);
 const DB_PATH = process.env.DB_PATH || "./cursors.db";
@@ -278,7 +279,17 @@ function handle(c, m) {
       }
       break;
     }
-    case "deploy": { void deploy(c); break; }
+    case "deploy": {
+      // One deploy attempt per 500ms per connection. Without this, every
+      // message is a round-trip against the arcade ledger (hold attempt), and
+      // a scripted client can pump those far faster than the UI can send them.
+      // The client's own auto-deploy ticks at 1800ms, so honest play is never
+      // throttled by this.
+      if (now - (c.lastDeploy || 0) < 500) break;
+      c.lastDeploy = now;
+      void deploy(c);
+      break;
+    }
     case "recall": sim.requestRecall(c.key); break;
     case "recallOne": if (Number.isInteger(m.id)) sim.recallOne(c.key, m.id); break;
     case "recallCancel": sim.cancelRecall(c.key); break;
@@ -328,7 +339,7 @@ function handle(c, m) {
       break;
     }
     case "gallery":
-      if (now - (c.lastGalleryGet || 0) < 5000) return;
+      if (now - (c.lastGalleryGet || 0) < 10000) return;
       c.lastGalleryGet = now;
       send(c, { t: "gallery", list: db.galleryList() });
       break;
@@ -342,7 +353,7 @@ function handle(c, m) {
       }
       if (now - c.lastGallery < 20000) return send(c, { t: "err", msg: "one painting per 20s" });
       const png = String(m.png || "");
-      if (!png.startsWith("data:image/png;base64,") || png.length > 400000)
+      if (!validGalleryPng(png))
         return send(c, { t: "err", msg: "png only, 400 KB max" });
       c.lastGallery = now;
       gp.published = (gp.published || 0) + 1;
@@ -430,10 +441,18 @@ function shutdown() {
   db.close();
   process.exit(0);
 }
+// An unknown-state process must not keep taking stakes. Exit and let systemd
+// restart us: boot replay (settlePending) and the sweep exist precisely to
+// make a restart the safe outcome, so use them.
+function die(why, e) {
+  console.error(why, e);
+  try { for (const key of [...byKey.keys()]) { try { persistPlayer(key); } catch {} } } catch {}
+  process.exit(1);
+}
 process.on("SIGINT", shutdown);
 process.on("SIGTERM", shutdown);
-process.on("uncaughtException", e => console.error("uncaught:", e));
-process.on("unhandledRejection", e => console.error("unhandled:", e));
+process.on("uncaughtException", e => die("uncaught:", e));
+process.on("unhandledRejection", e => die("unhandled:", e));
 
 if (ledger.enabled) {
   const pending = db.settlePending();
